@@ -73,7 +73,7 @@
 <body class="font-display bg-background-light dark:bg-background-dark text-brand-dark-gray dark:text-brand-white">
   <div class="flex h-screen w-full flex-col">
     <!-- Header - Default State -->
-    <header id="header-default" class="flex shrink-0 items-center justify-between whitespace-nowrap border-b border-solid border-brand-light-gray dark:border-brand-dark-gray/20 bg-brand-light-gray dark:bg-brand-dark-gray/30 px-6 py-3 shadow-sm">
+    <header id="header-default" class="flex shrink-0 items-center justify-between whitespace-nowrap border-b border-solid border-brand-light-gray dark:border-brand-dark-gray/20 bg-brand-white dark:bg-brand-dark-gray/30 px-6 py-3 shadow-sm">
       <div class="flex items-center gap-4">
         <img alt="Malvern Prep Logo" class="h-10 w-auto" src="https://raw.githubusercontent.com/stephenborish/veritasassets/f0a824864d7d66637a13b822bff99fa6830e6123/mplogo.png"/>
         <div class="flex flex-col">
@@ -87,7 +87,7 @@
     </header>
 
     <!-- Header - Live Poll State -->
-    <header id="header-live" class="flex shrink-0 items-center justify-between whitespace-nowrap border-b border-solid border-brand-light-gray dark:border-brand-dark-gray/20 bg-brand-light-gray dark:bg-brand-dark-gray/30 px-6 py-3 shadow-sm" style="display: none;">
+    <header id="header-live" class="flex shrink-0 items-center justify-between whitespace-nowrap border-b border-solid border-brand-light-gray dark:border-brand-dark-gray/20 bg-brand-white dark:bg-brand-dark-gray/30 px-6 py-3 shadow-sm" style="display: none;">
       <div class="flex items-center gap-4">
         <img alt="Malvern Prep Logo" class="h-10 w-auto" src="https://raw.githubusercontent.com/stephenborish/veritasassets/f0a824864d7d66637a13b822bff99fa6830e6123/mplogo.png"/>
         <div class="flex flex-col">
@@ -189,6 +189,9 @@
                 </div>
                 <div id="question-image-container" class="relative w-24 h-24 flex-shrink-0" style="display: none;">
                   <img id="live-question-image" alt="Question" class="rounded-lg object-cover w-full h-full" src=""/>
+                  <button class="absolute inset-0 flex items-center justify-center bg-black/50 text-white rounded-lg opacity-0 hover:opacity-100 transition-opacity" onclick="window.expandQuestionImage()">
+                    <span class="material-symbols-outlined">zoom_in</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -247,44 +250,61 @@
             <span>Create New Poll</span>
           </button>
         </nav>
+        <div class="mt-auto w-full">
+          <button id="nav-settings" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-brand-white/70 hover:bg-brand-white/20 hover:text-brand-white transition-colors text-left w-full">
+            <span class="material-symbols-outlined">settings</span>
+            <span>Settings</span>
+          </button>
+        </div>
       </aside>
     </div>
   </div>
 
   <!-- Poll Creator Modal -->
   <div id="poll-creator-modal" class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-    <div class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
-      <div class="sticky top-0 bg-brand-light-gray dark:bg-brand-dark-gray/50 px-6 py-4 border-b border-brand-light-gray dark:border-brand-dark-gray/40 z-10">
-        <h2 class="text-brand-dark-gray dark:text-brand-white text-2xl font-bold">Create New Poll</h2>
+    <div class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div class="sticky top-0 bg-primary px-6 py-4 border-b border-primary/20 z-10 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <img alt="Malvern Prep Logo" class="h-8 w-auto" src="https://raw.githubusercontent.com/stephenborish/veritasassets/f0a824864d7d66637a13b822bff99fa6830e6123/mplogo.png"/>
+          <input type="text" id="new-poll-name" placeholder="Chapter 5 Quiz" class="bg-transparent text-brand-white text-xl font-bold border-none focus:ring-0 p-0 placeholder-brand-white/70 min-w-[300px]"/>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="save-status" class="text-sm text-brand-white/80 mr-2">All changes saved</span>
+          <button id="close-modal-btn" class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-brand-white/20 text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-brand-white/30 transition-colors">
+            <span class="truncate">Cancel</span>
+          </button>
+          <button id="save-poll-btn" class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-brand-white text-primary text-sm font-bold leading-normal tracking-[0.015em] hover:bg-brand-light-gray transition-colors">
+            <span class="truncate">Publish Poll</span>
+          </button>
+        </div>
       </div>
-      <div class="p-6">
-        <div class="form-group mb-4">
-          <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white" for="new-poll-name">Poll Name</label>
-          <input type="text" id="new-poll-name" placeholder="e.g., Week 5 Physics Quiz" class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"/>
-        </div>
-        <div class="form-group mb-6">
-          <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white" for="class-select">Class</label>
-          <select id="class-select" class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
-            <option value="">-- Select Class --</option>
-          </select>
-        </div>
-        <div class="flex items-center justify-between mb-4 pb-4 border-b border-brand-light-gray dark:border-brand-dark-gray/40">
-          <h3 class="text-brand-dark-gray dark:text-brand-white text-lg font-bold">Questions</h3>
-          <button id="add-question-btn" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-sm font-bold hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors">
-            <span class="material-symbols-outlined text-base">add</span>
-            <span>Add Question</span>
-          </button>
-        </div>
-        <div id="question-builder" class="max-h-[50vh] overflow-y-auto mb-6"></div>
-        <div class="flex gap-3 pt-4 border-t border-brand-light-gray dark:border-brand-dark-gray/40">
-          <button id="save-poll-btn" class="flex-1 flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-primary text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90 transition-colors">
-            <span class="material-symbols-outlined text-xl">save</span>
-            <span>Save Poll</span>
-          </button>
-          <button id="close-modal-btn" class="flex-1 flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-brand-light-gray text-brand-dark-gray text-sm font-bold leading-normal tracking-[0.015em] hover:bg-brand-light-gray/80 transition-colors">
-            <span>Cancel</span>
-          </button>
-        </div>
+
+      <div class="flex flex-grow overflow-hidden">
+        <!-- Question Navigator Sidebar -->
+        <aside class="w-64 flex-shrink-0 border-r border-solid border-brand-light-gray dark:border-brand-dark-gray/20 bg-brand-white dark:bg-background-dark overflow-y-auto">
+          <div class="flex h-full flex-col justify-between p-4">
+            <div id="question-navigator" class="flex flex-col gap-2">
+              <!-- Question items will be added dynamically -->
+            </div>
+            <button id="add-question-btn" class="flex w-full items-center justify-center gap-2 rounded-lg h-10 px-4 bg-primary/20 dark:bg-primary/30 text-primary dark:text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/30 dark:hover:bg-primary/40 transition-colors mt-4">
+              <span class="truncate">+ Add Question</span>
+            </button>
+          </div>
+        </aside>
+
+        <!-- Editing Workspace -->
+        <main class="flex-1 p-8 overflow-y-auto">
+          <div class="form-group mb-6">
+            <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white" for="class-select">Class</label>
+            <select id="class-select" class="w-full max-w-md rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+              <option value="">-- Select Class --</option>
+            </select>
+          </div>
+
+          <div id="question-builder-workspace">
+            <!-- Question editing workspace will be populated dynamically -->
+          </div>
+        </main>
       </div>
     </div>
   </div>
@@ -320,6 +340,8 @@
   var visualTimerInterval=null;
   var isPaused=false;
   var questionCounter=0;
+  var questions=[];
+  var selectedQuestionIndex=0;
 
   // --- Element Cache ---
   var pollSelect=document.getElementById('poll-select');
@@ -341,7 +363,7 @@
   document.getElementById('nav-polls-list').onclick=showDashboard;
   document.getElementById('close-modal-btn').onclick=closePollCreator;
   document.getElementById('close-links-modal-btn').onclick=closeLinksModal;
-  document.getElementById('add-question-btn').onclick=addQuestionToBuilder;
+  document.getElementById('add-question-btn').onclick=addQuestion;
   document.getElementById('save-poll-btn').onclick=savePoll;
   startPollBtn.onclick=onStartPoll;
   document.getElementById('header-start-btn').onclick=onStartPoll;
@@ -563,19 +585,26 @@
       var isCorrect=answer===correctAnswer;
 
       var barDiv=document.createElement('div');
-      barDiv.className=isCorrect?'rounded-lg border-2 border-primary':'';
-
-      var barHtml='<div class="relative flex items-center min-h-[3rem] '+(isCorrect?'correct-answer-bg':'')+' rounded-lg bg-brand-light-gray dark:bg-brand-dark-gray/50 overflow-hidden cursor-pointer hover:bg-gray-200 dark:hover:bg-brand-dark-gray/60 transition-colors">';
-      barHtml+='<div class="absolute inset-y-0 left-0 '+(isCorrect?'bg-primary':'bg-primary/20 dark:bg-primary/50')+'" style="width: '+percentage+'%;"></div>';
-      barHtml+='<div class="relative flex w-full items-start justify-between p-3">';
       if(isCorrect){
-        barHtml+='<div class="flex items-start gap-2"><span class="font-serif font-medium text-brand-white mix-blend-difference text-sm">'+escapeHtml(answer)+'</span>';
-        barHtml+='<span class="material-symbols-outlined text-brand-white text-xl mix-blend-difference">check_circle</span></div>';
-        barHtml+='<span class="font-bold text-brand-white mix-blend-difference shrink-0 ml-4 text-sm">'+percentage+'%</span>';
-      } else {
-        barHtml+='<span class="font-serif font-medium text-brand-dark-gray dark:text-brand-white text-sm">'+escapeHtml(answer)+'</span>';
-        barHtml+='<span class="font-bold text-brand-dark-gray dark:text-brand-white shrink-0 ml-4 text-sm">'+percentage+'%</span>';
+        barDiv.className='rounded-lg border-2 border-primary';
       }
+
+      var correctClass=isCorrect?'correct-answer-bg':'';
+      var bgClass=isCorrect?'bg-primary':'bg-primary/20 dark:bg-primary/50';
+      var textClass=isCorrect?'text-brand-white mix-blend-difference':'text-brand-dark-gray dark:text-brand-white';
+
+      var barHtml='<div class="relative flex items-center min-h-[3rem] '+correctClass+' rounded-lg bg-brand-light-gray dark:bg-brand-dark-gray/50 overflow-hidden cursor-pointer hover:bg-gray-200 dark:hover:bg-brand-dark-gray/60 transition-colors">';
+      barHtml+='<div class="absolute inset-y-0 left-0 '+bgClass+'" style="width: '+percentage+'%;"></div>';
+      barHtml+='<div class="relative flex w-full items-start justify-between p-3">';
+      
+      if(isCorrect){
+        barHtml+='<div class="flex items-start gap-2"><span class="font-serif font-medium '+textClass+' text-sm">'+escapeHtml(answer)+'</span>';
+        barHtml+='<span class="material-symbols-outlined '+textClass+' text-xl">check_circle</span></div>';
+      } else {
+        barHtml+='<span class="font-serif font-medium '+textClass+' text-sm">'+escapeHtml(answer)+'</span>';
+      }
+      
+      barHtml+='<span class="font-bold '+textClass+' shrink-0 ml-4 text-sm">'+percentage+'%</span>';
       barHtml+='</div></div>';
 
       // Add student names who selected this answer (if correct)
@@ -798,162 +827,246 @@
   // --- Poll Creator Modal ---
   function openPollCreator(){
     questionCounter=0;
-    document.getElementById('question-builder').innerHTML="";
-    document.getElementById('new-poll-name').value="";
-    document.getElementById('class-select').value="";
-    addQuestionToBuilder();
+    questions=[];
+    selectedQuestionIndex=0;
+    document.getElementById('new-poll-name').value='';
+    document.getElementById('class-select').value='';
+    addQuestion();
+    renderQuestionNavigator();
+    renderQuestionWorkspace();
     modal.style.display='flex';
   }
 
   function closePollCreator(){
     modal.style.display='none';
-    document.getElementById('question-builder').innerHTML="";
+    questions=[];
     questionCounter=0;
+    selectedQuestionIndex=0;
   }
 
-  function addQuestionToBuilder(){
-    var questionIndex=questionCounter++;
-    var builder=document.getElementById('question-builder');
-    var qDiv=document.createElement('div');
-    qDiv.className='bg-brand-light-gray/50 dark:bg-brand-dark-gray/20 border border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg p-5 mb-4';
-    qDiv.dataset.index=questionIndex;
-    qDiv.id='question-'+questionIndex;
-
-    var html='';
-    html+='<div class="flex items-center justify-between mb-4 pb-3 border-b border-brand-light-gray dark:border-brand-dark-gray/40">';
-    html+='<h4 class="text-brand-dark-gray dark:text-brand-white text-base font-bold">Question '+(questionIndex+1)+'</h4>';
-    if(questionIndex>0){
-      html+='<button type="button" class="delete-question-btn px-3 py-1 text-xs font-semibold rounded bg-red-600 text-white hover:bg-red-700 transition-colors" onclick="window.deleteQuestion('+questionIndex+')">Delete</button>';
-    }
-    html+='</div>';
-    html+='<div class="mb-4">';
-    html+='<label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white">Question Text (optional)</label>';
-    html+='<textarea class="q-text w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm font-serif focus:outline-none focus:ring-2 focus:ring-primary/50" rows="3" placeholder="Enter your question here..."></textarea>';
-    html+='</div>';
-    html+='<div class="mb-4">';
-    html+='<label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white">Question Image (optional)</label>';
-    html+='<input type="file" class="q-image text-xs" accept="image/*" onchange="window.previewQuestionImage(this, '+questionIndex+')">';
-    html+='<img src="" class="image-preview hidden mt-3 rounded-lg max-w-[200px] max-h-[120px] border border-brand-light-gray" id="q-img-preview-'+questionIndex+'">';
-    html+='</div>';
-    html+='<div>';
-    html+='<label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white">Answer Choices</label>';
-    html+='<div class="answer-choices-container space-y-2" id="q-answers-'+questionIndex+'"></div>';
-    html+='<button type="button" class="add-answer-btn mt-3 w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-brand-light-gray text-brand-dark-gray text-sm font-semibold hover:bg-brand-light-gray/80 transition-colors" onclick="window.addAnswerToQuestion('+questionIndex+')"><span class="material-symbols-outlined text-base">add</span><span>Add Answer</span></button>';
-    html+='</div>';
-    html+='<div class="mt-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-sm text-blue-800 dark:text-blue-300">';
-    html+='<span class="material-symbols-outlined text-base align-middle">info</span> <strong>Tip:</strong> Select the radio button next to the correct answer';
-    html+='</div>';
-
-    qDiv.innerHTML=html;
-    builder.appendChild(qDiv);
-
-    window.addAnswerToQuestion(questionIndex);
-    window.addAnswerToQuestion(questionIndex);
+  function addQuestion(){
+    var newQuestion={
+      questionText:'',
+      questionImage:null,
+      answers:[
+        {text:'',image:null},
+        {text:'',image:null}
+      ],
+      correctAnswerIndex:0
+    };
+    questions.push(newQuestion);
+    selectedQuestionIndex=questions.length-1;
+    renderQuestionNavigator();
+    renderQuestionWorkspace();
   }
 
-  window.deleteQuestion=function(questionIndex){
-    var qDiv=document.getElementById('question-'+questionIndex);
-    if(qDiv){
-      qDiv.remove();
-      renumberQuestions();
+  function deleteQuestion(index){
+    if(questions.length<=1){
+      alert('A poll must have at least one question.');
+      return;
     }
-  };
+    questions.splice(index,1);
+    selectedQuestionIndex=Math.max(0,Math.min(selectedQuestionIndex,questions.length-1));
+    renderQuestionNavigator();
+    renderQuestionWorkspace();
+  }
 
-  function renumberQuestions(){
-    var questions=document.getElementById('question-builder').querySelectorAll('[id^="question-"]');
+  function renderQuestionNavigator(){
+    var nav=document.getElementById('question-navigator');
+    nav.innerHTML='';
+    
     questions.forEach(function(q,index){
-      var header=q.querySelector('h4');
-      if(header){
-        header.textContent='Question '+(index+1);
+      var isSelected=index===selectedQuestionIndex;
+      var div=document.createElement('div');
+      div.className='group relative flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer '+(isSelected?'bg-primary/20 dark:bg-primary/30':'hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10');
+      
+      var html='<span class="material-symbols-outlined '+(isSelected?'text-brand-dark-gray dark:text-brand-white':'text-brand-dark-gray/50 dark:text-brand-white/50')+'">drag_indicator</span>';
+      html+='<p class="'+(isSelected?'text-primary dark:text-brand-white':'text-brand-dark-gray dark:text-brand-white')+' text-sm font-medium leading-normal">Question '+(index+1)+'</p>';
+      
+      if(questions.length>1){
+        html+='<div class="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity">';
+        html+='<button class="p-1 rounded-full hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10" data-index="'+index+'">';
+        html+='<span class="material-symbols-outlined text-brand-dark-gray dark:text-brand-white text-base">close</span>';
+        html+='</button></div>';
       }
+      
+      div.innerHTML=html;
+      
+      div.onclick=function(e){
+        if(e.target.classList.contains('material-symbols-outlined')&&e.target.textContent==='close')return;
+        selectedQuestionIndex=index;
+        renderQuestionNavigator();
+        renderQuestionWorkspace();
+      };
+      
+      var closeBtn=div.querySelector('button[data-index]');
+      if(closeBtn){
+        closeBtn.onclick=function(e){
+          e.stopPropagation();
+          deleteQuestion(parseInt(this.dataset.index));
+        };
+      }
+      
+      nav.appendChild(div);
     });
   }
 
-  window.addAnswerToQuestion=function(questionIndex){
-    var container=document.getElementById('q-answers-'+questionIndex);
-    if(!container)return;
-    var answerIndex=container.children.length;
-    var aDiv=document.createElement('div');
-    aDiv.className='flex items-center gap-2 bg-brand-white dark:bg-brand-dark-gray/20 border border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg p-2';
-    aDiv.dataset.index=answerIndex;
-    aDiv.id='q'+questionIndex+'-answer-'+answerIndex;
-
-    var html='';
-    html+='<input type="radio" name="correct-answer-q'+questionIndex+'" class="a-correct h-5 w-5 cursor-pointer accent-green-600" value="'+answerIndex+'" title="Mark as correct answer">';
-    html+='<input type="text" class="a-text flex-1 rounded border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-2 py-1.5 text-sm font-serif focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="Answer text (required)">';
-    html+='<input type="file" class="a-image text-xs w-auto" accept="image/*" onchange="window.previewAnswerImage(this, '+questionIndex+', '+answerIndex+')">';
-    if(answerIndex>=2){
-      html+='<button type="button" class="delete-answer-btn px-2 py-1 text-xs font-semibold rounded bg-red-600 text-white hover:bg-red-700 transition-colors" onclick="window.deleteAnswer('+questionIndex+', '+answerIndex+')">✕</button>';
-    } else {
-      html+='<span class="w-[28px]"></span>';
+  function renderQuestionWorkspace(){
+    var workspace=document.getElementById('question-builder-workspace');
+    var question=questions[selectedQuestionIndex];
+    
+    var html='<div class="max-w-4xl mx-auto">';
+    html+='<div class="flex flex-wrap justify-between gap-3 mb-6">';
+    html+='<div class="flex min-w-72 flex-col gap-1">';
+    html+='<p class="text-brand-dark-gray dark:text-brand-white tracking-light text-[32px] font-bold leading-tight">Question '+(selectedQuestionIndex+1)+'</p>';
+    html+='<p class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm font-normal leading-normal">Edit the question and answer choices below.</p>';
+    html+='</div></div>';
+    
+    html+='<div class="bg-brand-white dark:bg-brand-dark-gray/20 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/30 p-6 shadow-sm mb-6">';
+    html+='<label class="flex flex-col w-full">';
+    html+='<p class="text-brand-dark-gray dark:text-brand-white text-base font-medium leading-normal pb-2">Question Text</p>';
+    html+='<textarea id="question-text-input" class="form-input flex w-full min-w-0 flex-1 resize-y overflow-hidden rounded-lg text-brand-dark-gray dark:text-brand-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 focus:border-primary min-h-36 placeholder:text-brand-dark-gray/50 dark:placeholder:text-brand-white/50 p-[15px] text-base font-normal leading-normal" placeholder="Type your question here...">'+escapeHtml(question.questionText)+'</textarea>';
+    html+='</label>';
+    html+='<div class="flex mt-4">';
+    html+='<label class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-brand-light-gray dark:bg-brand-dark-gray/40 text-brand-dark-gray dark:text-brand-white gap-2 pl-3 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/60 transition-colors">';
+    html+='<span class="material-symbols-outlined text-xl">image</span>';
+    html+='<span class="truncate">Upload Image</span>';
+    html+='<input type="file" class="hidden" accept="image/*" id="question-image-input">';
+    html+='</label></div>';
+    
+    if(question.questionImage){
+      html+='<img src="'+getImagePreviewUrl(question.questionImage)+'" class="mt-4 rounded-lg max-w-full h-auto"/>';
     }
-    html+='<img src="" class="image-preview hidden rounded max-w-[80px] max-h-[60px]" id="q'+questionIndex+'-a'+answerIndex+'-preview">';
-
-    aDiv.innerHTML=html;
-    container.appendChild(aDiv);
-  };
-
-  window.deleteAnswer=function(questionIndex,answerIndex){
-    var aDiv=document.getElementById('q'+questionIndex+'-answer-'+answerIndex);
-    if(aDiv){
-      var container=document.getElementById('q-answers-'+questionIndex);
-      if(container.children.length>2){
-        aDiv.remove();
-      } else {
-        alert('Questions must have at least 2 answer choices.');
-      }
-    }
-  };
-
-  window.previewQuestionImage=function(input,questionIndex){
-    var preview=document.getElementById('q-img-preview-'+questionIndex);
-    if(!preview)return;
-    if(input.files&&input.files[0]){
-      var file=input.files[0];
-      if(file.size>5*1024*1024){
-        alert('File is too large. Maximum size is 5MB.');
-        input.value='';
-        return;
-      }
-      var reader=new FileReader();
-      reader.onload=function(e){
-        preview.src=e.target.result;
-        preview.classList.remove('hidden');
+    
+    html+='</div>';
+    
+    html+='<div class="bg-brand-white dark:bg-brand-dark-gray/20 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/30 p-6 shadow-sm">';
+    html+='<p class="text-brand-dark-gray dark:text-brand-white text-base font-medium leading-normal pb-4">Answer Choices</p>';
+    html+='<div class="flex flex-col gap-4">';
+    
+    question.answers.forEach(function(answer,aIndex){
+      html+=renderAnswerChoice(answer,aIndex,question.correctAnswerIndex===aIndex);
+    });
+    
+    html+='</div>';
+    html+='<div class="mt-4">';
+    html+='<button id="add-answer-btn" class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-brand-light-gray dark:bg-brand-dark-gray/40 text-brand-dark-gray dark:text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/60 transition-colors">';
+    html+='<span class="truncate">+ Add Answer Choice</span>';
+    html+='</button></div></div></div>';
+    
+    workspace.innerHTML=html;
+    
+    // Attach event listeners
+    document.getElementById('question-text-input').oninput=function(){
+      questions[selectedQuestionIndex].questionText=this.value;
+    };
+    
+    var qImgInput=document.getElementById('question-image-input');
+    if(qImgInput){
+      qImgInput.onchange=function(){
+        if(this.files&&this.files[0]){
+          questions[selectedQuestionIndex].questionImage=this.files[0];
+          renderQuestionWorkspace();
+        }
       };
-      reader.readAsDataURL(file);
-    } else {
-      preview.src="";
-      preview.classList.add('hidden');
     }
-  };
-
-  window.previewAnswerImage=function(input,questionIndex,answerIndex){
-    var preview=document.getElementById('q'+questionIndex+'-a'+answerIndex+'-preview');
-    if(!preview)return;
-    if(input.files&&input.files[0]){
-      var file=input.files[0];
-      if(file.size>5*1024*1024){
-        alert('File is too large. Maximum size is 5MB.');
-        input.value='';
-        return;
-      }
-      var reader=new FileReader();
-      reader.onload=function(e){
-        preview.src=e.target.result;
-        preview.classList.remove('hidden');
+    
+    document.getElementById('add-answer-btn').onclick=function(){
+      questions[selectedQuestionIndex].answers.push({text:'',image:null});
+      renderQuestionWorkspace();
+    };
+    
+    // Attach answer choice listeners
+    var answerInputs=workspace.querySelectorAll('.answer-text-input');
+    answerInputs.forEach(function(input,index){
+      input.oninput=function(){
+        questions[selectedQuestionIndex].answers[index].text=this.value;
       };
-      reader.readAsDataURL(file);
+    });
+    
+    var correctRadios=workspace.querySelectorAll('.correct-radio');
+    correctRadios.forEach(function(radio,index){
+      radio.onchange=function(){
+        if(this.checked){
+          questions[selectedQuestionIndex].correctAnswerIndex=index;
+        }
+      };
+    });
+    
+    var deleteButtons=workspace.querySelectorAll('.delete-answer-btn');
+    deleteButtons.forEach(function(btn,index){
+      btn.onclick=function(){
+        deleteAnswer(index);
+      };
+    });
+    
+    var answerImageInputs=workspace.querySelectorAll('.answer-image-input');
+    answerImageInputs.forEach(function(input,index){
+      input.onchange=function(){
+        if(this.files&&this.files[0]){
+          questions[selectedQuestionIndex].answers[index].image=this.files[0];
+          renderQuestionWorkspace();
+        }
+      };
+    });
+  }
+
+  function renderAnswerChoice(answer,index,isCorrect){
+    var html='<div class="flex items-center gap-3">';
+    html+='<label class="relative flex items-center justify-center cursor-pointer" title="Set as correct answer">';
+    html+='<input class="correct-radio peer h-5 w-5 cursor-pointer appearance-none rounded-full border border-brand-light-gray dark:border-brand-white/30 checked:border-primary checked:bg-primary transition-all" name="correct_answer" type="radio" '+(isCorrect?'checked':'')+'/>';
+    html+='<span class="material-symbols-outlined absolute text-brand-white transition-opacity opacity-0 peer-checked:opacity-100 text-sm">check</span>';
+    html+='</label>';
+    html+='<input class="answer-text-input form-input flex-1 rounded-lg text-brand-dark-gray dark:text-brand-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 focus:border-primary placeholder:text-brand-dark-gray/50 dark:placeholder:text-brand-white/50 p-3 text-base" placeholder="Answer '+String.fromCharCode(65+index)+'" type="text" value="'+escapeHtml(answer.text)+'"/>';
+    html+='<label class="p-2 rounded-lg hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10 transition-colors cursor-pointer" title="Upload image for this answer">';
+    html+='<span class="material-symbols-outlined text-brand-dark-gray/60 dark:text-brand-white/60">image</span>';
+    html+='<input type="file" class="answer-image-input hidden" accept="image/*">';
+    html+='</label>';
+    
+    if(questions[selectedQuestionIndex].answers.length>2){
+      html+='<button class="delete-answer-btn p-2 rounded-lg hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10 transition-colors" title="Remove this answer">';
+      html+='<span class="material-symbols-outlined text-brand-dark-gray/60 dark:text-brand-white/60">delete</span>';
+      html+='</button>';
     } else {
-      preview.src="";
-      preview.classList.add('hidden');
+      html+='<div class="w-10"></div>';
     }
-  };
+    
+    html+='</div>';
+    
+    if(answer.image){
+      html+='<img src="'+getImagePreviewUrl(answer.image)+'" class="mt-2 rounded-lg max-w-[200px] h-auto"/>';
+    }
+    
+    return html;
+  }
+
+  function deleteAnswer(index){
+    if(questions[selectedQuestionIndex].answers.length<=2){
+      alert('A question must have at least two answer choices.');
+      return;
+    }
+    questions[selectedQuestionIndex].answers.splice(index,1);
+    if(questions[selectedQuestionIndex].correctAnswerIndex>=index){
+      questions[selectedQuestionIndex].correctAnswerIndex=Math.max(0,questions[selectedQuestionIndex].correctAnswerIndex-1);
+    }
+    renderQuestionWorkspace();
+  }
+
+  function getImagePreviewUrl(image){
+    if(image instanceof File){
+      return URL.createObjectURL(image);
+    }
+    if(typeof image==='string'&&image){
+      return image;
+    }
+    return'';
+  }
 
   // --- Poll & Image Uploader ---
   function savePoll(){
     var savePollBtn=document.getElementById('save-poll-btn');
     savePollBtn.disabled=true;
-    savePollBtn.innerHTML='<div class="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div><span>Saving...</span>';
+    savePollBtn.innerHTML='<div class="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent"></div><span>Saving...</span>';
 
     var pollName=document.getElementById('new-poll-name').value.trim();
     var className=document.getElementById('class-select').value;
@@ -961,110 +1074,71 @@
     if(!pollName||!className){
       alert("Please enter a poll name and select a class.");
       savePollBtn.disabled=false;
-      savePollBtn.innerHTML='<span class="material-symbols-outlined text-xl">save</span><span>Save Poll</span>';
+      savePollBtn.innerHTML='<span class="truncate">Publish Poll</span>';
       return;
     }
 
-    var questions=[];
-    var questionItems=document.getElementById('question-builder').querySelectorAll('[id^="question-"]');
-    var uploadTasks=[];
-
-    if(questionItems.length===0){
+    if(questions.length===0){
       alert("Please add at least one question.");
       savePollBtn.disabled=false;
-      savePollBtn.innerHTML='<span class="material-symbols-outlined text-xl">save</span><span>Save Poll</span>';
+      savePollBtn.innerHTML='<span class="truncate">Publish Poll</span>';
       return;
     }
 
-    for(var qi=0;qi<questionItems.length;qi++){
-      var item=questionItems[qi];
-      var qText=item.querySelector('.q-text').value.trim();
-      var qImageInput=item.querySelector('.q-image');
+    var uploadTasks=[];
+    var questionsToSave=JSON.parse(JSON.stringify(questions));
 
-      var questionData={
-        questionText:qText,
-        questionImageURL:null,
-        options:[],
-        correctAnswer:null
-      };
-
-      if(qImageInput.files&&qImageInput.files[0]){
-        (function(qData){
-          uploadTasks.push(uploadFile(qImageInput.files[0]).then(function(url){
-            qData.questionImageURL=url;
+    questions.forEach(function(q,qIndex){
+      if(q.questionImage instanceof File){
+        uploadTasks.push(uploadFile(q.questionImage).then(function(url){
+          questionsToSave[qIndex].questionImage=url;
+        }));
+      }
+      
+      q.answers.forEach(function(a,aIndex){
+        if(a.image instanceof File){
+          uploadTasks.push(uploadFile(a.image).then(function(url){
+            questionsToSave[qIndex].answers[aIndex].image=url;
           }));
-        })(questionData);
-      }
-
-      var correctRadio=item.querySelector('.a-correct:checked');
-      var correctIndex=correctRadio?parseInt(correctRadio.value):-1;
-      var answerItems=item.querySelectorAll('[id^="q'+qi+'-answer-"]');
-      var validAnswerCount=0;
-
-      for(var ai=0;ai<answerItems.length;ai++){
-        var aItem=answerItems[ai];
-        var aText=aItem.querySelector('.a-text').value.trim();
-        var aImageInput=aItem.querySelector('.a-image');
-
-        if(!aText&&!(aImageInput.files&&aImageInput.files[0])){
-          continue;
         }
-
-        var optionData={text:aText,imageURL:null};
-
-        if(aImageInput.files&&aImageInput.files[0]){
-          (function(oData){
-            uploadTasks.push(uploadFile(aImageInput.files[0]).then(function(url){
-              oData.imageURL=url;
-            }));
-          })(optionData);
-        }
-
-        if(ai===correctIndex){
-          questionData.correctAnswer=aText;
-        }
-        questionData.options.push(optionData);
-        validAnswerCount++;
-      }
-
-      if(validAnswerCount<2){
-        alert("Question "+(qi+1)+" must have at least 2 answer choices.");
-        savePollBtn.disabled=false;
-        savePollBtn.innerHTML='<span class="material-symbols-outlined text-xl">save</span><span>Save Poll</span>';
-        return;
-      }
-
-      if(!questionData.correctAnswer&&validAnswerCount>0){
-        var result=confirm("Question "+(qi+1)+" doesn't have a correct answer selected. Continue anyway?");
-        if(!result){
-          savePollBtn.disabled=false;
-          savePollBtn.innerHTML='<span class="material-symbols-outlined text-xl">save</span><span>Save Poll</span>';
-          return;
-        }
-      }
-      questions.push(questionData);
-    }
+      });
+    });
 
     Promise.all(uploadTasks).then(function(){
+      var pollData={
+        pollName:pollName,
+        className:className,
+        questions:questionsToSave.map(function(q){
+          return{
+            questionText:q.questionText,
+            questionImage:q.questionImage,
+            options:q.answers.map(function(a){
+              return{text:a.text,image:a.image};
+            }),
+            correctAnswer:q.answers[q.correctAnswerIndex]?q.answers[q.correctAnswerIndex].text:null
+          };
+        })
+      };
+
       google.script.run
         .withSuccessHandler(function(newPollsList){
           ALL_POLLS=newPollsList;
           updatePollDropdown();
           savePollBtn.disabled=false;
-          savePollBtn.innerHTML='<span class="material-symbols-outlined text-xl">save</span><span>Save Poll</span>';
+          savePollBtn.innerHTML='<span class="truncate">Publish Poll</span>';
           closePollCreator();
           alert('✅ Poll created successfully with '+questions.length+' questions!');
         })
         .withFailureHandler(function(error){
           handleError(error);
           savePollBtn.disabled=false;
-          savePollBtn.innerHTML='<span class="material-symbols-outlined text-xl">save</span><span>Save Poll</span>';
+          savePollBtn.innerHTML='<span class="truncate">Publish Poll</span>';
         })
-        .createNewPoll(pollName,className,questions);
+        .createNewPoll(pollData.pollName,pollData.className,pollData.questions);
     }).catch(function(err){
       alert('❌ Upload error: '+err.message);
       savePollBtn.disabled=false;
-      savePollBtn.innerHTML='<span class="material-symbols-outlined text-xl">save</span><span>Save Poll</span>';
+      savePollBtn.innerHTML='<span class="truncate">Publish Poll</span>';
     });
   }
 
@@ -1111,6 +1185,15 @@
     console.error('Error:',error);
     alert('Error: '+(error.message||error));
   }
+
+  // Expand question image in modal
+  window.expandQuestionImage=function(){
+    var imgSrc=document.getElementById('live-question-image').src;
+    var modalHtml='<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;" onclick="this.remove()">';
+    modalHtml+='<img src="'+imgSrc+'" style="max-width:90%;max-height:90%;"/>';
+    modalHtml+='</div>';
+    document.body.insertAdjacentHTML('beforeend',modalHtml);
+  };
 
   console.log('✓ Teacher Panel Ready');
 })();

@@ -373,7 +373,7 @@ function setupSheet() {
     return;
   }
   
-  const sheetNames = ["Rosters", "Polls", "LiveStatus", "Responses"];
+  const sheetNames = ["Classes", "Rosters", "Polls", "LiveStatus", "Responses"];
   sheetNames.forEach(name => {
     if (!ss.getSheetByName(name)) {
       ss.insertSheet(name);
@@ -381,12 +381,16 @@ function setupSheet() {
   });
 
   // Set up headers
+  const classesSheet = ss.getSheetByName("Classes");
+  classesSheet.getRange("A1:B1").setValues([["ClassName", "Description"]])
+    .setFontWeight("bold").setBackground("#4285f4").setFontColor("#ffffff");
+
   const rostersSheet = ss.getSheetByName("Rosters");
   rostersSheet.getRange("A1:C1").setValues([["ClassName", "StudentName", "StudentEmail"]])
     .setFontWeight("bold").setBackground("#4285f4").setFontColor("#ffffff");
-  
+
   const pollsSheet = ss.getSheetByName("Polls");
-  pollsSheet.getRange("A1:E1").setValues([["PollID", "PollName", "ClassName", "QuestionIndex", "QuestionDataJSON"]])
+  pollsSheet.getRange("A1:G1").setValues([["PollID", "PollName", "ClassName", "QuestionIndex", "QuestionDataJSON", "CreatedAt", "UpdatedAt"]])
     .setFontWeight("bold").setBackground("#4285f4").setFontColor("#ffffff");
   
   const liveSheet = ss.getSheetByName("LiveStatus");
@@ -399,7 +403,7 @@ function setupSheet() {
     .setFontWeight("bold").setBackground("#4285f4").setFontColor("#ffffff");
   
   // Freeze header rows
-  [rostersSheet, pollsSheet, liveSheet, responsesSheet].forEach(sheet => {
+  [classesSheet, rostersSheet, pollsSheet, liveSheet, responsesSheet].forEach(sheet => {
     sheet.setFrozenRows(1);
   });
   
@@ -477,14 +481,247 @@ function uploadImageToDrive(dataUrl, fileName) {
 function getTeacherDashboardData() {
   return withErrorHandling(() => {
     const classes = getClasses_();
-    const polls = DataAccess.polls.getAll();
-    
+    const polls = DataAccess.polls.getAll()
+      .map(poll => ({
+        ...poll,
+        questionCount: poll.questions.length,
+        createdAt: poll.createdAt || '',
+        updatedAt: poll.updatedAt || ''
+      }));
+
+    polls.sort((a, b) => {
+      const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+      const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+      return bTime - aTime;
+    });
+
     Logger.log('Dashboard data loaded', { classCount: classes.length, pollCount: polls.length });
-    
+
     return {
       classes: classes,
       polls: polls
     };
+  })();
+}
+
+function getPollForEditing(pollId) {
+  return withErrorHandling(() => {
+    if (!pollId) {
+      throw new Error('Poll ID is required');
+    }
+
+    const poll = DataAccess.polls.getById(pollId);
+    if (!poll) {
+      throw new Error('Poll not found');
+    }
+
+    const questions = poll.questions.map(question => ({
+      questionText: question.questionText || '',
+      questionImageURL: question.questionImageURL || null,
+      options: (question.options || []).map(opt => ({
+        text: opt.text || '',
+        imageURL: opt.imageURL || null
+      })),
+      correctAnswer: question.correctAnswer || null,
+      timerSeconds: question.timerSeconds || null
+    }));
+
+    return {
+      pollId: poll.pollId,
+      pollName: poll.pollName,
+      className: poll.className,
+      createdAt: poll.createdAt || '',
+      updatedAt: poll.updatedAt || '',
+      questions: questions
+    };
+  })();
+}
+
+function getRosterManagerData() {
+  return withErrorHandling(() => {
+    const classes = getClasses_();
+    const rosterData = {};
+    classes.forEach(className => {
+      rosterData[className] = getRoster_(className);
+    });
+
+    return {
+      classes: classes,
+      rosters: rosterData
+    };
+  })();
+}
+
+function createClassRecord(className, description) {
+  return withErrorHandling(() => {
+    if (!className || className.trim() === '') {
+      throw new Error('Class name is required');
+    }
+
+    ensureClassExists_(className.trim(), description || '');
+    CacheManager.invalidate('CLASSES_LIST');
+
+    Logger.log('Class created', { className: className });
+
+    return getRosterManagerData();
+  })();
+}
+
+function saveRoster(className, rosterEntries) {
+  return withErrorHandling(() => {
+    if (!className || className.trim() === '') {
+      throw new Error('Class name is required');
+    }
+
+    if (!Array.isArray(rosterEntries)) {
+      throw new Error('Roster entries must be an array');
+    }
+
+    const cleanedEntries = rosterEntries
+      .map(entry => ({
+        name: (entry.name || '').toString().trim(),
+        email: (entry.email || '').toString().trim()
+      }))
+      .filter(entry => entry.name !== '' && entry.email !== '');
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const rosterSheet = ss.getSheetByName('Rosters');
+    if (!rosterSheet) {
+      throw new Error('Rosters sheet not found');
+    }
+
+    // Remove existing entries for the class
+    const values = getDataRangeValues_(rosterSheet);
+    for (let i = values.length - 1; i >= 0; i--) {
+      if (values[i][0] === className) {
+        rosterSheet.deleteRow(i + 2);
+      }
+    }
+
+    if (cleanedEntries.length > 0) {
+      const rows = cleanedEntries.map(entry => [className, entry.name, entry.email]);
+      rosterSheet.getRange(rosterSheet.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+    }
+
+    ensureClassExists_(className);
+
+    CacheManager.invalidate(['CLASSES_LIST']);
+
+    Logger.log('Roster saved', { className: className, studentCount: cleanedEntries.length });
+
+    return getRosterManagerData();
+  })();
+}
+
+function renameClass(oldName, newName) {
+  return withErrorHandling(() => {
+    if (!oldName || !newName) {
+      throw new Error('Both current and new class names are required');
+    }
+
+    const normalizedNewName = newName.trim();
+    if (normalizedNewName === '') {
+      throw new Error('New class name cannot be empty');
+    }
+
+    if (oldName === normalizedNewName) {
+      return getRosterManagerData();
+    }
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const classesSheet = ss.getSheetByName('Classes');
+    if (classesSheet && classesSheet.getLastRow() >= 2) {
+      const values = classesSheet.getRange(2, 1, classesSheet.getLastRow() - 1, 2).getValues();
+      for (let i = 0; i < values.length; i++) {
+        if (values[i][0] === oldName) {
+          classesSheet.getRange(i + 2, 1, 1, 1).setValue(normalizedNewName);
+        }
+      }
+    }
+
+    const rosterSheet = ss.getSheetByName('Rosters');
+    const rosterValues = getDataRangeValues_(rosterSheet);
+    for (let i = 0; i < rosterValues.length; i++) {
+      if (rosterValues[i][0] === oldName) {
+        rosterSheet.getRange(i + 2, 1).setValue(normalizedNewName);
+      }
+    }
+
+    const pollSheet = ss.getSheetByName('Polls');
+    const pollValues = getDataRangeValues_(pollSheet);
+    for (let i = 0; i < pollValues.length; i++) {
+      if (pollValues[i][2] === oldName) {
+        pollSheet.getRange(i + 2, 3).setValue(normalizedNewName);
+      }
+    }
+
+    const props = PropertiesService.getScriptProperties();
+    const tokenMapStr = props.getProperty('STUDENT_TOKENS') || '{}';
+    const tokenMap = JSON.parse(tokenMapStr);
+    let tokensUpdated = false;
+    Object.keys(tokenMap).forEach(token => {
+      const data = tokenMap[token];
+      if (data.className === oldName) {
+        data.className = normalizedNewName;
+        tokensUpdated = true;
+      }
+    });
+    if (tokensUpdated) {
+      props.setProperty('STUDENT_TOKENS', JSON.stringify(tokenMap));
+    }
+
+    CacheManager.invalidate(['CLASSES_LIST', 'ALL_POLLS_DATA']);
+
+    Logger.log('Class renamed', { from: oldName, to: normalizedNewName });
+
+    return getRosterManagerData();
+  })();
+}
+
+function deleteClassRecord(className) {
+  return withErrorHandling(() => {
+    if (!className) {
+      throw new Error('Class name is required');
+    }
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const classesSheet = ss.getSheetByName('Classes');
+    if (classesSheet && classesSheet.getLastRow() >= 2) {
+      const values = classesSheet.getRange(2, 1, classesSheet.getLastRow() - 1, 1).getValues();
+      for (let i = values.length - 1; i >= 0; i--) {
+        if (values[i][0] === className) {
+          classesSheet.deleteRow(i + 2);
+        }
+      }
+    }
+
+    const rosterSheet = ss.getSheetByName('Rosters');
+    const rosterValues = getDataRangeValues_(rosterSheet);
+    for (let i = rosterValues.length - 1; i >= 0; i--) {
+      if (rosterValues[i][0] === className) {
+        rosterSheet.deleteRow(i + 2);
+      }
+    }
+
+    const props = PropertiesService.getScriptProperties();
+    const tokenMapStr = props.getProperty('STUDENT_TOKENS') || '{}';
+    const tokenMap = JSON.parse(tokenMapStr);
+    let mutated = false;
+    Object.keys(tokenMap).forEach(token => {
+      if (tokenMap[token].className === className) {
+        delete tokenMap[token];
+        mutated = true;
+      }
+    });
+    if (mutated) {
+      props.setProperty('STUDENT_TOKENS', JSON.stringify(tokenMap));
+    }
+
+    CacheManager.invalidate(['CLASSES_LIST', 'ALL_POLLS_DATA']);
+
+    Logger.log('Class deleted', { className: className });
+
+    return getRosterManagerData();
   })();
 }
 
@@ -493,31 +730,20 @@ function createNewPoll(pollName, className, questions) {
     if (!pollName || !className || !Array.isArray(questions) || questions.length === 0) {
       throw new Error('Invalid poll data: name, class, and questions are required');
     }
-    
+
     if (questions.length > 50) {
       throw new Error('Maximum 50 questions per poll');
     }
-    
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const pollSheet = ss.getSheetByName("Polls");
+
     const pollId = "P-" + Utilities.getUuid();
-    
-    const newRows = questions.map((q, index) => {
-      return [
-        pollId,
-        pollName,
-        className,
-        index,
-        JSON.stringify(q)
-      ];
-    });
-    
-    pollSheet.getRange(pollSheet.getLastRow() + 1, 1, newRows.length, newRows[0].length).setValues(newRows);
-    
+    const timestamp = new Date().toISOString();
+
+    writePollRows_(pollId, pollName, className, questions, timestamp, timestamp);
+
     CacheManager.invalidate('ALL_POLLS_DATA');
-    
+
     Logger.log('Poll created', { pollId: pollId, pollName: pollName, questionCount: questions.length });
-    
+
     return DataAccess.polls.getAll();
   })();
 }
@@ -528,31 +754,20 @@ function saveDraft(pollData) {
     if (!pollName || !className || !Array.isArray(questions) || questions.length === 0) {
       throw new Error('Invalid poll data: name, class, and questions are required');
     }
-    
+
     if (questions.length > 50) {
       throw new Error('Maximum 50 questions per poll');
     }
-    
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const pollSheet = ss.getSheetByName("Polls");
+
     const pollId = "D-" + Utilities.getUuid(); // "D" for Draft
-    
-    const newRows = questions.map((q, index) => {
-      return [
-        pollId,
-        pollName,
-        className,
-        index,
-        JSON.stringify(q)
-      ];
-    });
-    
-    pollSheet.getRange(pollSheet.getLastRow() + 1, 1, newRows.length, newRows[0].length).setValues(newRows);
-    
+    const timestamp = new Date().toISOString();
+
+    writePollRows_(pollId, pollName, className, questions, timestamp, timestamp);
+
     CacheManager.invalidate('ALL_POLLS_DATA');
-    
+
     Logger.log('Draft saved', { pollId: pollId, pollName: pollName, questionCount: questions.length });
-    
+
     return { success: true };
   })();
 }
@@ -563,31 +778,20 @@ function savePollNew(pollData) {
     if (!pollName || !className || !Array.isArray(questions) || questions.length === 0) {
       throw new Error('Invalid poll data: name, class, and questions are required');
     }
-    
+
     if (questions.length > 50) {
       throw new Error('Maximum 50 questions per poll');
     }
-    
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const pollSheet = ss.getSheetByName("Polls");
+
     const pollId = "P-" + Utilities.getUuid();
-    
-    const newRows = questions.map((q, index) => {
-      return [
-        pollId,
-        pollName,
-        className,
-        index,
-        JSON.stringify(q)
-      ];
-    });
-    
-    pollSheet.getRange(pollSheet.getLastRow() + 1, 1, newRows.length, newRows[0].length).setValues(newRows);
-    
+    const timestamp = new Date().toISOString();
+
+    writePollRows_(pollId, pollName, className, questions, timestamp, timestamp);
+
     CacheManager.invalidate('ALL_POLLS_DATA');
-    
+
     Logger.log('Poll created via new editor', { pollId: pollId, pollName: pollName, questionCount: questions.length });
-    
+
     return DataAccess.polls.getAll();
   })();
 }
@@ -604,6 +808,60 @@ function startPoll(pollId) {
     Logger.log('Poll started', { pollId: pollId, pollName: poll.pollName });
     
     return getLivePollData(pollId, 0);
+  })();
+}
+
+function updatePoll(pollId, pollName, className, questions) {
+  return withErrorHandling(() => {
+    if (!pollId || !pollName || !className || !Array.isArray(questions) || questions.length === 0) {
+      throw new Error('Invalid poll data: poll ID, name, class, and questions are required');
+    }
+
+    if (questions.length > 50) {
+      throw new Error('Maximum 50 questions per poll');
+    }
+
+    removePollRows_(pollId);
+
+    const existingPoll = DataAccess.polls.getById(pollId);
+    const createdAt = existingPoll && existingPoll.createdAt ? existingPoll.createdAt : new Date().toISOString();
+    const updatedAt = new Date().toISOString();
+
+    writePollRows_(pollId, pollName, className, questions, createdAt, updatedAt);
+
+    CacheManager.invalidate('ALL_POLLS_DATA');
+
+    Logger.log('Poll updated', { pollId: pollId, pollName: pollName, questionCount: questions.length });
+
+    return DataAccess.polls.getAll();
+  })();
+}
+
+function deletePoll(pollId) {
+  return withErrorHandling(() => {
+    if (!pollId) {
+      throw new Error('Poll ID is required');
+    }
+
+    removePollRows_(pollId);
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const responsesSheet = ss.getSheetByName('Responses');
+    if (responsesSheet) {
+      const values = getDataRangeValues_(responsesSheet);
+      for (let i = values.length - 1; i >= 0; i--) {
+        const rowIndex = i + 2;
+        if (values[i][2] === pollId) {
+          responsesSheet.deleteRow(rowIndex);
+        }
+      }
+    }
+
+    CacheManager.invalidate('ALL_POLLS_DATA');
+
+    Logger.log('Poll deleted', { pollId: pollId });
+
+    return DataAccess.polls.getAll();
   })();
 }
 
@@ -675,12 +933,144 @@ function closePoll() {
   return withErrorHandling(() => {
     const currentStatus = DataAccess.liveStatus.get();
     const pollId = currentStatus[0];
-    
+
     DataAccess.liveStatus.set("", -1, "CLOSED");
-    
+
     Logger.log('Poll closed completely', { pollId: pollId });
-    
+
     return { status: "CLOSED" };
+  })();
+}
+
+
+function getArchivedPolls() {
+  return withErrorHandling(() => {
+    const polls = DataAccess.polls.getAll();
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const responsesSheet = ss.getSheetByName('Responses');
+    const responseValues = responsesSheet ? getDataRangeValues_(responsesSheet) : [];
+
+    const responsesByPoll = new Map();
+
+    responseValues.forEach(row => {
+      const pollId = row[2];
+      const questionIndex = typeof row[3] === 'number' ? row[3] : parseInt(row[3], 10);
+      if (isNaN(questionIndex)) {
+        return;
+      }
+      const studentEmail = (row[4] || '').toString().trim();
+      const answer = row[5];
+      const isCorrectRaw = row[6];
+      const timestamp = row[1];
+
+      if (!responsesByPoll.has(pollId)) {
+        responsesByPoll.set(pollId, {
+          responses: new Map(),
+          violations: new Map(),
+          latestTimestamp: 0
+        });
+      }
+
+      const pollEntry = responsesByPoll.get(pollId);
+      if (timestamp && typeof timestamp === 'number') {
+        pollEntry.latestTimestamp = Math.max(pollEntry.latestTimestamp, timestamp);
+      }
+
+      if (questionIndex === -1 && answer === 'VIOLATION_LOCKED') {
+        pollEntry.violations.set(studentEmail, true);
+        return;
+      }
+
+      if (!pollEntry.responses.has(questionIndex)) {
+        pollEntry.responses.set(questionIndex, []);
+      }
+
+      const isCorrect = (isCorrectRaw === true) || (isCorrectRaw === 'TRUE') || (isCorrectRaw === 'true') || (isCorrectRaw === 1);
+
+      pollEntry.responses.get(questionIndex).push({
+        email: studentEmail,
+        answer: answer,
+        isCorrect: isCorrect,
+        timestamp: timestamp
+      });
+    });
+
+    const archivedPolls = polls.map(poll => {
+      const pollResponses = responsesByPoll.get(poll.pollId) || { responses: new Map(), violations: new Map(), latestTimestamp: 0 };
+      const roster = DataAccess.roster.getByClass(poll.className);
+      const rosterMap = new Map(roster.map(student => [student.email, student.name]));
+      const violationsSet = new Set(Array.from(pollResponses.violations.keys()));
+
+      const questions = poll.questions.map((question, index) => {
+        const submissions = pollResponses.responses.get(index) || [];
+        const responsesDetailed = submissions.map(submission => ({
+          email: submission.email,
+          name: rosterMap.get(submission.email) || submission.email,
+          answer: submission.answer,
+          isCorrect: submission.isCorrect,
+          violation: violationsSet.has(submission.email),
+          timestamp: submission.timestamp || null
+        }));
+
+        const respondedEmails = new Set(responsesDetailed.map(response => response.email));
+        const nonResponders = roster
+          .filter(student => !respondedEmails.has(student.email))
+          .map(student => ({
+            email: student.email,
+            name: student.name,
+            violation: violationsSet.has(student.email)
+          }));
+
+        const correctCount = responsesDetailed.filter(response => response.isCorrect).length;
+        const incorrectCount = responsesDetailed.filter(response => !response.isCorrect).length;
+        const violationCount = responsesDetailed.filter(response => response.violation).length + nonResponders.filter(student => student.violation).length;
+
+        return {
+          index: index,
+          questionText: question.questionText,
+          questionImageURL: question.questionImageURL || null,
+          correctAnswer: question.correctAnswer || null,
+          timerSeconds: question.timerSeconds || null,
+          responses: responsesDetailed,
+          nonResponders: nonResponders,
+          summary: {
+            totalStudents: roster.length,
+            responded: responsesDetailed.length,
+            correct: correctCount,
+            incorrect: incorrectCount,
+            noResponse: nonResponders.length,
+            violations: violationCount
+          }
+        };
+      });
+
+      const latestTimestamp = pollResponses.latestTimestamp || 0;
+      const lastRunAt = latestTimestamp ? new Date(latestTimestamp).toISOString() : poll.updatedAt || poll.createdAt || '';
+
+      return {
+        pollId: poll.pollId,
+        pollName: poll.pollName,
+        className: poll.className,
+        createdAt: poll.createdAt || '',
+        updatedAt: poll.updatedAt || '',
+        lastRunAt: lastRunAt,
+        questions: questions,
+        questionCount: poll.questions.length,
+        totalResponses: questions.reduce((sum, q) => sum + q.responses.length, 0),
+        totalStudents: roster.length,
+        violations: Array.from(violationsSet)
+      };
+    });
+
+    archivedPolls.sort((a, b) => {
+      const aTime = a.lastRunAt ? new Date(a.lastRunAt).getTime() : 0;
+      const bTime = b.lastRunAt ? new Date(b.lastRunAt).getTime() : 0;
+      return bTime - aTime;
+    });
+
+    Logger.log('Archived poll data generated', { count: archivedPolls.length });
+
+    return archivedPolls;
   })();
 }
 
@@ -773,7 +1163,8 @@ function getLivePollData(pollId, questionIndex) {
       results: answerCounts,
       studentStatusList: studentStatusList,
       totalStudents: roster.length,
-      totalResponses: submittedAnswers.size
+      totalResponses: submittedAnswers.size,
+      timerSeconds: question.timerSeconds || null
     };
   })();
 }
@@ -1180,30 +1571,123 @@ function getPolls_() {
       const pollId = row[0];
       const pollName = row[1];
       const className = row[2];
+      const questionIndex = typeof row[3] === 'number' ? row[3] : parseInt(row[3], 10) || 0;
+      const createdAt = row[5] || '';
+      const updatedAt = row[6] || createdAt || '';
       const questionData = normalizeQuestionObject_(JSON.parse(row[4] || "{}"));
+      questionData.index = questionIndex;
 
       if (!pollsMap.has(pollId)) {
         pollsMap.set(pollId, {
           pollId: pollId,
           pollName: pollName,
           className: className,
+          createdAt: createdAt,
+          updatedAt: updatedAt,
           questions: []
         });
       }
-      
-      pollsMap.get(pollId).questions.push(questionData);
+
+      const pollEntry = pollsMap.get(pollId);
+      pollEntry.questions.push(questionData);
+      pollEntry.questionCount = pollEntry.questions.length;
     });
-    
+
     return Array.from(pollsMap.values());
   }, CacheManager.CACHE_TIMES.LONG);
+}
+
+function writePollRows_(pollId, pollName, className, questions, createdAt, updatedAt) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const pollSheet = ss.getSheetByName('Polls');
+  if (!pollSheet) {
+    throw new Error('Polls sheet not found. Run setupSheet() first.');
+  }
+
+  const payload = questions.map((q, index) => [
+    pollId,
+    pollName,
+    className,
+    index,
+    JSON.stringify(q),
+    createdAt,
+    updatedAt
+  ]);
+
+  if (payload.length === 0) {
+    return;
+  }
+
+  const startRow = pollSheet.getLastRow() + 1;
+  pollSheet.getRange(startRow, 1, payload.length, payload[0].length).setValues(payload);
+}
+
+function removePollRows_(pollId) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const pollSheet = ss.getSheetByName('Polls');
+  if (!pollSheet) {
+    return;
+  }
+
+  const values = getDataRangeValues_(pollSheet);
+  for (let i = values.length - 1; i >= 0; i--) {
+    if (values[i][0] === pollId) {
+      pollSheet.deleteRow(i + 2);
+    }
+  }
+}
+
+function ensureClassExists_(className, description) {
+  if (!className) {
+    return;
+  }
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const classesSheet = ss.getSheetByName('Classes');
+  if (!classesSheet) {
+    return;
+  }
+
+  const trimmedName = className.toString().trim();
+  if (trimmedName === '') {
+    return;
+  }
+
+  const lastRow = classesSheet.getLastRow();
+  if (lastRow >= 2) {
+    const existingNames = classesSheet.getRange(2, 1, lastRow - 1, 1).getValues()
+      .map(row => row[0])
+      .filter(name => name);
+    if (existingNames.includes(trimmedName)) {
+      return;
+    }
+  }
+
+  classesSheet.appendRow([trimmedName, description || '']);
 }
 
 function getClasses_() {
   return CacheManager.get('CLASSES_LIST', () => {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    const classesSheet = ss.getSheetByName("Classes");
+    if (classesSheet && classesSheet.getLastRow() >= 2) {
+      const values = classesSheet.getRange(2, 1, classesSheet.getLastRow() - 1, 1).getValues();
+      return values
+        .map(row => row[0])
+        .filter(name => name && name.toString().trim() !== '')
+        .map(name => name.toString().trim())
+        .filter((value, index, arr) => arr.indexOf(value) === index)
+        .sort();
+    }
+
     const rosterSheet = ss.getSheetByName("Rosters");
     const values = getDataRangeValues_(rosterSheet);
-    const classNames = new Set(values.map(row => row[0]));
+    const classNames = new Set(
+      values
+        .map(row => row[0])
+        .filter(name => name && name.toString().trim() !== '')
+    );
     return Array.from(classNames).sort();
   }, CacheManager.CACHE_TIMES.LONG);
 }
@@ -1215,7 +1699,8 @@ function getRoster_(className) {
 
   return values
     .filter(row => row[0] === className)
-    .map(row => ({ name: row[1], email: row[2] }))
+    .map(row => ({ name: (row[1] || '').toString().trim(), email: (row[2] || '').toString().trim() }))
+    .filter(entry => entry.name !== '' && entry.email !== '')
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 

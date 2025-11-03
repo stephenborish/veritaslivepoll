@@ -167,11 +167,48 @@
             </div>
           </aside>
 
-          <div class="lg:col-span-2 flex items-center justify-center">
-            <div class="text-center">
-              <span class="material-symbols-outlined text-6xl text-primary dark:text-brand-white mb-4 inline-block">ballot</span>
-              <h2 class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white mb-2">Welcome to Veritas Live Poll</h2>
-              <p class="text-brand-dark-gray/60 dark:text-brand-white/60">Select a poll and click "Start Poll" to begin</p>
+          <div class="lg:col-span-2 flex flex-col gap-6">
+            <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm">
+              <div class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h2 class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white mb-1">Poll Library</h2>
+                  <p class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm">Sort, filter, edit, or delete any poll.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-3">
+                  <label class="flex items-center gap-2 text-sm text-brand-dark-gray/70 dark:text-brand-white/70">
+                    <span class="hidden sm:inline">Sort by</span>
+                    <select id="poll-sort-select" class="rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+                      <option value="updated_desc">Latest activity</option>
+                      <option value="updated_asc">Oldest activity</option>
+                      <option value="name_asc">Name A → Z</option>
+                      <option value="class_asc">Class A → Z</option>
+                    </select>
+                  </label>
+                  <label class="flex items-center gap-2 text-sm text-brand-dark-gray/70 dark:text-brand-white/70">
+                    <span class="hidden sm:inline">Class</span>
+                    <select id="poll-filter-select" class="rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+                      <option value="all">All classes</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+              <div class="mt-4 overflow-hidden rounded-lg border border-brand-light-gray/70 dark:border-brand-dark-gray/50">
+                <table class="min-w-full divide-y divide-brand-light-gray/70 dark:divide-brand-dark-gray/50 text-sm">
+                  <thead class="bg-brand-light-gray/40 dark:bg-brand-dark-gray/40 text-brand-dark-gray/70 dark:text-brand-white/60">
+                    <tr>
+                      <th class="px-4 py-2 text-left font-semibold">Poll</th>
+                      <th class="px-4 py-2 text-left font-semibold">Class</th>
+                      <th class="px-4 py-2 text-left font-semibold">Questions</th>
+                      <th class="px-4 py-2 text-left font-semibold">Last Edited</th>
+                      <th class="px-4 py-2 text-right font-semibold">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="polls-table-body" class="divide-y divide-brand-light-gray/60 dark:divide-brand-dark-gray/40 bg-brand-white dark:bg-brand-dark-gray/30"></tbody>
+                </table>
+                <div id="polls-empty-state" class="p-6 text-center text-brand-dark-gray/60 dark:text-brand-white/60 hidden">
+                  <p>No polls found. Create your first poll to get started.</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -222,7 +259,7 @@
                 </div>
                 <button id="restart-timer-btn" class="flex items-center justify-center gap-2 h-10 px-4 rounded-full bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors">
                   <span class="material-symbols-outlined text-xl">restart_alt</span>
-                  <span>Restart Timer</span>
+                  <span>Apply Timer</span>
                 </button>
               </div>
             </div>
@@ -236,26 +273,118 @@
             </div>
           </aside>
         </div>
+
+        <!-- Roster Manager View -->
+        <div id="roster-manager" class="p-6 grid grid-cols-1 lg:grid-cols-4 gap-6" style="display: none;">
+          <div class="lg:col-span-1 bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-5 shadow-sm flex flex-col">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-bold text-brand-dark-gray dark:text-brand-white">Classes</h2>
+              <button id="add-class-btn" class="flex items-center justify-center h-9 w-9 rounded-full bg-primary text-brand-white hover:bg-primary/90 transition-colors" title="Add class">
+                <span class="material-symbols-outlined text-base">add</span>
+              </button>
+            </div>
+            <div id="roster-class-list" class="flex-1 overflow-y-auto space-y-2">
+              <!-- Classes will render here -->
+            </div>
+          </div>
+          <div class="lg:col-span-3 bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+              <div>
+                <h2 id="roster-class-title" class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">Select a class</h2>
+                <p class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm">Manage student names and emails for rostered classes.</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button id="rename-class-btn" class="hidden h-9 px-4 rounded-lg bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-sm font-semibold hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors">Rename</button>
+                <button id="delete-class-btn" class="hidden h-9 px-4 rounded-lg bg-red-600/10 text-red-600 dark:text-red-300 dark:bg-red-500/20 text-sm font-semibold hover:bg-red-600/20 dark:hover:bg-red-500/30 transition-colors">Delete</button>
+              </div>
+            </div>
+            <div id="roster-empty-state" class="border border-dashed border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg p-10 text-center text-brand-dark-gray/60 dark:text-brand-white/60">
+              <p>Choose a class on the left to view its roster.</p>
+            </div>
+            <div id="roster-table-wrapper" class="hidden flex flex-col gap-4">
+              <div class="overflow-x-auto border border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg">
+                <table class="min-w-full divide-y divide-brand-light-gray dark:divide-brand-dark-gray text-sm">
+                  <thead class="bg-brand-light-gray/50 dark:bg-brand-dark-gray/40 text-brand-dark-gray dark:text-brand-white">
+                    <tr>
+                      <th class="px-4 py-2 text-left font-semibold w-1/2">Student Name</th>
+                      <th class="px-4 py-2 text-left font-semibold w-1/2">Email</th>
+                      <th class="px-4 py-2 text-center font-semibold w-16">Remove</th>
+                    </tr>
+                  </thead>
+                  <tbody id="roster-table-body" class="divide-y divide-brand-light-gray/70 dark:divide-brand-dark-gray/50"></tbody>
+                </table>
+              </div>
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                  <button id="add-student-row-btn" class="h-10 px-4 rounded-lg bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-sm font-semibold hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors">+ Add Student</button>
+                  <span id="roster-status" class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60"></span>
+                </div>
+                <button id="save-roster-btn" class="h-10 px-5 rounded-lg bg-primary text-brand-white text-sm font-bold hover:bg-primary/90 transition-colors">Save Roster</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Archived Polls View -->
+        <div id="archived-view" class="p-6 grid grid-cols-1 lg:grid-cols-4 gap-6" style="display: none;">
+          <div class="lg:col-span-1 bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-5 shadow-sm flex flex-col">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-bold text-brand-dark-gray dark:text-brand-white">Archived Polls</h2>
+              <button id="refresh-archived-btn" class="flex items-center justify-center h-9 w-9 rounded-full bg-primary text-brand-white hover:bg-primary/90 transition-colors" title="Refresh">
+                <span class="material-symbols-outlined text-base">refresh</span>
+              </button>
+            </div>
+            <label class="block text-xs font-semibold uppercase tracking-wide text-brand-dark-gray/60 dark:text-brand-white/60 mb-2">Class Filter</label>
+            <select id="archived-class-filter" class="mb-4 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+              <option value="all">All classes</option>
+            </select>
+            <div id="archived-list" class="flex-1 overflow-y-auto space-y-2">
+              <!-- Archived polls list -->
+            </div>
+          </div>
+          <div class="lg:col-span-3 bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm">
+            <div id="archived-empty-state" class="border border-dashed border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg p-10 text-center text-brand-dark-gray/60 dark:text-brand-white/60">
+              <p>Select an archived poll to review student performance.</p>
+            </div>
+            <div id="archived-detail" class="hidden flex flex-col gap-6">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 id="archived-poll-title" class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white"></h2>
+                  <p id="archived-poll-meta" class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm"></p>
+                </div>
+                <div class="text-right text-sm text-brand-dark-gray/60 dark:text-brand-white/60">
+                  <p><span class="font-semibold text-brand-dark-gray dark:text-brand-white">Questions:</span> <span id="archived-question-count"></span></p>
+                  <p><span class="font-semibold text-brand-dark-gray dark:text-brand-white">Responses:</span> <span id="archived-response-count"></span></p>
+                </div>
+              </div>
+              <div id="archived-questions-container" class="space-y-4">
+                <!-- Question breakdowns will render here -->
+              </div>
+            </div>
+          </div>
+        </div>
       </main>
 
       <!-- Right Sidebar Navigation -->
       <aside class="w-64 bg-primary flex-col items-center p-4 border-l border-primary/20 hidden lg:flex">
         <nav class="flex flex-col w-full gap-2">
           <button id="nav-polls-list" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-brand-white/10 text-brand-white hover:bg-brand-white/20 font-semibold transition-colors text-left">
-            <span class="material-symbols-outlined">ballot</span>
-            <span>Polls List</span>
+            <span class="material-symbols-outlined">monitoring</span>
+            <span>Live Dashboard</span>
           </button>
           <button id="nav-create-poll" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-brand-white/70 hover:bg-brand-white/20 hover:text-brand-white transition-colors text-left">
             <span class="material-symbols-outlined">add_circle</span>
             <span>Create New Poll</span>
           </button>
-        </nav>
-        <div class="mt-auto w-full">
-          <button id="nav-settings" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-brand-white/70 hover:bg-brand-white/20 hover:text-brand-white transition-colors text-left w-full">
-            <span class="material-symbols-outlined">settings</span>
-            <span>Settings</span>
+          <button id="nav-rosters" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-brand-white/70 hover:bg-brand-white/20 hover:text-brand-white transition-colors text-left">
+            <span class="material-symbols-outlined">group</span>
+            <span>Classes &amp; Rosters</span>
           </button>
-        </div>
+          <button id="nav-archived" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-brand-white/70 hover:bg-brand-white/20 hover:text-brand-white transition-colors text-left">
+            <span class="material-symbols-outlined">inventory_2</span>
+            <span>Archived Polls</span>
+          </button>
+        </nav>
       </aside>
     </div>
   </div>
@@ -339,47 +468,155 @@
   var questionTimer=null;
   var visualTimerInterval=null;
   var isPaused=false;
+  var isLiveSession=false;
   var questionCounter=0;
   var questions=[];
   var selectedQuestionIndex=0;
+  var editingPollId=null;
+  var isPollDirty=false;
+  var pollSortMode='updated_desc';
+  var pollClassFilter='all';
+  var rosterData={};
+  var selectedRosterClass='';
+  var rosterDirty=false;
+  var archivedPolls=[];
+  var archivedClassFilter='all';
+  var selectedArchivedPollId='';
+  var BASE_CLASSES=[];
 
   // --- Element Cache ---
   var pollSelect=document.getElementById('poll-select');
   var startPollBtn=document.getElementById('start-poll-btn');
   var dashboard=document.getElementById('dashboard');
   var liveView=document.getElementById('live-view');
+  var rosterManager=document.getElementById('roster-manager');
+  var archivedView=document.getElementById('archived-view');
   var headerDefault=document.getElementById('header-default');
   var headerLive=document.getElementById('header-live');
   var modal=document.getElementById('poll-creator-modal');
   var linksModal=document.getElementById('student-links-modal');
+  var pollSortSelect=document.getElementById('poll-sort-select');
+  var pollFilterSelect=document.getElementById('poll-filter-select');
+  var pollsTableBody=document.getElementById('polls-table-body');
+  var pollsEmptyState=document.getElementById('polls-empty-state');
+  var classSelect=document.getElementById('class-select');
+  var archivedClassFilterSelect=document.getElementById('archived-class-filter');
+  var archivedList=document.getElementById('archived-list');
+  var archivedEmptyState=document.getElementById('archived-empty-state');
+  var archivedDetail=document.getElementById('archived-detail');
+  var archivedPollTitle=document.getElementById('archived-poll-title');
+  var archivedPollMeta=document.getElementById('archived-poll-meta');
+  var archivedQuestionCount=document.getElementById('archived-question-count');
+  var archivedResponseCount=document.getElementById('archived-response-count');
+  var archivedQuestionsContainer=document.getElementById('archived-questions-container');
+  var rosterClassList=document.getElementById('roster-class-list');
+  var rosterClassTitle=document.getElementById('roster-class-title');
+  var rosterEmptyState=document.getElementById('roster-empty-state');
+  var rosterTableWrapper=document.getElementById('roster-table-wrapper');
+  var rosterTableBody=document.getElementById('roster-table-body');
+  var rosterStatus=document.getElementById('roster-status');
+  var renameClassBtn=document.getElementById('rename-class-btn');
+  var deleteClassBtn=document.getElementById('delete-class-btn');
+  var addClassBtn=document.getElementById('add-class-btn');
+  var addStudentRowBtn=document.getElementById('add-student-row-btn');
+  var saveRosterBtn=document.getElementById('save-roster-btn');
+  var refreshArchivedBtn=document.getElementById('refresh-archived-btn');
 
   // --- Initialization ---
   google.charts.load('current',{'packages':['corechart']});
   google.charts.setOnLoadCallback(loadInitialData);
 
   // --- Event Listeners ---
-  document.getElementById('open-creator-btn').onclick=openPollCreator;
-  document.getElementById('nav-create-poll').onclick=openPollCreator;
+  document.getElementById('open-creator-btn').onclick=function(){openPollCreator();};
+  document.getElementById('nav-create-poll').onclick=function(){openPollCreator();};
   document.getElementById('nav-polls-list').onclick=showDashboard;
+  document.getElementById('nav-rosters').onclick=showRosterManager;
+  document.getElementById('nav-archived').onclick=showArchivedView;
   document.getElementById('close-modal-btn').onclick=closePollCreator;
   document.getElementById('close-links-modal-btn').onclick=closeLinksModal;
   document.getElementById('add-question-btn').onclick=addQuestion;
   document.getElementById('save-poll-btn').onclick=savePoll;
+  document.getElementById('new-poll-name').addEventListener('input',markPollDirty);
+  classSelect.addEventListener('change',markPollDirty);
   startPollBtn.onclick=onStartPoll;
-  document.getElementById('header-start-btn').onclick=onStartPoll;
+  document.getElementById('header-start-btn').onclick=onResumePoll;
   document.getElementById('header-pause-btn').onclick=onStopPoll;
   document.getElementById('header-stop-btn').onclick=onEndPoll;
   document.getElementById('header-next-btn').onclick=onNextQuestion;
   document.getElementById('header-skip-btn').onclick=onNextQuestion;
-  document.getElementById('restart-timer-btn').onclick=onRestartTimer;
+  document.getElementById('restart-timer-btn').onclick=onApplyTimer;
   document.getElementById('send-link-btn').onclick=onSendLink;
   document.getElementById('view-links-btn').onclick=onViewLinks;
+  pollSelect.onchange=onPollSelectChange;
+  pollSortSelect.onchange=function(){pollSortMode=this.value;refreshPollViews();};
+  pollFilterSelect.onchange=function(){pollClassFilter=this.value;refreshPollViews();};
+  archivedClassFilterSelect.onchange=function(){archivedClassFilter=this.value;renderArchivedList();};
+  addClassBtn.onclick=onAddClass;
+  addStudentRowBtn.onclick=addRosterRow;
+  saveRosterBtn.onclick=saveRoster;
+  renameClassBtn.onclick=onRenameClass;
+  deleteClassBtn.onclick=onDeleteClass;
+  refreshArchivedBtn.onclick=function(){loadArchivedPolls(true);};
+
+  function setMainSection(section){
+    dashboard.style.display=section==='dashboard'?'grid':'none';
+    liveView.style.display=section==='live'?'grid':'none';
+    rosterManager.style.display=section==='roster'?'grid':'none';
+    archivedView.style.display=section==='archived'?'grid':'none';
+  }
+
+  function clearLiveIntervals(){
+    if(pollInterval){
+      clearInterval(pollInterval);
+      pollInterval=null;
+    }
+    if(questionTimer){
+      clearTimeout(questionTimer);
+      questionTimer=null;
+    }
+    stopVisualTimer();
+  }
 
   function showDashboard(){
-    dashboard.style.display='grid';
-    liveView.style.display='none';
+    clearLiveIntervals();
+    isLiveSession=false;
+    CURRENT_POLL_DATA={};
     headerDefault.style.display='flex';
     headerLive.style.display='none';
+    setMainSection('dashboard');
+  }
+
+  function showRosterManager(){
+    clearLiveIntervals();
+    headerDefault.style.display='flex';
+    headerLive.style.display='none';
+    setMainSection('roster');
+    if(Object.keys(rosterData).length===0){
+      loadRosterData();
+    } else {
+      renderRosterClassList();
+      if(selectedRosterClass){
+        renderRosterTable();
+      } else {
+        rosterEmptyState.classList.remove('hidden');
+        rosterTableWrapper.classList.add('hidden');
+        renameClassBtn.classList.add('hidden');
+        deleteClassBtn.classList.add('hidden');
+      }
+    }
+  }
+
+  function showArchivedView(){
+    clearLiveIntervals();
+    headerDefault.style.display='flex';
+    headerLive.style.display='none';
+    setMainSection('archived');
+    if(archivedPolls.length===0){
+      loadArchivedPolls();
+    } else {
+      renderArchivedList();
+      renderArchivedDetail();
+    }
   }
 
   // --- Initial Data Load ---
@@ -392,10 +629,45 @@
 
   function onDashboardDataLoaded(data){
     mainLoader.style.display='none';
-    ALL_CLASSES=data.classes||[];
     ALL_POLLS=data.polls||[];
+    refreshClassOptions(data.classes||[]);
+    refreshPollViews();
+  }
 
-    var classSelect=document.getElementById('class-select');
+  function updatePollDropdown(polls){
+    polls=polls||getFilteredSortedPolls();
+    var previousValue=pollSelect.value;
+    pollSelect.innerHTML='<option value="">-- Choose a poll --</option>';
+    var hasSelection=false;
+    polls.forEach(function(poll){
+      var opt=document.createElement('option');
+      opt.value=poll.pollId;
+      opt.textContent=poll.pollName+' ('+poll.className+') - '+poll.questions.length+' questions';
+      if(poll.pollId===previousValue){
+        opt.selected=true;
+        hasSelection=true;
+      }
+      pollSelect.appendChild(opt);
+    });
+    if(!hasSelection){
+      pollSelect.value='';
+    }
+    onPollSelectChange();
+  }
+
+  function refreshClassOptions(classList){
+    BASE_CLASSES=(classList||[]).map(function(name){return (name||'').toString().trim();}).filter(function(name){return name!=='';});
+    var classSet=new Set();
+    BASE_CLASSES.forEach(function(name){classSet.add(name);});
+    Object.keys(rosterData).forEach(function(name){if(name)classSet.add(name);});
+    ALL_POLLS.forEach(function(poll){
+      if(poll.className){
+        classSet.add(poll.className);
+      }
+    });
+    ALL_CLASSES=Array.from(classSet).sort();
+
+    var previousSelection=classSelect.value;
     classSelect.innerHTML='<option value="">-- Select Class --</option>';
     ALL_CLASSES.forEach(function(className){
       var opt=document.createElement('option');
@@ -403,20 +675,181 @@
       opt.textContent=className;
       classSelect.appendChild(opt);
     });
+    if(previousSelection&&ALL_CLASSES.indexOf(previousSelection)!==-1){
+      classSelect.value=previousSelection;
+    } else {
+      classSelect.value='';
+    }
 
-    updatePollDropdown();
+    updateClassFilters();
   }
 
-  function updatePollDropdown(){
-    pollSelect.innerHTML='<option value="">-- Choose a poll --</option>';
-    ALL_POLLS.forEach(function(poll){
+  function updateClassFilters(){
+    var previousPollFilter=pollClassFilter;
+    pollFilterSelect.innerHTML='<option value="all">All classes</option>';
+    ALL_CLASSES.forEach(function(className){
       var opt=document.createElement('option');
-      opt.value=poll.pollId;
-      opt.textContent=poll.pollName+' ('+poll.className+') - '+poll.questions.length+' questions';
-      pollSelect.appendChild(opt);
+      opt.value=className;
+      opt.textContent=className;
+      pollFilterSelect.appendChild(opt);
     });
-    pollSelect.onchange=onPollSelectChange;
-    onPollSelectChange();
+    if(previousPollFilter&&ALL_CLASSES.indexOf(previousPollFilter)!==-1){
+      pollClassFilter=previousPollFilter;
+    } else {
+      pollClassFilter='all';
+    }
+    pollFilterSelect.value=pollClassFilter;
+
+    var previousArchivedFilter=archivedClassFilter;
+    archivedClassFilterSelect.innerHTML='<option value="all">All classes</option>';
+    ALL_CLASSES.forEach(function(className){
+      var opt=document.createElement('option');
+      opt.value=className;
+      opt.textContent=className;
+      archivedClassFilterSelect.appendChild(opt);
+    });
+    if(previousArchivedFilter&&ALL_CLASSES.indexOf(previousArchivedFilter)!==-1){
+      archivedClassFilter=previousArchivedFilter;
+    } else {
+      archivedClassFilter='all';
+    }
+    archivedClassFilterSelect.value=archivedClassFilter;
+  }
+
+  function getFilteredSortedPolls(){
+    var list=ALL_POLLS.slice();
+    if(pollClassFilter!=='all'){
+      list=list.filter(function(poll){return poll.className===pollClassFilter;});
+    }
+
+    list.sort(function(a,b){
+      switch(pollSortMode){
+        case 'updated_asc':
+          return getPollTimestamp(a)-getPollTimestamp(b);
+        case 'name_asc':
+          return (a.pollName||'').localeCompare(b.pollName||'');
+        case 'class_asc':
+          var classCompare=(a.className||'').localeCompare(b.className||'');
+          if(classCompare!==0)return classCompare;
+          return (a.pollName||'').localeCompare(b.pollName||'');
+        case 'updated_desc':
+        default:
+          return getPollTimestamp(b)-getPollTimestamp(a);
+      }
+    });
+    return list;
+  }
+
+  function getPollTimestamp(poll){
+    var value=poll && (poll.updatedAt||poll.lastRunAt||poll.createdAt||'');
+    var time=value?Date.parse(value):NaN;
+    return isNaN(time)?0:time;
+  }
+
+  function refreshPollViews(){
+    var polls=getFilteredSortedPolls();
+    renderPollTable(polls);
+    updatePollDropdown(polls);
+    if(polls.length===0){
+      pollsEmptyState.classList.remove('hidden');
+    } else {
+      pollsEmptyState.classList.add('hidden');
+    }
+  }
+
+  function startEditPoll(pollId,triggerButton){
+    if(!pollId)return;
+    var button=triggerButton||null;
+    var originalLabel=button?button.innerHTML:'';
+    if(button){
+      button.disabled=true;
+      button.textContent='Loading...';
+    }
+
+    google.script.run
+      .withSuccessHandler(function(poll){
+        if(button){
+          button.disabled=false;
+          button.innerHTML=originalLabel;
+        }
+        openPollCreator(poll);
+      })
+      .withFailureHandler(function(error){
+        if(button){
+          button.disabled=false;
+          button.innerHTML=originalLabel;
+        }
+        handleError(error);
+      })
+      .getPollForEditing(pollId);
+  }
+
+  function renderPollTable(polls){
+    polls=polls||getFilteredSortedPolls();
+    pollsTableBody.innerHTML='';
+
+    if(polls.length===0){
+      return;
+    }
+
+    polls.forEach(function(poll){
+      var row=document.createElement('tr');
+      row.className='hover:bg-brand-light-gray/40 dark:hover:bg-brand-dark-gray/40 transition-colors';
+      var lastEdited=formatDateTime(poll.updatedAt||poll.lastRunAt||poll.createdAt);
+      var createdLabel=poll.createdAt?formatDateTime(poll.createdAt):'—';
+      var htmlParts=[];
+      htmlParts.push('<td class="px-4 py-3 align-top">');
+      htmlParts.push('<div class="font-semibold text-brand-dark-gray dark:text-brand-white">'+escapeHtml(poll.pollName||'Untitled Poll')+'</div>');
+      htmlParts.push('<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/50">Created '+createdLabel+'</div>');
+      htmlParts.push('</td>');
+      htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">'+escapeHtml(poll.className||'—')+'</td>');
+      htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">'+(poll.questions?poll.questions.length:0)+'</td>');
+      htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">'+lastEdited+'</td>');
+      htmlParts.push('<td class="px-4 py-3 align-top">');
+      htmlParts.push('<div class="flex justify-end gap-2">');
+      htmlParts.push('<button class="poll-select-btn h-8 px-3 rounded-md bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-xs font-semibold hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors" data-poll-id="'+poll.pollId+'">Select</button>');
+      htmlParts.push('<button class="poll-edit-btn h-8 px-3 rounded-md bg-primary text-brand-white text-xs font-semibold hover:bg-primary/90 transition-colors" data-poll-id="'+poll.pollId+'">Edit</button>');
+      htmlParts.push('<button class="poll-delete-btn h-8 px-3 rounded-md bg-red-600/10 text-red-600 dark:text-red-300 dark:bg-red-500/20 text-xs font-semibold hover:bg-red-600/20 dark:hover:bg-red-500/30 transition-colors" data-poll-id="'+poll.pollId+'">Delete</button>');
+      htmlParts.push('</div>');
+      htmlParts.push('</td>');
+      row.innerHTML=htmlParts.join('');
+      pollsTableBody.appendChild(row);
+    });
+
+    pollsTableBody.querySelectorAll('.poll-select-btn').forEach(function(btn){
+      btn.onclick=function(){
+        var id=this.dataset.pollId;
+        pollSelect.value=id;
+        onPollSelectChange();
+        showDashboard();
+      };
+    });
+
+    pollsTableBody.querySelectorAll('.poll-edit-btn').forEach(function(btn){
+      btn.onclick=function(){
+        startEditPoll(this.dataset.pollId,this);
+      };
+    });
+
+    pollsTableBody.querySelectorAll('.poll-delete-btn').forEach(function(btn){
+      btn.onclick=function(){
+        var id=this.dataset.pollId;
+        if(confirm('Delete this poll permanently? This will also remove all responses.')){
+          google.script.run
+            .withSuccessHandler(function(polls){
+              refreshPollData(polls);
+            })
+            .withFailureHandler(handleError)
+            .deletePoll(id);
+        }
+      };
+    });
+  }
+
+  function refreshPollData(polls){
+    ALL_POLLS=polls||[];
+    refreshClassOptions(BASE_CLASSES);
+    refreshPollViews();
   }
 
   function onPollSelectChange(){
@@ -437,16 +870,408 @@
     }
   }
 
+  // --- Roster Management ---
+  function loadRosterData(){
+    rosterStatus.textContent='Loading roster...';
+    google.script.run
+      .withSuccessHandler(function(data){
+        rosterStatus.textContent='';
+        onRosterDataLoaded(data, selectedRosterClass);
+      })
+      .withFailureHandler(function(error){
+        rosterStatus.textContent='';
+        handleError(error);
+      })
+      .getRosterManagerData();
+  }
+
+  function onRosterDataLoaded(data, focusClass){
+    rosterDirty=false;
+    rosterData=data&&data.rosters?data.rosters:{};
+    refreshClassOptions((data&&data.classes)||BASE_CLASSES);
+
+    if(focusClass){
+      selectedRosterClass=focusClass;
+    }
+
+    if(selectedRosterClass && !rosterData[selectedRosterClass]){
+      selectedRosterClass='';
+    }
+
+    renderRosterClassList();
+
+    if(selectedRosterClass){
+      renderRosterTable();
+    } else {
+      rosterClassTitle.textContent='Select a class';
+      rosterEmptyState.classList.remove('hidden');
+      rosterTableWrapper.classList.add('hidden');
+      renameClassBtn.classList.add('hidden');
+      deleteClassBtn.classList.add('hidden');
+      rosterStatus.textContent='';
+    }
+  }
+
+  function renderRosterClassList(){
+    rosterClassList.innerHTML='';
+    if(ALL_CLASSES.length===0){
+      rosterClassList.innerHTML='<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No classes yet. Click the + button to add one.</p>';
+      return;
+    }
+
+    ALL_CLASSES.forEach(function(className){
+      var button=document.createElement('button');
+      button.type='button';
+      var isActive=className===selectedRosterClass;
+      button.className='w-full text-left px-3 py-2 rounded-lg transition-colors '+(isActive?'bg-primary text-brand-white shadow-sm':'bg-brand-light-gray/40 dark:bg-brand-dark-gray/30 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray/60 dark:hover:bg-brand-dark-gray/50');
+      button.textContent=className;
+      button.onclick=function(){
+        selectRosterClass(className);
+      };
+      rosterClassList.appendChild(button);
+    });
+  }
+
+  function selectRosterClass(className){
+    selectedRosterClass=className;
+    rosterDirty=false;
+    rosterStatus.textContent='';
+    renderRosterClassList();
+    renderRosterTable();
+  }
+
+  function renderRosterTable(){
+    if(!selectedRosterClass){
+      return;
+    }
+
+    var entries=rosterData[selectedRosterClass]||[];
+    rosterData[selectedRosterClass]=entries;
+
+    if(entries.length===0){
+      entries.push({name:'',email:''});
+    }
+
+    rosterClassTitle.textContent=selectedRosterClass;
+    rosterEmptyState.classList.add('hidden');
+    rosterTableWrapper.classList.remove('hidden');
+    renameClassBtn.classList.remove('hidden');
+    deleteClassBtn.classList.remove('hidden');
+
+    rosterTableBody.innerHTML='';
+    entries.forEach(function(entry,index){
+      var row=document.createElement('tr');
+      row.innerHTML=
+        '<td class="px-4 py-2 align-top">'+
+          '<input type="text" class="roster-name-input w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" data-index="'+index+'" placeholder="Student Name" value="'+escapeHtml(entry.name||'')+'" />'+
+        '</td>'+
+        '<td class="px-4 py-2 align-top">'+
+          '<input type="email" class="roster-email-input w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" data-index="'+index+'" placeholder="email@example.com" value="'+escapeHtml(entry.email||'')+'" />'+
+        '</td>'+
+        '<td class="px-4 py-2 align-top text-center">'+
+          '<button class="remove-roster-row-btn h-8 w-8 rounded-full bg-red-600/10 text-red-600 dark:text-red-300 dark:bg-red-500/20 hover:bg-red-600/20 dark:hover:bg-red-500/30 transition-colors" data-index="'+index+'" title="Remove">'+
+            '<span class="material-symbols-outlined text-base">close</span>'+
+          '</button>'+
+        '</td>';
+      rosterTableBody.appendChild(row);
+    });
+
+    rosterTableBody.querySelectorAll('.roster-name-input').forEach(function(input){
+      input.oninput=function(){
+        var idx=parseInt(this.dataset.index,10);
+        rosterData[selectedRosterClass][idx].name=this.value;
+        markRosterDirty();
+      };
+    });
+
+    rosterTableBody.querySelectorAll('.roster-email-input').forEach(function(input){
+      input.oninput=function(){
+        var idx=parseInt(this.dataset.index,10);
+        rosterData[selectedRosterClass][idx].email=this.value;
+        markRosterDirty();
+      };
+    });
+
+    rosterTableBody.querySelectorAll('.remove-roster-row-btn').forEach(function(btn){
+      btn.onclick=function(){
+        var idx=parseInt(this.dataset.index,10);
+        removeRosterRow(idx);
+      };
+    });
+  }
+
+  function markRosterDirty(){
+    rosterDirty=true;
+    rosterStatus.textContent='Unsaved changes';
+  }
+
+  function addRosterRow(){
+    if(!selectedRosterClass){
+      alert('Select a class first.');
+      return;
+    }
+    if(!rosterData[selectedRosterClass]){
+      rosterData[selectedRosterClass]=[];
+    }
+    rosterData[selectedRosterClass].push({name:'',email:''});
+    markRosterDirty();
+    renderRosterTable();
+  }
+
+  function removeRosterRow(index){
+    if(!selectedRosterClass)return;
+    var entries=rosterData[selectedRosterClass]||[];
+    if(entries.length>index){
+      entries.splice(index,1);
+      markRosterDirty();
+      if(entries.length===0){
+        entries.push({name:'',email:''});
+      }
+      renderRosterTable();
+    }
+  }
+
+  function saveRoster(){
+    if(!selectedRosterClass){
+      alert('Select a class to save.');
+      return;
+    }
+
+    var entries=(rosterData[selectedRosterClass]||[]).map(function(entry){
+      return {
+        name:(entry.name||'').trim(),
+        email:(entry.email||'').trim()
+      };
+    }).filter(function(entry){
+      return entry.name!==''&&entry.email!=='';
+    });
+
+    saveRosterBtn.disabled=true;
+    rosterStatus.textContent='Saving roster...';
+
+    google.script.run
+      .withSuccessHandler(function(data){
+        saveRosterBtn.disabled=false;
+        rosterStatus.textContent='Roster saved.';
+        rosterDirty=false;
+        onRosterDataLoaded(data, selectedRosterClass);
+      })
+      .withFailureHandler(function(error){
+        saveRosterBtn.disabled=false;
+        handleError(error);
+      })
+      .saveRoster(selectedRosterClass, entries);
+  }
+
+  function onAddClass(){
+    var className=prompt('Class name');
+    if(!className)return;
+    className=className.trim();
+    if(className==='')return;
+    rosterStatus.textContent='Creating class...';
+    google.script.run
+      .withSuccessHandler(function(data){
+        rosterStatus.textContent='Class created.';
+        selectedRosterClass=className;
+        onRosterDataLoaded(data, className);
+      })
+      .withFailureHandler(function(error){
+        rosterStatus.textContent='';
+        handleError(error);
+      })
+      .createClassRecord(className,'');
+  }
+
+  function onRenameClass(){
+    if(!selectedRosterClass){
+      alert('Select a class first.');
+      return;
+    }
+    var newName=prompt('Rename class', selectedRosterClass);
+    if(!newName)return;
+    newName=newName.trim();
+    if(newName===''){return;}
+    if(newName===selectedRosterClass)return;
+    rosterStatus.textContent='Renaming class...';
+    google.script.run
+      .withSuccessHandler(function(data){
+        rosterStatus.textContent='Class renamed.';
+        selectedRosterClass=newName;
+        onRosterDataLoaded(data, newName);
+      })
+      .withFailureHandler(function(error){
+        rosterStatus.textContent='';
+        handleError(error);
+      })
+      .renameClass(selectedRosterClass,newName);
+  }
+
+  function onDeleteClass(){
+    if(!selectedRosterClass){
+      alert('Select a class first.');
+      return;
+    }
+    if(!confirm('Delete class "'+selectedRosterClass+'" and remove all students?'))return;
+    rosterStatus.textContent='Deleting class...';
+    var classToDelete=selectedRosterClass;
+    google.script.run
+      .withSuccessHandler(function(data){
+        rosterStatus.textContent='Class deleted.';
+        selectedRosterClass='';
+        onRosterDataLoaded(data, '');
+      })
+      .withFailureHandler(function(error){
+        rosterStatus.textContent='';
+        handleError(error);
+      })
+      .deleteClassRecord(classToDelete);
+  }
+
+  // --- Archived Polls ---
+  function loadArchivedPolls(force){
+    if(archivedPolls.length>0&&!force){
+      renderArchivedList();
+      renderArchivedDetail();
+      return;
+    }
+
+    archivedList.innerHTML='<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">Loading archived polls...</p>';
+    archivedEmptyState.classList.remove('hidden');
+    archivedDetail.classList.add('hidden');
+
+    google.script.run
+      .withSuccessHandler(function(polls){
+        archivedPolls=polls||[];
+        if(archivedPolls.length>0){
+          if(!archivedPolls.some(function(p){return p.pollId===selectedArchivedPollId;})){
+            selectedArchivedPollId=archivedPolls[0].pollId;
+          }
+        } else {
+          selectedArchivedPollId='';
+        }
+        renderArchivedList();
+        renderArchivedDetail();
+      })
+      .withFailureHandler(handleError)
+      .getArchivedPolls();
+  }
+
+  function renderArchivedList(){
+    archivedList.innerHTML='';
+    var filtered=archivedClassFilter==='all'?archivedPolls:archivedPolls.filter(function(poll){return poll.className===archivedClassFilter;});
+
+    if(filtered.length===0){
+      archivedList.innerHTML='<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No archived polls for this filter.</p>';
+      archivedEmptyState.classList.remove('hidden');
+      archivedDetail.classList.add('hidden');
+      return;
+    }
+
+    filtered.forEach(function(poll){
+      var button=document.createElement('button');
+      button.type='button';
+      var isActive=poll.pollId===selectedArchivedPollId;
+      button.className='w-full text-left px-3 py-2 rounded-lg transition-colors '+(isActive?'bg-primary text-brand-white shadow-sm':'bg-brand-light-gray/40 dark:bg-brand-dark-gray/30 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray/60 dark:hover:bg-brand-dark-gray/50');
+      var metaText=(poll.className||'Unassigned')+' • '+formatDateTime(poll.lastRunAt||poll.updatedAt||poll.createdAt);
+      button.innerHTML='<div class="font-semibold">'+escapeHtml(poll.pollName||'Untitled Poll')+'</div><div class="text-xs opacity-80">'+escapeHtml(metaText)+'</div>';
+      button.onclick=function(){
+        selectedArchivedPollId=poll.pollId;
+        renderArchivedList();
+        renderArchivedDetail();
+      };
+      archivedList.appendChild(button);
+    });
+  }
+
+  function renderArchivedDetail(){
+    var poll=archivedPolls.find(function(p){return p.pollId===selectedArchivedPollId;});
+    if(!poll){
+      archivedEmptyState.classList.remove('hidden');
+      archivedDetail.classList.add('hidden');
+      return;
+    }
+
+    archivedEmptyState.classList.add('hidden');
+    archivedDetail.classList.remove('hidden');
+
+    archivedPollTitle.textContent=poll.pollName||'Untitled Poll';
+    archivedPollMeta.textContent=(poll.className||'Unassigned')+' • Last run '+formatDateTime(poll.lastRunAt||poll.updatedAt||poll.createdAt);
+    archivedQuestionCount.textContent=poll.questionCount||0;
+    archivedResponseCount.textContent=(poll.totalResponses||0)+' of '+(poll.totalStudents||0);
+
+    archivedQuestionsContainer.innerHTML='';
+    poll.questions.forEach(function(question,index){
+      var card=document.createElement('div');
+      card.className='border border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg p-4 bg-brand-white dark:bg-brand-dark-gray/40';
+      var summary=question.summary||{correct:0,incorrect:0,noResponse:0,violations:0};
+      var responses=Array.isArray(question.responses)?question.responses:[];
+      var nonResponders=Array.isArray(question.nonResponders)?question.nonResponders:[];
+      summary.correct=summary.correct||0;
+      summary.incorrect=summary.incorrect||0;
+      summary.noResponse=summary.noResponse||0;
+      summary.violations=summary.violations||0;
+
+      var responsesHtml='';
+      if(responses.length===0){
+        responsesHtml='<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No responses recorded.</p>';
+      } else {
+        responsesHtml='<table class="min-w-full text-sm divide-y divide-brand-light-gray dark:divide-brand-dark-gray/40"><thead class="text-xs uppercase tracking-wide text-brand-dark-gray/60 dark:text-brand-white/50"><tr><th class="py-2 text-left">Student</th><th class="py-2 text-left">Answer</th><th class="py-2 text-left">Status</th></tr></thead><tbody class="divide-y divide-brand-light-gray/70 dark:divide-brand-dark-gray/40">';
+        responses.forEach(function(response){
+          var status=response.violation?'Violation':(response.isCorrect?'Correct':'Incorrect');
+          var statusClass=response.violation?'text-orange-600 dark:text-orange-300':(response.isCorrect?'text-green-600 dark:text-green-300':'text-red-600 dark:text-red-300');
+          responsesHtml+='<tr><td class="py-2 pr-3">'+escapeHtml(response.name||response.email)+'</td><td class="py-2 pr-3">'+escapeHtml(response.answer||'—')+'</td><td class="py-2 pr-3 '+statusClass+'">'+status+'</td></tr>';
+        });
+        responsesHtml+='</tbody></table>';
+      }
+
+      var nonResponderHtml='';
+      if(nonResponders.length>0){
+        nonResponderHtml='<div class="mt-3"><h4 class="text-xs font-semibold uppercase text-brand-dark-gray/60 dark:text-brand-white/60">No Response</h4><div class="flex flex-wrap gap-2 mt-1">';
+        nonResponders.forEach(function(student){
+          var chipClass=student.violation?'bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-200':'bg-brand-light-gray text-brand-dark-gray dark:bg-brand-dark-gray/50 dark:text-brand-white/80';
+          nonResponderHtml+='<span class="px-2 py-1 rounded-full text-xs '+chipClass+'">'+escapeHtml(student.name||student.email)+'</span>';
+        });
+        nonResponderHtml+='</div></div>';
+      }
+
+      var imageHtml=question.questionImageURL?'<div class="mt-3"><img src="'+escapeHtml(question.questionImageURL)+'" class="max-h-48 rounded-lg object-contain" alt="Question image" /></div>':'';
+      var questionHtml='<div><h3 class="font-serif text-lg text-brand-dark-gray dark:text-brand-white">Question '+(index+1)+'</h3><p class="text-sm text-brand-dark-gray/70 dark:text-brand-white/70 mt-1">'+escapeHtml(question.questionText||'')+'</p></div>';
+      var summaryHtml='<div class="text-sm text-brand-dark-gray/70 dark:text-brand-white/70 text-right">'+
+        '<p><span class="font-semibold text-brand-dark-gray dark:text-brand-white">Correct:</span> '+summary.correct+'</p>'+
+        '<p><span class="font-semibold text-brand-dark-gray dark:text-brand-white">Incorrect:</span> '+summary.incorrect+'</p>'+
+        '<p><span class="font-semibold text-brand-dark-gray dark:text-brand-white">No Response:</span> '+summary.noResponse+'</p>'+
+        '<p><span class="font-semibold text-brand-dark-gray dark:text-brand-white">Violations:</span> '+summary.violations+'</p>'+
+      '</div>';
+      card.innerHTML='<div class="flex flex-wrap items-start justify-between gap-3">'+questionHtml+summaryHtml+'</div>'+imageHtml+'<div class="mt-4">'+responsesHtml+'</div>'+nonResponderHtml;
+
+      archivedQuestionsContainer.appendChild(card);
+    });
+  }
+
   // --- Poll Lifecycle Controls ---
   function onStartPoll(){
     var pollId=pollSelect.value;
     if(!pollId){alert("Please select a poll first.");return;}
     startPollBtn.disabled=true;
-    startMasterTimer();
+    clearLiveIntervals();
+    isPaused=false;
+    isLiveSession=true;
     google.script.run
       .withSuccessHandler(updateLiveView)
       .withFailureHandler(handleError)
       .startPoll(pollId);
+  }
+
+  function onResumePoll(){
+    if(pollInterval)clearInterval(pollInterval);
+    clearTimeout(questionTimer);
+    stopVisualTimer();
+    isPaused=false;
+    isLiveSession=true;
+    google.script.run
+      .withSuccessHandler(updateLiveView)
+      .withFailureHandler(handleError)
+      .resumePoll();
   }
 
   function onStopPoll(){
@@ -463,8 +1288,9 @@
 
   function onNextQuestion(){
     if(pollInterval)clearInterval(pollInterval);
+    clearTimeout(questionTimer);
+    stopVisualTimer();
     isPaused=false;
-    startMasterTimer();
     google.script.run
       .withSuccessHandler(updateLiveView)
       .withFailureHandler(handleError)
@@ -473,22 +1299,25 @@
 
   function onEndPoll(){
     if(!confirm('Are you sure you want to end this poll completely?'))return;
-    clearTimeout(questionTimer);
-    stopVisualTimer();
-    if(pollInterval)clearInterval(pollInterval);
+    showDashboard();
     google.script.run
       .withSuccessHandler(function(data){
-        showDashboard();
+        if(data&&data.status!=='CLOSED'){
+          showDashboard();
+        }
       })
       .withFailureHandler(handleError)
       .closePoll();
   }
 
-  function onRestartTimer(){
+  function onApplyTimer(){
     var timerInput=document.getElementById('poll-timer-input');
     var seconds=parseInt(timerInput.value,10);
     if(seconds>0&&seconds<=600){
       startMasterTimer();
+    } else {
+      clearTimeout(questionTimer);
+      stopVisualTimer();
     }
   }
 
@@ -497,6 +1326,12 @@
     mainLoader.style.display='none';
     startPollBtn.disabled=false;
 
+    if(!data){return;}
+
+    if(!isLiveSession && data.status!=="CLOSED"){
+      return;
+    }
+
     if(data.status==="CLOSED"){
       showDashboard();
       return;
@@ -504,14 +1339,19 @@
 
     if(data.error){handleError(data.error);return;}
 
-    CURRENT_POLL_DATA.pollId=pollSelect.value;
+    var previousQuestionIndex=typeof CURRENT_POLL_DATA.questionIndex==='number'?CURRENT_POLL_DATA.questionIndex:null;
+    isPaused=data.status==='PAUSED';
+
+    CURRENT_POLL_DATA.pollId=data.pollId||pollSelect.value;
     CURRENT_POLL_DATA.questionIndex=data.questionIndex;
     CURRENT_POLL_DATA.correctAnswer=data.correctAnswer;
     CURRENT_POLL_DATA.totalQuestions=data.totalQuestions;
+    CURRENT_POLL_DATA.timerSeconds=data.timerSeconds||null;
+
+    var questionChanged=previousQuestionIndex===null||data.questionIndex!==previousQuestionIndex;
 
     // Show live view
-    dashboard.style.display='none';
-    liveView.style.display='grid';
+    setMainSection('live');
     headerDefault.style.display='none';
     headerLive.style.display='flex';
 
@@ -528,6 +1368,21 @@
     } else {
       document.getElementById('header-start-btn').style.display='none';
       document.getElementById('header-pause-btn').style.display='flex';
+    }
+
+    var timerInput=document.getElementById('poll-timer-input');
+    if(timerInput&&questionChanged){
+      if(data.timerSeconds){
+        timerInput.value=data.timerSeconds;
+        if(!isPaused){
+          startMasterTimer();
+        }
+      } else {
+        timerInput.value='';
+        clearTimeout(questionTimer);
+        questionTimer=null;
+        stopVisualTimer();
+      }
     }
 
     // Update question display
@@ -690,7 +1545,7 @@
   }
 
   function pollForResults(){
-    if(isPaused)return;
+    if(isPaused||!isLiveSession)return;
     var pollId=CURRENT_POLL_DATA.pollId;
     var questionIndex=CURRENT_POLL_DATA.questionIndex;
     if(pollId===undefined||questionIndex===undefined)return;
@@ -708,10 +1563,12 @@
     var seconds=parseInt(timerInput.value,10);
 
     if(seconds>0&&seconds<=600){
+      isPaused=false;
       startVisualTimer(seconds);
       questionTimer=setTimeout(onStopPoll,seconds*1000);
     } else {
       stopVisualTimer();
+      questionTimer=null;
     }
   }
 
@@ -846,14 +1703,84 @@
     linksModal.style.display='none';
   }
 
+  function setSaveStatus(message){
+    var saveStatus=document.getElementById('save-status');
+    if(saveStatus){
+      saveStatus.textContent=message;
+    }
+  }
+
+  function markPollDirty(){
+    if(!isPollDirty){
+      isPollDirty=true;
+    }
+    setSaveStatus('Unsaved changes');
+  }
+
+  function resetPollDirty(message){
+    isPollDirty=false;
+    setSaveStatus(message||'All changes saved');
+  }
+
   // --- Poll Creator Modal ---
-  function openPollCreator(){
+  function openPollCreator(existingPoll){
+    var saveButton=document.getElementById('save-poll-btn');
+
     questionCounter=0;
     questions=[];
     selectedQuestionIndex=0;
-    document.getElementById('new-poll-name').value='';
-    document.getElementById('class-select').value='';
-    addQuestion();
+
+    if(existingPoll){
+      editingPollId=existingPoll.pollId;
+      document.getElementById('new-poll-name').value=existingPoll.pollName||'';
+      if(existingPoll.className){
+        refreshClassOptions(BASE_CLASSES.concat([existingPoll.className]));
+      }
+      classSelect.value=existingPoll.className||'';
+      questions=existingPoll.questions.map(function(question){
+        var answers=(question.options||[]).map(function(opt){
+          return {
+            text:opt.text||'',
+            image:opt.imageURL||null,
+            imageURL:opt.imageURL||null
+          };
+        });
+        if(answers.length<2){
+          while(answers.length<2){
+            answers.push({text:'',image:null,imageURL:null});
+          }
+        }
+        var correctIndex=0;
+        answers.forEach(function(answer,idx){
+          if(answer.text===question.correctAnswer){
+            correctIndex=idx;
+          }
+        });
+        return {
+          questionText:question.questionText||'',
+          questionImage:null,
+          questionImageURL:question.questionImageURL||null,
+          answers:answers,
+          correctAnswerIndex:correctIndex,
+          timerSeconds:question.timerSeconds||null
+        };
+      });
+      if(questions.length===0){
+        addQuestion(true);
+      }
+      questionCounter=questions.length;
+      selectedQuestionIndex=0;
+      saveButton.innerHTML='<span class="truncate">Save Changes</span>';
+      resetPollDirty('Editing existing poll');
+    } else {
+      editingPollId=null;
+      document.getElementById('new-poll-name').value='';
+      classSelect.value='';
+      addQuestion(true);
+      saveButton.innerHTML='<span class="truncate">Publish Poll</span>';
+      resetPollDirty('All changes saved');
+    }
+
     renderQuestionNavigator();
     renderQuestionWorkspace();
     modal.style.display='flex';
@@ -864,20 +1791,29 @@
     questions=[];
     questionCounter=0;
     selectedQuestionIndex=0;
+    editingPollId=null;
+    document.getElementById('save-poll-btn').innerHTML='<span class="truncate">Publish Poll</span>';
+    resetPollDirty('All changes saved');
   }
 
-  function addQuestion(){
+  function addQuestion(suppressDirty){
+    var skipDirty=suppressDirty===true;
     var newQuestion={
       questionText:'',
       questionImage:null,
+      questionImageURL:null,
       answers:[
-        {text:'',image:null},
-        {text:'',image:null}
+        {text:'',image:null,imageURL:null},
+        {text:'',image:null,imageURL:null}
       ],
-      correctAnswerIndex:0
+      correctAnswerIndex:0,
+      timerSeconds:null
     };
     questions.push(newQuestion);
     selectedQuestionIndex=questions.length-1;
+    if(!skipDirty){
+      markPollDirty();
+    }
     renderQuestionNavigator();
     renderQuestionWorkspace();
   }
@@ -891,6 +1827,7 @@
     selectedQuestionIndex=Math.max(0,Math.min(selectedQuestionIndex,questions.length-1));
     renderQuestionNavigator();
     renderQuestionWorkspace();
+    markPollDirty();
   }
 
   function renderQuestionNavigator(){
@@ -936,99 +1873,141 @@
   function renderQuestionWorkspace(){
     var workspace=document.getElementById('question-builder-workspace');
     var question=questions[selectedQuestionIndex];
-    
+
     var html='<div class="max-w-4xl mx-auto">';
     html+='<div class="flex flex-wrap justify-between gap-3 mb-6">';
     html+='<div class="flex min-w-72 flex-col gap-1">';
     html+='<p class="text-brand-dark-gray dark:text-brand-white tracking-light text-[32px] font-bold leading-tight">Question '+(selectedQuestionIndex+1)+'</p>';
     html+='<p class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm font-normal leading-normal">Edit the question and answer choices below.</p>';
     html+='</div></div>';
-    
+
     html+='<div class="bg-brand-white dark:bg-brand-dark-gray/20 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/30 p-6 shadow-sm mb-6">';
     html+='<label class="flex flex-col w-full">';
     html+='<p class="text-brand-dark-gray dark:text-brand-white text-base font-medium leading-normal pb-2">Question Text</p>';
-    html+='<textarea id="question-text-input" class="form-input flex w-full min-w-0 flex-1 resize-y overflow-hidden rounded-lg text-brand-dark-gray dark:text-brand-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 focus:border-primary min-h-36 placeholder:text-brand-dark-gray/50 dark:placeholder:text-brand-white/50 p-[15px] text-base font-normal leading-normal" placeholder="Type your question here...">'+escapeHtml(question.questionText)+'</textarea>';
+    html+='<textarea id="question-text-input" class="form-input flex w-full min-w-0 flex-1 resize-y overflow-hidden rounded-lg text-brand-dark-gray dark:text-brand-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 focus:border-primary min-h-36 placeholder:text-brand-dark-gray/50 dark:placeholder:text-brand-white/50 p-[15px] text-base font-normal leading-normal" placeholder="Type your question here...">'+escapeHtml(question.questionText||'')+'</textarea>';
     html+='</label>';
-    html+='<div class="flex mt-4">';
+    html+='<div class="flex mt-4 items-center gap-3 flex-wrap">';
     html+='<label class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-brand-light-gray dark:bg-brand-dark-gray/40 text-brand-dark-gray dark:text-brand-white gap-2 pl-3 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/60 transition-colors">';
     html+='<span class="material-symbols-outlined text-xl">image</span>';
     html+='<span class="truncate">Upload Image</span>';
     html+='<input type="file" class="hidden" accept="image/*" id="question-image-input">';
-    html+='</label></div>';
-    
-    if(question.questionImage){
-      html+='<img src="'+getImagePreviewUrl(question.questionImage)+'" class="mt-4 rounded-lg max-w-full h-auto"/>';
-    }
-    
+    html+='</label>';
     html+='</div>';
-    
+
+    var questionImagePreview=getImagePreviewUrl(question.questionImage||question.questionImageURL);
+    if(questionImagePreview){
+      html+='<div class="mt-4 flex flex-wrap items-center gap-3 bg-primary/5 dark:bg-primary/10 p-3 rounded-lg">';
+      html+='<img src="'+questionImagePreview+'" class="rounded-lg max-w-xs h-auto">';
+      html+='<button type="button" class="remove-question-image-btn h-9 px-4 rounded-lg bg-red-600/10 text-red-600 dark:text-red-300 dark:bg-red-500/20 text-sm font-semibold hover:bg-red-600/20 dark:hover:bg-red-500/30 transition-colors">Remove Image</button>';
+      html+='</div>';
+    }
+
+    html+='<div class="mt-4">';
+    html+='<label class="text-brand-dark-gray dark:text-brand-white text-sm font-medium leading-normal block pb-2" for="question-timer-input">Suggested Timer (seconds)</label>';
+    html+='<input id="question-timer-input" type="number" min="0" max="600" class="w-40 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" value="'+(question.timerSeconds||'')+'">';
+    html+='<p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-1">Leave blank to control the timer manually during the live poll.</p>';
+    html+='</div>';
+
+    html+='</div>';
+
     html+='<div class="bg-brand-white dark:bg-brand-dark-gray/20 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/30 p-6 shadow-sm">';
     html+='<p class="text-brand-dark-gray dark:text-brand-white text-base font-medium leading-normal pb-4">Answer Choices</p>';
     html+='<div class="flex flex-col gap-4">';
-    
+
     question.answers.forEach(function(answer,aIndex){
       html+=renderAnswerChoice(answer,aIndex,question.correctAnswerIndex===aIndex);
     });
-    
+
     html+='</div>';
     html+='<div class="mt-4">';
     html+='<button id="add-answer-btn" class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-brand-light-gray dark:bg-brand-dark-gray/40 text-brand-dark-gray dark:text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/60 transition-colors">';
     html+='<span class="truncate">+ Add Answer Choice</span>';
     html+='</button></div></div></div>';
-    
+
     workspace.innerHTML=html;
-    
-    // Attach event listeners
+
     document.getElementById('question-text-input').oninput=function(){
       questions[selectedQuestionIndex].questionText=this.value;
+      markPollDirty();
     };
-    
+
     var qImgInput=document.getElementById('question-image-input');
     if(qImgInput){
       qImgInput.onchange=function(){
         if(this.files&&this.files[0]){
           questions[selectedQuestionIndex].questionImage=this.files[0];
+          questions[selectedQuestionIndex].questionImageURL=null;
+          markPollDirty();
           renderQuestionWorkspace();
         }
       };
     }
-    
+
+    var removeQImgBtn=workspace.querySelector('.remove-question-image-btn');
+    if(removeQImgBtn){
+      removeQImgBtn.onclick=function(){
+        questions[selectedQuestionIndex].questionImage=null;
+        questions[selectedQuestionIndex].questionImageURL=null;
+        markPollDirty();
+        renderQuestionWorkspace();
+      };
+    }
+
+    var timerInput=document.getElementById('question-timer-input');
+    if(timerInput){
+      timerInput.oninput=function(){
+        var value=parseInt(this.value,10);
+        questions[selectedQuestionIndex].timerSeconds=isNaN(value)||value<=0?null:value;
+        markPollDirty();
+      };
+    }
+
     document.getElementById('add-answer-btn').onclick=function(){
-      questions[selectedQuestionIndex].answers.push({text:'',image:null});
+      questions[selectedQuestionIndex].answers.push({text:'',image:null,imageURL:null});
+      markPollDirty();
       renderQuestionWorkspace();
     };
-    
-    // Attach answer choice listeners
-    var answerInputs=workspace.querySelectorAll('.answer-text-input');
-    answerInputs.forEach(function(input,index){
+
+    workspace.querySelectorAll('.answer-text-input').forEach(function(input,index){
       input.oninput=function(){
         questions[selectedQuestionIndex].answers[index].text=this.value;
+        markPollDirty();
       };
     });
-    
-    var correctRadios=workspace.querySelectorAll('.correct-radio');
-    correctRadios.forEach(function(radio,index){
+
+    workspace.querySelectorAll('.correct-radio').forEach(function(radio,index){
       radio.onchange=function(){
         if(this.checked){
           questions[selectedQuestionIndex].correctAnswerIndex=index;
+          markPollDirty();
         }
       };
     });
-    
-    var deleteButtons=workspace.querySelectorAll('.delete-answer-btn');
-    deleteButtons.forEach(function(btn,index){
+
+    workspace.querySelectorAll('.delete-answer-btn').forEach(function(btn,index){
       btn.onclick=function(){
         deleteAnswer(index);
       };
     });
-    
-    var answerImageInputs=workspace.querySelectorAll('.answer-image-input');
-    answerImageInputs.forEach(function(input,index){
+
+    workspace.querySelectorAll('.answer-image-input').forEach(function(input,index){
       input.onchange=function(){
         if(this.files&&this.files[0]){
           questions[selectedQuestionIndex].answers[index].image=this.files[0];
+          questions[selectedQuestionIndex].answers[index].imageURL=null;
+          markPollDirty();
           renderQuestionWorkspace();
         }
+      };
+    });
+
+    workspace.querySelectorAll('.remove-answer-image-btn').forEach(function(btn){
+      btn.onclick=function(){
+        var idx=parseInt(this.dataset.index,10);
+        questions[selectedQuestionIndex].answers[idx].image=null;
+        questions[selectedQuestionIndex].answers[idx].imageURL=null;
+        markPollDirty();
+        renderQuestionWorkspace();
       };
     });
   }
@@ -1039,12 +2018,12 @@
     html+='<input class="correct-radio peer h-5 w-5 cursor-pointer appearance-none rounded-full border border-brand-light-gray dark:border-brand-white/30 checked:border-primary checked:bg-primary transition-all" name="correct_answer" type="radio" '+(isCorrect?'checked':'')+'/>';
     html+='<span class="material-symbols-outlined absolute text-brand-white transition-opacity opacity-0 peer-checked:opacity-100 text-sm">check</span>';
     html+='</label>';
-    html+='<input class="answer-text-input form-input flex-1 rounded-lg text-brand-dark-gray dark:text-brand-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 focus:border-primary placeholder:text-brand-dark-gray/50 dark:placeholder:text-brand-white/50 p-3 text-base" placeholder="Answer '+String.fromCharCode(65+index)+'" type="text" value="'+escapeHtml(answer.text)+'"/>';
+    html+='<input class="answer-text-input form-input flex-1 rounded-lg text-brand-dark-gray dark:text-brand-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 focus:border-primary placeholder:text-brand-dark-gray/50 dark:placeholder:text-brand-white/50 p-3 text-base" placeholder="Answer '+String.fromCharCode(65+index)+'" type="text" value="'+escapeHtml(answer.text||'')+'"/>';
     html+='<label class="p-2 rounded-lg hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10 transition-colors cursor-pointer" title="Upload image for this answer">';
     html+='<span class="material-symbols-outlined text-brand-dark-gray/60 dark:text-brand-white/60">image</span>';
     html+='<input type="file" class="answer-image-input hidden" accept="image/*">';
     html+='</label>';
-    
+
     if(questions[selectedQuestionIndex].answers.length>2){
       html+='<button class="delete-answer-btn p-2 rounded-lg hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10 transition-colors" title="Remove this answer">';
       html+='<span class="material-symbols-outlined text-brand-dark-gray/60 dark:text-brand-white/60">delete</span>';
@@ -1052,13 +2031,17 @@
     } else {
       html+='<div class="w-10"></div>';
     }
-    
+
     html+='</div>';
-    
-    if(answer.image){
-      html+='<img src="'+getImagePreviewUrl(answer.image)+'" class="mt-2 rounded-lg max-w-[200px] h-auto"/>';
+
+    var answerPreview=getImagePreviewUrl(answer.image||answer.imageURL);
+    if(answerPreview){
+      html+='<div class="mt-2 flex items-center gap-3 bg-primary/5 dark:bg-primary/10 p-2 rounded-lg">';
+      html+='<img src="'+answerPreview+'" class="rounded-md max-w-[160px] h-auto">';
+      html+='<button type="button" class="remove-answer-image-btn h-8 px-3 rounded-md bg-red-600/10 text-red-600 dark:text-red-300 dark:bg-red-500/20 text-xs font-semibold hover:bg-red-600/20 dark:hover:bg-red-500/30 transition-colors" data-index="'+index+'">Remove</button>';
+      html+='</div>';
     }
-    
+
     return html;
   }
 
@@ -1071,6 +2054,7 @@
     if(questions[selectedQuestionIndex].correctAnswerIndex>=index){
       questions[selectedQuestionIndex].correctAnswerIndex=Math.max(0,questions[selectedQuestionIndex].correctAnswerIndex-1);
     }
+    markPollDirty();
     renderQuestionWorkspace();
   }
 
@@ -1087,84 +2071,177 @@
   // --- Poll & Image Uploader ---
   function savePoll(){
     var savePollBtn=document.getElementById('save-poll-btn');
+    var defaultLabel=editingPollId?'<span class="truncate">Save Changes</span>':'<span class="truncate">Publish Poll</span>';
+
     savePollBtn.disabled=true;
     savePollBtn.innerHTML='<div class="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent"></div><span>Saving...</span>';
 
     var pollName=document.getElementById('new-poll-name').value.trim();
-    var className=document.getElementById('class-select').value;
+    var className=(classSelect.value||'').trim();
 
     if(!pollName||!className){
-      alert("Please enter a poll name and select a class.");
+      alert('Please enter a poll name and select a class.');
       savePollBtn.disabled=false;
-      savePollBtn.innerHTML='<span class="truncate">Publish Poll</span>';
+      savePollBtn.innerHTML=defaultLabel;
       return;
     }
 
     if(questions.length===0){
-      alert("Please add at least one question.");
+      alert('Please add at least one question.');
       savePollBtn.disabled=false;
-      savePollBtn.innerHTML='<span class="truncate">Publish Poll</span>';
+      savePollBtn.innerHTML=defaultLabel;
       return;
     }
 
-    var uploadTasks=[];
-    var questionsToSave=JSON.parse(JSON.stringify(questions));
+    var validationError='';
+    questions.forEach(function(question,index){
+      if(validationError)return;
+      var questionText=(question.questionText||'').trim();
+      if(questionText===''){
+        validationError='Question '+(index+1)+' needs question text.';
+        return;
+      }
+      var answerTexts=question.answers.map(function(answer){return(answer.text||'').trim();});
+      var filledAnswers=answerTexts.filter(function(text){return text!=='';});
+      if(filledAnswers.length<2){
+        validationError='Question '+(index+1)+' must include at least two answer choices with text.';
+        return;
+      }
+      var correctIndex=typeof question.correctAnswerIndex==='number'?question.correctAnswerIndex:0;
+      if(correctIndex<0||correctIndex>=answerTexts.length){
+        validationError='Question '+(index+1)+' has an invalid correct answer selection.';
+        return;
+      }
+      if(answerTexts[correctIndex]===''){
+        validationError='Question '+(index+1)+' must mark a correct answer with text.';
+      }
+    });
 
-    questions.forEach(function(q,qIndex){
-      if(q.questionImage instanceof File){
-        uploadTasks.push(uploadFile(q.questionImage).then(function(url){
-          questionsToSave[qIndex].questionImage=url;
-          questionsToSave[qIndex].questionImageURL=url;
+    if(validationError){
+      alert(validationError);
+      savePollBtn.disabled=false;
+      savePollBtn.innerHTML=defaultLabel;
+      return;
+    }
+
+    var sanitizedQuestions=questions.map(function(question){
+      var answers=question.answers.map(function(answer){
+        var text=(answer.text||'').trim();
+        var existingImage=(typeof answer.image==='string'&&answer.image)?answer.image:null;
+        return{
+          text:text,
+          imageURL:answer.imageURL||existingImage||null
+        };
+      });
+      var correctIndex=typeof question.correctAnswerIndex==='number'?question.correctAnswerIndex:0;
+      if(correctIndex<0){correctIndex=0;}
+      if(correctIndex>=answers.length){
+        correctIndex=Math.max(0,answers.length-1);
+      }
+      var timerValue=null;
+      if(typeof question.timerSeconds==='number'){
+        timerValue=question.timerSeconds;
+      } else if(typeof question.timerSeconds==='string'&&question.timerSeconds.trim()!==''){
+        timerValue=parseInt(question.timerSeconds,10);
+      }
+      if(timerValue&&(!isFinite(timerValue)||timerValue<=0)){
+        timerValue=null;
+      }
+      if(timerValue){
+        timerValue=Math.min(Math.round(timerValue),600);
+      }
+      var imageValue=null;
+      if(question.questionImage instanceof File){
+        imageValue=null;
+      } else if(typeof question.questionImage==='string'&&question.questionImage){
+        imageValue=question.questionImage;
+      } else if(question.questionImageURL){
+        imageValue=question.questionImageURL;
+      }
+      return{
+        questionText:(question.questionText||'').trim(),
+        questionImageURL:imageValue,
+        answers:answers,
+        correctAnswerIndex:correctIndex,
+        timerSeconds:timerValue&&timerValue>0?timerValue:null,
+        questionImageFile:question.questionImage instanceof File?question.questionImage:null
+      };
+    });
+
+    var uploadTasks=[];
+    sanitizedQuestions.forEach(function(question,qIndex){
+      if(question.questionImageFile){
+        uploadTasks.push(uploadFile(question.questionImageFile).then(function(url){
+          sanitizedQuestions[qIndex].questionImageURL=url;
+          sanitizedQuestions[qIndex].questionImageFile=null;
         }));
       }
-
-      q.answers.forEach(function(a,aIndex){
-        if(a.image instanceof File){
-          uploadTasks.push(uploadFile(a.image).then(function(url){
-            questionsToSave[qIndex].answers[aIndex].image=url;
-            questionsToSave[qIndex].answers[aIndex].imageURL=url;
+      questions[qIndex].answers.forEach(function(answer,aIndex){
+        if(answer.image instanceof File){
+          uploadTasks.push(uploadFile(answer.image).then(function(url){
+            sanitizedQuestions[qIndex].answers[aIndex].imageURL=url;
           }));
         }
       });
     });
 
     Promise.all(uploadTasks).then(function(){
-      var pollData={
-        pollName:pollName,
-        className:className,
-        questions:questionsToSave.map(function(q){
+      var payloadQuestions=sanitizedQuestions.map(function(question){
+        var options=question.answers.map(function(answer){
+          var imageUrl=answer.imageURL||null;
           return{
-            questionText:q.questionText,
-            questionImage:q.questionImageURL||q.questionImage||null,
-            questionImageURL:q.questionImageURL||q.questionImage||null,
-            options:q.answers.map(function(a){
-              var imageUrl=a.imageURL||a.image||null;
-              return{text:a.text,image:imageUrl,imageURL:imageUrl};
-            }),
-            correctAnswer:q.answers[q.correctAnswerIndex]?q.answers[q.correctAnswerIndex].text:null
+            text:answer.text,
+            image:imageUrl,
+            imageURL:imageUrl
           };
-        })
-      };
+        });
+        var correctIndex=question.correctAnswerIndex;
+        if(correctIndex<0||correctIndex>=options.length){
+          correctIndex=Math.max(0,options.length-1);
+        }
+        var correctAnswerText=options[correctIndex]?options[correctIndex].text:null;
+        var imageUrl=question.questionImageURL||null;
+        return{
+          questionText:question.questionText,
+          questionImage:imageUrl,
+          questionImageURL:imageUrl,
+          options:options,
+          correctAnswer:correctAnswerText,
+          timerSeconds:question.timerSeconds||null
+        };
+      });
 
-      google.script.run
-        .withSuccessHandler(function(newPollsList){
-          ALL_POLLS=newPollsList;
-          updatePollDropdown();
+      var questionCount=payloadQuestions.length;
+      var request=google.script.run
+        .withSuccessHandler(function(updatedPolls){
+          refreshPollData(updatedPolls);
+          resetPollDirty('All changes saved');
           savePollBtn.disabled=false;
-          savePollBtn.innerHTML='<span class="truncate">Publish Poll</span>';
+          savePollBtn.innerHTML=defaultLabel;
+          var successMessage=editingPollId?'✅ Poll updated successfully with '+questionCount+' question'+(questionCount===1?'':'s')+'!':'✅ Poll created successfully with '+questionCount+' question'+(questionCount===1?'':'s')+'!';
+          var shouldSelectNew=!editingPollId;
           closePollCreator();
-          alert('✅ Poll created successfully with '+questions.length+' questions!');
+          if(shouldSelectNew){
+            pollSelect.value='';
+            onPollSelectChange();
+          }
+          alert(successMessage);
         })
         .withFailureHandler(function(error){
           handleError(error);
           savePollBtn.disabled=false;
-          savePollBtn.innerHTML='<span class="truncate">Publish Poll</span>';
-        })
-        .createNewPoll(pollData.pollName,pollData.className,pollData.questions);
+          savePollBtn.innerHTML=defaultLabel;
+        });
+
+      if(editingPollId){
+        request.updatePoll(editingPollId,pollName,className,payloadQuestions);
+      } else {
+        request.createNewPoll(pollName,className,payloadQuestions);
+      }
     }).catch(function(err){
       alert('❌ Upload error: '+err.message);
       savePollBtn.disabled=false;
-      savePollBtn.innerHTML='<span class="truncate">Publish Poll</span>';
+      savePollBtn.innerHTML=defaultLabel;
     });
   }
 
@@ -1199,6 +2276,15 @@
   }
 
   // --- Utilities ---
+  function formatDateTime(value){
+    if(!value)return'—';
+    var date=new Date(value);
+    if(isNaN(date.getTime())){
+      return value;
+    }
+    return date.toLocaleString();
+  }
+
   function escapeHtml(text){
     if(!text)return'';
     var div=document.createElement('div');

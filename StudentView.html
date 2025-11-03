@@ -78,7 +78,7 @@
           <p class="text-red-800 dark:text-red-300 text-base text-left leading-relaxed">
             This poll must be completed in this tab.
             <strong>Do not switch tabs, open other windows, or exit fullscreen mode</strong>,
-            or your session will be automatically locked.
+            or your session will be permanently locked and you will need your teacher to unlock you.
           </p>
         </div>
 
@@ -129,6 +129,8 @@
       var currentPollState = {};
       var pollInterval = null;
       var sessionLocked = false;
+      var hasAnsweredCurrent = false; // NEW: Track if student answered current question
+      var violationLogged = false; // NEW: Ensure violation only logged once
 
       startSessionBtn.onclick = function() {
         console.log('Starting session...');
@@ -146,19 +148,25 @@
           console.error('Fullscreen error:', e);
         }
 
-        // Add security listeners
+        // Add security listeners - THESE TRIGGER PERMANENT LOCKOUT
         document.addEventListener('visibilitychange', function() {
-          if (document.hidden && !sessionLocked) {
+          if (document.hidden && !sessionLocked && !violationLogged) {
+            console.log('VIOLATION: Tab switch detected');
             sessionLocked = true;
-            showLockedMessage("Your session has been locked because you navigated away from the poll.");
+            violationLogged = true;
+            clearInterval(pollInterval); // STOP POLLING IMMEDIATELY
+            showLockedMessage("Your session has been permanently locked because you navigated away from the poll. Your teacher must unlock you.");
             google.script.run.withFailureHandler(handleError).logStudentViolation();
           }
         });
 
         document.addEventListener('fullscreenchange', function() {
-          if (!document.fullscreenElement && !sessionLocked) {
+          if (!document.fullscreenElement && !sessionLocked && !violationLogged) {
+            console.log('VIOLATION: Fullscreen exit detected');
             sessionLocked = true;
-            showLockedMessage("Your session has been locked because you exited fullscreen mode.");
+            violationLogged = true;
+            clearInterval(pollInterval); // STOP POLLING IMMEDIATELY
+            showLockedMessage("Your session has been permanently locked because you exited fullscreen mode. Your teacher must unlock you.");
             google.script.run.withFailureHandler(handleError).logStudentViolation();
           }
         });
@@ -168,6 +176,13 @@
       };
 
       function pollForStatus() {
+        // CRITICAL: If locked, do not make any more requests
+        if (sessionLocked) {
+          console.log('Session locked - stopping all polling');
+          clearInterval(pollInterval);
+          return;
+        }
+
         google.script.run
           .withSuccessHandler(updateStudentView)
           .withFailureHandler(handleError)
@@ -175,64 +190,92 @@
       }
 
       function updateStudentView(data) {
+        console.log('Status update:', data.status);
+        
+        // CRITICAL FIX #1: If we get LOCKED status from server, lock permanently
+        if (data.status === 'LOCKED') {
+          console.log('Server confirmed LOCKED status');
+          sessionLocked = true;
+          clearInterval(pollInterval); // Stop polling forever
+          showLockedMessage(data.message || "Your session is locked. Please wait for your teacher to unlock you.");
+          return;
+        }
+
+        // CRITICAL FIX #2: If sessionLocked is true, ignore all other updates
         if (sessionLocked) {
-          if (data.status === 'LOCKED') {
-            showLockedMessage(data.message);
-            return;
-          } else {
-            sessionLocked = false;
-            try {
-              document.documentElement.requestFullscreen().catch(function(e) {});
-            } catch (e) {}
-          }
+          console.log('Client-side lock active - ignoring server update');
+          return;
         }
 
         if (studentLoader) studentLoader.style.display = 'none';
 
         if (data.status === 'OPEN') {
-          if (currentPollState.pollId === data.pollId && currentPollState.questionIndex === data.questionIndex) {
-            return;
-          }
+          // CRITICAL FIX #3: Check if this is a NEW question
+          var isNewQuestion = (
+            currentPollState.pollId !== data.pollId || 
+            currentPollState.questionIndex !== data.questionIndex
+          );
 
-          currentPollState = data;
-          statusContainer.style.display = 'none';
-          questionContainer.style.display = 'block';
+          if (isNewQuestion) {
+            console.log('NEW QUESTION detected');
+            hasAnsweredCurrent = false; // Reset answer flag for new question
+            currentPollState = data;
+            
+            statusContainer.style.display = 'none';
+            questionContainer.style.display = 'block';
 
-          document.getElementById('question-text').textContent = data.questionText || '';
+            document.getElementById('question-text').textContent = data.questionText || '';
 
-          var qImgEl = document.getElementById('question-image');
-          if (data.questionImageURL) {
-            qImgEl.src = data.questionImageURL;
-            qImgEl.style.display = 'block';
-          } else {
-            qImgEl.style.display = 'none';
-          }
-
-          optionsList.innerHTML = "";
-          var shuffled = shuffle(data.options || []);
-
-          shuffled.forEach(function(option) {
-            var btn = document.createElement('button');
-            btn.className = 'answer-option w-full p-6 rounded-lg border-2 border-brand-light-gray dark:border-brand-dark-gray/40 bg-brand-white dark:bg-brand-dark-gray/20 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all hover:shadow-md cursor-pointer';
-            btn.dataset.answerText = option.text || '';
-
-            var content = '<div class="flex flex-col items-center gap-3 text-center">';
-            if (option.imageURL) {
-              content += '<img src="' + escapeHtml(option.imageURL) + '" alt="Answer" class="max-w-full max-h-[200px] rounded-lg object-contain">';
+            var qImgEl = document.getElementById('question-image');
+            if (data.questionImageURL) {
+              qImgEl.src = data.questionImageURL;
+              qImgEl.style.display = 'block';
+            } else {
+              qImgEl.style.display = 'none';
             }
-            if (option.text) {
-              content += '<p class="font-serif text-brand-dark-gray dark:text-brand-white text-xl font-semibold leading-relaxed">' + escapeHtml(option.text) + '</p>';
-            }
-            content += '</div>';
 
-            btn.innerHTML = content;
-            btn.onclick = function() {
-              submitAnswer(data.pollId, data.questionIndex, option.text);
-            };
-            optionsList.appendChild(btn);
-          });
+            optionsList.innerHTML = "";
+            var shuffled = shuffle(data.options || []);
+
+            shuffled.forEach(function(option) {
+              var btn = document.createElement('button');
+              btn.className = 'answer-option w-full p-6 rounded-lg border-2 border-brand-light-gray dark:border-brand-dark-gray/40 bg-brand-white dark:bg-brand-dark-gray/20 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all hover:shadow-md cursor-pointer';
+              btn.dataset.answerText = option.text || '';
+
+              var content = '<div class="flex flex-col items-center gap-3 text-center">';
+              if (option.imageURL) {
+                content += '<img src="' + escapeHtml(option.imageURL) + '" alt="Answer" class="max-w-full max-h-[200px] rounded-lg object-contain">';
+              }
+              if (option.text) {
+                content += '<p class="font-serif text-brand-dark-gray dark:text-brand-white text-xl font-semibold leading-relaxed">' + escapeHtml(option.text) + '</p>';
+              }
+              content += '</div>';
+
+              btn.innerHTML = content;
+              btn.onclick = function() {
+                submitAnswer(data.pollId, data.questionIndex, option.text);
+              };
+              optionsList.appendChild(btn);
+            });
+          } else if (hasAnsweredCurrent) {
+            // CRITICAL FIX #4: Student already answered this question, show waiting
+            console.log('Student already answered current question - showing waiting state');
+            questionContainer.style.display = 'none';
+            statusContainer.style.display = 'block';
+            statusMessage.textContent = "Your answer has been submitted! Waiting for the next question...";
+            statusMessage.className = 'text-green-600 dark:text-green-400 text-2xl font-semibold';
+            
+            var iconEl = statusContainer.querySelector('.material-symbols-outlined');
+            if (iconEl) {
+              iconEl.textContent = 'check_circle';
+              iconEl.className = 'material-symbols-outlined text-6xl text-green-600 dark:text-green-400 mb-4 inline-block';
+            }
+          }
+          // If it's the same question and they haven't answered, keep showing the question
         } else {
+          // Status is WAITING, CLOSED, NOT_ENROLLED, etc.
           currentPollState = {};
+          hasAnsweredCurrent = false;
           questionContainer.style.display = 'none';
           statusContainer.style.display = 'block';
 
@@ -249,10 +292,7 @@
             statusMessage.className = 'text-red-600 dark:text-red-400 text-2xl font-bold';
             statusIcon = 'error';
             statusClass = 'text-red-600 dark:text-red-400';
-            if (pollInterval) clearInterval(pollInterval);
-          } else if (data.status === 'LOCKED') {
-            showLockedMessage(data.message);
-            return;
+            clearInterval(pollInterval); // Stop polling
           } else {
             statusMessage.textContent = "The poll is not active.";
             statusMessage.className = 'text-brand-dark-gray dark:text-brand-white text-2xl font-semibold';
@@ -268,8 +308,19 @@
       }
 
       function submitAnswer(pollId, questionIndex, answerText) {
-        if (sessionLocked) return;
+        if (sessionLocked) {
+          console.log('Session locked - cannot submit answer');
+          return;
+        }
 
+        if (hasAnsweredCurrent) {
+          console.log('Already answered this question - ignoring duplicate submission');
+          return;
+        }
+
+        console.log('Submitting answer:', answerText);
+
+        // Disable all buttons immediately
         var buttons = optionsList.querySelectorAll('button');
         for (var i = 0; i < buttons.length; i++) {
           buttons[i].disabled = true;
@@ -280,6 +331,10 @@
           }
         }
 
+        // CRITICAL: Mark that we've answered BEFORE hiding the question
+        hasAnsweredCurrent = true;
+
+        // Show submitting status
         statusContainer.style.display = 'block';
         questionContainer.style.display = 'none';
         statusMessage.textContent = "Submitting...";
@@ -291,27 +346,48 @@
           iconEl.className = 'material-symbols-outlined text-6xl text-primary dark:text-brand-white mb-4 inline-block animate-spin';
         }
 
-        currentPollState = {};
-
         google.script.run
           .withSuccessHandler(function(response) {
             if (!response.success) {
+              // If submission failed, allow them to try again
+              hasAnsweredCurrent = false;
               statusMessage.textContent = response.error || "Error occurred.";
               statusMessage.className = 'text-red-600 dark:text-red-400 text-2xl font-bold';
               if (iconEl) {
                 iconEl.textContent = 'error';
                 iconEl.className = 'material-symbols-outlined text-6xl text-red-600 dark:text-red-400 mb-4 inline-block';
               }
+              
+              // Show question again after 2 seconds
+              setTimeout(function() {
+                if (!sessionLocked) {
+                  questionContainer.style.display = 'block';
+                  statusContainer.style.display = 'none';
+                  // Re-enable buttons
+                  var buttons = optionsList.querySelectorAll('button');
+                  for (var i = 0; i < buttons.length; i++) {
+                    buttons[i].disabled = false;
+                    buttons[i].className = 'answer-option w-full p-6 rounded-lg border-2 border-brand-light-gray dark:border-brand-dark-gray/40 bg-brand-white dark:bg-brand-dark-gray/20 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all hover:shadow-md cursor-pointer';
+                  }
+                }
+              }, 2000);
             } else {
-              statusMessage.textContent = "Answer submitted! Waiting for next question...";
+              // Success! Show confirmation and KEEP IT VISIBLE
+              console.log('Answer submitted successfully');
+              statusMessage.textContent = "Your answer has been submitted! Waiting for the next question...";
               statusMessage.className = 'text-green-600 dark:text-green-400 text-2xl font-semibold';
               if (iconEl) {
                 iconEl.textContent = 'check_circle';
                 iconEl.className = 'material-symbols-outlined text-6xl text-green-600 dark:text-green-400 mb-4 inline-block';
               }
+              
+              // KEEP STATUS VISIBLE - polling will handle showing the next question
             }
           })
-          .withFailureHandler(handleError)
+          .withFailureHandler(function(error) {
+            hasAnsweredCurrent = false;
+            handleError(error);
+          })
           .submitStudentAnswer(pollId, questionIndex, answerText);
       }
 
@@ -334,6 +410,7 @@
       }
 
       function showLockedMessage(message) {
+        console.log('Showing locked message:', message);
         studentContainer.style.display = 'block';
         entryScreen.style.display = 'none';
         questionContainer.style.display = 'none';
@@ -348,6 +425,9 @@
           iconEl.textContent = 'lock';
           iconEl.className = 'material-symbols-outlined text-6xl text-red-600 dark:text-red-400 mb-4 inline-block';
         }
+
+        // CRITICAL: Stop all polling
+        clearInterval(pollInterval);
       }
 
       function handleError(error) {

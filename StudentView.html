@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Veritas Live Poll - Student</title>
+  <?!= include('Styling'); ?>
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <h1>Veritas Live Poll</h1>
+      <div id="loader" class="loader" style="display: none;"></div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Entry Screen -->
+    <div id="entry-screen" class="container">
+      <h1>📱 Live Poll</h1>
+      <p>Welcome to Veritas Live Poll! Click <strong>"Begin Session"</strong> to start participating.</p>
+      <div style="background: #fff5f5; border: 2px solid #dc3545; border-radius: 8px; padding: 20px; margin: 24px auto; max-width: 600px;">
+        <h4 style="color: #dc3545; margin-top: 0;">⚠️ Important Security Notice</h4>
+        <p style="margin-bottom: 0;">
+          This poll must be completed in this tab. 
+          <b>Do not switch tabs, open other windows, or exit fullscreen mode</b>, 
+          or your session will be automatically locked.
+        </p>
+      </div>
+      <button id="start-session-btn" class="btn-primary" style="padding: 16px 48px; font-size: 1.3rem; margin-top: 12px;">
+        Begin Session
+      </button>
+    </div>
+
+    <!-- Student App Container -->
+    <div class="container" id="student-container" style="display: none;">
+      <div id="student-loader" class="loader" style="display: block; margin: 0 auto;"></div>
+      
+      <div id="status-container" style="display: none;">
+        <h2 id="status-message" style="font-weight: 500; color: #555;">Connecting to poll...</h2>
+      </div>
+
+      <div id="question-container" style="display: none; width: 100%;">
+        <div id="question-content">
+          <img id="question-image" src="" alt="Question" style="max-width: 90%; max-height: 400px; display: none; margin: 0 auto 24px; border-radius: 8px;" />
+          <h2 id="question-text" style="color: #212529; margin-top: 0;"></h2>
+        </div>
+        <div id="options-list"></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    (function() {
+      var studentLoader = document.getElementById('student-loader');
+      var statusContainer = document.getElementById('status-container');
+      var statusMessage = document.getElementById('status-message');
+      var questionContainer = document.getElementById('question-container');
+      var optionsList = document.getElementById('options-list');
+      var entryScreen = document.getElementById('entry-screen');
+      var startSessionBtn = document.getElementById('start-session-btn');
+      var studentContainer = document.getElementById('student-container');
+      
+      var currentPollState = {};
+      var pollInterval = null;
+      var sessionLocked = false;
+      
+      startSessionBtn.onclick = function() {
+        console.log('Starting session...');
+        entryScreen.style.display = 'none';
+        studentContainer.style.display = 'flex';
+        
+        // Request fullscreen
+        try {
+          if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(function(e) {
+              console.warn('Fullscreen denied:', e);
+            });
+          }
+        } catch (e) {
+          console.error('Fullscreen error:', e);
+        }
+        
+        // Add security listeners
+        document.addEventListener('visibilitychange', function() {
+          if (document.hidden && !sessionLocked) {
+            sessionLocked = true;
+            showLockedMessage("Your session has been locked because you navigated away from the poll.");
+            google.script.run.withFailureHandler(handleError).logStudentViolation();
+          }
+        });
+        
+        document.addEventListener('fullscreenchange', function() {
+          if (!document.fullscreenElement && !sessionLocked) {
+            sessionLocked = true;
+            showLockedMessage("Your session has been locked because you exited fullscreen mode.");
+            google.script.run.withFailureHandler(handleError).logStudentViolation();
+          }
+        });
+        
+        pollForStatus();
+        pollInterval = setInterval(pollForStatus, 2500);
+      };
+      
+      function pollForStatus() {
+        google.script.run
+          .withSuccessHandler(updateStudentView)
+          .withFailureHandler(handleError)
+          .getStudentPollStatus();
+      }
+      
+      function updateStudentView(data) {
+        if (sessionLocked) {
+          if (data.status === 'LOCKED') {
+            showLockedMessage(data.message);
+            return;
+          } else {
+            sessionLocked = false;
+            try {
+              document.documentElement.requestFullscreen().catch(function(e) {});
+            } catch (e) {}
+          }
+        }
+        
+        if (studentLoader) studentLoader.style.display = 'none';
+        
+        if (data.status === 'OPEN') {
+          if (currentPollState.pollId === data.pollId && currentPollState.questionIndex === data.questionIndex) {
+            return;
+          }
+          
+          currentPollState = data;
+          statusContainer.style.display = 'none';
+          questionContainer.style.display = 'block';
+          
+          document.getElementById('question-text').textContent = data.questionText || '';
+          
+          var qImgEl = document.getElementById('question-image');
+          if (data.questionImageURL) {
+            qImgEl.src = data.questionImageURL;
+            qImgEl.style.display = 'block';
+          } else {
+            qImgEl.style.display = 'none';
+          }
+          
+          optionsList.innerHTML = "";
+          var shuffled = shuffle(data.options || []);
+          
+          shuffled.forEach(function(option) {
+            var btn = document.createElement('button');
+            btn.className = 'answer-option';
+            btn.dataset.answerText = option.text || '';
+            
+            var content = '<div class="rich-answer-option">';
+            if (option.imageURL) {
+              content += '<img src="' + escapeHtml(option.imageURL) + '" alt="Answer" />';
+            }
+            if (option.text) {
+              content += '<p>' + escapeHtml(option.text) + '</p>';
+            }
+            content += '</div>';
+            
+            btn.innerHTML = content;
+            btn.onclick = function() {
+              submitAnswer(data.pollId, data.questionIndex, option.text);
+            };
+            optionsList.appendChild(btn);
+          });
+        } else {
+          currentPollState = {};
+          questionContainer.style.display = 'none';
+          statusContainer.style.display = 'block';
+          
+          if (data.status === 'WAITING') {
+            statusMessage.textContent = data.message || "Waiting for next question...";
+            statusMessage.className = '';
+          } else if (data.status === 'NOT_ENROLLED') {
+            statusMessage.textContent = data.message || "You are not enrolled.";
+            statusMessage.className = 'locked-message';
+            if (pollInterval) clearInterval(pollInterval);
+          } else {
+            statusMessage.textContent = "The poll is not active.";
+            statusMessage.className = '';
+          }
+        }
+      }
+      
+      function submitAnswer(pollId, questionIndex, answerText) {
+        if (sessionLocked) return;
+        
+        var buttons = optionsList.querySelectorAll('button');
+        for (var i = 0; i < buttons.length; i++) {
+          buttons[i].disabled = true;
+          if (buttons[i].dataset.answerText === answerText) {
+            buttons[i].classList.add('selected');
+          }
+        }
+        
+        statusContainer.style.display = 'block';
+        questionContainer.style.display = 'none';
+        statusMessage.textContent = "Submitting...";
+        statusMessage.className = '';
+        currentPollState = {};
+        
+        google.script.run
+          .withSuccessHandler(function(response) {
+            if (!response.success) {
+              statusMessage.textContent = response.error || "Error occurred.";
+              statusMessage.className = 'locked-message';
+            }
+          })
+          .withFailureHandler(handleError)
+          .submitStudentAnswer(pollId, questionIndex, answerText);
+      }
+      
+      function shuffle(array) {
+        var arr = array.slice();
+        for (var i = arr.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1));
+          var temp = arr[i];
+          arr[i] = arr[j];
+          arr[j] = temp;
+        }
+        return arr;
+      }
+      
+      function escapeHtml(text) {
+        if (!text) return '';
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+      
+      function showLockedMessage(message) {
+        studentContainer.style.display = 'flex';
+        entryScreen.style.display = 'none';
+        questionContainer.style.display = 'none';
+        statusContainer.style.display = 'block';
+        if (studentLoader) studentLoader.style.display = 'none';
+        statusMessage.textContent = message;
+        statusMessage.className = 'locked-message';
+      }
+      
+      function handleError(error) {
+        console.error('Error:', error);
+        statusMessage.textContent = 'An error occurred: ' + (error.message || error);
+        statusMessage.className = 'locked-message';
+      }
+    })();
+  </script>
+</body>
+</html>

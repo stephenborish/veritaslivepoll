@@ -356,6 +356,12 @@ function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
+function getPollEditorHtml(className) {
+  const template = HtmlService.createTemplateFromFile('PollEditor.html');
+  template.className = className || '';
+  return template.evaluate().getContent();
+}
+
 // =============================================================================
 // ONE-TIME SETUP
 // =============================================================================
@@ -512,6 +518,76 @@ function createNewPoll(pollName, className, questions) {
     
     Logger.log('Poll created', { pollId: pollId, pollName: pollName, questionCount: questions.length });
     
+    return DataAccess.polls.getAll();
+  })();
+}
+
+function saveDraft(pollData) {
+  return withErrorHandling(() => {
+    const { pollName, className, questions } = pollData;
+    if (!pollName || !className || !Array.isArray(questions) || questions.length === 0) {
+      throw new Error('Invalid poll data: name, class, and questions are required');
+    }
+
+    if (questions.length > 50) {
+      throw new Error('Maximum 50 questions per poll');
+    }
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const pollSheet = ss.getSheetByName("Polls");
+    const pollId = "D-" + Utilities.getUuid(); // "D" for Draft
+
+    const newRows = questions.map((q, index) => {
+      return [
+        pollId,
+        pollName,
+        className,
+        index,
+        JSON.stringify(q)
+      ];
+    });
+
+    pollSheet.getRange(pollSheet.getLastRow() + 1, 1, newRows.length, newRows[0].length).setValues(newRows);
+
+    CacheManager.invalidate('ALL_POLLS_DATA');
+
+    Logger.log('Draft saved', { pollId: pollId, pollName: pollName, questionCount: questions.length });
+
+    return { success: true };
+  })();
+}
+
+function savePollNew(pollData) {
+  return withErrorHandling(() => {
+    const { pollName, className, questions } = pollData;
+    if (!pollName || !className || !Array.isArray(questions) || questions.length === 0) {
+      throw new Error('Invalid poll data: name, class, and questions are required');
+    }
+
+    if (questions.length > 50) {
+      throw new Error('Maximum 50 questions per poll');
+    }
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const pollSheet = ss.getSheetByName("Polls");
+    const pollId = "P-" + Utilities.getUuid();
+
+    const newRows = questions.map((q, index) => {
+      return [
+        pollId,
+        pollName,
+        className,
+        index,
+        JSON.stringify(q)
+      ];
+    });
+
+    pollSheet.getRange(pollSheet.getLastRow() + 1, 1, newRows.length, newRows[0].length).setValues(newRows);
+
+    CacheManager.invalidate('ALL_POLLS_DATA');
+
+    Logger.log('Poll created via new editor', { pollId: pollId, pollName: pollName, questionCount: questions.length });
+
     return DataAccess.polls.getAll();
   })();
 }
@@ -1040,6 +1116,16 @@ function getPolls_() {
       const pollName = row[1];
       const className = row[2];
       const questionData = JSON.parse(row[4] || "{}");
+
+      // --- BACKWARD COMPATIBILITY: Normalize question data ---
+      // This ensures that polls created with the old editor (options as string array)
+      // are compatible with the new format (options as object array).
+      if (questionData.options && Array.isArray(questionData.options) && questionData.options.length > 0) {
+        if (typeof questionData.options[0] === 'string') {
+          questionData.options = questionData.options.map(optText => ({ text: optText, image: null }));
+        }
+      }
+      // --- END NORMALIZATION ---
       
       if (!pollsMap.has(pollId)) {
         pollsMap.set(pollId, {

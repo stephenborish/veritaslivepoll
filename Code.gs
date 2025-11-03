@@ -690,8 +690,10 @@ function getLivePollData(pollId, questionIndex) {
     const poll = DataAccess.polls.getById(pollId);
     if (!poll) throw new Error("Poll not found");
     
-    const question = poll.questions[questionIndex];
+    let question = poll.questions[questionIndex];
     if (!question) throw new Error("Question not found");
+    question = normalizeQuestionObject_(question);
+    poll.questions[questionIndex] = question;
     
     const roster = DataAccess.roster.getByClass(poll.className);
     const pollResponses = DataAccess.responses.getByPoll(pollId);
@@ -764,6 +766,7 @@ function getLivePollData(pollId, questionIndex) {
       status: "OPEN",
       pollName: poll.pollName,
       questionText: question.questionText || '',
+      questionImageURL: question.questionImageURL || null,
       questionIndex: questionIndex,
       totalQuestions: poll.questions.length,
       correctAnswer: question.correctAnswer || null,
@@ -786,60 +789,68 @@ function getStudentPollStatus() {
     const questionIndex = statusValues[1];
     const pollStatus = statusValues[2];
     
+    const baseWaiting = (message, hasSubmitted = false) => ({ status: "WAITING", message, hasSubmitted });
+
     // If paused or closed, students see waiting message
     if (pollStatus === "CLOSED" || !pollId) {
-      return { status: "CLOSED" };
+      return { status: "CLOSED", hasSubmitted: false };
     }
-    
+
     if (pollStatus === "PAUSED") {
-      return { 
-        status: "WAITING", 
-        message: "The teacher has paused the poll. Waiting to resume..." 
-      };
+      return baseWaiting("The teacher has paused the poll. Waiting to resume...", false);
     }
-    
+
     const studentEmail = TokenManager.getCurrentStudentEmail();
-    
+
     if (!studentEmail) {
-      return { 
-        status: "ERROR", 
-        message: "Authentication error. Please use your personalized poll link." 
+      return {
+        status: "ERROR",
+        message: "Authentication error. Please use your personalized poll link.",
+        hasSubmitted: false
       };
     }
-    
+
     const poll = DataAccess.polls.getById(pollId);
-    
+
     if (!poll) {
-      return { status: "CLOSED", message: "Poll configuration error." };
+      return { status: "CLOSED", message: "Poll configuration error.", hasSubmitted: false };
     }
     
     if (!DataAccess.roster.isEnrolled(poll.className, studentEmail)) {
-      return { 
-        status: "NOT_ENROLLED", 
-        message: "You are not enrolled in this class." 
+      return {
+        status: "NOT_ENROLLED",
+        message: "You are not enrolled in this class.",
+        hasSubmitted: false
       };
     }
-    
+
     if (DataAccess.responses.isLocked(pollId, studentEmail)) {
-      return { 
-        status: "LOCKED", 
-        message: "Your session was locked because you navigated away from the poll." 
+      return {
+        status: "LOCKED",
+        message: "Your session was locked because you navigated away from the poll.",
+        hasSubmitted: false
       };
     }
-    
-    if (DataAccess.responses.hasAnswered(pollId, questionIndex, studentEmail)) {
-      return { 
-        status: "WAITING", 
-        message: "Your answer has been submitted. Waiting for the next question." 
-      };
+
+    if (questionIndex < 0) {
+      return baseWaiting("Waiting for the teacher to begin the poll...", false);
     }
-    
+
+    const hasSubmitted = DataAccess.responses.hasAnswered(pollId, questionIndex, studentEmail);
+
+    if (hasSubmitted) {
+      return baseWaiting("Your answer has been submitted. Waiting for the next question.", true);
+    }
+
     const question = poll.questions[questionIndex];
+    const normalizedQuestion = normalizeQuestionObject_(question);
+
     return {
       status: "OPEN",
       pollId: pollId,
       questionIndex: questionIndex,
-      ...question
+      hasSubmitted: false,
+      ...normalizedQuestion
     };
   })();
 }
@@ -992,6 +1003,60 @@ function unlockStudent(studentEmail, pollId) {
     return { success: true, rowsDeleted: rowsToDelete.length };
   })();
 }
+
+function resetStudentResponse(studentEmail, pollId, questionIndex) {
+  return withErrorHandling(() => {
+    if (!studentEmail || !pollId || typeof questionIndex === 'undefined') {
+      throw new Error('Student email, poll ID, and question index are required');
+    }
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("Responses");
+
+    if (sheet.getLastRow() < 2) {
+      return { success: true, rowsDeleted: 0 };
+    }
+
+    const range = sheet.getDataRange();
+    const values = range.getValues();
+    const header = values[0];
+
+    const pollCol = header.indexOf('PollID');
+    const questionCol = header.indexOf('QuestionIndex');
+    const emailCol = header.indexOf('StudentEmail');
+
+    if (pollCol === -1 || questionCol === -1 || emailCol === -1) {
+      throw new Error('Responses sheet is missing required columns');
+    }
+
+    const normalizedQuestionIndex = typeof questionIndex === 'string'
+      ? parseInt(questionIndex, 10)
+      : questionIndex;
+
+    const rowsToDelete = [];
+    for (let i = values.length - 1; i >= 1; i--) {
+      const row = values[i];
+      if (row[pollCol] === pollId &&
+          row[emailCol] === studentEmail &&
+          row[questionCol] === normalizedQuestionIndex) {
+        rowsToDelete.push(i + 1);
+      }
+    }
+
+    rowsToDelete.forEach(rowIndex => {
+      sheet.deleteRow(rowIndex);
+    });
+
+    Logger.log('Student response reset', {
+      studentEmail,
+      pollId,
+      questionIndex: normalizedQuestionIndex,
+      rowsDeleted: rowsToDelete.length
+    });
+
+    return { success: true, rowsDeleted: rowsToDelete.length };
+  })();
+}
 /**
  * Sends unique personalized poll links to all students in a class.
  * Each student receives their own token-based URL.
@@ -1102,31 +1167,21 @@ function getPolls_() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const pollSheet = ss.getSheetByName("Polls");
     const values = getDataRangeValues_(pollSheet);
-    
+
     const pollsMap = new Map();
-    
+
     values.sort((a, b) => {
       if (a[0] < b[0]) return -1;
       if (a[0] > b[0]) return 1;
       return a[3] - b[3];
     });
-    
+
     values.forEach(row => {
       const pollId = row[0];
       const pollName = row[1];
       const className = row[2];
-      const questionData = JSON.parse(row[4] || "{}");
+      const questionData = normalizeQuestionObject_(JSON.parse(row[4] || "{}"));
 
-      // --- BACKWARD COMPATIBILITY: Normalize question data ---
-      // This ensures that polls created with the old editor (options as string array)
-      // are compatible with the new format (options as object array).
-      if (questionData.options && Array.isArray(questionData.options) && questionData.options.length > 0) {
-        if (typeof questionData.options[0] === 'string') {
-          questionData.options = questionData.options.map(optText => ({ text: optText, image: null }));
-        }
-      }
-      // --- END NORMALIZATION ---
-      
       if (!pollsMap.has(pollId)) {
         pollsMap.set(pollId, {
           pollId: pollId,
@@ -1157,7 +1212,7 @@ function getRoster_(className) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const rosterSheet = ss.getSheetByName("Rosters");
   const values = getDataRangeValues_(rosterSheet);
-  
+
   return values
     .filter(row => row[0] === className)
     .map(row => ({ name: row[1], email: row[2] }))
@@ -1169,4 +1224,38 @@ function getDataRangeValues_(sheet) {
     return [];
   }
   return sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
+}
+
+function normalizeQuestionObject_(questionData) {
+  const normalized = {};
+
+  normalized.questionText = questionData.questionText || questionData.text || '';
+  normalized.questionImageURL = questionData.questionImageURL || questionData.questionImage || null;
+  if (normalized.questionImageURL) {
+    normalized.questionImage = normalized.questionImageURL;
+  }
+
+  const optionsArray = Array.isArray(questionData.options) ? questionData.options : [];
+  normalized.options = optionsArray.map(opt => {
+    if (typeof opt === 'string') {
+      return { text: opt, imageURL: null, image: null };
+    }
+    return {
+      text: opt.text || '',
+      imageURL: opt.imageURL || opt.image || null,
+      image: opt.imageURL || opt.image || null
+    };
+  });
+
+  normalized.correctAnswer = questionData.correctAnswer || null;
+
+  if (questionData.explanation) {
+    normalized.explanation = questionData.explanation;
+  }
+
+  if (questionData.timerSeconds) {
+    normalized.timerSeconds = questionData.timerSeconds;
+  }
+
+  return normalized;
 }

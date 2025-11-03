@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Malvern Prep Polling Application</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#002e6d",
+              "background-light": "#f5f7f8",
+              "background-dark": "#0f1723",
+              "brand-white": "#ffffff",
+              "brand-light-gray": "#d9e0e7",
+              "brand-dark-gray": "#242424"
+            },
+            fontFamily: {
+              "display": ["Lexend"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-brand-dark-gray dark:text-brand-white">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-brand-light-gray dark:border-brand-dark-gray/20 bg-primary px-6 py-3 sticky top-0 z-10">
+<div class="flex items-center gap-4">
+<img alt="Malvern Prep Logo" class="h-8 w-auto" src="https://raw.githubusercontent.com/stephenborish/veritasassets/f0a824864d7d66637a13b822bff99fa6830e6123/mplogo.png"/>
+<input class="bg-transparent text-brand-white text-lg font-bold leading-tight tracking-[-0.015em] border-none focus:ring-0 p-0 placeholder-brand-white/70" type="text" value="Chapter 5 Quiz"/>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-sm text-brand-white/80 mr-2">All changes saved</span>
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-brand-white/20 text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-brand-white/30 transition-colors">
+<span class="truncate">Save Draft</span>
+</button>
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-brand-white text-primary text-sm font-bold leading-normal tracking-[0.015em] hover:bg-brand-light-gray transition-colors">
+<span class="truncate">Publish Poll</span>
+</button>
+</div>
+</header>
+<div class="flex flex-grow">
+<!-- Left Column: Question Navigator -->
+<aside class="w-64 flex-shrink-0 border-r border-solid border-brand-light-gray dark:border-brand-dark-gray/20 bg-brand-white dark:bg-background-dark">
+<div class="flex h-full flex-col justify-between p-4">
+<div class="flex flex-col gap-2">
+<div class="group relative flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/20 dark:bg-primary/30 cursor-pointer">
+<span class="material-symbols-outlined text-brand-dark-gray dark:text-brand-white">drag_indicator</span>
+<p class="text-primary dark:text-brand-white text-sm font-medium leading-normal">Question 1</p>
+<div class="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1 rounded-full hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10">
+<span class="material-symbols-outlined text-brand-dark-gray dark:text-brand-white text-base">more_vert</span>
+</button>
+</div>
+</div>
+<div class="group relative flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10 cursor-pointer">
+<span class="material-symbols-outlined text-brand-dark-gray/50 dark:text-brand-white/50">drag_indicator</span>
+<p class="text-brand-dark-gray dark:text-brand-white text-sm font-medium leading-normal">Question 2</p>
+<div class="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1 rounded-full hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10">
+<span class="material-symbols-outlined text-brand-dark-gray dark:text-brand-white text-base">more_vert</span>
+</button>
+</div>
+</div>
+<div class="group relative flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10 cursor-pointer">
+<span class="material-symbols-outlined text-brand-dark-gray/50 dark:text-brand-white/50">drag_indicator</span>
+<p class="text-brand-dark-gray dark:text-brand-white text-sm font-medium leading-normal">Question 3</p>
+<div class="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1 rounded-full hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10">
+<span class="material-symbols-outlined text-brand-dark-gray dark:text-brand-white text-base">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+<button class="flex w-full min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary/20 dark:bg-primary/30 text-primary dark:text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/30 dark:hover:bg-primary/40 transition-colors">
+<span class="truncate">+ Add Question</span>
+</button>
+</div>
+</aside>
+<!-- Right Column: Editing Workspace -->
+<main class="flex-1 p-8">
+<div class="max-w-4xl mx-auto">
+<!-- Page Heading -->
+<div class="flex flex-wrap justify-between gap-3 mb-6">
+<div class="flex min-w-72 flex-col gap-1">
+<p class="text-brand-dark-gray dark:text-brand-white tracking-light text-[32px] font-bold leading-tight">Question 1</p>
+<p class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm font-normal leading-normal">Edit the question and answer choices below.</p>
+</div>
+</div>
+<!-- Question Input Card -->
+<div class="bg-brand-white dark:bg-brand-dark-gray/20 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/30 p-6 shadow-sm mb-6">
+<label class="flex flex-col w-full">
+<p class="text-brand-dark-gray dark:text-brand-white text-base font-medium leading-normal pb-2">Question Text</p>
+<textarea class="form-input flex w-full min-w-0 flex-1 resize-y overflow-hidden rounded-lg text-brand-dark-gray dark:text-brand-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 focus:border-primary min-h-36 placeholder:text-brand-dark-gray/50 dark:placeholder:text-brand-white/50 p-[15px] text-base font-normal leading-normal" placeholder="Type your question here..."></textarea>
+</label>
+<div class="flex mt-4">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-brand-light-gray dark:bg-brand-dark-gray/40 text-brand-dark-gray dark:text-brand-white gap-2 pl-3 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/60 transition-colors">
+<span class="material-symbols-outlined text-xl">image</span>
+<span class="truncate">Upload Image</span>
+</button>
+</div>
+</div>
+<!-- Answer Choices Section -->
+<div class="bg-brand-white dark:bg-brand-dark-gray/20 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/30 p-6 shadow-sm">
+<p class="text-brand-dark-gray dark:text-brand-white text-base font-medium leading-normal pb-4">Answer Choices</p>
+<div class="flex flex-col gap-4">
+<!-- Answer Choice Item -->
+<div class="flex items-center gap-3">
+<label class="relative flex items-center justify-center cursor-pointer" title="Set as correct answer">
+<input class="peer h-5 w-5 cursor-pointer appearance-none rounded-full border border-brand-light-gray dark:border-brand-white/30 checked:border-primary checked:bg-primary transition-all" name="correct_answer" type="radio"/>
+<span class="material-symbols-outlined absolute text-brand-white transition-opacity opacity-0 peer-checked:opacity-100 text-sm">check</span>
+</label>
+<input class="form-input flex-1 rounded-lg text-brand-dark-gray dark:text-brand-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 focus:border-primary placeholder:text-brand-dark-gray/50 dark:placeholder:text-brand-white/50 p-3 text-base" placeholder="Answer A" type="text"/>
+<button class="p-2 rounded-lg hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10 transition-colors" title="Upload image for this answer">
+<span class="material-symbols-outlined text-brand-dark-gray/60 dark:text-brand-white/60">image</span>
+</button>
+<button class="p-2 rounded-lg hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10 transition-colors" title="Remove this answer">
+<span class="material-symbols-outlined text-brand-dark-gray/60 dark:text-brand-white/60">delete</span>
+</button>
+</div>
+<!-- Answer Choice Item -->
+<div class="flex items-center gap-3">
+<label class="relative flex items-center justify-center cursor-pointer" title="Set as correct answer">
+<input class="peer h-5 w-5 cursor-pointer appearance-none rounded-full border border-brand-light-gray dark:border-brand-white/30 checked:border-primary checked:bg-primary transition-all" name="correct_answer" type="radio"/>
+<span class="material-symbols-outlined absolute text-brand-white transition-opacity opacity-0 peer-checked:opacity-100 text-sm">check</span>
+</label>
+<input class="form-input flex-1 rounded-lg text-brand-dark-gray dark:text-brand-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 focus:border-primary placeholder:text-brand-dark-gray/50 dark:placeholder:text-brand-white/50 p-3 text-base" placeholder="Answer B" type="text"/>
+<button class="p-2 rounded-lg hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10 transition-colors" title="Upload image for this answer">
+<span class="material-symbols-outlined text-brand-dark-gray/60 dark:text-brand-white/60">image</span>
+</button>
+<button class="p-2 rounded-lg hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10 transition-colors" title="Remove this answer">
+<span class="material-symbols-outlined text-brand-dark-gray/60 dark:text-brand-white/60">delete</span>
+</button>
+</div>
+</div>
+<div class="mt-4">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-brand-light-gray dark:bg-brand-dark-gray/40 text-brand-dark-gray dark:text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/60 transition-colors">
+<span class="truncate">+ Add Answer Choice</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+<script>
+  (function() {
+    window.pollEditorApp = {
+      className: "<?!= className ?>",
+      questions: [
+        {
+          questionText: '',
+          questionImage: null,
+          answers: [
+            { text: '', image: null },
+            { text: '', image: null },
+          ],
+          correctAnswerIndex: 0
+        }
+      ],
+      selectedQuestionIndex: 0,
+
+      init() {
+        this.render();
+        this.initDragAndDrop();
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.more-options-btn')) {
+                document.querySelectorAll('.more-options-menu').forEach(menu => {
+                    menu.classList.add('hidden');
+                });
+            }
+        });
+      },
+
+      initDragAndDrop() {
+        const questionList = document.querySelector('aside .flex-col.gap-2');
+        new Sortable(questionList, {
+          animation: 150,
+          handle: '.material-symbols-outlined',
+          onEnd: (evt) => {
+            const item = this.questions.splice(evt.oldIndex, 1)[0];
+            this.questions.splice(evt.newIndex, 0, item);
+            this.selectedQuestionIndex = evt.newIndex;
+            this.render();
+          }
+        });
+      },
+
+      render() {
+        this.renderQuestionNavigator();
+        this.renderEditingWorkspace();
+      },
+
+      renderQuestionNavigator() {
+        const navigator = document.querySelector('aside .flex-col.gap-2');
+        navigator.innerHTML = '';
+        this.questions.forEach((q, index) => {
+          const isSelected = index === this.selectedQuestionIndex;
+          const questionElement = document.createElement('div');
+          questionElement.className = `group relative flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer ${isSelected ? 'bg-primary/20 dark:bg-primary/30' : 'hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10'}`;
+          questionElement.innerHTML = `
+            <span class="material-symbols-outlined ${isSelected ? 'text-brand-dark-gray dark:text-brand-white' : 'text-brand-dark-gray/50 dark:text-brand-white/50'}">drag_indicator</span>
+            <p class="flex-grow ${isSelected ? 'text-primary dark:text-brand-white' : 'text-brand-dark-gray dark:text-brand-white'} text-sm font-medium leading-normal">Question ${index + 1}</p>
+            <div class="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button class="more-options-btn p-1 rounded-full hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10" data-index="${index}">
+                <span class="material-symbols-outlined text-brand-dark-gray dark:text-brand-white text-base">more_vert</span>
+              </button>
+              <div class="more-options-menu hidden absolute right-0 mt-2 w-48 bg-white dark:bg-brand-dark-gray rounded-md shadow-lg z-10">
+                <a href="#" class="delete-question-btn block px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" data-index="${index}">Delete Question</a>
+              </div>
+            </div>
+          `;
+
+          questionElement.querySelector('p').addEventListener('click', () => {
+            this.selectedQuestionIndex = index;
+            this.render();
+          });
+
+          const moreOptionsBtn = questionElement.querySelector('.more-options-btn');
+          const moreOptionsMenu = questionElement.querySelector('.more-options-menu');
+
+          moreOptionsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            moreOptionsMenu.classList.toggle('hidden');
+          });
+
+          questionElement.querySelector('.delete-question-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.deleteQuestion(index);
+          });
+
+          navigator.appendChild(questionElement);
+        });
+      },
+
+      renderEditingWorkspace() {
+        const question = this.questions[this.selectedQuestionIndex];
+        const workspace = document.querySelector('main');
+        workspace.innerHTML = `
+          <div class="max-w-4xl mx-auto">
+            <div class="flex flex-wrap justify-between gap-3 mb-6">
+              <div class="flex min-w-72 flex-col gap-1">
+                <p class="text-brand-dark-gray dark:text-brand-white tracking-light text-[32px] font-bold leading-tight">Question ${this.selectedQuestionIndex + 1}</p>
+                <p class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm font-normal leading-normal">Edit the question and answer choices below.</p>
+              </div>
+            </div>
+            <div class="bg-brand-white dark:bg-brand-dark-gray/20 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/30 p-6 shadow-sm mb-6">
+              <label class="flex flex-col w-full">
+                <p class="text-brand-dark-gray dark:text-brand-white text-base font-medium leading-normal pb-2">Question Text</p>
+                <textarea class="form-input flex w-full min-w-0 flex-1 resize-y overflow-hidden rounded-lg text-brand-dark-gray dark:text-brand-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 focus:border-primary min-h-36 placeholder:text-brand-dark-gray/50 dark:placeholder:text-brand-white/50 p-[15px] text-base font-normal leading-normal" placeholder="Type your question here...">${question.questionText}</textarea>
+              </label>
+              <div class="flex mt-4">
+                <label class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-brand-light-gray dark:bg-brand-dark-gray/40 text-brand-dark-gray dark:text-brand-white gap-2 pl-3 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/60 transition-colors">
+                  <span class="material-symbols-outlined text-xl">image</span>
+                  <span class="truncate">Upload Image</span>
+                  <input type="file" class="hidden" accept="image/*" id="question-image-input-${this.selectedQuestionIndex}">
+                </label>
+              </div>
+              <img id="question-image-preview-${this.selectedQuestionIndex}" src="${this.getImagePreviewUrl(question.questionImage)}" alt="Image Preview" class="mt-4 rounded-lg" style="${this.getImagePreviewUrl(question.questionImage) ? '' : 'display: none;'} max-width: 100%; height: auto;"/>
+            </div>
+            <div class="bg-brand-white dark:bg-brand-dark-gray/20 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/30 p-6 shadow-sm">
+              <p class="text-brand-dark-gray dark:text-brand-white text-base font-medium leading-normal pb-4">Answer Choices</p>
+              <div class="flex flex-col gap-4">
+                ${question.answers.map((answer, index) => this.renderAnswerChoice(answer, index)).join('')}
+              </div>
+              <div class="mt-4">
+                <button class="add-answer-btn flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-brand-light-gray dark:bg-brand-dark-gray/40 text-brand-dark-gray dark:text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/60 transition-colors">
+                  <span class="truncate">+ Add Answer Choice</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+
+        // Add event listeners
+        workspace.querySelector('textarea').addEventListener('input', (e) => {
+          this.questions[this.selectedQuestionIndex].questionText = e.target.value;
+        });
+
+        const questionImageInput = workspace.querySelector(`#question-image-input-${this.selectedQuestionIndex}`);
+        questionImageInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                this.questions[this.selectedQuestionIndex].questionImage = file;
+                this.render();
+            }
+        });
+
+        workspace.querySelector('.add-answer-btn').addEventListener('click', () => {
+          this.addAnswer();
+        });
+
+        workspace.querySelectorAll('.answer-choice-item').forEach((item, index) => {
+          item.querySelector('input[type="radio"]').addEventListener('change', () => {
+            this.questions[this.selectedQuestionIndex].correctAnswerIndex = index;
+            this.render();
+          });
+          item.querySelector('input[type="text"]').addEventListener('input', (e) => {
+            this.questions[this.selectedQuestionIndex].answers[index].text = e.target.value;
+          });
+          item.querySelector('.delete-answer-btn').addEventListener('click', () => {
+            this.deleteAnswer(index);
+          });
+          const answerImageInput = item.querySelector(`#answer-image-input-${this.selectedQuestionIndex}-${index}`);
+            if(answerImageInput) {
+              answerImageInput.addEventListener('change', (event) => {
+                  const file = event.target.files[0];
+                  if (file) {
+                      this.questions[this.selectedQuestionIndex].answers[index].image = file;
+                      this.render();
+                  }
+              });
+            }
+        });
+      },
+
+      renderAnswerChoice(answer, index) {
+        const isCorrect = index === this.questions[this.selectedQuestionIndex].correctAnswerIndex;
+        return `
+          <div class="answer-choice-item flex items-center gap-3">
+            <label class="relative flex items-center justify-center cursor-pointer" title="Set as correct answer">
+              <input class="peer h-5 w-5 cursor-pointer appearance-none rounded-full border border-brand-light-gray dark:border-brand-white/30 checked:border-primary checked:bg-primary transition-all" name="correct_answer" type="radio" ${isCorrect ? 'checked' : ''}/>
+              <span class="material-symbols-outlined absolute text-brand-white transition-opacity opacity-0 peer-checked:opacity-100 text-sm">check</span>
+            </label>
+            <input class="form-input flex-1 rounded-lg text-brand-dark-gray dark:text-brand-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 focus:border-primary placeholder:text-brand-dark-gray/50 dark:placeholder:text-brand-white/50 p-3 text-base" placeholder="Answer ${String.fromCharCode(65 + index)}" type="text" value="${answer.text}"/>
+            <label class="p-2 rounded-lg hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10 transition-colors cursor-pointer" title="Upload image for this answer">
+              <span class="material-symbols-outlined text-brand-dark-gray/60 dark:text-brand-white/60">image</span>
+               <input type="file" class="hidden" accept="image/*" id="answer-image-input-${this.selectedQuestionIndex}-${index}">
+            </label>
+            <button class="delete-answer-btn p-2 rounded-lg hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10 transition-colors" title="Remove this answer">
+              <span class="material-symbols-outlined text-brand-dark-gray/60 dark:text-brand-white/60">delete</span>
+            </button>
+          </div>
+          <img id="answer-image-preview-${this.selectedQuestionIndex}-${index}" src="${this.getImagePreviewUrl(answer.image)}" alt="Image Preview" class="mt-2 rounded-lg" style="${this.getImagePreviewUrl(answer.image) ? '' : 'display: none;'} max-width: 100%; height: auto;"/>
+        `;
+      },
+
+      getImagePreviewUrl(image) {
+          if (image instanceof File) {
+              return URL.createObjectURL(image);
+          }
+          if (typeof image === 'string' && image) {
+              return image;
+          }
+          return '';
+      },
+
+      addQuestion() {
+        this.questions.push({
+          questionText: '',
+          questionImage: null,
+          answers: [
+            { text: '', image: null },
+            { text: '', image: null },
+          ],
+          correctAnswerIndex: 0
+        });
+        this.selectedQuestionIndex = this.questions.length - 1;
+        this.render();
+      },
+
+      addAnswer() {
+        this.questions[this.selectedQuestionIndex].answers.push({ text: '', image: null });
+        this.render();
+      },
+
+      deleteQuestion(index) {
+        if (this.questions.length > 1) {
+          this.questions.splice(index, 1);
+          if (this.selectedQuestionIndex >= index) {
+            this.selectedQuestionIndex = Math.max(0, this.selectedQuestionIndex - 1);
+          }
+          this.render();
+        } else {
+          alert('A poll must have at least one question.');
+        }
+      },
+
+      deleteAnswer(index) {
+        if (this.questions[this.selectedQuestionIndex].answers.length > 2) {
+          this.questions[this.selectedQuestionIndex].answers.splice(index, 1);
+          if (this.questions[this.selectedQuestionIndex].correctAnswerIndex >= index) {
+            this.questions[this.selectedQuestionIndex].correctAnswerIndex = Math.max(0, this.questions[this.selectedQuestionIndex].correctAnswerIndex - 1);
+          }
+          this.render();
+        } else {
+          alert('A question must have at least two answer choices.');
+        }
+      },
+
+      savePoll() {
+        this.save('savePollNew');
+      },
+
+      saveDraft() {
+        this.save('saveDraft');
+      },
+
+      save(method) {
+        const pollTitle = document.querySelector('header input').value;
+        let uploadPromises = [];
+
+        const questionsToSave = JSON.parse(JSON.stringify(this.questions));
+
+        this.questions.forEach((question, qIndex) => {
+            const questionImageFile = question.questionImage;
+            if (questionImageFile instanceof File) {
+                let promise = uploadFile(questionImageFile).then(url => {
+                    questionsToSave[qIndex].questionImage = url;
+                });
+                uploadPromises.push(promise);
+            }
+
+            question.answers.forEach((answer, aIndex) => {
+                const answerImageFile = answer.image;
+                if (answerImageFile instanceof File) {
+                    let promise = uploadFile(answerImageFile).then(url => {
+                        questionsToSave[qIndex].answers[aIndex].image = url;
+                    });
+                    uploadPromises.push(promise);
+                }
+            });
+        });
+
+        Promise.all(uploadPromises).then(() => {
+            const pollData = {
+                pollName: pollTitle,
+                className: this.className,
+                questions: questionsToSave.map(q => ({
+                    questionText: q.questionText,
+                    questionImage: q.questionImage,
+                    options: q.answers.map(a => ({
+                        text: a.text,
+                        image: a.image,
+                    })),
+                    correctAnswer: q.answers[q.correctAnswerIndex] ? q.answers[q.correctAnswerIndex].text : null,
+                })),
+            };
+
+            const successCallback = () => {
+                const action = method === 'savePollNew' ? 'saved' : 'draft saved';
+                alert(`Poll ${action} successfully!`);
+                if (method === 'savePollNew') {
+                    location.reload();
+                }
+            };
+
+            const failureCallback = (err) => {
+                console.error(err);
+                alert(`Error saving poll: ${err.message}`);
+            };
+
+            google.script.run
+                .withSuccessHandler(successCallback)
+                .withFailureHandler(failureCallback)
+                [method](pollData);
+
+        }).catch(err => {
+            alert(`Error uploading images: ${err.message}`);
+        });
+      }
+    };
+
+    window.pollEditorApp.init();
+
+    document.querySelector('aside button').addEventListener('click', () => {
+      window.pollEditorApp.addQuestion();
+    });
+
+    document.querySelector('header .flex.items-center.gap-2 button:last-child').addEventListener('click', () => {
+      window.pollEditorApp.savePoll();
+    });
+
+    document.querySelector('header .flex.items-center.gap-2 button:first-child').addEventListener('click', () => {
+      window.pollEditorApp.saveDraft();
+    });
+
+    function fileToBase64(file){
+      return new Promise(function(resolve,reject){
+        var reader=new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload=function(){
+          resolve(reader.result);
+        };
+        reader.onerror=function(error){
+          reject(error);
+        };
+      });
+    }
+
+    function uploadFile(file){
+      return new Promise(function(resolve,reject){
+        fileToBase64(file).then(function(dataUrl){
+          google.script.run
+            .withSuccessHandler(function(response){
+              if(response.success){
+                resolve(response.url);
+              } else {
+                reject(new Error(response.error||'Upload failed'));
+              }
+            })
+            .withFailureHandler(reject)
+            .uploadImageToDrive(dataUrl,file.name);
+        }).catch(reject);
+      });
+    }
+  })();
+</script>
+</body></html>

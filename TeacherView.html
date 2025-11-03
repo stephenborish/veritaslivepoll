@@ -689,7 +689,15 @@
   google.charts.setOnLoadCallback(loadInitialData);
   
   // --- Event Listeners ---
-  document.getElementById('open-creator-btn').onclick=openPollCreator;
+  document.getElementById('open-creator-btn').onclick = () => {
+    const selectedPollId = pollSelect.value;
+    if (selectedPollId) {
+      const selectedPoll = ALL_POLLS.find(p => p.pollId === selectedPollId);
+      openPollEditor(selectedPoll.className);
+    } else {
+      openPollEditor();
+    }
+  };
   document.getElementById('close-modal-btn').onclick=closePollCreator;
   document.getElementById('close-links-modal-btn').onclick=closeLinksModal;
   document.getElementById('add-question-btn').onclick=addQuestionToBuilder;
@@ -1172,6 +1180,17 @@
   }
   
   // --- Poll Creator Modal ---
+  function openPollEditor(className) {
+    mainLoader.style.display = 'block';
+    google.script.run
+      .withSuccessHandler(function(html) {
+        document.getElementById('dashboard').innerHTML = html;
+        mainLoader.style.display = 'none';
+      })
+      .withFailureHandler(handleError)
+      .getPollEditorHtml(className);
+  }
+
   function openPollCreator(){
     questionCounter=0;
     document.getElementById('question-builder').innerHTML="";

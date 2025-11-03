@@ -528,15 +528,15 @@ function saveDraft(pollData) {
     if (!pollName || !className || !Array.isArray(questions) || questions.length === 0) {
       throw new Error('Invalid poll data: name, class, and questions are required');
     }
-
+    
     if (questions.length > 50) {
       throw new Error('Maximum 50 questions per poll');
     }
-
+    
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const pollSheet = ss.getSheetByName("Polls");
     const pollId = "D-" + Utilities.getUuid(); // "D" for Draft
-
+    
     const newRows = questions.map((q, index) => {
       return [
         pollId,
@@ -546,13 +546,13 @@ function saveDraft(pollData) {
         JSON.stringify(q)
       ];
     });
-
+    
     pollSheet.getRange(pollSheet.getLastRow() + 1, 1, newRows.length, newRows[0].length).setValues(newRows);
-
+    
     CacheManager.invalidate('ALL_POLLS_DATA');
-
+    
     Logger.log('Draft saved', { pollId: pollId, pollName: pollName, questionCount: questions.length });
-
+    
     return { success: true };
   })();
 }
@@ -563,15 +563,15 @@ function savePollNew(pollData) {
     if (!pollName || !className || !Array.isArray(questions) || questions.length === 0) {
       throw new Error('Invalid poll data: name, class, and questions are required');
     }
-
+    
     if (questions.length > 50) {
       throw new Error('Maximum 50 questions per poll');
     }
-
+    
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const pollSheet = ss.getSheetByName("Polls");
     const pollId = "P-" + Utilities.getUuid();
-
+    
     const newRows = questions.map((q, index) => {
       return [
         pollId,
@@ -581,13 +581,13 @@ function savePollNew(pollData) {
         JSON.stringify(q)
       ];
     });
-
+    
     pollSheet.getRange(pollSheet.getLastRow() + 1, 1, newRows.length, newRows[0].length).setValues(newRows);
-
+    
     CacheManager.invalidate('ALL_POLLS_DATA');
-
+    
     Logger.log('Poll created via new editor', { pollId: pollId, pollName: pollName, questionCount: questions.length });
-
+    
     return DataAccess.polls.getAll();
   })();
 }

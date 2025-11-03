@@ -1,52 +1,116 @@
 <!DOCTYPE html>
-<html>
+<html class="light" lang="en">
 <head>
   <base target="_top">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Veritas Live Poll - Student</title>
-  <?!= include('Styling'); ?>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+
+  <!-- Material Symbols -->
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#002d6b",
+            "brand-white": "#ffffff",
+            "brand-light-gray": "#d9e0e7",
+            "brand-dark-gray": "#242424",
+            "background-light": "#f5f7f8",
+            "background-dark": "#0f1723"
+          },
+          fontFamily: {
+            display: ["Inter", "sans-serif"],
+            serif: ["Noto Serif", "serif"]
+          },
+          borderRadius: {
+            DEFAULT: "0.25rem",
+            lg: "0.5rem",
+            xl: "0.75rem",
+            full: "9999px"
+          }
+        }
+      }
+    };
+  </script>
 </head>
-<body>
-  <header>
-    <div class="header-content">
-      <h1>Veritas Live Poll</h1>
-      <div id="loader" class="loader" style="display: none;"></div>
+<body class="font-display bg-background-light dark:bg-background-dark text-brand-dark-gray dark:text-brand-white min-h-screen">
+  <!-- Header -->
+  <header class="flex shrink-0 items-center justify-between whitespace-nowrap border-b border-solid border-brand-light-gray dark:border-brand-dark-gray/20 bg-brand-light-gray dark:bg-brand-dark-gray/30 px-6 py-3 shadow-sm">
+    <div class="flex items-center gap-4">
+      <img alt="Malvern Prep Logo" class="h-10 w-auto" src="https://raw.githubusercontent.com/stephenborish/veritasassets/f0a824864d7d66637a13b822bff99fa6830e6123/mplogo.png"/>
+      <div class="flex flex-col">
+        <h1 class="text-primary dark:text-brand-white text-lg font-bold leading-tight tracking-[-0.015em]">Veritas Live Poll</h1>
+        <p class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm">Student View</p>
+      </div>
+    </div>
+    <div id="loader" class="loader" style="display: none;">
+      <div class="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
     </div>
   </header>
 
-  <main>
+  <main class="flex flex-col items-center justify-center p-6">
     <!-- Entry Screen -->
-    <div id="entry-screen" class="container">
-      <h1>📱 Live Poll</h1>
-      <p>Welcome to Veritas Live Poll! Click <strong>"Begin Session"</strong> to start participating.</p>
-      <div style="background: #fff5f5; border: 2px solid #dc3545; border-radius: 8px; padding: 20px; margin: 24px auto; max-width: 600px;">
-        <h4 style="color: #dc3545; margin-top: 0;">⚠️ Important Security Notice</h4>
-        <p style="margin-bottom: 0;">
-          This poll must be completed in this tab. 
-          <b>Do not switch tabs, open other windows, or exit fullscreen mode</b>, 
-          or your session will be automatically locked.
+    <div id="entry-screen" class="container max-w-3xl mx-auto text-center py-12">
+      <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-8 shadow-lg">
+        <span class="material-symbols-outlined text-6xl text-primary dark:text-brand-white mb-4 inline-block">ballot</span>
+        <h1 class="text-primary dark:text-brand-white text-4xl font-bold mb-4">Live Poll</h1>
+        <p class="text-brand-dark-gray/80 dark:text-brand-white/80 text-lg mb-6 leading-relaxed">
+          Welcome to Veritas Live Poll! Click <strong>"Begin Session"</strong> to start participating.
         </p>
+
+        <!-- Important Security Notice -->
+        <div class="bg-red-50 dark:bg-red-900/20 border-2 border-red-500 dark:border-red-700 rounded-lg p-6 mb-8">
+          <div class="flex items-start gap-3 mb-3">
+            <span class="material-symbols-outlined text-3xl text-red-600 dark:text-red-400 flex-shrink-0">warning</span>
+            <h4 class="text-red-600 dark:text-red-400 text-xl font-bold text-left">Important Security Notice</h4>
+          </div>
+          <p class="text-red-800 dark:text-red-300 text-base text-left leading-relaxed">
+            This poll must be completed in this tab.
+            <strong>Do not switch tabs, open other windows, or exit fullscreen mode</strong>,
+            or your session will be automatically locked.
+          </p>
+        </div>
+
+        <button id="start-session-btn" class="flex items-center justify-center gap-3 mx-auto px-12 py-4 rounded-full bg-primary text-brand-white text-xl font-bold hover:bg-primary/90 transition-colors shadow-lg hover:shadow-xl">
+          <span class="material-symbols-outlined text-2xl">play_circle</span>
+          <span>Begin Session</span>
+        </button>
       </div>
-      <button id="start-session-btn" class="btn-primary" style="padding: 16px 48px; font-size: 1.3rem; margin-top: 12px;">
-        Begin Session
-      </button>
     </div>
 
     <!-- Student App Container -->
-    <div class="container" id="student-container" style="display: none;">
-      <div id="student-loader" class="loader" style="display: block; margin: 0 auto;"></div>
-      
-      <div id="status-container" style="display: none;">
-        <h2 id="status-message" style="font-weight: 500; color: #555;">Connecting to poll...</h2>
+    <div class="container max-w-4xl mx-auto" id="student-container" style="display: none;">
+      <div id="student-loader" class="text-center py-12" style="display: block;">
+        <div class="h-16 w-16 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4"></div>
+        <p class="text-brand-dark-gray/60 dark:text-brand-white/60 text-lg">Connecting to poll...</p>
       </div>
 
-      <div id="question-container" style="display: none; width: 100%;">
-        <div id="question-content">
-          <img id="question-image" src="" alt="Question" style="max-width: 90%; max-height: 400px; display: none; margin: 0 auto 24px; border-radius: 8px;" />
-          <h2 id="question-text" style="color: #212529; margin-top: 0;"></h2>
+      <!-- Status Container -->
+      <div id="status-container" class="text-center py-12" style="display: none;">
+        <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-8 shadow-lg">
+          <span class="material-symbols-outlined text-6xl text-primary dark:text-brand-white mb-4 inline-block">schedule</span>
+          <h2 id="status-message" class="text-brand-dark-gray dark:text-brand-white text-2xl font-semibold">Connecting to poll...</h2>
         </div>
-        <div id="options-list"></div>
+      </div>
+
+      <!-- Question Container -->
+      <div id="question-container" class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-8 shadow-lg" style="display: none;">
+        <div id="question-content" class="mb-8">
+          <img id="question-image" src="" alt="Question" class="max-w-full max-h-[400px] rounded-lg mx-auto mb-6 shadow-md" style="display: none;" />
+          <h2 id="question-text" class="font-serif text-brand-dark-gray dark:text-brand-white text-3xl font-bold leading-tight text-center"></h2>
+        </div>
+        <div id="options-list" class="space-y-4"></div>
       </div>
     </div>
   </main>
@@ -61,16 +125,16 @@
       var entryScreen = document.getElementById('entry-screen');
       var startSessionBtn = document.getElementById('start-session-btn');
       var studentContainer = document.getElementById('student-container');
-      
+
       var currentPollState = {};
       var pollInterval = null;
       var sessionLocked = false;
-      
+
       startSessionBtn.onclick = function() {
         console.log('Starting session...');
         entryScreen.style.display = 'none';
-        studentContainer.style.display = 'flex';
-        
+        studentContainer.style.display = 'block';
+
         // Request fullscreen
         try {
           if (document.documentElement.requestFullscreen) {
@@ -81,7 +145,7 @@
         } catch (e) {
           console.error('Fullscreen error:', e);
         }
-        
+
         // Add security listeners
         document.addEventListener('visibilitychange', function() {
           if (document.hidden && !sessionLocked) {
@@ -90,7 +154,7 @@
             google.script.run.withFailureHandler(handleError).logStudentViolation();
           }
         });
-        
+
         document.addEventListener('fullscreenchange', function() {
           if (!document.fullscreenElement && !sessionLocked) {
             sessionLocked = true;
@@ -98,18 +162,18 @@
             google.script.run.withFailureHandler(handleError).logStudentViolation();
           }
         });
-        
+
         pollForStatus();
         pollInterval = setInterval(pollForStatus, 2500);
       };
-      
+
       function pollForStatus() {
         google.script.run
           .withSuccessHandler(updateStudentView)
           .withFailureHandler(handleError)
           .getStudentPollStatus();
       }
-      
+
       function updateStudentView(data) {
         if (sessionLocked) {
           if (data.status === 'LOCKED') {
@@ -122,20 +186,20 @@
             } catch (e) {}
           }
         }
-        
+
         if (studentLoader) studentLoader.style.display = 'none';
-        
+
         if (data.status === 'OPEN') {
           if (currentPollState.pollId === data.pollId && currentPollState.questionIndex === data.questionIndex) {
             return;
           }
-          
+
           currentPollState = data;
           statusContainer.style.display = 'none';
           questionContainer.style.display = 'block';
-          
+
           document.getElementById('question-text').textContent = data.questionText || '';
-          
+
           var qImgEl = document.getElementById('question-image');
           if (data.questionImageURL) {
             qImgEl.src = data.questionImageURL;
@@ -143,24 +207,24 @@
           } else {
             qImgEl.style.display = 'none';
           }
-          
+
           optionsList.innerHTML = "";
           var shuffled = shuffle(data.options || []);
-          
+
           shuffled.forEach(function(option) {
             var btn = document.createElement('button');
-            btn.className = 'answer-option';
+            btn.className = 'answer-option w-full p-6 rounded-lg border-2 border-brand-light-gray dark:border-brand-dark-gray/40 bg-brand-white dark:bg-brand-dark-gray/20 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all hover:shadow-md cursor-pointer';
             btn.dataset.answerText = option.text || '';
-            
-            var content = '<div class="rich-answer-option">';
+
+            var content = '<div class="flex flex-col items-center gap-3 text-center">';
             if (option.imageURL) {
-              content += '<img src="' + escapeHtml(option.imageURL) + '" alt="Answer" />';
+              content += '<img src="' + escapeHtml(option.imageURL) + '" alt="Answer" class="max-w-full max-h-[200px] rounded-lg object-contain">';
             }
             if (option.text) {
-              content += '<p>' + escapeHtml(option.text) + '</p>';
+              content += '<p class="font-serif text-brand-dark-gray dark:text-brand-white text-xl font-semibold leading-relaxed">' + escapeHtml(option.text) + '</p>';
             }
             content += '</div>';
-            
+
             btn.innerHTML = content;
             btn.onclick = function() {
               submitAnswer(data.pollId, data.questionIndex, option.text);
@@ -171,49 +235,86 @@
           currentPollState = {};
           questionContainer.style.display = 'none';
           statusContainer.style.display = 'block';
-          
+
+          var statusIcon = 'schedule';
+          var statusClass = 'text-primary dark:text-brand-white';
+
           if (data.status === 'WAITING') {
             statusMessage.textContent = data.message || "Waiting for next question...";
-            statusMessage.className = '';
+            statusMessage.className = 'text-brand-dark-gray dark:text-brand-white text-2xl font-semibold';
+            statusIcon = 'check_circle';
+            statusClass = 'text-green-600 dark:text-green-400';
           } else if (data.status === 'NOT_ENROLLED') {
             statusMessage.textContent = data.message || "You are not enrolled.";
-            statusMessage.className = 'locked-message';
+            statusMessage.className = 'text-red-600 dark:text-red-400 text-2xl font-bold';
+            statusIcon = 'error';
+            statusClass = 'text-red-600 dark:text-red-400';
             if (pollInterval) clearInterval(pollInterval);
+          } else if (data.status === 'LOCKED') {
+            showLockedMessage(data.message);
+            return;
           } else {
             statusMessage.textContent = "The poll is not active.";
-            statusMessage.className = '';
+            statusMessage.className = 'text-brand-dark-gray dark:text-brand-white text-2xl font-semibold';
+          }
+
+          // Update icon
+          var iconEl = statusContainer.querySelector('.material-symbols-outlined');
+          if (iconEl) {
+            iconEl.textContent = statusIcon;
+            iconEl.className = 'material-symbols-outlined text-6xl mb-4 inline-block ' + statusClass;
           }
         }
       }
-      
+
       function submitAnswer(pollId, questionIndex, answerText) {
         if (sessionLocked) return;
-        
+
         var buttons = optionsList.querySelectorAll('button');
         for (var i = 0; i < buttons.length; i++) {
           buttons[i].disabled = true;
           if (buttons[i].dataset.answerText === answerText) {
-            buttons[i].classList.add('selected');
+            buttons[i].className = 'answer-option w-full p-6 rounded-lg border-2 border-primary bg-primary/10 dark:bg-primary/20 shadow-md';
+          } else {
+            buttons[i].className = 'answer-option w-full p-6 rounded-lg border-2 border-brand-light-gray dark:border-brand-dark-gray/40 bg-brand-white dark:bg-brand-dark-gray/20 opacity-50';
           }
         }
-        
+
         statusContainer.style.display = 'block';
         questionContainer.style.display = 'none';
         statusMessage.textContent = "Submitting...";
-        statusMessage.className = '';
+        statusMessage.className = 'text-brand-dark-gray dark:text-brand-white text-2xl font-semibold';
+
+        var iconEl = statusContainer.querySelector('.material-symbols-outlined');
+        if (iconEl) {
+          iconEl.textContent = 'sync';
+          iconEl.className = 'material-symbols-outlined text-6xl text-primary dark:text-brand-white mb-4 inline-block animate-spin';
+        }
+
         currentPollState = {};
-        
+
         google.script.run
           .withSuccessHandler(function(response) {
             if (!response.success) {
               statusMessage.textContent = response.error || "Error occurred.";
-              statusMessage.className = 'locked-message';
+              statusMessage.className = 'text-red-600 dark:text-red-400 text-2xl font-bold';
+              if (iconEl) {
+                iconEl.textContent = 'error';
+                iconEl.className = 'material-symbols-outlined text-6xl text-red-600 dark:text-red-400 mb-4 inline-block';
+              }
+            } else {
+              statusMessage.textContent = "Answer submitted! Waiting for next question...";
+              statusMessage.className = 'text-green-600 dark:text-green-400 text-2xl font-semibold';
+              if (iconEl) {
+                iconEl.textContent = 'check_circle';
+                iconEl.className = 'material-symbols-outlined text-6xl text-green-600 dark:text-green-400 mb-4 inline-block';
+              }
             }
           })
           .withFailureHandler(handleError)
           .submitStudentAnswer(pollId, questionIndex, answerText);
       }
-      
+
       function shuffle(array) {
         var arr = array.slice();
         for (var i = arr.length - 1; i > 0; i--) {
@@ -224,28 +325,45 @@
         }
         return arr;
       }
-      
+
       function escapeHtml(text) {
         if (!text) return '';
         var div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
       }
-      
+
       function showLockedMessage(message) {
-        studentContainer.style.display = 'flex';
+        studentContainer.style.display = 'block';
         entryScreen.style.display = 'none';
         questionContainer.style.display = 'none';
         statusContainer.style.display = 'block';
         if (studentLoader) studentLoader.style.display = 'none';
+
         statusMessage.textContent = message;
-        statusMessage.className = 'locked-message';
+        statusMessage.className = 'text-red-600 dark:text-red-400 text-2xl font-bold';
+
+        var iconEl = statusContainer.querySelector('.material-symbols-outlined');
+        if (iconEl) {
+          iconEl.textContent = 'lock';
+          iconEl.className = 'material-symbols-outlined text-6xl text-red-600 dark:text-red-400 mb-4 inline-block';
+        }
       }
-      
+
       function handleError(error) {
         console.error('Error:', error);
+        statusContainer.style.display = 'block';
+        questionContainer.style.display = 'none';
+        if (studentLoader) studentLoader.style.display = 'none';
+
         statusMessage.textContent = 'An error occurred: ' + (error.message || error);
-        statusMessage.className = 'locked-message';
+        statusMessage.className = 'text-red-600 dark:text-red-400 text-2xl font-bold';
+
+        var iconEl = statusContainer.querySelector('.material-symbols-outlined');
+        if (iconEl) {
+          iconEl.textContent = 'error';
+          iconEl.className = 'material-symbols-outlined text-6xl text-red-600 dark:text-red-400 mb-4 inline-block';
+        }
       }
     })();
   </script>

@@ -73,34 +73,34 @@
 <body class="font-display bg-background-light dark:bg-background-dark text-brand-dark-gray dark:text-brand-white">
   <div class="flex h-screen w-full flex-col">
     <!-- Header - Default State -->
-    <header id="header-default" class="flex shrink-0 items-center justify-between whitespace-nowrap border-b border-solid border-brand-light-gray dark:border-brand-dark-gray/20 bg-brand-white dark:bg-brand-dark-gray/30 px-6 py-3 shadow-sm">
+    <header id="header-default" class="flex shrink-0 items-center justify-between whitespace-nowrap border-b border-solid border-primary/80 bg-primary px-6 py-3 shadow-sm">
       <div class="flex items-center gap-4">
         <img alt="Malvern Prep Logo" class="h-10 w-auto" src="https://raw.githubusercontent.com/stephenborish/veritasassets/f0a824864d7d66637a13b822bff99fa6830e6123/mplogo.png"/>
         <div class="flex flex-col">
-          <h1 class="text-primary dark:text-brand-white text-lg font-bold leading-tight tracking-[-0.015em]">Veritas Live Poll</h1>
-          <p class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm">Teacher Dashboard</p>
+          <h1 class="text-brand-white text-lg font-bold leading-tight tracking-[-0.015em]">Veritas Live Poll</h1>
+          <p class="text-brand-white/80 text-sm">Teacher Dashboard</p>
         </div>
       </div>
       <div id="loader" class="loader" style="display: block;">
-        <div class="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+        <div class="h-6 w-6 animate-spin rounded-full border-2 border-brand-white/80 border-t-transparent"></div>
       </div>
     </header>
 
     <!-- Header - Live Poll State -->
-    <header id="header-live" class="flex shrink-0 items-center justify-between whitespace-nowrap border-b border-solid border-brand-light-gray dark:border-brand-dark-gray/20 bg-brand-white dark:bg-brand-dark-gray/30 px-6 py-3 shadow-sm" style="display: none;">
+    <header id="header-live" class="flex shrink-0 items-center justify-between whitespace-nowrap border-b border-solid border-primary/80 bg-primary px-6 py-3 shadow-sm" style="display: none;">
       <div class="flex items-center gap-4">
         <img alt="Malvern Prep Logo" class="h-10 w-auto" src="https://raw.githubusercontent.com/stephenborish/veritasassets/f0a824864d7d66637a13b822bff99fa6830e6123/mplogo.png"/>
         <div class="flex flex-col">
-          <h1 id="header-poll-name" class="text-primary dark:text-brand-white text-lg font-bold leading-tight tracking-[-0.015em]">Poll Name</h1>
-          <p class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm">Live Poll</p>
+          <h1 id="header-poll-name" class="text-brand-white text-lg font-bold leading-tight tracking-[-0.015em]">Poll Name</h1>
+          <p class="text-brand-white/80 text-sm">Live Poll</p>
         </div>
       </div>
       <div class="flex items-center gap-2 flex-wrap">
-        <button id="header-start-btn" class="flex min-w-[80px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-primary text-brand-white text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-primary/90 transition-colors">
+        <button id="header-start-btn" class="flex min-w-[80px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-brand-white text-primary text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-brand-light-gray transition-colors">
           <span class="material-symbols-outlined text-xl">play_arrow</span>
           <span class="truncate">Start</span>
         </button>
-        <button id="header-pause-btn" class="flex min-w-[80px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors" style="display: none;">
+        <button id="header-pause-btn" class="flex min-w-[80px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-brand-white/20 text-brand-white text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-brand-white/30 transition-colors" style="display: none;">
           <span class="material-symbols-outlined text-xl">pause</span>
           <span class="truncate">Pause</span>
         </button>
@@ -108,15 +108,15 @@
           <span class="material-symbols-outlined text-xl">stop</span>
           <span class="truncate">Stop</span>
         </button>
-        <div class="mx-2 h-6 w-px bg-brand-light-gray dark:bg-brand-dark-gray/40"></div>
-        <div id="question-dots" class="flex items-center gap-1.5 rounded-full bg-brand-light-gray/50 dark:bg-brand-dark-gray/50 px-3 py-1.5 text-sm font-medium text-primary dark:text-brand-white">
+        <div class="mx-2 h-6 w-px bg-brand-white/30"></div>
+        <div id="question-dots" class="flex items-center gap-1.5 rounded-full bg-brand-white/20 px-3 py-1.5 text-sm font-medium text-brand-white">
           <!-- Question dots will be populated dynamically -->
         </div>
-        <button id="header-next-btn" class="flex min-w-[80px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors">
+        <button id="header-next-btn" class="flex min-w-[80px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-brand-white/20 text-brand-white text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-brand-white/30 transition-colors">
           <span class="material-symbols-outlined text-xl">skip_next</span>
           <span class="truncate">Next</span>
         </button>
-        <button id="header-skip-btn" class="flex min-w-[80px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors ml-2">
+        <button id="header-skip-btn" class="flex min-w-[80px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-brand-white/20 text-brand-white text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-brand-white/30 transition-colors ml-2">
           <span class="material-symbols-outlined text-xl">fast_forward</span>
           <span class="truncate">Skip Question</span>
         </button>
@@ -312,14 +312,14 @@
   <!-- Student Links Modal -->
   <div id="student-links-modal" class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
     <div class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
-      <div class="sticky top-0 bg-brand-light-gray dark:bg-brand-dark-gray/50 px-6 py-4 border-b border-brand-light-gray dark:border-brand-dark-gray/40">
-        <h2 class="text-brand-dark-gray dark:text-brand-white text-2xl font-bold">Student Personalized Links</h2>
-        <p class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm mt-1">Each student has a unique tracking link.</p>
+      <div class="sticky top-0 bg-primary px-6 py-4 border-b border-primary/70">
+        <h2 class="text-brand-white text-2xl font-bold">Student Personalized Links</h2>
+        <p class="text-brand-white/80 text-sm mt-1">Each student has a unique tracking link.</p>
       </div>
       <div class="p-6">
         <div id="links-container" class="max-h-[60vh] overflow-y-auto"></div>
-        <div class="mt-6 pt-4 border-t border-brand-light-gray dark:border-brand-dark-gray/40">
-          <button id="close-links-modal-btn" class="flex items-center justify-center gap-2 rounded-lg h-10 px-6 bg-brand-light-gray text-brand-dark-gray text-sm font-bold leading-normal tracking-[0.015em] hover:bg-brand-light-gray/80 transition-colors">
+        <div class="mt-6 pt-4 border-t border-primary/20">
+          <button id="close-links-modal-btn" class="flex items-center justify-center gap-2 rounded-lg h-10 px-6 bg-primary text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90 transition-colors">
             <span>Close</span>
           </button>
         </div>
@@ -633,8 +633,10 @@
       var tile=document.createElement('div');
 
       if(student.status==='Submitted'){
-        tile.className='flex items-center justify-center p-2.5 rounded-lg bg-green-500/10 dark:bg-green-500/20 text-center';
-        tile.innerHTML='<span class="text-sm font-medium text-green-800 dark:text-green-300">'+escapeHtml(student.name)+'</span>';
+        tile.className='flex items-center justify-between p-2.5 rounded-lg bg-green-500/10 dark:bg-green-500/20 gap-2';
+        tile.innerHTML='<span class="text-sm font-medium text-green-800 dark:text-green-300 truncate">'+escapeHtml(student.name)+'</span>'+
+          '<button class="reset-btn flex-shrink-0 flex items-center justify-center gap-1 h-7 px-2.5 rounded-md bg-green-600 text-brand-white text-xs font-bold hover:bg-green-700 transition-colors" data-email="'+student.email+'">'+
+          '<span class="material-symbols-outlined text-sm">refresh</span><span>Reset</span></button>';
       } else if(student.status==='LOCKED'){
         tile.className='flex items-center justify-between p-2.5 rounded-lg bg-orange-500/10 dark:bg-orange-500/20 gap-2';
         tile.innerHTML='<div class="flex flex-col text-left flex-grow min-w-0"><span class="text-sm font-medium text-orange-800 dark:text-orange-300 truncate">'+escapeHtml(student.name)+'</span></div>'+
@@ -663,6 +665,26 @@
           .withSuccessHandler(pollForResults)
           .withFailureHandler(handleError)
           .unlockStudent(email,pollId);
+      };
+    });
+
+    grid.querySelectorAll('.reset-btn').forEach(function(btn){
+      btn.onclick=function(){
+        var email=this.dataset.email;
+        var pollId=CURRENT_POLL_DATA.pollId;
+        var questionIndex=CURRENT_POLL_DATA.questionIndex;
+        if(!email||pollId===undefined||questionIndex===undefined)return;
+        var button=this;
+        button.disabled=true;
+        button.querySelector('span:last-child').textContent='Resetting...';
+        google.script.run
+          .withSuccessHandler(pollForResults)
+          .withFailureHandler(function(error){
+            handleError(error);
+            button.disabled=false;
+            button.querySelector('span:last-child').textContent='Reset';
+          })
+          .resetStudentResponse(email,pollId,questionIndex);
       };
     });
   }
@@ -1092,13 +1114,15 @@
       if(q.questionImage instanceof File){
         uploadTasks.push(uploadFile(q.questionImage).then(function(url){
           questionsToSave[qIndex].questionImage=url;
+          questionsToSave[qIndex].questionImageURL=url;
         }));
       }
-      
+
       q.answers.forEach(function(a,aIndex){
         if(a.image instanceof File){
           uploadTasks.push(uploadFile(a.image).then(function(url){
             questionsToSave[qIndex].answers[aIndex].image=url;
+            questionsToSave[qIndex].answers[aIndex].imageURL=url;
           }));
         }
       });
@@ -1111,9 +1135,11 @@
         questions:questionsToSave.map(function(q){
           return{
             questionText:q.questionText,
-            questionImage:q.questionImage,
+            questionImage:q.questionImageURL||q.questionImage||null,
+            questionImageURL:q.questionImageURL||q.questionImage||null,
             options:q.answers.map(function(a){
-              return{text:a.text,image:a.image};
+              var imageUrl=a.imageURL||a.image||null;
+              return{text:a.text,image:imageUrl,imageURL:imageUrl};
             }),
             correctAnswer:q.answers[q.correctAnswerIndex]?q.answers[q.correctAnswerIndex].text:null
           };

@@ -46,16 +46,16 @@
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-brand-dark-gray dark:text-brand-white min-h-screen">
   <!-- Header -->
-  <header class="flex shrink-0 items-center justify-between whitespace-nowrap border-b border-solid border-brand-light-gray dark:border-brand-dark-gray/20 bg-brand-light-gray dark:bg-brand-dark-gray/30 px-6 py-3 shadow-sm">
+  <header class="flex shrink-0 items-center justify-between whitespace-nowrap border-b border-solid border-primary/80 bg-primary px-6 py-3 shadow-sm">
     <div class="flex items-center gap-4">
       <img alt="Malvern Prep Logo" class="h-10 w-auto" src="https://raw.githubusercontent.com/stephenborish/veritasassets/f0a824864d7d66637a13b822bff99fa6830e6123/mplogo.png"/>
       <div class="flex flex-col">
-        <h1 class="text-primary dark:text-brand-white text-lg font-bold leading-tight tracking-[-0.015em]">Veritas Live Poll</h1>
-        <p class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm">Student View</p>
+        <h1 class="text-brand-white text-lg font-bold leading-tight tracking-[-0.015em]">Veritas Live Poll</h1>
+        <p class="text-brand-white/80 text-sm">Student View</p>
       </div>
     </div>
     <div id="loader" class="loader" style="display: none;">
-      <div class="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+      <div class="h-6 w-6 animate-spin rounded-full border-2 border-brand-white/80 border-t-transparent"></div>
     </div>
   </header>
 
@@ -101,6 +101,15 @@
         <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-8 shadow-lg">
           <span class="material-symbols-outlined text-6xl text-primary dark:text-brand-white mb-4 inline-block">schedule</span>
           <h2 id="status-message" class="text-brand-dark-gray dark:text-brand-white text-2xl font-semibold">Connecting to poll...</h2>
+          <div id="resume-controls" class="mt-6 space-y-3" style="display: none;">
+            <p class="text-brand-dark-gray/80 dark:text-brand-white/80 text-base leading-relaxed">
+              Your teacher has unlocked your session. Click below to return to fullscreen and resume the poll.
+            </p>
+            <button id="resume-session-btn" class="mx-auto flex items-center justify-center gap-2 px-8 py-3 rounded-full bg-primary text-brand-white text-lg font-semibold hover:bg-primary/90 transition-colors shadow">
+              <span class="material-symbols-outlined text-xl">fullscreen</span>
+              <span>Resume Poll</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -125,17 +134,55 @@
       var entryScreen = document.getElementById('entry-screen');
       var startSessionBtn = document.getElementById('start-session-btn');
       var studentContainer = document.getElementById('student-container');
+      var resumeControls = document.getElementById('resume-controls');
+      var resumeSessionBtn = document.getElementById('resume-session-btn');
 
       var currentPollState = {};
       var pollInterval = null;
-      var sessionLocked = false;
+      var isInteractionBlocked = false;
+      var awaitingUnlock = false;
+      var pendingResume = false;
       var hasAnsweredCurrent = false; // NEW: Track if student answered current question
       var violationLogged = false; // NEW: Ensure violation only logged once
+
+      if (resumeSessionBtn) {
+        resumeSessionBtn.onclick = function() {
+          console.log('Resume button clicked');
+          if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(function(e) {
+              console.warn('Fullscreen denied on resume:', e);
+            });
+          }
+          pendingResume = false;
+          awaitingUnlock = false;
+          isInteractionBlocked = false;
+          violationLogged = false;
+          hasAnsweredCurrent = false;
+          if (resumeControls) {
+            resumeControls.style.display = 'none';
+          }
+          statusMessage.textContent = 'Reconnecting to poll...';
+          statusMessage.className = 'text-brand-dark-gray dark:text-brand-white text-2xl font-semibold';
+          var resumeIcon = statusContainer.querySelector('.material-symbols-outlined');
+          if (resumeIcon) {
+            resumeIcon.textContent = 'sync';
+            resumeIcon.className = 'material-symbols-outlined text-6xl text-primary mb-4 inline-block animate-spin';
+          }
+          pollForStatus();
+        };
+      }
 
       startSessionBtn.onclick = function() {
         console.log('Starting session...');
         entryScreen.style.display = 'none';
         studentContainer.style.display = 'block';
+        isInteractionBlocked = false;
+        awaitingUnlock = false;
+        pendingResume = false;
+        violationLogged = false;
+        if (resumeControls) {
+          resumeControls.style.display = 'none';
+        }
 
         // Request fullscreen
         try {
@@ -150,39 +197,37 @@
 
         // Add security listeners - THESE TRIGGER PERMANENT LOCKOUT
         document.addEventListener('visibilitychange', function() {
-          if (document.hidden && !sessionLocked && !violationLogged) {
+          if (document.hidden && !awaitingUnlock && !pendingResume && !violationLogged) {
             console.log('VIOLATION: Tab switch detected');
-            sessionLocked = true;
+            isInteractionBlocked = true;
+            awaitingUnlock = true;
+            pendingResume = false;
             violationLogged = true;
-            clearInterval(pollInterval); // STOP POLLING IMMEDIATELY
             showLockedMessage("Your session has been permanently locked because you navigated away from the poll. Your teacher must unlock you.");
             google.script.run.withFailureHandler(handleError).logStudentViolation();
           }
         });
 
         document.addEventListener('fullscreenchange', function() {
-          if (!document.fullscreenElement && !sessionLocked && !violationLogged) {
+          if (!document.fullscreenElement && !awaitingUnlock && !pendingResume && !violationLogged) {
             console.log('VIOLATION: Fullscreen exit detected');
-            sessionLocked = true;
+            isInteractionBlocked = true;
+            awaitingUnlock = true;
+            pendingResume = false;
             violationLogged = true;
-            clearInterval(pollInterval); // STOP POLLING IMMEDIATELY
             showLockedMessage("Your session has been permanently locked because you exited fullscreen mode. Your teacher must unlock you.");
             google.script.run.withFailureHandler(handleError).logStudentViolation();
           }
         });
 
         pollForStatus();
+        if (pollInterval) {
+          clearInterval(pollInterval);
+        }
         pollInterval = setInterval(pollForStatus, 2500);
       };
 
       function pollForStatus() {
-        // CRITICAL: If locked, do not make any more requests
-        if (sessionLocked) {
-          console.log('Session locked - stopping all polling');
-          clearInterval(pollInterval);
-          return;
-        }
-
         google.script.run
           .withSuccessHandler(updateStudentView)
           .withFailureHandler(handleError)
@@ -191,36 +236,47 @@
 
       function updateStudentView(data) {
         console.log('Status update:', data.status);
-        
-        // CRITICAL FIX #1: If we get LOCKED status from server, lock permanently
+
+        if (studentLoader) studentLoader.style.display = 'none';
+
         if (data.status === 'LOCKED') {
           console.log('Server confirmed LOCKED status');
-          sessionLocked = true;
-          clearInterval(pollInterval); // Stop polling forever
+          isInteractionBlocked = true;
+          if (!awaitingUnlock && !pendingResume) {
+            awaitingUnlock = true;
+          }
           showLockedMessage(data.message || "Your session is locked. Please wait for your teacher to unlock you.");
           return;
         }
 
-        // CRITICAL FIX #2: If sessionLocked is true, ignore all other updates
-        if (sessionLocked) {
-          console.log('Client-side lock active - ignoring server update');
+        if (awaitingUnlock) {
+          console.log('Teacher unlocked session - waiting for student to resume');
+          awaitingUnlock = false;
+          pendingResume = true;
+          isInteractionBlocked = true;
+          showResumePrompt();
           return;
         }
 
-        if (studentLoader) studentLoader.style.display = 'none';
+        if (pendingResume) {
+          return;
+        }
+
+        if (resumeControls) {
+          resumeControls.style.display = 'none';
+        }
 
         if (data.status === 'OPEN') {
-          // CRITICAL FIX #3: Check if this is a NEW question
           var isNewQuestion = (
-            currentPollState.pollId !== data.pollId || 
+            currentPollState.pollId !== data.pollId ||
             currentPollState.questionIndex !== data.questionIndex
           );
 
           if (isNewQuestion) {
             console.log('NEW QUESTION detected');
-            hasAnsweredCurrent = false; // Reset answer flag for new question
+            hasAnsweredCurrent = !!data.hasSubmitted;
             currentPollState = data;
-            
+
             statusContainer.style.display = 'none';
             questionContainer.style.display = 'block';
 
@@ -257,48 +313,78 @@
               };
               optionsList.appendChild(btn);
             });
-          } else if (hasAnsweredCurrent) {
-            // CRITICAL FIX #4: Student already answered this question, show waiting
-            console.log('Student already answered current question - showing waiting state');
+          } else if (hasAnsweredCurrent && !data.hasSubmitted) {
+            console.log('Answer reset detected - restoring question UI');
+            hasAnsweredCurrent = false;
+            questionContainer.style.display = 'block';
+            statusContainer.style.display = 'none';
+            var resetButtons = optionsList.querySelectorAll('button');
+            for (var b = 0; b < resetButtons.length; b++) {
+              resetButtons[b].disabled = false;
+              resetButtons[b].className = 'answer-option w-full p-6 rounded-lg border-2 border-brand-light-gray dark:border-brand-dark-gray/40 bg-brand-white dark:bg-brand-dark-gray/20 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all hover:shadow-md cursor-pointer';
+            }
+          }
+
+          if (data.hasSubmitted) {
+            hasAnsweredCurrent = true;
+          }
+
+          if (hasAnsweredCurrent) {
             questionContainer.style.display = 'none';
             statusContainer.style.display = 'block';
             statusMessage.textContent = "Your answer has been submitted! Waiting for the next question...";
             statusMessage.className = 'text-green-600 dark:text-green-400 text-2xl font-semibold';
-            
+
             var iconEl = statusContainer.querySelector('.material-symbols-outlined');
             if (iconEl) {
               iconEl.textContent = 'check_circle';
               iconEl.className = 'material-symbols-outlined text-6xl text-green-600 dark:text-green-400 mb-4 inline-block';
             }
           }
-          // If it's the same question and they haven't answered, keep showing the question
         } else {
-          // Status is WAITING, CLOSED, NOT_ENROLLED, etc.
           currentPollState = {};
-          hasAnsweredCurrent = false;
           questionContainer.style.display = 'none';
           statusContainer.style.display = 'block';
 
           var statusIcon = 'schedule';
-          var statusClass = 'text-primary dark:text-brand-white';
+          var statusClass = 'text-primary';
+          var statusTextClass = 'text-brand-dark-gray dark:text-brand-white text-2xl font-semibold';
 
           if (data.status === 'WAITING') {
-            statusMessage.textContent = data.message || "Waiting for next question...";
-            statusMessage.className = 'text-brand-dark-gray dark:text-brand-white text-2xl font-semibold';
-            statusIcon = 'check_circle';
-            statusClass = 'text-green-600 dark:text-green-400';
+            if (data.hasSubmitted) {
+              hasAnsweredCurrent = true;
+              statusMessage.textContent = data.message || "Your answer has been submitted! Waiting for the next question...";
+              statusTextClass = 'text-green-600 dark:text-green-400 text-2xl font-semibold';
+              statusIcon = 'check_circle';
+              statusClass = 'text-green-600 dark:text-green-400';
+            } else {
+              hasAnsweredCurrent = false;
+              statusMessage.textContent = data.message || "Waiting for next question...";
+              statusIcon = 'schedule';
+              statusClass = 'text-primary';
+            }
           } else if (data.status === 'NOT_ENROLLED') {
+            hasAnsweredCurrent = false;
             statusMessage.textContent = data.message || "You are not enrolled.";
-            statusMessage.className = 'text-red-600 dark:text-red-400 text-2xl font-bold';
+            statusTextClass = 'text-red-600 dark:text-red-400 text-2xl font-bold';
             statusIcon = 'error';
             statusClass = 'text-red-600 dark:text-red-400';
-            clearInterval(pollInterval); // Stop polling
+            clearInterval(pollInterval);
+          } else if (data.status === 'ERROR') {
+            hasAnsweredCurrent = false;
+            statusMessage.textContent = data.message || "An error occurred.";
+            statusTextClass = 'text-red-600 dark:text-red-400 text-2xl font-bold';
+            statusIcon = 'error';
+            statusClass = 'text-red-600 dark:text-red-400';
           } else {
-            statusMessage.textContent = "The poll is not active.";
-            statusMessage.className = 'text-brand-dark-gray dark:text-brand-white text-2xl font-semibold';
+            hasAnsweredCurrent = false;
+            statusMessage.textContent = data.message || "The poll is not active.";
+            statusIcon = 'schedule';
+            statusClass = 'text-primary';
           }
 
-          // Update icon
+          statusMessage.className = statusTextClass;
+
           var iconEl = statusContainer.querySelector('.material-symbols-outlined');
           if (iconEl) {
             iconEl.textContent = statusIcon;
@@ -308,8 +394,8 @@
       }
 
       function submitAnswer(pollId, questionIndex, answerText) {
-        if (sessionLocked) {
-          console.log('Session locked - cannot submit answer');
+        if (isInteractionBlocked || awaitingUnlock || pendingResume) {
+          console.log('Session locked or paused - cannot submit answer');
           return;
         }
 
@@ -360,7 +446,7 @@
               
               // Show question again after 2 seconds
               setTimeout(function() {
-                if (!sessionLocked) {
+                if (!isInteractionBlocked && !awaitingUnlock && !pendingResume) {
                   questionContainer.style.display = 'block';
                   statusContainer.style.display = 'none';
                   // Re-enable buttons
@@ -425,9 +511,30 @@
           iconEl.textContent = 'lock';
           iconEl.className = 'material-symbols-outlined text-6xl text-red-600 dark:text-red-400 mb-4 inline-block';
         }
+        if (resumeControls) {
+          resumeControls.style.display = 'none';
+        }
+      }
 
-        // CRITICAL: Stop all polling
-        clearInterval(pollInterval);
+      function showResumePrompt() {
+        studentContainer.style.display = 'block';
+        entryScreen.style.display = 'none';
+        questionContainer.style.display = 'none';
+        statusContainer.style.display = 'block';
+        if (studentLoader) studentLoader.style.display = 'none';
+
+        statusMessage.textContent = 'Your teacher has unlocked your session. Please resume fullscreen to continue.';
+        statusMessage.className = 'text-primary text-2xl font-semibold';
+
+        var iconEl = statusContainer.querySelector('.material-symbols-outlined');
+        if (iconEl) {
+          iconEl.textContent = 'fullscreen';
+          iconEl.className = 'material-symbols-outlined text-6xl text-primary mb-4 inline-block';
+        }
+
+        if (resumeControls) {
+          resumeControls.style.display = 'block';
+        }
       }
 
       function handleError(error) {
@@ -435,6 +542,7 @@
         statusContainer.style.display = 'block';
         questionContainer.style.display = 'none';
         if (studentLoader) studentLoader.style.display = 'none';
+        if (resumeControls) resumeControls.style.display = 'none';
 
         statusMessage.textContent = 'An error occurred: ' + (error.message || error);
         statusMessage.className = 'text-red-600 dark:text-red-400 text-2xl font-bold';

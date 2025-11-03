@@ -72,8 +72,8 @@
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-brand-dark-gray dark:text-brand-white">
   <div class="flex h-screen w-full flex-col">
-    <!-- Header -->
-    <header class="flex shrink-0 items-center justify-between whitespace-nowrap border-b border-solid border-brand-light-gray dark:border-brand-dark-gray/20 bg-brand-light-gray dark:bg-brand-dark-gray/30 px-6 py-3 shadow-sm">
+    <!-- Header - Default State -->
+    <header id="header-default" class="flex shrink-0 items-center justify-between whitespace-nowrap border-b border-solid border-brand-light-gray dark:border-brand-dark-gray/20 bg-brand-light-gray dark:bg-brand-dark-gray/30 px-6 py-3 shadow-sm">
       <div class="flex items-center gap-4">
         <img alt="Malvern Prep Logo" class="h-10 w-auto" src="https://raw.githubusercontent.com/stephenborish/veritasassets/f0a824864d7d66637a13b822bff99fa6830e6123/mplogo.png"/>
         <div class="flex flex-col">
@@ -86,9 +86,47 @@
       </div>
     </header>
 
+    <!-- Header - Live Poll State -->
+    <header id="header-live" class="flex shrink-0 items-center justify-between whitespace-nowrap border-b border-solid border-brand-light-gray dark:border-brand-dark-gray/20 bg-brand-light-gray dark:bg-brand-dark-gray/30 px-6 py-3 shadow-sm" style="display: none;">
+      <div class="flex items-center gap-4">
+        <img alt="Malvern Prep Logo" class="h-10 w-auto" src="https://raw.githubusercontent.com/stephenborish/veritasassets/f0a824864d7d66637a13b822bff99fa6830e6123/mplogo.png"/>
+        <div class="flex flex-col">
+          <h1 id="header-poll-name" class="text-primary dark:text-brand-white text-lg font-bold leading-tight tracking-[-0.015em]">Poll Name</h1>
+          <p class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm">Live Poll</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <button id="header-start-btn" class="flex min-w-[80px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-primary text-brand-white text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-primary/90 transition-colors">
+          <span class="material-symbols-outlined text-xl">play_arrow</span>
+          <span class="truncate">Start</span>
+        </button>
+        <button id="header-pause-btn" class="flex min-w-[80px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors" style="display: none;">
+          <span class="material-symbols-outlined text-xl">pause</span>
+          <span class="truncate">Pause</span>
+        </button>
+        <button id="header-stop-btn" class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-red-600 text-brand-white text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-red-700 transition-colors">
+          <span class="material-symbols-outlined text-xl">stop</span>
+          <span class="truncate">Stop</span>
+        </button>
+        <div class="mx-2 h-6 w-px bg-brand-light-gray dark:bg-brand-dark-gray/40"></div>
+        <div id="question-dots" class="flex items-center gap-1.5 rounded-full bg-brand-light-gray/50 dark:bg-brand-dark-gray/50 px-3 py-1.5 text-sm font-medium text-primary dark:text-brand-white">
+          <!-- Question dots will be populated dynamically -->
+        </div>
+        <button id="header-next-btn" class="flex min-w-[80px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors">
+          <span class="material-symbols-outlined text-xl">skip_next</span>
+          <span class="truncate">Next</span>
+        </button>
+        <button id="header-skip-btn" class="flex min-w-[80px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors ml-2">
+          <span class="material-symbols-outlined text-xl">fast_forward</span>
+          <span class="truncate">Skip Question</span>
+        </button>
+      </div>
+    </header>
+
     <div class="flex flex-grow overflow-hidden">
       <!-- Main Content Area -->
       <main class="flex-1 overflow-y-auto">
+        <!-- Dashboard View (Default) -->
         <div id="dashboard" class="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
           <!-- Sidebar Controls -->
           <aside class="lg:col-span-1 flex flex-col gap-6">
@@ -117,10 +155,6 @@
                 <span class="material-symbols-outlined text-xl">play_arrow</span>
                 <span class="truncate">Start Poll</span>
               </button>
-              <button id="stop-poll-btn" class="flex w-full items-center justify-center gap-2 rounded-lg h-10 px-4 bg-red-600 text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-red-700 transition-colors" style="display: none;">
-                <span class="material-symbols-outlined text-xl">pause</span>
-                <span class="truncate">Pause Poll</span>
-              </button>
             </div>
 
             <!-- Create New Poll -->
@@ -133,102 +167,94 @@
             </div>
           </aside>
 
-          <!-- Live View -->
-          <div id="live-view" class="lg:col-span-2 flex-col gap-6" style="display: none;">
+          <div class="lg:col-span-2 flex items-center justify-center">
+            <div class="text-center">
+              <span class="material-symbols-outlined text-6xl text-primary dark:text-brand-white mb-4 inline-block">ballot</span>
+              <h2 class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white mb-2">Welcome to Veritas Live Poll</h2>
+              <p class="text-brand-dark-gray/60 dark:text-brand-white/60">Select a poll and click "Start Poll" to begin</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Poll View -->
+        <div id="live-view" class="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6" style="display: none;">
+          <!-- Main Content (2/3) -->
+          <div class="lg:col-span-2 flex flex-col gap-6">
             <!-- Question Display -->
-            <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm mb-6">
-              <div class="flex items-center gap-4 mb-4">
-                <span class="status-badge inline-block px-4 py-1.5 rounded-full text-sm font-semibold bg-green-500/20 text-green-800 dark:text-green-300" id="poll-status-badge">OPEN</span>
-                <span id="live-question-info" class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm font-medium">Question 1 of 10</span>
-              </div>
-              <h2 id="live-poll-name" class="font-serif text-brand-dark-gray dark:text-brand-white text-2xl font-bold leading-tight mb-4">Poll Name</h2>
-              <div id="live-timer-display" class="text-center text-5xl font-bold text-primary dark:text-brand-white my-6 font-mono"></div>
-              <div id="live-question-text" class="font-serif text-brand-dark-gray dark:text-brand-white text-xl leading-relaxed">Question text appears here</div>
-            </div>
-
-            <!-- Live Controls -->
-            <div class="flex flex-wrap gap-3 mb-6">
-              <button id="resume-question-btn" class="flex items-center justify-center gap-2 rounded-full h-10 px-6 bg-green-600 text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-green-700 transition-colors" style="display: none;">
-                <span class="material-symbols-outlined text-xl">play_arrow</span>
-                <span class="truncate">Resume Question</span>
-              </button>
-              <button id="next-question-btn" class="flex items-center justify-center gap-2 rounded-full h-10 px-6 bg-primary text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90 transition-colors">
-                <span class="material-symbols-outlined text-xl">skip_next</span>
-                <span class="truncate">Next Question</span>
-              </button>
-              <button id="end-poll-btn" class="flex items-center justify-center gap-2 rounded-full h-10 px-6 bg-red-600 text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-red-700 transition-colors">
-                <span class="material-symbols-outlined text-xl">stop</span>
-                <span class="truncate">End Poll</span>
-              </button>
-            </div>
-
-            <!-- Results Section -->
-            <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm mb-6">
-              <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
-                <h3 class="text-brand-dark-gray dark:text-brand-white text-xl font-bold leading-normal">Live Results</h3>
-                <div class="flex items-center gap-3">
-                  <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary dark:text-brand-white text-sm font-semibold">
-                    <span class="material-symbols-outlined text-base">group</span>
-                    <span id="response-count">0 / 0 responses</span>
-                  </div>
-                  <div class="px-3 py-1.5 rounded-full bg-green-500/10 text-green-800 dark:text-green-300 text-sm font-semibold">
-                    <span id="correct-answer-display">Correct: -</span>
-                  </div>
+            <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm">
+              <div class="flex gap-6">
+                <div class="flex-grow">
+                  <p id="live-question-info" class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm font-medium leading-normal mb-1">Question 1 of 10</p>
+                  <h2 id="live-question-text" class="font-serif text-brand-dark-gray dark:text-brand-white tracking-tight text-xl leading-snug mb-4">Question text appears here</h2>
+                </div>
+                <div id="question-image-container" class="relative w-24 h-24 flex-shrink-0" style="display: none;">
+                  <img id="live-question-image" alt="Question" class="rounded-lg object-cover w-full h-full" src=""/>
                 </div>
               </div>
-              <div id="chart-div" class="min-h-[300px]"></div>
+            </div>
+
+            <!-- Live Results -->
+            <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm">
+              <div class="flex justify-between items-center mb-6">
+                <h3 class="text-brand-dark-gray dark:text-brand-white text-xl font-bold leading-normal">Live Results</h3>
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary dark:text-brand-white">group</span>
+                  <span id="response-count" class="text-brand-dark-gray dark:text-brand-white text-base font-medium">0 / 0 answered</span>
+                </div>
+              </div>
+              <div id="results-bars" class="flex flex-col gap-3">
+                <!-- Results bars will be populated dynamically -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Sidebar (1/3) -->
+          <aside class="lg:col-span-1 flex flex-col gap-6">
+            <!-- Timer -->
+            <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm">
+              <div class="flex flex-col items-center gap-4">
+                <div class="text-center">
+                  <p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">Time Remaining</p>
+                  <p id="live-timer-display" class="text-5xl font-bold text-primary dark:text-brand-white tracking-tighter font-mono">--:--</p>
+                </div>
+                <button id="restart-timer-btn" class="flex items-center justify-center gap-2 h-10 px-4 rounded-full bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors">
+                  <span class="material-symbols-outlined text-xl">restart_alt</span>
+                  <span>Restart Timer</span>
+                </button>
+              </div>
             </div>
 
             <!-- Student Status -->
-            <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm">
-              <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
-                <h3 class="text-brand-dark-gray dark:text-brand-white text-xl font-bold leading-normal">Student Status</h3>
-                <div class="flex items-center gap-2">
-                  <button class="sort-btn active px-3 py-1.5 rounded-lg bg-primary text-brand-white text-sm font-semibold hover:bg-primary/90 transition-colors" data-sort="name">Name</button>
-                  <button class="sort-btn px-3 py-1.5 rounded-lg bg-brand-light-gray text-brand-dark-gray text-sm font-semibold hover:bg-brand-light-gray/80 transition-colors" data-sort="time">Time</button>
-                  <button class="sort-btn px-3 py-1.5 rounded-lg bg-brand-light-gray text-brand-dark-gray text-sm font-semibold hover:bg-brand-light-gray/80 transition-colors" data-sort="correctness">Correct</button>
-                </div>
+            <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm overflow-y-auto max-h-[600px]">
+              <h3 class="text-brand-dark-gray dark:text-brand-white text-xl font-bold leading-normal mb-4">Student Status</h3>
+              <div id="student-status-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3">
+                <!-- Student status tiles will be populated dynamically -->
               </div>
-              <div id="student-tile-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[500px] overflow-y-auto"></div>
             </div>
-          </div>
+          </aside>
         </div>
       </main>
 
       <!-- Right Sidebar Navigation -->
-      <aside class="w-64 bg-brand-light-gray dark:bg-primary flex-col items-center p-4 border-l border-brand-light-gray/50 dark:border-primary/20 hidden xl:flex">
+      <aside class="w-64 bg-primary flex-col items-center p-4 border-l border-primary/20 hidden lg:flex">
         <nav class="flex flex-col w-full gap-2">
-          <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/20 dark:bg-brand-white/10 text-primary dark:text-brand-white hover:bg-primary/30 dark:hover:bg-brand-white/20 font-semibold transition-colors" href="#">
+          <button id="nav-polls-list" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-brand-white/10 text-brand-white hover:bg-brand-white/20 font-semibold transition-colors text-left">
             <span class="material-symbols-outlined">ballot</span>
             <span>Polls List</span>
-          </a>
-          <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-brand-dark-gray/70 dark:text-brand-white/70 hover:bg-primary/10 dark:hover:bg-brand-white/20 hover:text-primary dark:hover:text-brand-white transition-colors" href="#">
-            <span class="material-symbols-outlined">archive</span>
-            <span>Archived Polls</span>
-          </a>
-          <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-brand-dark-gray/70 dark:text-brand-white/70 hover:bg-primary/10 dark:hover:bg-brand-white/20 hover:text-primary dark:hover:text-brand-white transition-colors" href="#">
+          </button>
+          <button id="nav-create-poll" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-brand-white/70 hover:bg-brand-white/20 hover:text-brand-white transition-colors text-left">
             <span class="material-symbols-outlined">add_circle</span>
             <span>Create New Poll</span>
-          </a>
-          <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-brand-dark-gray/70 dark:text-brand-white/70 hover:bg-primary/10 dark:hover:bg-brand-white/20 hover:text-primary dark:hover:text-brand-white transition-colors" href="#">
-            <span class="material-symbols-outlined">group</span>
-            <span>Rosters</span>
-          </a>
+          </button>
         </nav>
-        <div class="mt-auto w-full">
-          <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-brand-dark-gray/70 dark:text-brand-white/70 hover:bg-primary/10 dark:hover:bg-brand-white/20 hover:text-primary dark:hover:text-brand-white transition-colors" href="#">
-            <span class="material-symbols-outlined">settings</span>
-            <span>Settings</span>
-          </a>
-        </div>
       </aside>
     </div>
   </div>
 
   <!-- Poll Creator Modal -->
   <div id="poll-creator-modal" class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-    <div class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-      <div class="sticky top-0 bg-brand-light-gray dark:bg-brand-dark-gray/50 px-6 py-4 border-b border-brand-light-gray dark:border-brand-dark-gray/40">
+    <div class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+      <div class="sticky top-0 bg-brand-light-gray dark:bg-brand-dark-gray/50 px-6 py-4 border-b border-brand-light-gray dark:border-brand-dark-gray/40 z-10">
         <h2 class="text-brand-dark-gray dark:text-brand-white text-2xl font-bold">Create New Poll</h2>
       </div>
       <div class="p-6">
@@ -289,7 +315,6 @@
   var ALL_CLASSES=[];
   var CURRENT_POLL_DATA={};
   var currentStudentStatusData=[];
-  var currentSort='name';
   var pollInterval=null;
   var questionTimer=null;
   var visualTimerInterval=null;
@@ -299,40 +324,41 @@
   // --- Element Cache ---
   var pollSelect=document.getElementById('poll-select');
   var startPollBtn=document.getElementById('start-poll-btn');
-  var stopPollBtn=document.getElementById('stop-poll-btn');
-  var resumeQuestionBtn=document.getElementById('resume-question-btn');
-  var nextQuestionBtn=document.getElementById('next-question-btn');
-  var endPollBtn=document.getElementById('end-poll-btn');
+  var dashboard=document.getElementById('dashboard');
   var liveView=document.getElementById('live-view');
+  var headerDefault=document.getElementById('header-default');
+  var headerLive=document.getElementById('header-live');
   var modal=document.getElementById('poll-creator-modal');
   var linksModal=document.getElementById('student-links-modal');
-  var pollStatusBadge=document.getElementById('poll-status-badge');
 
   // --- Initialization ---
   google.charts.load('current',{'packages':['corechart']});
   google.charts.setOnLoadCallback(loadInitialData);
 
   // --- Event Listeners ---
-  document.getElementById('open-creator-btn').onclick = () => {
-    const selectedPollId = pollSelect.value;
-    if (selectedPollId) {
-      const selectedPoll = ALL_POLLS.find(p => p.pollId === selectedPollId);
-      openPollEditor(selectedPoll.className);
-    } else {
-      openPollEditor();
-    }
-  };
+  document.getElementById('open-creator-btn').onclick=openPollCreator;
+  document.getElementById('nav-create-poll').onclick=openPollCreator;
+  document.getElementById('nav-polls-list').onclick=showDashboard;
   document.getElementById('close-modal-btn').onclick=closePollCreator;
   document.getElementById('close-links-modal-btn').onclick=closeLinksModal;
   document.getElementById('add-question-btn').onclick=addQuestionToBuilder;
   document.getElementById('save-poll-btn').onclick=savePoll;
   startPollBtn.onclick=onStartPoll;
-  stopPollBtn.onclick=onStopPoll;
-  resumeQuestionBtn.onclick=onResumePoll;
-  nextQuestionBtn.onclick=onNextQuestion;
-  endPollBtn.onclick=onEndPoll;
+  document.getElementById('header-start-btn').onclick=onStartPoll;
+  document.getElementById('header-pause-btn').onclick=onStopPoll;
+  document.getElementById('header-stop-btn').onclick=onEndPoll;
+  document.getElementById('header-next-btn').onclick=onNextQuestion;
+  document.getElementById('header-skip-btn').onclick=onNextQuestion;
+  document.getElementById('restart-timer-btn').onclick=onRestartTimer;
   document.getElementById('send-link-btn').onclick=onSendLink;
   document.getElementById('view-links-btn').onclick=onViewLinks;
+
+  function showDashboard(){
+    dashboard.style.display='grid';
+    liveView.style.display='none';
+    headerDefault.style.display='flex';
+    headerLive.style.display='none';
+  }
 
   // --- Initial Data Load ---
   function loadInitialData(){
@@ -357,8 +383,6 @@
     });
 
     updatePollDropdown();
-    setupSortButtons();
-    setupUnlockListener();
   }
 
   function updatePollDropdown(){
@@ -404,7 +428,6 @@
   }
 
   function onStopPoll(){
-    stopPollBtn.disabled=true;
     clearTimeout(questionTimer);
     stopVisualTimer();
     google.script.run
@@ -416,20 +439,7 @@
       .stopPoll();
   }
 
-  function onResumePoll(){
-    resumeQuestionBtn.disabled=true;
-    google.script.run
-      .withSuccessHandler(function(data){
-        isPaused=false;
-        startMasterTimer();
-        updateLiveView(data);
-      })
-      .withFailureHandler(handleError)
-      .resumePoll();
-  }
-
   function onNextQuestion(){
-    nextQuestionBtn.disabled=true;
     if(pollInterval)clearInterval(pollInterval);
     isPaused=false;
     startMasterTimer();
@@ -441,33 +451,32 @@
 
   function onEndPoll(){
     if(!confirm('Are you sure you want to end this poll completely?'))return;
-    endPollBtn.disabled=true;
     clearTimeout(questionTimer);
     stopVisualTimer();
     if(pollInterval)clearInterval(pollInterval);
     google.script.run
-      .withSuccessHandler(updateLiveView)
+      .withSuccessHandler(function(data){
+        showDashboard();
+      })
       .withFailureHandler(handleError)
       .closePoll();
+  }
+
+  function onRestartTimer(){
+    var timerInput=document.getElementById('poll-timer-input');
+    var seconds=parseInt(timerInput.value,10);
+    if(seconds>0&&seconds<=600){
+      startMasterTimer();
+    }
   }
 
   // --- Live View & Data Polling ---
   function updateLiveView(data){
     mainLoader.style.display='none';
     startPollBtn.disabled=false;
-    stopPollBtn.disabled=false;
-    resumeQuestionBtn.disabled=false;
-    nextQuestionBtn.disabled=false;
-    endPollBtn.disabled=false;
 
     if(data.status==="CLOSED"){
-      liveView.style.display='none';
-      startPollBtn.style.display='inline-flex';
-      stopPollBtn.style.display='none';
-      if(pollInterval)clearInterval(pollInterval);
-      CURRENT_POLL_DATA={};
-      currentStudentStatusData=[];
-      stopVisualTimer();
+      showDashboard();
       return;
     }
 
@@ -476,40 +485,157 @@
     CURRENT_POLL_DATA.pollId=pollSelect.value;
     CURRENT_POLL_DATA.questionIndex=data.questionIndex;
     CURRENT_POLL_DATA.correctAnswer=data.correctAnswer;
-    CURRENT_POLL_DATA.isPaused=isPaused;
+    CURRENT_POLL_DATA.totalQuestions=data.totalQuestions;
 
-    liveView.style.display='flex';
-    startPollBtn.style.display='none';
+    // Show live view
+    dashboard.style.display='none';
+    liveView.style.display='grid';
+    headerDefault.style.display='none';
+    headerLive.style.display='flex';
 
+    // Update header
+    document.getElementById('header-poll-name').textContent=data.pollName;
+
+    // Update question dots
+    updateQuestionDots(data.questionIndex,data.totalQuestions);
+
+    // Show/hide pause/start buttons
     if(isPaused){
-      pollStatusBadge.textContent='PAUSED';
-      pollStatusBadge.className='inline-block px-4 py-1.5 rounded-full text-sm font-semibold bg-yellow-500/20 text-yellow-800 dark:text-yellow-300';
-      stopPollBtn.style.display='none';
-      resumeQuestionBtn.style.display='inline-flex';
+      document.getElementById('header-start-btn').style.display='flex';
+      document.getElementById('header-pause-btn').style.display='none';
     } else {
-      pollStatusBadge.textContent='OPEN';
-      pollStatusBadge.className='inline-block px-4 py-1.5 rounded-full text-sm font-semibold bg-green-500/20 text-green-800 dark:text-green-300';
-      stopPollBtn.style.display='inline-flex';
-      resumeQuestionBtn.style.display='none';
+      document.getElementById('header-start-btn').style.display='none';
+      document.getElementById('header-pause-btn').style.display='flex';
     }
 
-    document.getElementById('live-poll-name').textContent=data.pollName;
+    // Update question display
     document.getElementById('live-question-info').textContent='Question '+(data.questionIndex+1)+' of '+data.totalQuestions;
     document.getElementById('live-question-text').textContent=data.questionText;
-    document.getElementById('response-count').textContent=data.totalResponses+' / '+data.totalStudents+' responses';
-    document.getElementById('correct-answer-display').textContent=data.correctAnswer?'Correct: '+data.correctAnswer:'No correct answer set';
 
-    var isLastQuestion=(data.questionIndex+1===data.totalQuestions);
-    nextQuestionBtn.innerHTML='<span class="material-symbols-outlined text-xl">'+(isLastQuestion?'check_circle':'skip_next')+'</span><span class="truncate">'+(isLastQuestion?'Finish Poll':'Next Question')+'</span>';
+    // Handle question image
+    if(data.questionImageURL){
+      document.getElementById('question-image-container').style.display='block';
+      document.getElementById('live-question-image').src=data.questionImageURL;
+    } else {
+      document.getElementById('question-image-container').style.display='none';
+    }
 
+    // Update response count
+    document.getElementById('response-count').textContent=data.totalResponses+' / '+data.totalStudents+' answered';
+
+    // Update results bars
+    renderResultsBars(data.results,data.correctAnswer,data.studentStatusList);
+
+    // Update student status
     currentStudentStatusData=data.studentStatusList;
-    renderStudentTiles();
-    drawChart(data.results,data.correctAnswer);
+    renderStudentStatus();
 
     if(pollInterval)clearInterval(pollInterval);
     if(!isPaused){
       pollInterval=setInterval(pollForResults,2500);
     }
+  }
+
+  function updateQuestionDots(current,total){
+    var dotsContainer=document.getElementById('question-dots');
+    dotsContainer.innerHTML='';
+    for(var i=0;i<total;i++){
+      var dot=document.createElement('span');
+      dot.className='h-2 w-2 rounded-full '+(i===current?'bg-primary':'bg-primary/50');
+      dotsContainer.appendChild(dot);
+    }
+  }
+
+  function renderResultsBars(results,correctAnswer,studentsList){
+    var container=document.getElementById('results-bars');
+    container.innerHTML='';
+
+    if(!results||Object.keys(results).length===0){
+      container.innerHTML='<p class="text-center text-gray-500 py-4">Waiting for responses...</p>';
+      return;
+    }
+
+    var total=Object.values(results).reduce(function(a,b){return a+b;},0);
+
+    Object.keys(results).forEach(function(answer){
+      var count=results[answer];
+      var percentage=total>0?Math.round((count/total)*100):0;
+      var isCorrect=answer===correctAnswer;
+
+      var barDiv=document.createElement('div');
+      barDiv.className=isCorrect?'rounded-lg border-2 border-primary':'';
+
+      var barHtml='<div class="relative flex items-center min-h-[3rem] '+(isCorrect?'correct-answer-bg':'')+' rounded-lg bg-brand-light-gray dark:bg-brand-dark-gray/50 overflow-hidden cursor-pointer hover:bg-gray-200 dark:hover:bg-brand-dark-gray/60 transition-colors">';
+      barHtml+='<div class="absolute inset-y-0 left-0 '+(isCorrect?'bg-primary':'bg-primary/20 dark:bg-primary/50')+'" style="width: '+percentage+'%;"></div>';
+      barHtml+='<div class="relative flex w-full items-start justify-between p-3">';
+      if(isCorrect){
+        barHtml+='<div class="flex items-start gap-2"><span class="font-serif font-medium text-brand-white mix-blend-difference text-sm">'+escapeHtml(answer)+'</span>';
+        barHtml+='<span class="material-symbols-outlined text-brand-white text-xl mix-blend-difference">check_circle</span></div>';
+        barHtml+='<span class="font-bold text-brand-white mix-blend-difference shrink-0 ml-4 text-sm">'+percentage+'%</span>';
+      } else {
+        barHtml+='<span class="font-serif font-medium text-brand-dark-gray dark:text-brand-white text-sm">'+escapeHtml(answer)+'</span>';
+        barHtml+='<span class="font-bold text-brand-dark-gray dark:text-brand-white shrink-0 ml-4 text-sm">'+percentage+'%</span>';
+      }
+      barHtml+='</div></div>';
+
+      // Add student names who selected this answer (if correct)
+      if(isCorrect){
+        var studentsWithAnswer=studentsList.filter(function(s){return s.answer===answer;});
+        if(studentsWithAnswer.length>0){
+          barHtml+='<div class="bg-primary/5 dark:bg-primary/10 p-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 rounded-b-md">';
+          studentsWithAnswer.forEach(function(student){
+            barHtml+='<span class="text-xs text-primary dark:text-brand-white/80 font-medium px-2 py-1 bg-primary/10 dark:bg-primary/20 rounded">'+escapeHtml(student.name)+'</span>';
+          });
+          barHtml+='</div>';
+        }
+      }
+
+      barDiv.innerHTML=barHtml;
+      container.appendChild(barDiv);
+    });
+  }
+
+  function renderStudentStatus(){
+    var grid=document.getElementById('student-status-grid');
+    if(!grid)return;
+
+    grid.innerHTML='';
+    currentStudentStatusData.forEach(function(student){
+      var tile=document.createElement('div');
+
+      if(student.status==='Submitted'){
+        tile.className='flex items-center justify-center p-2.5 rounded-lg bg-green-500/10 dark:bg-green-500/20 text-center';
+        tile.innerHTML='<span class="text-sm font-medium text-green-800 dark:text-green-300">'+escapeHtml(student.name)+'</span>';
+      } else if(student.status==='LOCKED'){
+        tile.className='flex items-center justify-between p-2.5 rounded-lg bg-orange-500/10 dark:bg-orange-500/20 gap-2';
+        tile.innerHTML='<div class="flex flex-col text-left flex-grow min-w-0"><span class="text-sm font-medium text-orange-800 dark:text-orange-300 truncate">'+escapeHtml(student.name)+'</span></div>'+
+          '<button class="unlock-btn flex-shrink-0 flex items-center justify-center gap-1 h-7 px-2.5 rounded-md bg-orange-500/20 text-orange-700 dark:bg-orange-400/20 dark:text-orange-300 text-xs font-bold hover:bg-orange-500/30 transition-colors" data-email="'+student.email+'">'+
+          '<span class="material-symbols-outlined text-sm">lock_open</span><span>Unlock</span></button>';
+      } else if(student.status==='Waiting...'){
+        tile.className='flex items-center justify-center p-2.5 rounded-lg bg-gray-500/10 dark:bg-gray-500/20 text-center';
+        tile.innerHTML='<span class="text-sm font-medium text-gray-600 dark:text-gray-300">'+escapeHtml(student.name)+'</span>';
+      } else {
+        tile.className='flex items-center justify-center p-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-center';
+        tile.innerHTML='<span class="text-sm font-medium text-red-800 dark:text-red-300">'+escapeHtml(student.name)+'</span>';
+      }
+
+      grid.appendChild(tile);
+    });
+
+    // Setup unlock listeners
+    grid.querySelectorAll('.unlock-btn').forEach(function(btn){
+      btn.onclick=function(){
+        var email=this.dataset.email;
+        var pollId=CURRENT_POLL_DATA.pollId;
+        if(!email||!pollId)return;
+        this.disabled=true;
+        this.querySelector('span:last-child').textContent='Unlocking...';
+        google.script.run
+          .withSuccessHandler(pollForResults)
+          .withFailureHandler(handleError)
+          .unlockStudent(email,pollId);
+      };
+    });
   }
 
   function pollForResults(){
@@ -533,7 +659,6 @@
     if(seconds>0&&seconds<=600){
       startVisualTimer(seconds);
       questionTimer=setTimeout(onStopPoll,seconds*1000);
-      timerInput.value='';
     } else {
       stopVisualTimer();
     }
@@ -551,9 +676,9 @@
       timerDisplay.textContent=minutes+':'+(seconds<10?'0':'')+seconds;
 
       if(timer<=10){
-        timerDisplay.className='text-center text-5xl font-bold text-red-600 dark:text-red-400 my-6 font-mono animate-pulse';
+        timerDisplay.className='text-5xl font-bold text-red-600 dark:text-red-400 tracking-tighter font-mono animate-pulse';
       } else {
-        timerDisplay.className='text-center text-5xl font-bold text-primary dark:text-brand-white my-6 font-mono';
+        timerDisplay.className='text-5xl font-bold text-primary dark:text-brand-white tracking-tighter font-mono';
       }
 
       if(timer<=0){
@@ -570,113 +695,9 @@
     clearInterval(visualTimerInterval);
     var timerDisplay=document.getElementById('live-timer-display');
     if(timerDisplay){
-      timerDisplay.textContent='';
-      timerDisplay.className='text-center text-5xl font-bold text-primary dark:text-brand-white my-6 font-mono';
+      timerDisplay.textContent='--:--';
+      timerDisplay.className='text-5xl font-bold text-primary dark:text-brand-white tracking-tighter font-mono';
     }
-  }
-
-  // --- Student Tile & Sorting ---
-  function renderStudentTiles(){
-    var grid=document.getElementById('student-tile-grid');
-    if(!grid)return;
-
-    var sortedData=currentStudentStatusData.slice();
-
-    if(currentSort==='name'){
-      sortedData.sort(function(a,b){return a.name.localeCompare(b.name);});
-    } else if(currentSort==='time'){
-      sortedData.sort(function(a,b){return a.timestamp-b.timestamp;});
-    } else if(currentSort==='correctness'){
-      sortedData.sort(function(a,b){
-        if(a.isCorrect===b.isCorrect)return 0;
-        if(a.isCorrect===true)return-1;
-        if(b.isCorrect===true)return 1;
-        if(a.isCorrect===false)return-1;
-        if(b.isCorrect===false)return 1;
-        return 0;
-      });
-    }
-
-    grid.innerHTML='';
-    sortedData.forEach(function(student){
-      var tile=document.createElement('div');
-      var baseClasses='bg-brand-white dark:bg-brand-dark-gray/20 rounded-lg border-l-4 p-3 shadow-sm transition-all hover:shadow-md';
-      var statusClass='border-gray-400';
-
-      if(student.status==='Submitted'){
-        statusClass='border-green-500 bg-green-50 dark:bg-green-900/10';
-      } else if(student.status==='LOCKED'){
-        statusClass='border-red-500 bg-red-50 dark:bg-red-900/10';
-      }
-
-      tile.className=baseClasses+' '+statusClass;
-      tile.dataset.email=student.email;
-
-      var statusIcon='⏳';
-      var timeText='';
-      if(student.status==='Submitted'){
-        var isCorrect=student.isCorrect;
-        statusIcon=isCorrect?'✅':(CURRENT_POLL_DATA.correctAnswer?'❌':'◉');
-        var date=new Date(student.timestamp);
-        timeText='<div class="text-xs text-gray-500 dark:text-gray-400 mt-1">'+date.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'})+'</div>';
-      } else if(student.status==='LOCKED'){
-        statusIcon='🔒';
-      }
-
-      var html='';
-      html+='<div class="flex items-center justify-between mb-2">';
-      html+='<span class="font-semibold text-sm text-brand-dark-gray dark:text-brand-white">'+escapeHtml(student.name)+'</span>';
-      html+='<span class="text-xl">'+statusIcon+'</span>';
-      html+='</div>';
-      html+='<div class="font-serif text-xs text-gray-600 dark:text-gray-300 truncate">'+(student.answer?escapeHtml(student.answer):'<i>'+student.status+'...</i>')+'</div>';
-      html+=timeText;
-
-      if(student.status==='LOCKED'){
-        html+='<div class="mt-2"><button class="unlock-btn w-full px-3 py-1.5 text-xs font-semibold rounded-md bg-primary text-brand-white hover:bg-primary/90 transition-colors">Unlock</button></div>';
-      }
-
-      tile.innerHTML=html;
-      grid.appendChild(tile);
-    });
-  }
-
-  function setupSortButtons(){
-    var sortButtons=document.querySelectorAll('.sort-btn');
-    sortButtons.forEach(function(btn){
-      btn.addEventListener('click',function(){
-        var sortType=this.dataset.sort;
-        if(sortType===currentSort)return;
-
-        sortButtons.forEach(function(b){
-          b.className='sort-btn px-3 py-1.5 rounded-lg bg-brand-light-gray text-brand-dark-gray text-sm font-semibold hover:bg-brand-light-gray/80 transition-colors';
-        });
-        this.className='sort-btn active px-3 py-1.5 rounded-lg bg-primary text-brand-white text-sm font-semibold hover:bg-primary/90 transition-colors';
-        currentSort=sortType;
-        renderStudentTiles();
-      });
-    });
-  }
-
-  function setupUnlockListener(){
-    var grid=document.getElementById('student-tile-grid');
-    if(!grid)return;
-
-    grid.addEventListener('click',function(e){
-      if(e.target.classList.contains('unlock-btn')){
-        var tile=e.target.closest('[data-email]');
-        var studentEmail=tile.dataset.email;
-        var pollId=CURRENT_POLL_DATA.pollId;
-
-        if(!studentEmail||!pollId){alert("Error unlocking");return;}
-
-        e.target.disabled=true;
-        e.target.textContent="Unlocking...";
-        google.script.run
-          .withSuccessHandler(pollForResults)
-          .withFailureHandler(handleError)
-          .unlockStudent(studentEmail,pollId);
-      }
-    });
   }
 
   // --- Student Link Controls ---
@@ -774,55 +795,7 @@
     linksModal.style.display='none';
   }
 
-  // --- Google Chart ---
-  function drawChart(resultsData,correctAnswer){
-    if(!resultsData||Object.keys(resultsData).length===0){
-      document.getElementById('chart-div').innerHTML='<p class="text-center text-gray-500 dark:text-gray-400 py-12">Waiting for first response...</p>';
-      return;
-    }
-
-    var dataArray=[['Answer','Count',{role:'style'}]];
-    var colors=[];
-    var defaultColor='#002d6b';
-    var correctColor='#28a745';
-
-    Object.keys(resultsData).forEach(function(key){
-      var count=resultsData[key];
-      var color=defaultColor;
-      if(key===correctAnswer){
-        color=correctColor;
-      }
-      dataArray.push([key,count,color]);
-      colors.push(color);
-    });
-
-    var data=google.visualization.arrayToDataTable(dataArray);
-    var options={
-      chartArea:{width:'75%',height:'70%'},
-      hAxis:{title:'Students',minValue:0,textStyle:{fontSize:12},gridlines:{color:'#e9ecef'}},
-      vAxis:{title:'Answer Choice',textStyle:{fontSize:11,bold:true},gridlines:{color:'transparent'}},
-      legend:{position:'none'},
-      animation:{startup:true,duration:400,easing:'out'},
-      bar:{groupWidth:'70%'},
-      colors:colors,
-      tooltip:{textStyle:{fontSize:12}}
-    };
-    var chart=new google.visualization.BarChart(document.getElementById('chart-div'));
-    chart.draw(data,options);
-  }
-
   // --- Poll Creator Modal ---
-  function openPollEditor(className) {
-    mainLoader.style.display = 'block';
-    google.script.run
-      .withSuccessHandler(function(html) {
-        document.getElementById('dashboard').innerHTML = html;
-        mainLoader.style.display = 'none';
-      })
-      .withFailureHandler(handleError)
-      .getPollEditorHtml(className);
-  }
-
   function openPollCreator(){
     questionCounter=0;
     document.getElementById('question-builder').innerHTML="";
@@ -1137,8 +1110,6 @@
     mainLoader.style.display='none';
     console.error('Error:',error);
     alert('Error: '+(error.message||error));
-    var buttons=document.querySelectorAll('button');
-    buttons.forEach(function(btn){btn.disabled=false;});
   }
 
   console.log('✓ Teacher Panel Ready');

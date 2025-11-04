@@ -1208,10 +1208,15 @@ function getLivePollData(pollId, questionIndex) {
       const email = student.email;
       
       if (lockedStudents.has(email)) {
+        // Get proctor state to include lockVersion
+        const proctorState = ProctorAccess.getState(pollId, email);
+
         return {
           name: student.name,
           email: email,
           status: 'LOCKED',
+          lockVersion: proctorState.lockVersion,
+          lockReason: proctorState.lockReason,
           answer: '---',
           isCorrect: null,
           timestamp: 0
@@ -1684,50 +1689,10 @@ function logStudentViolation() {
 }
 
 function unlockStudent(studentEmail, pollId) {
-  return withErrorHandling(() => {
-    if (!studentEmail || !pollId) {
-      throw new Error('Student email and poll ID are required');
-    }
-    
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName("Responses");
-    
-    if (sheet.getLastRow() < 2) {
-      return { success: true, rowsDeleted: 0 };
-    }
-    
-    const range = sheet.getDataRange();
-    const values = range.getValues();
-    const header = values[0];
-    
-    const colMap = {
-      pollId: header.indexOf('PollID'),
-      email: header.indexOf('StudentEmail'),
-      answer: header.indexOf('Answer')
-    };
-    
-    const rowsToDelete = [];
-    for (let i = values.length - 1; i >= 1; i--) {
-      const row = values[i];
-      if (row[colMap.pollId] === pollId && 
-          row[colMap.email] === studentEmail && 
-          row[colMap.answer] === 'VIOLATION_LOCKED') {
-        rowsToDelete.push(i + 1);
-      }
-    }
-    
-    rowsToDelete.forEach(rowIndex => {
-      sheet.deleteRow(rowIndex);
-    });
-    
-    Logger.log('Student unlocked', { 
-      studentEmail, 
-      pollId, 
-      rowsDeleted: rowsToDelete.length 
-    });
-    
-    return { success: true, rowsDeleted: rowsToDelete.length };
-  })();
+  // This function is now deprecated in favor of teacherApproveUnlock.
+  // It can be removed or left as a no-op.
+  Logger.log('Deprecated unlockStudent called', { studentEmail, pollId });
+  return { success: true, message: 'This function is deprecated.' };
 }
 
 function resetStudentResponse(studentEmail, pollId, questionIndex) {

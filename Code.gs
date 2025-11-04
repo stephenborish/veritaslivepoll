@@ -282,8 +282,16 @@ const DataAccess = {
 // CORE APP & ROUTING
 // =============================================================================
 
+const ALLOWED_FOLDER_ID = '1kLraHu_V-eGyVh_bOm9Vp_AdPylTToCi';
+
 function doGet(e) {
   try {
+    // Check if this is an image proxy request (must be first for performance)
+    const fn = (e && e.parameter && e.parameter.fn) || '';
+    if (fn === 'image') {
+      return serveImage_(e);
+    }
+
     // Check for token parameter first (anonymous access)
     const token = (e && e.parameter && e.parameter.token) ? e.parameter.token : null;
     let isTeacher = false;
@@ -352,6 +360,66 @@ function doGet(e) {
   }
 }
 
+/**
+ * Serve image via proxy endpoint
+ * This streams image bytes directly from Drive, avoiding ACL and rendering issues
+ * with direct Drive links
+ */
+function serveImage_(e) {
+  try {
+    const id = (e.parameter && e.parameter.id) || '';
+
+    if (!id) {
+      return ContentService.createTextOutput('Missing id parameter')
+        .setMimeType(ContentService.MimeType.TEXT);
+    }
+
+    // Fetch file from Drive
+    let file;
+    try {
+      file = DriveApp.getFileById(id);
+    } catch (err) {
+      Logger.error('File not found', { fileId: id, error: err });
+      return ContentService.createTextOutput('File not found')
+        .setMimeType(ContentService.MimeType.TEXT);
+    }
+
+    // Validate that file is in the allowed folder
+    const parents = file.getParents();
+    let isAllowed = false;
+
+    while (parents.hasNext()) {
+      const parent = parents.next();
+      if (parent.getId() === ALLOWED_FOLDER_ID) {
+        isAllowed = true;
+        break;
+      }
+    }
+
+    if (!isAllowed) {
+      Logger.error('Forbidden file access attempt', { fileId: id });
+      return ContentService.createTextOutput('Forbidden - file not in allowed folder')
+        .setMimeType(ContentService.MimeType.TEXT);
+    }
+
+    // Stream the image bytes with proper content type
+    const blob = file.getBlob();
+    const mimeType = blob.getContentType(); // e.g., image/png, image/jpeg
+
+    Logger.log('Serving image', { fileId: id, mimeType: mimeType, size: blob.getBytes().length });
+
+    // Return image with caching headers (5 minutes)
+    return ContentService.createOutput(blob)
+      .setMimeType(mimeType)
+      .setHeader('Cache-Control', 'public, max-age=300');
+
+  } catch (e) {
+    Logger.error('serveImage_ error', e);
+    return ContentService.createTextOutput('Error serving image: ' + e.message)
+      .setMimeType(ContentService.MimeType.TEXT);
+  }
+}
+
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
@@ -413,6 +481,24 @@ function setupSheet() {
 // =============================================================================
 // GOOGLE DRIVE IMAGE FUNCTIONS
 // =============================================================================
+
+/**
+ * Get the web app base URL for generating image proxy links
+ */
+function getWebAppUrl_() {
+  // Get the deployed web app URL from Script Properties (set during deployment)
+  const props = PropertiesService.getScriptProperties();
+  let url = props.getProperty('WEB_APP_URL');
+
+  // If not set, try to construct it (fallback)
+  if (!url) {
+    const scriptId = ScriptApp.getScriptId();
+    url = `https://script.google.com/macros/s/${scriptId}/exec`;
+    Logger.log('WEB_APP_URL not set in properties, using constructed URL', { url });
+  }
+
+  return url;
+}
 
 function getDriveFolder_() {
   const properties = PropertiesService.getScriptProperties();
@@ -478,11 +564,12 @@ function uploadImageToDrive(dataUrl, fileName) {
 
     const blob = Utilities.newBlob(Utilities.base64Decode(base64Data), mimeType, fileName);
     const file = folder.createFile(blob);
-    const fileUrl = `https://drive.google.com/uc?id=${file.getId()}`;
+    const fileId = file.getId();
 
-    Logger.log('Image uploaded successfully', { fileName: fileName, fileId: file.getId(), size: sizeInBytes });
+    Logger.log('Image uploaded successfully', { fileName: fileName, fileId: fileId, size: sizeInBytes });
 
-    return { success: true, url: fileUrl };
+    // Return fileId instead of URL - URLs will be generated at render time via proxy
+    return { success: true, fileId: fileId };
   })();
 }
 
@@ -1725,61 +1812,71 @@ function getDataRangeValues_(sheet) {
 
 function normalizeQuestionObject_(questionData) {
   const normalized = {};
+  const webAppUrl = getWebAppUrl_();
 
   // Normalize question text
   normalized.questionText = questionData.questionText || questionData.text || '';
 
-  // CANONICAL FIELD: questionImageURL
-  // Map legacy fields (questionImage) to the canonical questionImageURL
-  // Only store URLs, never base64
-  let imageUrl = questionData.questionImageURL || questionData.questionImage || null;
-  if (imageUrl && typeof imageUrl === 'string') {
-    // Ensure it's a URL (starts with http/https), not base64
-    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-      normalized.questionImageURL = imageUrl;
-    } else if (imageUrl.startsWith('data:')) {
-      // Legacy base64 - ignore it (should be re-uploaded)
-      Logger.log('Ignoring legacy base64 questionImage');
-      normalized.questionImageURL = null;
-    } else {
-      normalized.questionImageURL = null;
-    }
+  // NEW APPROACH: Use fileId to generate proxy URL
+  // Check for questionImageFileId first (new canonical field)
+  // Fall back to questionImageURL for legacy polls
+  let questionImageUrl = null;
+
+  if (questionData.questionImageFileId && typeof questionData.questionImageFileId === 'string') {
+    // NEW: Generate proxy URL from fileId
+    questionImageUrl = `${webAppUrl}?fn=image&id=${encodeURIComponent(questionData.questionImageFileId)}`;
   } else {
-    normalized.questionImageURL = null;
+    // LEGACY: Use old URL field (Drive URL)
+    let legacyUrl = questionData.questionImageURL || questionData.questionImage || null;
+    if (legacyUrl && typeof legacyUrl === 'string') {
+      // Ensure it's a URL (starts with http/https), not base64
+      if (legacyUrl.startsWith('http://') || legacyUrl.startsWith('https://')) {
+        questionImageUrl = legacyUrl;
+      } else if (legacyUrl.startsWith('data:')) {
+        // Legacy base64 - ignore it
+        Logger.log('Ignoring legacy base64 questionImage');
+        questionImageUrl = null;
+      }
+    }
   }
 
-  // For backward compatibility, also set questionImage to the same value
-  normalized.questionImage = normalized.questionImageURL;
+  normalized.questionImageURL = questionImageUrl;
+  normalized.questionImage = questionImageUrl;  // For backward compatibility
+  normalized.questionImageFileId = questionData.questionImageFileId || null; // Preserve fileId
 
   // Normalize options
   const optionsArray = Array.isArray(questionData.options) ? questionData.options : [];
   normalized.options = optionsArray.map(opt => {
     if (typeof opt === 'string') {
-      return { text: opt, imageURL: null, image: null };
+      return { text: opt, imageURL: null, image: null, imageFileId: null };
     }
 
-    // CANONICAL FIELD: imageURL for options
-    // Map legacy fields (image) to the canonical imageURL
-    let optImageUrl = opt.imageURL || opt.image || null;
-    if (optImageUrl && typeof optImageUrl === 'string') {
-      // Ensure it's a URL, not base64
-      if (optImageUrl.startsWith('http://') || optImageUrl.startsWith('https://')) {
-        // Valid URL
-      } else if (optImageUrl.startsWith('data:')) {
-        // Legacy base64 - ignore it
-        Logger.log('Ignoring legacy base64 option image');
-        optImageUrl = null;
-      } else {
-        optImageUrl = null;
-      }
+    // NEW APPROACH: Use fileId to generate proxy URL
+    let optionImageUrl = null;
+
+    if (opt.imageFileId && typeof opt.imageFileId === 'string') {
+      // NEW: Generate proxy URL from fileId
+      optionImageUrl = `${webAppUrl}?fn=image&id=${encodeURIComponent(opt.imageFileId)}`;
     } else {
-      optImageUrl = null;
+      // LEGACY: Use old URL field
+      let legacyUrl = opt.imageURL || opt.image || null;
+      if (legacyUrl && typeof legacyUrl === 'string') {
+        // Ensure it's a URL, not base64
+        if (legacyUrl.startsWith('http://') || legacyUrl.startsWith('https://')) {
+          optionImageUrl = legacyUrl;
+        } else if (legacyUrl.startsWith('data:')) {
+          // Legacy base64 - ignore it
+          Logger.log('Ignoring legacy base64 option image');
+          optionImageUrl = null;
+        }
+      }
     }
 
     return {
       text: opt.text || '',
-      imageURL: optImageUrl,
-      image: optImageUrl  // For backward compatibility
+      imageURL: optionImageUrl,
+      image: optionImageUrl,  // For backward compatibility
+      imageFileId: opt.imageFileId || null  // Preserve fileId
     };
   });
 

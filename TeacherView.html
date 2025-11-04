@@ -147,10 +147,6 @@
                 <span class="material-symbols-outlined text-xl">visibility</span>
                 <span class="truncate">View All Links</span>
               </button>
-              <div class="form-group mb-4">
-                <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white" for="poll-timer-input">Timer (seconds)</label>
-                <input type="number" id="poll-timer-input" placeholder="60" min="10" max="600" class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"/>
-              </div>
               <button id="start-poll-btn" class="flex w-full items-center justify-center gap-2 rounded-lg h-10 px-4 mb-2 bg-primary text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90 transition-colors">
                 <span class="material-symbols-outlined text-xl">play_arrow</span>
                 <span class="truncate">Start Poll</span>
@@ -252,14 +248,24 @@
           <aside class="lg:col-span-1 flex flex-col gap-6">
             <!-- Timer -->
             <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm">
+              <h3 class="text-brand-dark-gray dark:text-brand-white text-lg font-bold leading-normal mb-3 text-center">Question Timer</h3>
               <div class="flex flex-col items-center gap-4">
-                <div class="text-center">
-                  <p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">Time Remaining</p>
-                  <p id="live-timer-display" class="text-5xl font-bold text-primary dark:text-brand-white tracking-tighter font-mono">--:--</p>
+                <div class="text-center w-full">
+                  <p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60 mb-2">Time Remaining</p>
+                  <p id="live-timer-display" class="text-5xl font-bold text-primary dark:text-brand-white tracking-tighter font-mono mb-4">--:--</p>
                 </div>
-                <button id="restart-timer-btn" class="flex items-center justify-center gap-2 h-10 px-4 rounded-full bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors">
-                  <span class="material-symbols-outlined text-xl">restart_alt</span>
-                  <span>Apply Timer</span>
+                <div class="w-full">
+                  <label class="block text-xs font-semibold uppercase tracking-wide text-brand-dark-gray/60 dark:text-brand-white/60 mb-2 text-center" for="live-timer-input">Set Timer (seconds)</label>
+                  <input type="number" id="live-timer-input" placeholder="60" min="10" max="600" class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                  <p class="text-xs text-brand-dark-gray/50 dark:text-brand-white/50 mt-1 text-center">Leave blank for no timer</p>
+                </div>
+                <button id="restart-timer-btn" class="w-full flex items-center justify-center gap-2 h-10 px-4 rounded-lg bg-primary text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90 transition-colors">
+                  <span class="material-symbols-outlined text-xl">play_circle</span>
+                  <span>Start Timer</span>
+                </button>
+                <button id="stop-timer-btn" class="w-full flex items-center justify-center gap-2 h-10 px-4 rounded-lg bg-red-600/10 text-red-600 dark:text-red-400 dark:bg-red-500/20 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-red-600/20 dark:hover:bg-red-500/30 transition-colors">
+                  <span class="material-symbols-outlined text-xl">stop_circle</span>
+                  <span>Stop Timer</span>
                 </button>
               </div>
             </div>
@@ -545,6 +551,7 @@
   document.getElementById('header-next-btn').onclick=onNextQuestion;
   document.getElementById('header-skip-btn').onclick=onNextQuestion;
   document.getElementById('restart-timer-btn').onclick=onApplyTimer;
+  document.getElementById('stop-timer-btn').onclick=onStopTimer;
   document.getElementById('send-link-btn').onclick=onSendLink;
   document.getElementById('view-links-btn').onclick=onViewLinks;
   pollSelect.onchange=onPollSelectChange;
@@ -1291,6 +1298,13 @@
     clearTimeout(questionTimer);
     stopVisualTimer();
     isPaused=false;
+
+    // Clear timer input for next question
+    var timerInput=document.getElementById('live-timer-input');
+    if(timerInput){
+      timerInput.value='';
+    }
+
     google.script.run
       .withSuccessHandler(updateLiveView)
       .withFailureHandler(handleError)
@@ -1311,14 +1325,22 @@
   }
 
   function onApplyTimer(){
-    var timerInput=document.getElementById('poll-timer-input');
+    var timerInput=document.getElementById('live-timer-input');
     var seconds=parseInt(timerInput.value,10);
     if(seconds>0&&seconds<=600){
       startMasterTimer();
     } else {
       clearTimeout(questionTimer);
       stopVisualTimer();
+      alert('Please enter a valid timer duration between 10 and 600 seconds, or leave blank for no timer.');
     }
+  }
+
+  function onStopTimer(){
+    clearTimeout(questionTimer);
+    stopVisualTimer();
+    questionTimer=null;
+    console.log('Timer stopped manually');
   }
 
   // --- Live View & Data Polling ---
@@ -1559,13 +1581,14 @@
   // --- Timer Controls ---
   function startMasterTimer(){
     clearTimeout(questionTimer);
-    var timerInput=document.getElementById('poll-timer-input');
+    var timerInput=document.getElementById('live-timer-input');
     var seconds=parseInt(timerInput.value,10);
 
     if(seconds>0&&seconds<=600){
       isPaused=false;
       startVisualTimer(seconds);
       questionTimer=setTimeout(onStopPoll,seconds*1000);
+      console.log('Timer started: '+seconds+' seconds');
     } else {
       stopVisualTimer();
       questionTimer=null;
@@ -2211,14 +2234,33 @@
         };
       });
 
+      // Validate payload before sending
+      if(!payloadQuestions||payloadQuestions.length===0){
+        alert('❌ Error: No valid questions to save. Please check your poll data.');
+        savePollBtn.disabled=false;
+        savePollBtn.innerHTML=defaultLabel;
+        return;
+      }
+
+      // Capture question count immediately for success message
       var questionCount=payloadQuestions.length;
+      console.log('Saving poll with '+questionCount+' questions');
+
       var request=google.script.run
         .withSuccessHandler(function(updatedPolls){
+          // Use the captured questionCount variable (not from server response)
           refreshPollData(updatedPolls);
           resetPollDirty('All changes saved');
           savePollBtn.disabled=false;
           savePollBtn.innerHTML=defaultLabel;
-          var successMessage=editingPollId?'✅ Poll updated successfully with '+questionCount+' question'+(questionCount===1?'':'s')+'!':'✅ Poll created successfully with '+questionCount+' question'+(questionCount===1?'':'s')+'!';
+
+          // Generate success message with the count we know is correct
+          var successMessage=editingPollId
+            ?'✅ Poll updated successfully with '+questionCount+' question'+(questionCount===1?'':'s')+'!'
+            :'✅ Poll created successfully with '+questionCount+' question'+(questionCount===1?'':'s')+'!';
+
+          console.log(successMessage);
+
           var shouldSelectNew=!editingPollId;
           closePollCreator();
           if(shouldSelectNew){
@@ -2228,6 +2270,7 @@
           alert(successMessage);
         })
         .withFailureHandler(function(error){
+          console.error('Poll save error:',error);
           handleError(error);
           savePollBtn.disabled=false;
           savePollBtn.innerHTML=defaultLabel;
@@ -2239,7 +2282,8 @@
         request.createNewPoll(pollName,className,payloadQuestions);
       }
     }).catch(function(err){
-      alert('❌ Upload error: '+err.message);
+      console.error('Upload/save error:',err);
+      alert('❌ Upload error: '+(err.message||err));
       savePollBtn.disabled=false;
       savePollBtn.innerHTML=defaultLabel;
     });
@@ -2247,31 +2291,77 @@
 
   function fileToBase64(file){
     return new Promise(function(resolve,reject){
+      // Validate file input
+      if(!file){
+        reject(new Error('No file provided'));
+        return;
+      }
+      if(!(file instanceof File)){
+        reject(new Error('Invalid file object'));
+        return;
+      }
+      if(!file.type.startsWith('image/')){
+        reject(new Error('File must be an image'));
+        return;
+      }
+      if(file.size===0){
+        reject(new Error('File is empty'));
+        return;
+      }
+      if(file.size>5*1024*1024){
+        reject(new Error('File exceeds 5MB limit'));
+        return;
+      }
+
       var reader=new FileReader();
       reader.readAsDataURL(file);
       reader.onload=function(){
-        resolve(reader.result);
+        if(reader.result&&typeof reader.result==='string'){
+          resolve(reader.result);
+        } else {
+          reject(new Error('Failed to read file data'));
+        }
       };
       reader.onerror=function(error){
-        reject(error);
+        reject(new Error('File read error: '+(error.message||'Unknown error')));
       };
     });
   }
 
   function uploadFile(file){
     return new Promise(function(resolve,reject){
+      // Validate file before processing
+      if(!file){
+        reject(new Error('No file provided for upload'));
+        return;
+      }
+      if(!file.name){
+        reject(new Error('File has no name'));
+        return;
+      }
+
       fileToBase64(file).then(function(dataUrl){
+        // Double-check dataUrl before sending
+        if(!dataUrl||typeof dataUrl!=='string'){
+          reject(new Error('Invalid data URL generated from file'));
+          return;
+        }
+
         google.script.run
           .withSuccessHandler(function(response){
-            if(response.success){
+            if(response&&response.success){
               resolve(response.url);
             } else {
               reject(new Error(response.error||'Upload failed'));
             }
           })
-          .withFailureHandler(reject)
+          .withFailureHandler(function(error){
+            reject(new Error('Server error: '+(error.message||error)));
+          })
           .uploadImageToDrive(dataUrl,file.name);
-      }).catch(reject);
+      }).catch(function(error){
+        reject(new Error('File conversion error: '+(error.message||error)));
+      });
     });
   }
 

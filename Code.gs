@@ -448,28 +448,46 @@ function getDriveFolder_() {
 
 function uploadImageToDrive(dataUrl, fileName) {
   return withErrorHandling(() => {
+    // Validate inputs
+    if (!dataUrl || typeof dataUrl !== 'string') {
+      throw new Error('Invalid image data: dataUrl is missing or invalid');
+    }
+
+    if (!fileName || typeof fileName !== 'string') {
+      throw new Error('Invalid image data: fileName is missing or invalid');
+    }
+
+    // Validate dataUrl format
+    if (!dataUrl.includes(',')) {
+      throw new Error('Invalid image data format: missing comma separator');
+    }
+
+    if (!dataUrl.includes(':') || !dataUrl.includes(';')) {
+      throw new Error('Invalid image data format: missing mime type information');
+    }
+
     const base64Data = dataUrl.substring(dataUrl.indexOf(',') + 1);
     const sizeInBytes = base64Data.length * 0.75;
     const maxSize = 5 * 1024 * 1024;
-    
+
     if (sizeInBytes > maxSize) {
       throw new Error(`File "${fileName}" exceeds 5MB limit`);
     }
-    
+
     const folder = getDriveFolder_();
     const mimeType = dataUrl.substring(dataUrl.indexOf(':') + 1, dataUrl.indexOf(';'));
-    
+
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     if (!allowedTypes.includes(mimeType)) {
-      throw new Error(`File type "${mimeType}" not supported`);
+      throw new Error(`File type "${mimeType}" not supported. Allowed types: ${allowedTypes.join(', ')}`);
     }
-    
+
     const blob = Utilities.newBlob(Utilities.base64Decode(base64Data), mimeType, fileName);
     const file = folder.createFile(blob);
     const fileUrl = `https://drive.google.com/uc?id=${file.getId()}`;
-    
-    Logger.log('Image uploaded', { fileName: fileName, fileId: file.getId() });
-    
+
+    Logger.log('Image uploaded successfully', { fileName: fileName, fileId: file.getId(), size: sizeInBytes });
+
     return { success: true, url: fileUrl };
   })();
 }

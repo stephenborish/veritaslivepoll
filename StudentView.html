@@ -139,11 +139,11 @@
 
       var currentPollState = {};
       var pollInterval = null;
+      var proctorPollInterval = null;  // NEW: Separate polling for proctor state
       var isInteractionBlocked = false;
-      var awaitingUnlock = false;
-      var pendingResume = false;
-      var hasAnsweredCurrent = false; // NEW: Track if student answered current question
-      var violationLogged = false; // NEW: Ensure violation only logged once
+      var currentLockVersion = 0;  // NEW: Track current lock version
+      var hasAnsweredCurrent = false;
+      var violationLogged = false;
 
       if (resumeSessionBtn) {
         resumeSessionBtn.onclick = function() {

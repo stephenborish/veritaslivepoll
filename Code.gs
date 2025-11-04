@@ -1411,40 +1411,276 @@ function submitStudentAnswer(pollId, questionIndex, answerText) {
   })();
 }
 
-function logStudentViolation() {
+// =============================================================================
+// PROCTORING & LOCK MANAGEMENT (WITH ATOMIC APPROVAL)
+// =============================================================================
+
+/**
+ * Proctoring data access layer
+ * Stores per-student lock state with versioning for atomic teacher approvals
+ */
+const ProctorAccess = {
+  /**
+   * Get proctoring state for a student
+   */
+  getState: function(pollId, studentEmail) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName('ProctorState');
+
+    // Create sheet if doesn't exist
+    if (!sheet) {
+      sheet = ss.insertSheet('ProctorState');
+      sheet.getRange('A1:I1').setValues([[
+        'PollID', 'StudentEmail', 'Locked', 'LockVersion', 'LockReason',
+        'LockedAt', 'UnlockApproved', 'UnlockApprovedBy', 'UnlockApprovedAt'
+      ]]).setFontWeight('bold').setBackground('#4285f4').setFontColor('#ffffff');
+      sheet.setFrozenRows(1);
+    }
+
+    const data = sheet.getDataRange().getValues();
+
+    // Find existing record
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === pollId && data[i][1] === studentEmail) {
+        return {
+          pollId: data[i][0],
+          studentEmail: data[i][1],
+          locked: data[i][2] === true || data[i][2] === 'TRUE',
+          lockVersion: typeof data[i][3] === 'number' ? data[i][3] : 0,
+          lockReason: data[i][4] || '',
+          lockedAt: data[i][5] || '',
+          unlockApproved: data[i][6] === true || data[i][6] === 'TRUE',
+          unlockApprovedBy: data[i][7] || null,
+          unlockApprovedAt: data[i][8] || null,
+          rowIndex: i + 1
+        };
+      }
+    }
+
+    // Return default state if not found
+    return {
+      pollId: pollId,
+      studentEmail: studentEmail,
+      locked: false,
+      lockVersion: 0,
+      lockReason: '',
+      lockedAt: '',
+      unlockApproved: false,
+      unlockApprovedBy: null,
+      unlockApprovedAt: null,
+      rowIndex: null
+    };
+  },
+
+  /**
+   * Set proctoring state for a student
+   */
+  setState: function(state) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName('ProctorState');
+
+    if (!sheet) {
+      // Create if doesn't exist
+      this.getState(state.pollId, state.studentEmail);
+      sheet = ss.getSheetByName('ProctorState');
+    }
+
+    const rowData = [
+      state.pollId,
+      state.studentEmail,
+      state.locked,
+      state.lockVersion,
+      state.lockReason || '',
+      state.lockedAt || '',
+      state.unlockApproved || false,
+      state.unlockApprovedBy || '',
+      state.unlockApprovedAt || ''
+    ];
+
+    if (state.rowIndex) {
+      // Update existing row
+      sheet.getRange(state.rowIndex, 1, 1, 9).setValues([rowData]);
+    } else {
+      // Append new row
+      sheet.appendRow(rowData);
+    }
+  }
+};
+
+/**
+ * Report student violation (new authoritative version)
+ */
+function reportStudentViolation(reason) {
   return withErrorHandling(() => {
     const studentEmail = TokenManager.getCurrentStudentEmail();
-    
+
     if (!studentEmail) {
-      return { success: false, error: "Authentication error." };
+      return { success: false, error: 'Authentication error' };
     }
-    
+
     const statusValues = DataAccess.liveStatus.get();
     const pollId = statusValues[0];
-    
+
     if (!pollId) {
-      return { success: false, error: "No active poll." };
+      return { success: false, error: 'No active poll' };
     }
-    
-    if (DataAccess.responses.isLocked(pollId, studentEmail)) {
-      return { success: true, message: "Already locked." };
+
+    // Get current proctor state
+    const currentState = ProctorAccess.getState(pollId, studentEmail);
+
+    // If already locked, don't increment version - just update reason
+    if (currentState.locked) {
+      Logger.log('Student already locked, not incrementing version', {
+        studentEmail,
+        pollId,
+        currentLockVersion: currentState.lockVersion,
+        newReason: reason
+      });
+
+      // Update reason but keep everything else
+      currentState.lockReason = reason || currentState.lockReason;
+      ProctorAccess.setState(currentState);
+
+      return {
+        success: true,
+        locked: true,
+        lockVersion: currentState.lockVersion
+      };
     }
-    
-    const responseId = "R-" + Utilities.getUuid();
+
+    // New violation - set locked, increment version, reset approval
+    const newState = {
+      pollId: pollId,
+      studentEmail: studentEmail,
+      locked: true,
+      lockVersion: currentState.lockVersion + 1,
+      lockReason: reason || 'exit-fullscreen',
+      lockedAt: new Date().toISOString(),
+      unlockApproved: false,
+      unlockApprovedBy: null,
+      unlockApprovedAt: null,
+      rowIndex: currentState.rowIndex
+    };
+
+    ProctorAccess.setState(newState);
+
+    // Also log to Responses sheet for backward compatibility
+    const responseId = 'V-' + Utilities.getUuid();
     DataAccess.responses.add([
       responseId,
       new Date().getTime(),
       pollId,
       -1,
       studentEmail,
-      "VIOLATION_LOCKED",
+      'VIOLATION_LOCKED',
       false
     ]);
-    
-    Logger.log('Student violation logged', { studentEmail, pollId });
-    
-    return { success: true };
+
+    Logger.log('Student violation logged', {
+      studentEmail,
+      pollId,
+      lockVersion: newState.lockVersion,
+      reason: newState.lockReason
+    });
+
+    return {
+      success: true,
+      locked: true,
+      lockVersion: newState.lockVersion
+    };
   })();
+}
+
+/**
+ * Get student proctor state (for polling)
+ */
+function getStudentProctorState() {
+  return withErrorHandling(() => {
+    const studentEmail = TokenManager.getCurrentStudentEmail();
+
+    if (!studentEmail) {
+      return { success: false, error: 'Authentication error' };
+    }
+
+    const statusValues = DataAccess.liveStatus.get();
+    const pollId = statusValues[0];
+
+    if (!pollId) {
+      return { success: false, error: 'No active poll' };
+    }
+
+    const state = ProctorAccess.getState(pollId, studentEmail);
+
+    return {
+      success: true,
+      locked: state.locked,
+      lockVersion: state.lockVersion,
+      lockReason: state.lockReason,
+      lockedAt: state.lockedAt,
+      unlockApproved: state.unlockApproved,
+      unlockApprovedBy: state.unlockApprovedBy,
+      unlockApprovedAt: state.unlockApprovedAt
+    };
+  })();
+}
+
+/**
+ * Teacher approves unlock (atomic with version check)
+ */
+function teacherApproveUnlock(studentEmail, pollId, expectedLockVersion) {
+  return withErrorHandling(() => {
+    const teacherEmail = Session.getActiveUser().getEmail();
+
+    if (teacherEmail !== TEACHER_EMAIL) {
+      throw new Error('Unauthorized');
+    }
+
+    if (!studentEmail || !pollId || typeof expectedLockVersion !== 'number') {
+      throw new Error('Invalid parameters');
+    }
+
+    // Get current state
+    const currentState = ProctorAccess.getState(pollId, studentEmail);
+
+    // Atomic check: only approve if lockVersion matches and still locked
+    if (!currentState.locked) {
+      Logger.log('Unlock failed: student not locked', { studentEmail, pollId });
+      return { ok: false, reason: 'not_locked' };
+    }
+
+    if (currentState.lockVersion !== expectedLockVersion) {
+      Logger.log('Unlock failed: version mismatch', {
+        studentEmail,
+        pollId,
+        expected: expectedLockVersion,
+        current: currentState.lockVersion
+      });
+      return { ok: false, reason: 'version_mismatch' };
+    }
+
+    // Approve unlock
+    currentState.unlockApproved = true;
+    currentState.unlockApprovedBy = teacherEmail;
+    currentState.unlockApprovedAt = new Date().toISOString();
+
+    ProctorAccess.setState(currentState);
+
+    Logger.log('Teacher approved unlock', {
+      studentEmail,
+      pollId,
+      lockVersion: expectedLockVersion,
+      approvedBy: teacherEmail
+    });
+
+    return { ok: true };
+  })();
+}
+
+/**
+ * Legacy endpoint - redirect to new implementation
+ */
+function logStudentViolation() {
+  return reportStudentViolation('legacy-violation');
 }
 
 function unlockStudent(studentEmail, pollId) {

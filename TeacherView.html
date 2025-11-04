@@ -221,7 +221,7 @@
                   <h2 id="live-question-text" class="font-serif text-brand-dark-gray dark:text-brand-white tracking-tight text-xl leading-snug mb-4">Question text appears here</h2>
                 </div>
                 <div id="question-image-container" class="relative w-24 h-24 flex-shrink-0" style="display: none;">
-                  <img id="live-question-image" alt="Question" class="rounded-lg object-cover w-full h-full" src="" referrerpolicy="no-referrer" style="max-width:100%;height:auto;display:block"/>
+                  <img id="live-question-image" alt="Question" class="rounded-lg object-cover w-full h-full" src="" referrerpolicy="no-referrer" style="max-width:100%;height:auto;display:block" onerror="this.style.display='none';"/>
                   <button class="absolute inset-0 flex items-center justify-center bg-black/50 text-white rounded-lg opacity-0 hover:opacity-100 transition-opacity" onclick="window.expandQuestionImage()">
                     <span class="material-symbols-outlined">zoom_in</span>
                   </button>
@@ -1930,7 +1930,7 @@
     html+='</div>';
 
     // Show image preview or uploading state
-    var questionImagePreview=getImagePreviewUrl(question.questionImage||question.questionImageURL);
+    var questionImagePreview=getImagePreviewUrl(question.questionImage||question.questionImageURL,question.questionImageFileId);
     var isUploading=question.questionImage==='UPLOADING';
 
     if(questionImagePreview||isUploading){
@@ -1989,15 +1989,17 @@
           renderQuestionWorkspace();
 
           // Upload immediately to Drive
-          uploadFile(file).then(function(url){
-            // Store the Drive URL as the canonical field
-            questions[selectedQuestionIndex].questionImageURL=url;
+          uploadFile(file).then(function(fileId){
+            // Store the fileId (not URL) - URLs generated at render time via proxy
+            questions[selectedQuestionIndex].questionImageFileId=fileId;
             questions[selectedQuestionIndex].questionImage=null;
+            questions[selectedQuestionIndex].questionImageURL=null;
             markPollDirty();
             renderQuestionWorkspace();
           }).catch(function(error){
             alert('Image upload failed: '+(error.message||error));
             questions[selectedQuestionIndex].questionImage=null;
+            questions[selectedQuestionIndex].questionImageFileId=null;
             questions[selectedQuestionIndex].questionImageURL=null;
             renderQuestionWorkspace();
           });
@@ -2064,15 +2066,17 @@
           renderQuestionWorkspace();
 
           // Upload immediately to Drive
-          uploadFile(file).then(function(url){
-            // Store the Drive URL as the canonical field
-            questions[selectedQuestionIndex].answers[index].imageURL=url;
+          uploadFile(file).then(function(fileId){
+            // Store the fileId (not URL) - URLs generated at render time via proxy
+            questions[selectedQuestionIndex].answers[index].imageFileId=fileId;
             questions[selectedQuestionIndex].answers[index].image=null;
+            questions[selectedQuestionIndex].answers[index].imageURL=null;
             markPollDirty();
             renderQuestionWorkspace();
           }).catch(function(error){
             alert('Image upload failed: '+(error.message||error));
             questions[selectedQuestionIndex].answers[index].image=null;
+            questions[selectedQuestionIndex].answers[index].imageFileId=null;
             questions[selectedQuestionIndex].answers[index].imageURL=null;
             renderQuestionWorkspace();
           });
@@ -2114,7 +2118,7 @@
     html+='</div>';
 
     // Show image preview or uploading state for answer choices
-    var answerPreview=getImagePreviewUrl(answer.image||answer.imageURL);
+    var answerPreview=getImagePreviewUrl(answer.image||answer.imageURL,answer.imageFileId);
     var isAnswerUploading=answer.image==='UPLOADING';
 
     if(answerPreview||isAnswerUploading){
@@ -2147,16 +2151,40 @@
     renderQuestionWorkspace();
   }
 
-  function getImagePreviewUrl(image){
-    if(image instanceof File){
-      return URL.createObjectURL(image);
+  // Helper to get web app base URL for generating proxy URLs
+  function getWebAppUrl(){
+    // Use current page URL (web app deployment URL)
+    var url=window.location.href;
+    // Remove query parameters
+    var baseUrl=url.split('?')[0];
+    return baseUrl;
+  }
+
+  // Helper to generate image proxy URL from fileId
+  function generateProxyUrl(fileId){
+    if(!fileId||typeof fileId!=='string'){
+      return'';
     }
-    if(typeof image==='string'&&image){
+    var baseUrl=getWebAppUrl();
+    return baseUrl+'?fn=image&id='+encodeURIComponent(fileId);
+  }
+
+  function getImagePreviewUrl(imageData,fileId){
+    // If fileId is provided, generate proxy URL
+    if(fileId&&typeof fileId==='string'){
+      return generateProxyUrl(fileId);
+    }
+
+    // Otherwise handle legacy data
+    if(imageData instanceof File){
+      return URL.createObjectURL(imageData);
+    }
+    if(typeof imageData==='string'&&imageData){
       // Return the URL, unless it's the special UPLOADING marker
-      if(image==='UPLOADING'){
+      if(imageData==='UPLOADING'){
         return'';
       }
-      return image;
+      return imageData;
     }
     return'';
   }
@@ -2242,10 +2270,11 @@
     var sanitizedQuestions=questions.map(function(question){
       var answers=question.answers.map(function(answer){
         var text=(answer.text||'').trim();
-        // Use imageURL as canonical field
+        // Use imageFileId as canonical field (not URL)
         return{
           text:text,
-          imageURL:answer.imageURL||null
+          imageFileId:answer.imageFileId||null,
+          imageURL:answer.imageURL||null  // Keep for backward compatibility
         };
       });
 
@@ -2268,10 +2297,11 @@
         timerValue=Math.min(Math.round(timerValue),600);
       }
 
-      // Use questionImageURL as canonical field
+      // Use questionImageFileId as canonical field (not URL)
       return{
         questionText:(question.questionText||'').trim(),
-        questionImageURL:question.questionImageURL||null,
+        questionImageFileId:question.questionImageFileId||null,
+        questionImageURL:question.questionImageURL||null,  // Keep for backward compatibility
         answers:answers,
         correctAnswerIndex:correctIndex,
         timerSeconds:timerValue&&timerValue>0?timerValue:null
@@ -2421,7 +2451,8 @@
         google.script.run
           .withSuccessHandler(function(response){
             if(response&&response.success){
-              resolve(response.url);
+              // Server now returns fileId instead of url
+              resolve(response.fileId);
             } else {
               reject(new Error(response.error||'Upload failed'));
             }

@@ -1527,10 +1527,22 @@
           '<button class="reset-btn flex-shrink-0 flex items-center justify-center gap-1 h-7 px-2.5 rounded-md bg-green-600 text-brand-white text-xs font-bold hover:bg-green-700 transition-colors" data-email="'+student.email+'">'+
           '<span class="material-symbols-outlined text-sm">refresh</span><span>Reset</span></button>';
       } else if(student.status==='LOCKED'){
+        // Calculate time locked
+        var lockedDuration = '';
+        if (student.lockedAt) {
+          try {
+            var lockedMs = new Date() - new Date(student.lockedAt);
+            var lockedSec = Math.floor(lockedMs / 1000);
+            lockedDuration = ' • ' + lockedSec + 's';
+          } catch (e) {
+            lockedDuration = '';
+          }
+        }
+
         tile.className='flex items-center justify-between p-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 gap-2';
         tile.innerHTML='<div class="flex flex-col text-left flex-grow min-w-0">'+
           '<span class="text-sm font-medium text-red-800 dark:text-red-300 truncate">'+escapeHtml(student.name)+'</span>'+
-          '<span class="text-xs text-red-600 dark:text-red-400">v'+student.lockVersion+'</span>'+
+          '<span class="text-xs text-red-600 dark:text-red-400">v'+student.lockVersion+lockedDuration+'</span>'+
           '</div>'+
           '<button class="unlock-btn flex-shrink-0 flex items-center justify-center gap-1 h-7 px-2.5 rounded-md bg-red-500/20 text-red-700 dark:bg-red-400/20 dark:text-red-300 text-xs font-bold hover:bg-red-500/30 transition-colors" data-email="'+student.email+'" data-poll-id="'+CURRENT_POLL_DATA.pollId+'" data-lock-version="'+(student.lockVersion || 0)+'">'+
           '<span class="material-symbols-outlined text-sm">lock_open</span><span>Approve</span></button>';

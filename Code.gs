@@ -1217,6 +1217,7 @@ function getLivePollData(pollId, questionIndex) {
           status: proctorState.status === 'AWAITING_FULLSCREEN' ? 'AWAITING_FULLSCREEN' : 'LOCKED',
           lockVersion: proctorState.lockVersion,
           lockReason: proctorState.lockReason,
+          lockedAt: proctorState.lockedAt,
           answer: '---',
           isCorrect: null,
           timestamp: 0
@@ -1319,10 +1320,14 @@ function getStudentPollStatus() {
       };
     }
 
-    if (DataAccess.responses.isLocked(pollId, studentEmail)) {
+    // Check authoritative proctor state (not old Responses sheet)
+    const proctorState = ProctorAccess.getState(pollId, studentEmail);
+    if (proctorState.status === 'LOCKED' || proctorState.status === 'AWAITING_FULLSCREEN') {
       return {
-        status: "LOCKED",
-        message: "Your session was locked because you navigated away from the poll.",
+        status: proctorState.status,
+        message: proctorState.status === 'LOCKED'
+          ? "Your session was locked. Your teacher must unlock you."
+          : "Your teacher has approved unlock. Click resume when ready.",
         hasSubmitted: false
       };
     }
@@ -1421,6 +1426,56 @@ function submitStudentAnswer(pollId, questionIndex, answerText) {
 // =============================================================================
 
 /**
+ * Proctoring telemetry - toggleable logging for audit trail
+ */
+const ProctorTelemetry = {
+  enabled: true, // Toggle via script properties if needed
+
+  log: function(event, studentEmail, pollId, extra = {}) {
+    if (!this.enabled) return;
+
+    const entry = {
+      timestamp: new Date().toISOString(),
+      event: event,
+      studentEmail: studentEmail,
+      pollId: pollId,
+      ...extra
+    };
+
+    Logger.log('PROCTOR_EVENT: ' + JSON.stringify(entry));
+
+    // Optional: Write to sheet for detailed analysis (disabled by default for performance)
+    const enableSheetLogging = PropertiesService.getScriptProperties().getProperty('PROCTOR_SHEET_LOGGING');
+    if (enableSheetLogging === 'true') {
+      try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        let sheet = ss.getSheetByName('ProctorLog');
+        if (!sheet) {
+          sheet = ss.insertSheet('ProctorLog');
+          sheet.getRange('A1:G1').setValues([[
+            'Timestamp', 'Event', 'StudentEmail', 'PollID', 'LockVersion', 'Status', 'Extra'
+          ]]).setFontWeight('bold').setBackground('#4285f4').setFontColor('#ffffff');
+          sheet.setFrozenRows(1);
+        }
+
+        sheet.appendRow([
+          entry.timestamp,
+          event,
+          studentEmail,
+          pollId,
+          extra.lockVersion || '',
+          extra.status || '',
+          JSON.stringify(extra)
+        ]);
+      } catch (e) {
+        // Don't fail on logging error
+        Logger.error('Telemetry sheet write failed', e);
+      }
+    }
+  }
+};
+
+/**
  * Proctoring data access layer
  * Stores per-student lock state with versioning for atomic teacher approvals
  */
@@ -1491,6 +1546,26 @@ const ProctorAccess = {
    * Set proctoring state for a student
    */
   setState: function(state) {
+    // INVARIANT CHECKS (enforce state machine rules)
+    const validStatuses = ['OK', 'LOCKED', 'AWAITING_FULLSCREEN'];
+    if (!validStatuses.includes(state.status)) {
+      throw new Error(`Invalid proctor status: ${state.status}. Must be one of: ${validStatuses.join(', ')}`);
+    }
+
+    if (typeof state.lockVersion !== 'number' || state.lockVersion < 0) {
+      throw new Error(`Invalid lockVersion: ${state.lockVersion}. Must be non-negative number.`);
+    }
+
+    // AWAITING_FULLSCREEN requires unlockApproved=true
+    if (state.status === 'AWAITING_FULLSCREEN' && !state.unlockApproved) {
+      throw new Error('State AWAITING_FULLSCREEN requires unlockApproved=true (teacher must approve first)');
+    }
+
+    // LOCKED requires unlockApproved=false
+    if (state.status === 'LOCKED' && state.unlockApproved) {
+      throw new Error('State LOCKED requires unlockApproved=false (approval must be cleared on new violation)');
+    }
+
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     let sheet = ss.getSheetByName('ProctorState');
 
@@ -1544,7 +1619,7 @@ function reportStudentViolation(reason) {
     // Get current proctor state
     const currentState = ProctorAccess.getState(pollId, studentEmail);
 
-    // If already locked, don't increment version - just update reason
+    // If already in LOCKED state (but not AWAITING), don't increment version - just update reason
     if (currentState.status === 'LOCKED') {
       Logger.log('Student already locked, not incrementing version', {
         studentEmail,
@@ -1564,7 +1639,52 @@ function reportStudentViolation(reason) {
       };
     }
 
-    // New violation - set to LOCKED, increment version, reset approval
+    // If AWAITING_FULLSCREEN, this is a NEW violation → bump version and reset approval
+    if (currentState.status === 'AWAITING_FULLSCREEN') {
+      const newState = {
+        pollId: pollId,
+        studentEmail: studentEmail,
+        status: 'LOCKED',
+        lockVersion: currentState.lockVersion + 1,
+        lockReason: reason || 'exit-fullscreen-while-awaiting',
+        lockedAt: new Date().toISOString(),
+        unlockApproved: false,
+        unlockApprovedBy: null,
+        unlockApprovedAt: null,
+        sessionId: currentState.sessionId,
+        rowIndex: currentState.rowIndex
+      };
+
+      ProctorAccess.setState(newState);
+
+      // Log to Responses sheet
+      const responseId = 'V-' + Utilities.getUuid();
+      DataAccess.responses.add([
+        responseId,
+        new Date().getTime(),
+        pollId,
+        -1,
+        studentEmail,
+        'VIOLATION_LOCKED',
+        false
+      ]);
+
+      Logger.log('Student violated while awaiting fullscreen - version bumped', {
+        studentEmail,
+        pollId,
+        oldVersion: currentState.lockVersion,
+        newVersion: newState.lockVersion,
+        reason: newState.lockReason
+      });
+
+      return {
+        success: true,
+        status: 'LOCKED',
+        lockVersion: newState.lockVersion
+      };
+    }
+
+    // OK state - new violation, bump version
     const newState = {
       pollId: pollId,
       studentEmail: studentEmail,
@@ -1593,11 +1713,11 @@ function reportStudentViolation(reason) {
       false
     ]);
 
-    Logger.log('Student violation logged', {
-      studentEmail,
-      pollId,
+    // Telemetry logging
+    ProctorTelemetry.log('violation', studentEmail, pollId, {
       lockVersion: newState.lockVersion,
-      reason: newState.lockReason
+      reason: newState.lockReason,
+      status: 'LOCKED'
     });
 
     return {
@@ -1683,11 +1803,11 @@ function teacherApproveUnlock(studentEmail, pollId, expectedLockVersion) {
 
     ProctorAccess.setState(currentState);
 
-    Logger.log('Teacher approved unlock - awaiting fullscreen', {
-      studentEmail,
-      pollId,
+    // Telemetry logging
+    ProctorTelemetry.log('approve_unlock', studentEmail, pollId, {
       lockVersion: expectedLockVersion,
-      approvedBy: teacherEmail
+      approvedBy: teacherEmail,
+      status: 'AWAITING_FULLSCREEN'
     });
 
     return { ok: true, status: 'AWAITING_FULLSCREEN', lockVersion: expectedLockVersion };
@@ -1739,10 +1859,10 @@ function studentConfirmFullscreen(expectedLockVersion) {
     currentState.status = 'OK';
     ProctorAccess.setState(currentState);
 
-    Logger.log('Student confirmed fullscreen - unlocked', {
-      studentEmail,
-      pollId,
-      lockVersion: expectedLockVersion
+    // Telemetry logging
+    ProctorTelemetry.log('confirm_fullscreen', studentEmail, pollId, {
+      lockVersion: expectedLockVersion,
+      status: 'OK'
     });
 
     return { success: true, status: 'OK' };

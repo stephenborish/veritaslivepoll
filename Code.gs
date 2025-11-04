@@ -1206,15 +1206,15 @@ function getLivePollData(pollId, questionIndex) {
     
     const studentStatusList = roster.map(student => {
       const email = student.email;
-      
-      if (lockedStudents.has(email)) {
-        // Get proctor state to include lockVersion
-        const proctorState = ProctorAccess.getState(pollId, email);
 
+      // Check proctor state (status-based check, not just old "locked" responses)
+      const proctorState = ProctorAccess.getState(pollId, email);
+
+      if (proctorState.status === 'LOCKED' || proctorState.status === 'AWAITING_FULLSCREEN' || lockedStudents.has(email)) {
         return {
           name: student.name,
           email: email,
-          status: 'LOCKED',
+          status: proctorState.status === 'AWAITING_FULLSCREEN' ? 'AWAITING_FULLSCREEN' : 'LOCKED',
           lockVersion: proctorState.lockVersion,
           lockReason: proctorState.lockReason,
           answer: '---',
@@ -1435,9 +1435,9 @@ const ProctorAccess = {
     // Create sheet if doesn't exist
     if (!sheet) {
       sheet = ss.insertSheet('ProctorState');
-      sheet.getRange('A1:I1').setValues([[
-        'PollID', 'StudentEmail', 'Locked', 'LockVersion', 'LockReason',
-        'LockedAt', 'UnlockApproved', 'UnlockApprovedBy', 'UnlockApprovedAt'
+      sheet.getRange('A1:J1').setValues([[
+        'PollID', 'StudentEmail', 'Status', 'LockVersion', 'LockReason',
+        'LockedAt', 'UnlockApproved', 'UnlockApprovedBy', 'UnlockApprovedAt', 'SessionId'
       ]]).setFontWeight('bold').setBackground('#4285f4').setFontColor('#ffffff');
       sheet.setFrozenRows(1);
     }
@@ -1447,16 +1447,25 @@ const ProctorAccess = {
     // Find existing record
     for (let i = 1; i < data.length; i++) {
       if (data[i][0] === pollId && data[i][1] === studentEmail) {
+        // Migrate old data: if column 2 is boolean (old "locked" field), convert to status
+        let status = 'OK';
+        if (typeof data[i][2] === 'string' && ['OK', 'LOCKED', 'AWAITING_FULLSCREEN'].includes(data[i][2])) {
+          status = data[i][2];
+        } else if (data[i][2] === true || data[i][2] === 'TRUE') {
+          status = 'LOCKED'; // Migration: locked=true → LOCKED
+        }
+
         return {
           pollId: data[i][0],
           studentEmail: data[i][1],
-          locked: data[i][2] === true || data[i][2] === 'TRUE',
+          status: status,
           lockVersion: typeof data[i][3] === 'number' ? data[i][3] : 0,
           lockReason: data[i][4] || '',
           lockedAt: data[i][5] || '',
           unlockApproved: data[i][6] === true || data[i][6] === 'TRUE',
           unlockApprovedBy: data[i][7] || null,
           unlockApprovedAt: data[i][8] || null,
+          sessionId: data[i][9] || null,
           rowIndex: i + 1
         };
       }
@@ -1466,13 +1475,14 @@ const ProctorAccess = {
     return {
       pollId: pollId,
       studentEmail: studentEmail,
-      locked: false,
+      status: 'OK',
       lockVersion: 0,
       lockReason: '',
       lockedAt: '',
       unlockApproved: false,
       unlockApprovedBy: null,
       unlockApprovedAt: null,
+      sessionId: null,
       rowIndex: null
     };
   },
@@ -1493,18 +1503,19 @@ const ProctorAccess = {
     const rowData = [
       state.pollId,
       state.studentEmail,
-      state.locked,
+      state.status || 'OK',
       state.lockVersion,
       state.lockReason || '',
       state.lockedAt || '',
       state.unlockApproved || false,
       state.unlockApprovedBy || '',
-      state.unlockApprovedAt || ''
+      state.unlockApprovedAt || '',
+      state.sessionId || ''
     ];
 
     if (state.rowIndex) {
       // Update existing row
-      sheet.getRange(state.rowIndex, 1, 1, 9).setValues([rowData]);
+      sheet.getRange(state.rowIndex, 1, 1, 10).setValues([rowData]);
     } else {
       // Append new row
       sheet.appendRow(rowData);
@@ -1534,7 +1545,7 @@ function reportStudentViolation(reason) {
     const currentState = ProctorAccess.getState(pollId, studentEmail);
 
     // If already locked, don't increment version - just update reason
-    if (currentState.locked) {
+    if (currentState.status === 'LOCKED') {
       Logger.log('Student already locked, not incrementing version', {
         studentEmail,
         pollId,
@@ -1548,22 +1559,23 @@ function reportStudentViolation(reason) {
 
       return {
         success: true,
-        locked: true,
+        status: 'LOCKED',
         lockVersion: currentState.lockVersion
       };
     }
 
-    // New violation - set locked, increment version, reset approval
+    // New violation - set to LOCKED, increment version, reset approval
     const newState = {
       pollId: pollId,
       studentEmail: studentEmail,
-      locked: true,
+      status: 'LOCKED',
       lockVersion: currentState.lockVersion + 1,
       lockReason: reason || 'exit-fullscreen',
       lockedAt: new Date().toISOString(),
       unlockApproved: false,
       unlockApprovedBy: null,
       unlockApprovedAt: null,
+      sessionId: currentState.sessionId,
       rowIndex: currentState.rowIndex
     };
 
@@ -1590,7 +1602,7 @@ function reportStudentViolation(reason) {
 
     return {
       success: true,
-      locked: true,
+      status: 'LOCKED',
       lockVersion: newState.lockVersion
     };
   })();
@@ -1618,7 +1630,7 @@ function getStudentProctorState() {
 
     return {
       success: true,
-      locked: state.locked,
+      status: state.status,
       lockVersion: state.lockVersion,
       lockReason: state.lockReason,
       lockedAt: state.lockedAt,
@@ -1647,10 +1659,10 @@ function teacherApproveUnlock(studentEmail, pollId, expectedLockVersion) {
     // Get current state
     const currentState = ProctorAccess.getState(pollId, studentEmail);
 
-    // Atomic check: only approve if lockVersion matches and still locked
-    if (!currentState.locked) {
-      Logger.log('Unlock failed: student not locked', { studentEmail, pollId });
-      return { ok: false, reason: 'not_locked' };
+    // Atomic check: only approve if lockVersion matches and status is LOCKED
+    if (currentState.status !== 'LOCKED') {
+      Logger.log('Unlock failed: student not locked', { studentEmail, pollId, status: currentState.status });
+      return { ok: false, reason: 'not_locked', status: currentState.status };
     }
 
     if (currentState.lockVersion !== expectedLockVersion) {
@@ -1660,24 +1672,80 @@ function teacherApproveUnlock(studentEmail, pollId, expectedLockVersion) {
         expected: expectedLockVersion,
         current: currentState.lockVersion
       });
-      return { ok: false, reason: 'version_mismatch' };
+      return { ok: false, reason: 'version_mismatch', lockVersion: currentState.lockVersion };
     }
 
-    // Approve unlock
+    // Transition to AWAITING_FULLSCREEN (not full unlock yet)
+    currentState.status = 'AWAITING_FULLSCREEN';
     currentState.unlockApproved = true;
     currentState.unlockApprovedBy = teacherEmail;
     currentState.unlockApprovedAt = new Date().toISOString();
 
     ProctorAccess.setState(currentState);
 
-    Logger.log('Teacher approved unlock', {
+    Logger.log('Teacher approved unlock - awaiting fullscreen', {
       studentEmail,
       pollId,
       lockVersion: expectedLockVersion,
       approvedBy: teacherEmail
     });
 
-    return { ok: true };
+    return { ok: true, status: 'AWAITING_FULLSCREEN', lockVersion: expectedLockVersion };
+  })();
+}
+
+/**
+ * Student confirms fullscreen (completes unlock)
+ */
+function studentConfirmFullscreen(expectedLockVersion) {
+  return withErrorHandling(() => {
+    const studentEmail = TokenManager.getCurrentStudentEmail();
+
+    if (!studentEmail) {
+      return { success: false, error: 'Authentication error' };
+    }
+
+    const statusValues = DataAccess.liveStatus.get();
+    const pollId = statusValues[0];
+
+    if (!pollId) {
+      return { success: false, error: 'No active poll' };
+    }
+
+    // Get current state
+    const currentState = ProctorAccess.getState(pollId, studentEmail);
+
+    // Can only confirm if in AWAITING_FULLSCREEN state and lockVersion matches
+    if (currentState.status !== 'AWAITING_FULLSCREEN') {
+      Logger.log('Confirm fullscreen failed: wrong status', {
+        studentEmail,
+        pollId,
+        status: currentState.status
+      });
+      return { success: false, error: 'not_awaiting_fullscreen', status: currentState.status };
+    }
+
+    if (currentState.lockVersion !== expectedLockVersion) {
+      Logger.log('Confirm fullscreen failed: version mismatch', {
+        studentEmail,
+        pollId,
+        expected: expectedLockVersion,
+        current: currentState.lockVersion
+      });
+      return { success: false, error: 'version_mismatch', lockVersion: currentState.lockVersion };
+    }
+
+    // Transition to OK
+    currentState.status = 'OK';
+    ProctorAccess.setState(currentState);
+
+    Logger.log('Student confirmed fullscreen - unlocked', {
+      studentEmail,
+      pollId,
+      lockVersion: expectedLockVersion
+    });
+
+    return { success: true, status: 'OK' };
   })();
 }
 

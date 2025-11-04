@@ -221,7 +221,7 @@
                   <h2 id="live-question-text" class="font-serif text-brand-dark-gray dark:text-brand-white tracking-tight text-xl leading-snug mb-4">Question text appears here</h2>
                 </div>
                 <div id="question-image-container" class="relative w-24 h-24 flex-shrink-0" style="display: none;">
-                  <img id="live-question-image" alt="Question" class="rounded-lg object-cover w-full h-full" src=""/>
+                  <img id="live-question-image" alt="Question" class="rounded-lg object-cover w-full h-full" src="" referrerpolicy="no-referrer" style="max-width:100%;height:auto;display:block"/>
                   <button class="absolute inset-0 flex items-center justify-center bg-black/50 text-white rounded-lg opacity-0 hover:opacity-100 transition-opacity" onclick="window.expandQuestionImage()">
                     <span class="material-symbols-outlined">zoom_in</span>
                   </button>
@@ -1411,12 +1411,24 @@
     document.getElementById('live-question-info').textContent='Question '+(data.questionIndex+1)+' of '+data.totalQuestions;
     document.getElementById('live-question-text').textContent=data.questionText;
 
-    // Handle question image
+    // Handle question image with cache-busting
+    var questionImageContainer=document.getElementById('question-image-container');
+    var questionImageEl=document.getElementById('live-question-image');
     if(data.questionImageURL){
-      document.getElementById('question-image-container').style.display='block';
-      document.getElementById('live-question-image').src=data.questionImageURL;
+      questionImageContainer.style.display='block';
+
+      // Add cache-busting query parameter based on question index
+      // This ensures the browser re-fetches when switching questions
+      var imageUrl=data.questionImageURL;
+      var cacheBuster='q='+data.questionIndex;
+      var separator=imageUrl.includes('?')?'&':'?';
+      questionImageEl.src=imageUrl+separator+cacheBuster;
+
+      // Also set referrerpolicy for cross-origin images
+      questionImageEl.setAttribute('referrerpolicy','no-referrer');
     } else {
-      document.getElementById('question-image-container').style.display='none';
+      questionImageContainer.style.display='none';
+      questionImageEl.src='';
     }
 
     // Update response count
@@ -1917,11 +1929,21 @@
     html+='</label>';
     html+='</div>';
 
+    // Show image preview or uploading state
     var questionImagePreview=getImagePreviewUrl(question.questionImage||question.questionImageURL);
-    if(questionImagePreview){
+    var isUploading=question.questionImage==='UPLOADING';
+
+    if(questionImagePreview||isUploading){
       html+='<div class="mt-4 flex flex-wrap items-center gap-3 bg-primary/5 dark:bg-primary/10 p-3 rounded-lg">';
-      html+='<img src="'+questionImagePreview+'" class="rounded-lg max-w-xs h-auto">';
-      html+='<button type="button" class="remove-question-image-btn h-9 px-4 rounded-lg bg-red-600/10 text-red-600 dark:text-red-300 dark:bg-red-500/20 text-sm font-semibold hover:bg-red-600/20 dark:hover:bg-red-500/30 transition-colors">Remove Image</button>';
+      if(isUploading){
+        html+='<div class="flex items-center gap-2 text-primary dark:text-brand-white">';
+        html+='<div class="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>';
+        html+='<span class="text-sm font-medium">Uploading image...</span>';
+        html+='</div>';
+      } else if(questionImagePreview){
+        html+='<img src="'+questionImagePreview+'" class="rounded-lg max-w-xs h-auto" referrerpolicy="no-referrer">';
+        html+='<button type="button" class="remove-question-image-btn h-9 px-4 rounded-lg bg-red-600/10 text-red-600 dark:text-red-300 dark:bg-red-500/20 text-sm font-semibold hover:bg-red-600/20 dark:hover:bg-red-500/30 transition-colors">Remove Image</button>';
+      }
       html+='</div>';
     }
 
@@ -1958,10 +1980,27 @@
     if(qImgInput){
       qImgInput.onchange=function(){
         if(this.files&&this.files[0]){
-          questions[selectedQuestionIndex].questionImage=this.files[0];
-          questions[selectedQuestionIndex].questionImageURL=null;
-          markPollDirty();
+          var file=this.files[0];
+
+          // Show loading state
+          var currentQuestion=questions[selectedQuestionIndex];
+          currentQuestion.questionImage='UPLOADING';
+          currentQuestion.questionImageURL=null;
           renderQuestionWorkspace();
+
+          // Upload immediately to Drive
+          uploadFile(file).then(function(url){
+            // Store the Drive URL as the canonical field
+            questions[selectedQuestionIndex].questionImageURL=url;
+            questions[selectedQuestionIndex].questionImage=null;
+            markPollDirty();
+            renderQuestionWorkspace();
+          }).catch(function(error){
+            alert('Image upload failed: '+(error.message||error));
+            questions[selectedQuestionIndex].questionImage=null;
+            questions[selectedQuestionIndex].questionImageURL=null;
+            renderQuestionWorkspace();
+          });
         }
       };
     }
@@ -2016,10 +2055,27 @@
     workspace.querySelectorAll('.answer-image-input').forEach(function(input,index){
       input.onchange=function(){
         if(this.files&&this.files[0]){
-          questions[selectedQuestionIndex].answers[index].image=this.files[0];
-          questions[selectedQuestionIndex].answers[index].imageURL=null;
-          markPollDirty();
+          var file=this.files[0];
+
+          // Show loading state
+          var currentAnswer=questions[selectedQuestionIndex].answers[index];
+          currentAnswer.image='UPLOADING';
+          currentAnswer.imageURL=null;
           renderQuestionWorkspace();
+
+          // Upload immediately to Drive
+          uploadFile(file).then(function(url){
+            // Store the Drive URL as the canonical field
+            questions[selectedQuestionIndex].answers[index].imageURL=url;
+            questions[selectedQuestionIndex].answers[index].image=null;
+            markPollDirty();
+            renderQuestionWorkspace();
+          }).catch(function(error){
+            alert('Image upload failed: '+(error.message||error));
+            questions[selectedQuestionIndex].answers[index].image=null;
+            questions[selectedQuestionIndex].answers[index].imageURL=null;
+            renderQuestionWorkspace();
+          });
         }
       };
     });
@@ -2057,11 +2113,21 @@
 
     html+='</div>';
 
+    // Show image preview or uploading state for answer choices
     var answerPreview=getImagePreviewUrl(answer.image||answer.imageURL);
-    if(answerPreview){
+    var isAnswerUploading=answer.image==='UPLOADING';
+
+    if(answerPreview||isAnswerUploading){
       html+='<div class="mt-2 flex items-center gap-3 bg-primary/5 dark:bg-primary/10 p-2 rounded-lg">';
-      html+='<img src="'+answerPreview+'" class="rounded-md max-w-[160px] h-auto">';
-      html+='<button type="button" class="remove-answer-image-btn h-8 px-3 rounded-md bg-red-600/10 text-red-600 dark:text-red-300 dark:bg-red-500/20 text-xs font-semibold hover:bg-red-600/20 dark:hover:bg-red-500/30 transition-colors" data-index="'+index+'">Remove</button>';
+      if(isAnswerUploading){
+        html+='<div class="flex items-center gap-2 text-primary dark:text-brand-white">';
+        html+='<div class="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>';
+        html+='<span class="text-xs font-medium">Uploading...</span>';
+        html+='</div>';
+      } else if(answerPreview){
+        html+='<img src="'+answerPreview+'" class="rounded-md max-w-[160px] h-auto" referrerpolicy="no-referrer">';
+        html+='<button type="button" class="remove-answer-image-btn h-8 px-3 rounded-md bg-red-600/10 text-red-600 dark:text-red-300 dark:bg-red-500/20 text-xs font-semibold hover:bg-red-600/20 dark:hover:bg-red-500/30 transition-colors" data-index="'+index+'">Remove</button>';
+      }
       html+='</div>';
     }
 
@@ -2086,6 +2152,10 @@
       return URL.createObjectURL(image);
     }
     if(typeof image==='string'&&image){
+      // Return the URL, unless it's the special UPLOADING marker
+      if(image==='UPLOADING'){
+        return'';
+      }
       return image;
     }
     return'';
@@ -2147,20 +2217,44 @@
       return;
     }
 
+    // Check for any images still uploading
+    var uploadsInProgress=false;
+    questions.forEach(function(question,index){
+      if(question.questionImage==='UPLOADING'){
+        uploadsInProgress=true;
+        alert('Question '+(index+1)+' image is still uploading. Please wait for upload to complete.');
+      }
+      question.answers.forEach(function(answer,aIndex){
+        if(answer.image==='UPLOADING'){
+          uploadsInProgress=true;
+          alert('Question '+(index+1)+', answer '+(aIndex+1)+' image is still uploading. Please wait for upload to complete.');
+        }
+      });
+    });
+
+    if(uploadsInProgress){
+      savePollBtn.disabled=false;
+      savePollBtn.innerHTML=defaultLabel;
+      return;
+    }
+
+    // Build sanitized questions - all images should already be uploaded
     var sanitizedQuestions=questions.map(function(question){
       var answers=question.answers.map(function(answer){
         var text=(answer.text||'').trim();
-        var existingImage=(typeof answer.image==='string'&&answer.image)?answer.image:null;
+        // Use imageURL as canonical field
         return{
           text:text,
-          imageURL:answer.imageURL||existingImage||null
+          imageURL:answer.imageURL||null
         };
       });
+
       var correctIndex=typeof question.correctAnswerIndex==='number'?question.correctAnswerIndex:0;
       if(correctIndex<0){correctIndex=0;}
       if(correctIndex>=answers.length){
         correctIndex=Math.max(0,answers.length-1);
       }
+
       var timerValue=null;
       if(typeof question.timerSeconds==='number'){
         timerValue=question.timerSeconds;
@@ -2173,42 +2267,19 @@
       if(timerValue){
         timerValue=Math.min(Math.round(timerValue),600);
       }
-      var imageValue=null;
-      if(question.questionImage instanceof File){
-        imageValue=null;
-      } else if(typeof question.questionImage==='string'&&question.questionImage){
-        imageValue=question.questionImage;
-      } else if(question.questionImageURL){
-        imageValue=question.questionImageURL;
-      }
+
+      // Use questionImageURL as canonical field
       return{
         questionText:(question.questionText||'').trim(),
-        questionImageURL:imageValue,
+        questionImageURL:question.questionImageURL||null,
         answers:answers,
         correctAnswerIndex:correctIndex,
-        timerSeconds:timerValue&&timerValue>0?timerValue:null,
-        questionImageFile:question.questionImage instanceof File?question.questionImage:null
+        timerSeconds:timerValue&&timerValue>0?timerValue:null
       };
     });
 
-    var uploadTasks=[];
-    sanitizedQuestions.forEach(function(question,qIndex){
-      if(question.questionImageFile){
-        uploadTasks.push(uploadFile(question.questionImageFile).then(function(url){
-          sanitizedQuestions[qIndex].questionImageURL=url;
-          sanitizedQuestions[qIndex].questionImageFile=null;
-        }));
-      }
-      questions[qIndex].answers.forEach(function(answer,aIndex){
-        if(answer.image instanceof File){
-          uploadTasks.push(uploadFile(answer.image).then(function(url){
-            sanitizedQuestions[qIndex].answers[aIndex].imageURL=url;
-          }));
-        }
-      });
-    });
-
-    Promise.all(uploadTasks).then(function(){
+    // No upload tasks needed - images are uploaded immediately when selected
+    Promise.resolve().then(function(){
       var payloadQuestions=sanitizedQuestions.map(function(question){
         var options=question.answers.map(function(answer){
           var imageUrl=answer.imageURL||null;

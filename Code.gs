@@ -416,34 +416,28 @@ function setupSheet() {
 
 function getDriveFolder_() {
   const properties = PropertiesService.getScriptProperties();
-  const folderId = properties.getProperty('DRIVE_FOLDER_ID');
-  
-  if (folderId) {
-    try {
-      const folder = DriveApp.getFolderById(folderId);
-      // Folder exists and we can access it. We're done.
-      return folder;
-    } catch (e) {
-      // This means the ID was bad or the folder was deleted.
-      // We'll log it and create a new one.
-      Logger.log('Could not find folder by ID, creating new one.', { folderId: folderId });
-      properties.deleteProperty('DRIVE_FOLDER_ID');
-    }
+
+  // Use hardcoded folder ID - never create, never search by name
+  const HARDCODED_FOLDER_ID = '1kLraHu_V-eGyVh_bOm9Vp_AdPylTToCi';
+
+  // Always update/set the property to match hardcoded value
+  const storedId = properties.getProperty('DRIVE_FOLDER_ID');
+  if (storedId !== HARDCODED_FOLDER_ID) {
+    properties.setProperty('DRIVE_FOLDER_ID', HARDCODED_FOLDER_ID);
+    Logger.log('Updated DRIVE_FOLDER_ID to hardcoded value', { folderId: HARDCODED_FOLDER_ID });
   }
-  
-  // --- REVISED LOGIC ---
-  // If we're here, there was no folder ID or the ID was bad.
-  // We will create a new folder. We *never* search by name.
-  
-  const folderName = "Veritas Poll App Uploads";
-  const folder = DriveApp.createFolder(folderName);
-  
-  // Set permissions and save the ID
-  folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-  properties.setProperty('DRIVE_FOLDER_ID', folder.getId());
-  
-  Logger.log('Drive folder created and configured', { folderId: folder.getId() });
-  return folder;
+
+  try {
+    const folder = DriveApp.getFolderById(HARDCODED_FOLDER_ID);
+
+    // Ensure public sharing is always set
+    folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+    return folder;
+  } catch (e) {
+    Logger.error('Failed to access hardcoded Drive folder', e);
+    throw new Error(`Cannot access Drive folder ${HARDCODED_FOLDER_ID}. Please verify folder exists and script has access.`);
+  }
 }
 
 function uploadImageToDrive(dataUrl, fileName) {
@@ -1732,24 +1726,64 @@ function getDataRangeValues_(sheet) {
 function normalizeQuestionObject_(questionData) {
   const normalized = {};
 
+  // Normalize question text
   normalized.questionText = questionData.questionText || questionData.text || '';
-  normalized.questionImageURL = questionData.questionImageURL || questionData.questionImage || null;
-  if (normalized.questionImageURL) {
-    normalized.questionImage = normalized.questionImageURL;
+
+  // CANONICAL FIELD: questionImageURL
+  // Map legacy fields (questionImage) to the canonical questionImageURL
+  // Only store URLs, never base64
+  let imageUrl = questionData.questionImageURL || questionData.questionImage || null;
+  if (imageUrl && typeof imageUrl === 'string') {
+    // Ensure it's a URL (starts with http/https), not base64
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      normalized.questionImageURL = imageUrl;
+    } else if (imageUrl.startsWith('data:')) {
+      // Legacy base64 - ignore it (should be re-uploaded)
+      Logger.log('Ignoring legacy base64 questionImage');
+      normalized.questionImageURL = null;
+    } else {
+      normalized.questionImageURL = null;
+    }
+  } else {
+    normalized.questionImageURL = null;
   }
 
+  // For backward compatibility, also set questionImage to the same value
+  normalized.questionImage = normalized.questionImageURL;
+
+  // Normalize options
   const optionsArray = Array.isArray(questionData.options) ? questionData.options : [];
   normalized.options = optionsArray.map(opt => {
     if (typeof opt === 'string') {
       return { text: opt, imageURL: null, image: null };
     }
+
+    // CANONICAL FIELD: imageURL for options
+    // Map legacy fields (image) to the canonical imageURL
+    let optImageUrl = opt.imageURL || opt.image || null;
+    if (optImageUrl && typeof optImageUrl === 'string') {
+      // Ensure it's a URL, not base64
+      if (optImageUrl.startsWith('http://') || optImageUrl.startsWith('https://')) {
+        // Valid URL
+      } else if (optImageUrl.startsWith('data:')) {
+        // Legacy base64 - ignore it
+        Logger.log('Ignoring legacy base64 option image');
+        optImageUrl = null;
+      } else {
+        optImageUrl = null;
+      }
+    } else {
+      optImageUrl = null;
+    }
+
     return {
       text: opt.text || '',
-      imageURL: opt.imageURL || opt.image || null,
-      image: opt.imageURL || opt.image || null
+      imageURL: optImageUrl,
+      image: optImageUrl  // For backward compatibility
     };
   });
 
+  // Normalize other fields
   normalized.correctAnswer = questionData.correctAnswer || null;
 
   if (questionData.explanation) {

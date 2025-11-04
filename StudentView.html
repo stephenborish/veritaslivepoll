@@ -103,7 +103,6 @@
           <h2 id="status-message" class="text-brand-dark-gray dark:text-brand-white text-2xl font-semibold">Connecting to poll...</h2>
           <div id="resume-controls" class="mt-6 space-y-3" style="display: none;">
             <p class="text-brand-dark-gray/80 dark:text-brand-white/80 text-base leading-relaxed">
-              Your teacher has unlocked your session. Resume fullscreen to continue.<br>
               Click below to return to fullscreen and resume the poll.
             </p>
             <button id="resume-session-btn" class="mx-auto flex items-center justify-center gap-2 px-8 py-3 rounded-full bg-primary text-brand-white text-lg font-semibold hover:bg-primary/90 transition-colors shadow">
@@ -145,24 +144,48 @@
         var currentLockVersion = 0;
         var hasAnsweredCurrent = false;
         var violationLogged = false;
+        var violationDebounceTimer = null;
 
         if (resumeSessionBtn) {
             resumeSessionBtn.onclick = function() {
-                console.log('Resume button clicked');
+                console.log('Resume button clicked - attempting fullscreen');
                 if (document.documentElement.requestFullscreen) {
-                    document.documentElement.requestFullscreen().catch(function(e) {
-                        console.warn('Fullscreen denied on resume:', e);
-                    });
+                    document.documentElement.requestFullscreen()
+                        .then(function() {
+                            console.log('Fullscreen entered - confirming with server');
+                            // Call studentConfirmFullscreen with the current lockVersion
+                            google.script.run
+                                .withSuccessHandler(function(response) {
+                                    if (response.success && response.status === 'OK') {
+                                        console.log('Server confirmed unlock - resuming poll');
+                                        isInteractionBlocked = false;
+                                        violationLogged = false;
+                                        if (proctorPollInterval) {
+                                            clearInterval(proctorPollInterval);
+                                            proctorPollInterval = null;
+                                        }
+                                        if (resumeControls) {
+                                            resumeControls.style.display = 'none';
+                                        }
+                                        if (pollInterval) clearInterval(pollInterval);
+                                        pollInterval = setInterval(pollForStatus, 2500);
+                                        pollForStatus();
+                                    } else {
+                                        console.error('Failed to confirm fullscreen:', response);
+                                        statusMessage.textContent = 'Failed to resume. Please try again.';
+                                    }
+                                })
+                                .withFailureHandler(function(error) {
+                                    console.error('Error confirming fullscreen:', error);
+                                    statusMessage.textContent = 'Error resuming session.';
+                                })
+                                .studentConfirmFullscreen(currentLockVersion);
+                        })
+                        .catch(function(e) {
+                            console.warn('Fullscreen denied on resume:', e);
+                            statusMessage.textContent = 'Fullscreen is required. Please allow fullscreen and try again.';
+                        });
                 }
-                isInteractionBlocked = false;
-                violationLogged = false;
-                if (resumeControls) {
-                    resumeControls.style.display = 'none';
-                }
-                statusMessage.textContent = 'Reconnecting to poll...';
-                if (pollInterval) clearInterval(pollInterval);
-                pollInterval = setInterval(pollForStatus, 2500);
-                pollForStatus();
             };
         }
 
@@ -186,9 +209,15 @@
                 console.error('Fullscreen error:', e);
             }
 
-            document.addEventListener('visibilitychange', function() {
-                if (document.hidden && !isInteractionBlocked && !violationLogged) {
-                    console.log('VIOLATION: Tab switch detected');
+            function reportViolationDebounced(reason) {
+                // Clear any existing timer
+                if (violationDebounceTimer) {
+                    clearTimeout(violationDebounceTimer);
+                }
+
+                // Set a new timer for 300ms
+                violationDebounceTimer = setTimeout(function() {
+                    console.log('VIOLATION: ' + reason);
                     isInteractionBlocked = true;
                     violationLogged = true;
                     google.script.run
@@ -200,25 +229,19 @@
                             }
                         })
                         .withFailureHandler(handleError)
-                        .reportStudentViolation('tab-blur');
+                        .reportStudentViolation(reason);
+                }, 300);
+            }
+
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden && !isInteractionBlocked && !violationLogged) {
+                    reportViolationDebounced('tab-blur');
                 }
             });
 
             document.addEventListener('fullscreenchange', function() {
                 if (!document.fullscreenElement && !isInteractionBlocked && !violationLogged) {
-                    console.log('VIOLATION: Fullscreen exit detected');
-                    isInteractionBlocked = true;
-                    violationLogged = true;
-                    google.script.run
-                        .withSuccessHandler(function(response) {
-                            if (response.success) {
-                                currentLockVersion = response.lockVersion;
-                                showLockedMessage();
-                                startProctorPolling();
-                            }
-                        })
-                        .withFailureHandler(handleError)
-                        .reportStudentViolation('exit-fullscreen');
+                    reportViolationDebounced('exit-fullscreen');
                 }
             });
 
@@ -256,22 +279,28 @@
                         console.error('Proctor state check failed:', response.error);
                         return;
                     }
-                    if (response.unlockApproved && response.lockVersion === currentLockVersion) {
+
+                    // Check if status is AWAITING_FULLSCREEN and lockVersion matches
+                    if (response.status === 'AWAITING_FULLSCREEN' && response.lockVersion === currentLockVersion) {
                         if (proctorPollInterval) {
                             clearInterval(proctorPollInterval);
                             proctorPollInterval = null;
                         }
                         showResumePrompt();
-                    } else if (response.locked && response.lockVersion > currentLockVersion) {
+                    } else if (response.status === 'LOCKED' && response.lockVersion > currentLockVersion) {
+                        // New violation - update lockVersion
                         currentLockVersion = response.lockVersion;
                         showLockedMessage();
-                    } else if (!response.locked) {
+                    } else if (response.status === 'OK') {
+                        // Unlocked - resume normal polling
                         if (proctorPollInterval) {
                             clearInterval(proctorPollInterval);
                             proctorPollInterval = null;
                         }
                         isInteractionBlocked = false;
                         violationLogged = false;
+                        if (pollInterval) clearInterval(pollInterval);
+                        pollInterval = setInterval(pollForStatus, 2500);
                         pollForStatus();
                     }
                 })
@@ -516,6 +545,7 @@
             statusContainer.style.display = 'block';
             if (studentLoader) studentLoader.style.display = 'none';
 
+            // Use exact text from requirements
             statusMessage.textContent = 'Your teacher has unlocked your session. Resume fullscreen to continue.';
             statusMessage.className = 'text-primary dark:text-brand-white text-xl font-semibold';
 

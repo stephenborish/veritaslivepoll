@@ -261,23 +261,209 @@ const DataAccess = {
   },
   
   liveStatus: {
+    METADATA_KEY: 'LIVE_POLL_METADATA',
+
     get: function() {
-      return CacheManager.get('LIVE_POLL_STATUS', () => {
+      const statusValues = CacheManager.get('LIVE_POLL_STATUS', () => {
         const ss = SpreadsheetApp.getActiveSpreadsheet();
         const liveSheet = ss.getSheetByName("LiveStatus");
         return liveSheet.getRange("A2:C2").getValues()[0];
       }, CacheManager.CACHE_TIMES.INSTANT);
+
+      const metadata = this.getMetadata_();
+      if (Array.isArray(statusValues)) {
+        statusValues.metadata = metadata;
+      } else if (statusValues && statusValues.statusData && Array.isArray(statusValues.statusData)) {
+        statusValues.statusData.metadata = metadata;
+        return statusValues.statusData;
+      }
+      return statusValues;
     },
 
-    set: function(pollId, questionIndex, status) {
+    set: function(pollId, questionIndex, status, metadata = {}) {
       const ss = SpreadsheetApp.getActiveSpreadsheet();
       const liveSheet = ss.getSheetByName("LiveStatus");
       const statusData = [pollId, questionIndex, status];
       liveSheet.getRange("A2:C2").setValues([statusData]);
+
+      // Persist metadata for downstream consumers (students/teacher views)
+      this.setMetadata_(metadata);
+
       // Atomically update cache - put() overwrites existing entry without race condition
       const cache = CacheService.getScriptCache();
       cache.put('LIVE_POLL_STATUS', JSON.stringify(statusData), CacheManager.CACHE_TIMES.INSTANT);
+
+      const reason = (metadata && metadata.reason) ? metadata.reason : `STATUS_${status}`;
+      StateVersionManager.bump({
+        pollId: pollId || '',
+        questionIndex: typeof questionIndex === 'number' ? questionIndex : -1,
+        status: status,
+        reason: reason,
+        metadata: metadata,
+        timerRemainingSeconds: (metadata && typeof metadata.timerRemainingSeconds === 'number')
+          ? metadata.timerRemainingSeconds
+          : null
+      });
+    },
+
+    getMetadata: function() {
+      return this.getMetadata_();
+    },
+
+    setMetadata_: function(metadata) {
+      const props = PropertiesService.getScriptProperties();
+      if (metadata && Object.keys(metadata).length > 0) {
+        props.setProperty(this.METADATA_KEY, JSON.stringify(metadata));
+      } else {
+        props.deleteProperty(this.METADATA_KEY);
+      }
+    },
+
+    getMetadata_: function() {
+      const props = PropertiesService.getScriptProperties();
+      const metadataStr = props.getProperty(this.METADATA_KEY);
+      if (!metadataStr) return {};
+      try {
+        return JSON.parse(metadataStr);
+      } catch (err) {
+        Logger.error('Failed to parse live poll metadata', err);
+        return {};
+      }
     }
+  }
+};
+
+// --- LIVE STATE VERSIONING & HEARTBEAT TRACKING ---
+const StateVersionManager = {
+  VERSION_KEY: 'LIVE_STATE_VERSION_RECORD',
+  HEARTBEAT_PREFIX: 'HEARTBEAT_',
+  STALE_RECOVERY_THRESHOLD_MS: 6000,
+  OUTAGE_RECOVERY_THRESHOLD_MS: 15000,
+
+  bump: function(statePayload) {
+    const props = PropertiesService.getScriptProperties();
+    const previous = this._readRecord_(props);
+    const version = (previous.version || 0) + 1;
+    const nowIso = new Date().toISOString();
+
+    const record = {
+      version: version,
+      updatedAt: nowIso,
+      pollId: typeof statePayload.pollId === 'string' ? statePayload.pollId : (previous.pollId || ''),
+      questionIndex: typeof statePayload.questionIndex === 'number' ? statePayload.questionIndex : (previous.questionIndex || -1),
+      status: statePayload.status || statePayload.reason || previous.status || 'UNKNOWN',
+      reason: statePayload.reason || 'update',
+      timerRemainingSeconds: statePayload.timerRemainingSeconds !== undefined ? statePayload.timerRemainingSeconds : null,
+      metadata: statePayload.metadata || {}
+    };
+
+    const recordStr = JSON.stringify(record);
+    props.setProperty(this.VERSION_KEY, recordStr);
+
+    // Mirror to cache for fast reads in high-frequency polling scenarios
+    try {
+      CacheService.getScriptCache().put(this.VERSION_KEY, recordStr, CacheManager.CACHE_TIMES.INSTANT);
+    } catch (cacheError) {
+      Logger.error('State version cache put failed', cacheError);
+    }
+
+    return record;
+  },
+
+  get: function() {
+    const cache = CacheService.getScriptCache();
+    const cached = cache.get(this.VERSION_KEY);
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (err) {
+        Logger.error('State version cache parse failed', err);
+      }
+    }
+
+    const props = PropertiesService.getScriptProperties();
+    return this._readRecord_(props);
+  },
+
+  _readRecord_: function(props) {
+    const stored = props.getProperty(this.VERSION_KEY);
+    if (!stored) {
+      return {
+        version: 0,
+        updatedAt: null,
+        pollId: '',
+        questionIndex: -1,
+        status: 'CLOSED',
+        reason: 'boot'
+      };
+    }
+
+    try {
+      return JSON.parse(stored);
+    } catch (err) {
+      Logger.error('State version parse error', err);
+      return {
+        version: 0,
+        updatedAt: null,
+        pollId: '',
+        questionIndex: -1,
+        status: 'CLOSED',
+        reason: 'boot'
+      };
+    }
+  },
+
+  _heartbeatKey_: function(studentEmail) {
+    if (!studentEmail) return null;
+    return this.HEARTBEAT_PREFIX + studentEmail.replace(/[^A-Za-z0-9]/g, '_').toLowerCase();
+  },
+
+  noteHeartbeat: function(studentEmail) {
+    const key = this._heartbeatKey_(studentEmail);
+    if (!key) {
+      return { health: 'UNKNOWN', deltaMs: 0 };
+    }
+
+    const cache = CacheService.getScriptCache();
+    const cached = cache.get(key);
+    let record = { lastSeen: null, previousSeen: null };
+
+    if (cached) {
+      try {
+        record = JSON.parse(cached);
+      } catch (err) {
+        Logger.error('Heartbeat cache parse failed', err);
+      }
+    }
+
+    record.previousSeen = record.lastSeen || null;
+    const now = new Date();
+    record.lastSeen = now.toISOString();
+
+    try {
+      cache.put(key, JSON.stringify(record), CacheManager.CACHE_TIMES.LONG);
+    } catch (err) {
+      Logger.error('Heartbeat cache put failed', err);
+    }
+
+    let deltaMs = 0;
+    if (record.previousSeen) {
+      deltaMs = now.getTime() - new Date(record.previousSeen).getTime();
+    }
+
+    let health = 'HEALTHY';
+    if (deltaMs > this.OUTAGE_RECOVERY_THRESHOLD_MS) {
+      health = 'RECOVERED_AFTER_OUTAGE';
+    } else if (deltaMs > this.STALE_RECOVERY_THRESHOLD_MS) {
+      health = 'RECOVERING';
+    }
+
+    return {
+      lastSeen: record.lastSeen,
+      previousSeen: record.previousSeen,
+      deltaMs: deltaMs,
+      health: health
+    };
   }
 };
 
@@ -901,14 +1087,18 @@ function savePollNew(pollData) {
 function startPoll(pollId) {
   return withErrorHandling(() => {
     if (!pollId) throw new Error('Poll ID is required');
-    
+
     const poll = DataAccess.polls.getById(pollId);
     if (!poll) throw new Error('Poll not found');
-    
-    DataAccess.liveStatus.set(pollId, 0, "OPEN");
-    
+
+    DataAccess.liveStatus.set(pollId, 0, "OPEN", {
+      reason: 'RUNNING',
+      startedAt: new Date().toISOString(),
+      timer: null
+    });
+
     Logger.log('Poll started', { pollId: pollId, pollName: poll.pollName });
-    
+
     return getLivePollData(pollId, 0);
   })();
 }
@@ -971,21 +1161,25 @@ function nextQuestion() {
   return withErrorHandling(() => {
     const currentStatus = DataAccess.liveStatus.get();
     const pollId = currentStatus[0];
-    
+
     if (!pollId) return stopPoll();
-    
+
     let newIndex = currentStatus[1] + 1;
     const poll = DataAccess.polls.getById(pollId);
-    
+
     if (!poll || newIndex >= poll.questions.length) {
       Logger.log('Poll completed', { pollId: pollId });
       return stopPoll();
     }
-    
-    DataAccess.liveStatus.set(pollId, newIndex, "OPEN");
-    
+
+    DataAccess.liveStatus.set(pollId, newIndex, "OPEN", {
+      reason: 'RUNNING',
+      advancedAt: new Date().toISOString(),
+      timer: null
+    });
+
     Logger.log('Next question', { pollId: pollId, questionIndex: newIndex });
-    
+
     return getLivePollData(pollId, newIndex);
   })();
 }
@@ -995,12 +1189,15 @@ function stopPoll() {
     const currentStatus = DataAccess.liveStatus.get();
     const pollId = currentStatus[0];
     const questionIndex = currentStatus[1];
-    
+
     // Instead of closing completely, set to PAUSED state
-    DataAccess.liveStatus.set(pollId, questionIndex, "PAUSED");
-    
+    DataAccess.liveStatus.set(pollId, questionIndex, "PAUSED", {
+      reason: 'MANUAL_PAUSE',
+      pausedAt: new Date().toISOString()
+    });
+
     Logger.log('Poll paused', { pollId: pollId, questionIndex: questionIndex });
-    
+
     // Return current data so view stays visible
     return getLivePollData(pollId, questionIndex);
   })();
@@ -1014,16 +1211,19 @@ function resumePoll() {
     const currentStatus = DataAccess.liveStatus.get();
     const pollId = currentStatus[0];
     const questionIndex = currentStatus[1];
-    
+
     if (!pollId || questionIndex < 0) {
       throw new Error('No poll to resume');
     }
-    
+
     // Set back to OPEN
-    DataAccess.liveStatus.set(pollId, questionIndex, "OPEN");
-    
+    DataAccess.liveStatus.set(pollId, questionIndex, "OPEN", {
+      reason: 'RUNNING',
+      resumedAt: new Date().toISOString()
+    });
+
     Logger.log('Poll resumed', { pollId: pollId, questionIndex: questionIndex });
-    
+
     return getLivePollData(pollId, questionIndex);
   })();
 }
@@ -1036,11 +1236,80 @@ function closePoll() {
     const currentStatus = DataAccess.liveStatus.get();
     const pollId = currentStatus[0];
 
-    DataAccess.liveStatus.set("", -1, "CLOSED");
+    DataAccess.liveStatus.set("", -1, "CLOSED", {});
 
     Logger.log('Poll closed completely', { pollId: pollId });
 
     return { status: "CLOSED" };
+  })();
+}
+
+function pausePollForTimerExpiry() {
+  return withErrorHandling(() => {
+    const currentStatus = DataAccess.liveStatus.get();
+    const pollId = currentStatus[0];
+    const questionIndex = currentStatus[1];
+
+    if (!pollId || questionIndex < 0) {
+      throw new Error('No active question to pause');
+    }
+
+    DataAccess.liveStatus.set(pollId, questionIndex, "PAUSED", {
+      reason: 'TIMER_EXPIRED',
+      pausedAt: new Date().toISOString()
+    });
+
+    Logger.log('Poll paused due to timer expiry', { pollId, questionIndex });
+
+    return getLivePollData(pollId, questionIndex);
+  })();
+}
+
+function resetLiveQuestion(pollId, questionIndex, clearResponses) {
+  return withErrorHandling(() => {
+    if (!pollId) {
+      throw new Error('Poll ID is required');
+    }
+
+    if (typeof questionIndex !== 'number' || questionIndex < 0) {
+      throw new Error('Valid question index is required');
+    }
+
+    const poll = DataAccess.polls.getById(pollId);
+    if (!poll) {
+      throw new Error('Poll not found');
+    }
+
+    if (!poll.questions[questionIndex]) {
+      throw new Error('Question not found');
+    }
+
+    if (clearResponses) {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const responsesSheet = ss.getSheetByName('Responses');
+      if (responsesSheet) {
+        const values = getDataRangeValues_(responsesSheet);
+        for (let i = values.length - 1; i >= 0; i--) {
+          if (values[i][2] === pollId && values[i][3] === questionIndex) {
+            responsesSheet.deleteRow(i + 2);
+          }
+        }
+      }
+    }
+
+    DataAccess.liveStatus.set(pollId, questionIndex, "OPEN", {
+      reason: 'RUNNING',
+      resetAt: new Date().toISOString(),
+      clearedResponses: !!clearResponses
+    });
+
+    Logger.log('Question reset', {
+      pollId,
+      questionIndex,
+      cleared: !!clearResponses
+    });
+
+    return getLivePollData(pollId, questionIndex);
   })();
 }
 
@@ -1181,12 +1450,16 @@ function getLivePollData(pollId, questionIndex) {
   return withErrorHandling(() => {
     const poll = DataAccess.polls.getById(pollId);
     if (!poll) throw new Error("Poll not found");
-    
+
     let question = poll.questions[questionIndex];
     if (!question) throw new Error("Question not found");
     question = normalizeQuestionObject_(question);
     poll.questions[questionIndex] = question;
-    
+
+    const liveStatus = DataAccess.liveStatus.get();
+    const pollStatus = Array.isArray(liveStatus) ? (liveStatus[2] || 'OPEN') : 'OPEN';
+    const metadata = (liveStatus && liveStatus.metadata) ? liveStatus.metadata : {};
+
     const roster = DataAccess.roster.getByClass(poll.className);
     const pollResponses = DataAccess.responses.getByPoll(pollId);
     
@@ -1261,7 +1534,7 @@ function getLivePollData(pollId, questionIndex) {
     }
     
     return {
-      status: "OPEN",
+      status: pollStatus || "OPEN",
       pollId: pollId,
       pollName: poll.pollName,
       questionText: question.questionText || '',
@@ -1273,7 +1546,8 @@ function getLivePollData(pollId, questionIndex) {
       studentStatusList: studentStatusList,
       totalStudents: roster.length,
       totalResponses: submittedAnswers.size,
-      timerSeconds: question.timerSeconds || null
+      timerSeconds: question.timerSeconds || null,
+      metadata: metadata
     };
   })();
 }
@@ -1282,80 +1556,188 @@ function getLivePollData(pollId, questionIndex) {
 // STUDENT APP FUNCTIONS
 // =============================================================================
 
-function getStudentPollStatus(token) {
+function getStudentPollStatus(token, context) {
   return withErrorHandling(() => {
     const statusValues = DataAccess.liveStatus.get();
     const pollId = statusValues[0];
     const questionIndex = statusValues[1];
     const pollStatus = statusValues[2];
+    const metadata = (statusValues && statusValues.metadata) ? statusValues.metadata : {};
 
-    const baseWaiting = (message, hasSubmitted = false) => ({ status: "WAITING", message, hasSubmitted });
+    const pickMessage = (choices, fallback) => {
+      if (Array.isArray(choices) && choices.length > 0) {
+        const idx = Math.floor(Math.random() * choices.length);
+        return choices[idx];
+      }
+      return fallback || '';
+    };
+
+    const studentEmail = token ? TokenManager.getStudentEmail(token) : TokenManager.getCurrentStudentEmail();
+    const heartbeatInfo = StateVersionManager.noteHeartbeat(studentEmail);
+    const stateSnapshot = StateVersionManager.get();
+    const now = new Date();
+    const nowIso = now.toISOString();
+    const lastStateVersion = (context && typeof context.lastStateVersion === 'number') ? context.lastStateVersion : null;
+    const versionGap = (typeof lastStateVersion === 'number') ? (stateSnapshot.version - lastStateVersion) : 0;
+    const sinceLastSuccess = (context && typeof context.lastSuccessAt === 'number') ? (now.getTime() - context.lastSuccessAt) : null;
+    const clientFailures = (context && typeof context.failureCount === 'number') ? context.failureCount : 0;
+    const needsResync = versionGap > 3;
+
+    let connectionHealth = heartbeatInfo.health || 'HEALTHY';
+    if (needsResync && connectionHealth === 'HEALTHY') {
+      connectionHealth = 'RECOVERING';
+    }
+    if (sinceLastSuccess && sinceLastSuccess > StateVersionManager.OUTAGE_RECOVERY_THRESHOLD_MS && connectionHealth === 'HEALTHY') {
+      connectionHealth = 'RECOVERING';
+    }
+
+    const baseInterval = 2500;
+    let advisedPollIntervalMs = baseInterval + Math.min(1000, clientFailures * 350);
+    if (connectionHealth === 'RECOVERING') {
+      advisedPollIntervalMs = Math.max(advisedPollIntervalMs, 2800);
+    } else if (connectionHealth === 'RECOVERED_AFTER_OUTAGE') {
+      advisedPollIntervalMs = Math.max(advisedPollIntervalMs, 2600);
+    }
+    advisedPollIntervalMs = Math.min(5000, Math.max(2000, advisedPollIntervalMs));
+
+    const envelope = (payload) => {
+      const response = {
+        ...payload,
+        stateVersion: stateSnapshot.version,
+        stateUpdatedAt: stateSnapshot.updatedAt,
+        authoritativeStatus: stateSnapshot.status,
+        authoritativeReason: stateSnapshot.reason,
+        serverTime: nowIso,
+        staleAfterMs: 12000,
+        teacherStateFingerprint: `${stateSnapshot.version}:${stateSnapshot.updatedAt || ''}`,
+        connectionHealth: connectionHealth,
+        connectionLagMs: heartbeatInfo.deltaMs || 0,
+        lastHeartbeatAt: heartbeatInfo.previousSeen || null,
+        advisedPollIntervalMs: advisedPollIntervalMs
+      };
+
+      if (needsResync) {
+        response.resyncSuggested = true;
+        response.resyncHint = 'STATE_VERSION_GAP';
+      }
+
+      if (!response.pollId && stateSnapshot.pollId) {
+        response.pollId = stateSnapshot.pollId;
+      } else if (!response.pollId && pollId) {
+        response.pollId = pollId;
+      }
+
+      if (response.questionIndex === undefined && typeof stateSnapshot.questionIndex === 'number') {
+        response.questionIndex = stateSnapshot.questionIndex;
+      }
+
+      return response;
+    };
+
+    const baseWaiting = (message, hasSubmitted = false) => envelope({ status: "WAITING", message, hasSubmitted, pollId: pollId });
 
     // If paused or closed, students see waiting message
     if (pollStatus === "CLOSED" || !pollId) {
-      return { status: "CLOSED", hasSubmitted: false };
+      return envelope({
+        status: "CLOSED",
+        hasSubmitted: false,
+        message: pickMessage([
+          "That’s a wrap! You just finished the poll — nicely done.",
+          "Poll complete. You’ve officially survived science."
+        ], "That’s a wrap! You just finished the poll — nicely done."),
+        pollId: pollId || ''
+      });
     }
 
     if (pollStatus === "PAUSED") {
-      return baseWaiting("The teacher has paused the poll. Waiting to resume...", false);
+      const reason = metadata.reason || '';
+      let message;
+      if (reason === 'TIMER_EXPIRED') {
+        message = pickMessage([
+          "Time’s up! Hope you picked wisely.",
+          "That’s the bell — time to see how you did."
+        ], "Time’s up! Hope you picked wisely.");
+      } else {
+        message = pickMessage([
+          "Intermission! Your teacher’s cooking up the next one.",
+          "Breathe. Blink. Hydrate. A new question is on the way."
+        ], "Intermission! Your teacher’s cooking up the next one.");
+      }
+      return envelope({ status: "PAUSED", message: message, hasSubmitted: false, pollId: pollId });
     }
 
-    const studentEmail = token ? TokenManager.getStudentEmail(token) : TokenManager.getCurrentStudentEmail();
-
     if (!studentEmail) {
-      return {
+      return envelope({
         status: "ERROR",
         message: "Authentication error. Please use your personalized poll link.",
         hasSubmitted: false
-      };
+      });
     }
 
     const poll = DataAccess.polls.getById(pollId);
 
     if (!poll) {
-      return { status: "CLOSED", message: "Poll configuration error.", hasSubmitted: false };
+      return envelope({
+        status: "CLOSED",
+        message: "Poll configuration error.",
+        hasSubmitted: false
+      });
     }
-    
+
     if (!DataAccess.roster.isEnrolled(poll.className, studentEmail)) {
-      return {
+      return envelope({
         status: "NOT_ENROLLED",
         message: "You are not enrolled in this class.",
         hasSubmitted: false
-      };
+      });
     }
 
     // Check authoritative proctor state (not old Responses sheet)
     const proctorState = ProctorAccess.getState(pollId, studentEmail);
     if (proctorState.status === 'LOCKED' || proctorState.status === 'AWAITING_FULLSCREEN') {
-      return {
+      return envelope({
         status: proctorState.status,
         message: proctorState.status === 'LOCKED'
-          ? "Your session was locked. Your teacher must unlock you."
-          : "Your teacher has approved unlock. Click resume when ready.",
-        hasSubmitted: false
-      };
+          ? pickMessage([
+              "Oops — you left fullscreen. Your poll’s been paused until your teacher lets you back in.",
+              "You escaped fullscreen… sneaky! Hang tight until your teacher brings you back."
+            ], "Oops — you left fullscreen. Your poll’s been paused until your teacher lets you back in.")
+          : pickMessage([
+              "You’re cleared for re-entry. Go fullscreen to get back in the game.",
+              "All systems go. Click below to resume fullscreen and rejoin the action."
+            ], "You’re cleared for re-entry. Go fullscreen to get back in the game."),
+        hasSubmitted: false,
+        pollId: pollId
+      });
     }
 
     if (questionIndex < 0) {
-      return baseWaiting("Waiting for the teacher to begin the poll...", false);
+      return baseWaiting(pickMessage([
+        "Hang tight — your teacher’s loading the next challenge.",
+        "Get your brain in gear. The poll’s about to begin!"
+      ], "Hang tight — your teacher’s loading the next challenge."), false);
     }
 
     const hasSubmitted = DataAccess.responses.hasAnswered(pollId, questionIndex, studentEmail);
 
     if (hasSubmitted) {
-      return baseWaiting("Your answer has been submitted. Waiting for the next question.", true);
+      return baseWaiting(pickMessage([
+        "Answer received — nice work.",
+        "Got it! Your response is locked in."
+      ], "Answer received — nice work."), true);
     }
 
     const question = poll.questions[questionIndex];
     const normalizedQuestion = normalizeQuestionObject_(question);
 
-    return {
+    return envelope({
       status: "OPEN",
       pollId: pollId,
       questionIndex: questionIndex,
       hasSubmitted: false,
+      metadata: metadata,
       ...normalizedQuestion
-    };
+    });
   })();
 }
 

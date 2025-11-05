@@ -60,7 +60,14 @@
     </div>
   </header>
 
-  <main class="flex flex-col items-center justify-center p-6">
+  <main class="flex flex-col items-center justify-center p-6 space-y-4">
+    <div id="connectivity-banner" class="hidden w-full max-w-4xl items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-800 shadow-sm transition-all duration-200 dark:border-amber-500 dark:bg-amber-900/20 dark:text-amber-100">
+      <span id="connectivity-icon" class="material-symbols-outlined text-2xl">sync</span>
+      <div class="flex flex-col text-left">
+        <span id="connectivity-message" class="text-sm font-semibold">Reconnecting… your poll data’s catching up.</span>
+        <span id="connectivity-submessage" class="text-xs text-amber-700/80 dark:text-amber-200/80 opacity-0"></span>
+      </div>
+    </div>
     <!-- Entry Screen -->
     <div id="entry-screen" class="container max-w-3xl mx-auto text-center py-12">
       <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-8 shadow-lg">
@@ -102,6 +109,7 @@
         <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-8 shadow-lg">
           <span class="material-symbols-outlined text-6xl text-primary dark:text-brand-white mb-4 inline-block">schedule</span>
           <h2 id="status-message" class="text-brand-dark-gray dark:text-brand-white text-2xl font-semibold">Connecting to poll...</h2>
+          <p id="status-submessage" class="text-brand-dark-gray/70 dark:text-brand-white/70 text-lg mt-4" style="display: none;"></p>
           <div id="resume-controls" class="mt-6 space-y-3" style="display: none;">
             <p class="text-brand-dark-gray/80 dark:text-brand-white/80 text-base leading-relaxed">
               Click below to return to fullscreen and resume the poll.
@@ -124,7 +132,7 @@
         <!-- Question Content -->
         <div id="question-content" class="p-8">
           <img id="question-image" src="" alt="Question" class="max-w-full max-h-[500px] rounded-xl mx-auto mb-8 shadow-xl border-2 border-gray-200 dark:border-gray-700" referrerpolicy="no-referrer" onerror="this.style.display='none';" style="display: none;" />
-          <h2 id="question-text" class="font-serif text-brand-dark-gray dark:text-brand-white text-4xl font-bold leading-snug text-center mb-8"></h2>
+          <h2 id="question-text" class="font-serif text-brand-dark-gray dark:text-brand-white text-3xl font-normal leading-relaxed text-left mb-8"></h2>
         </div>
 
         <!-- Answer Options -->
@@ -147,15 +155,228 @@
         var studentContainer = document.getElementById('student-container');
         var resumeControls = document.getElementById('resume-controls');
         var resumeSessionBtn = document.getElementById('resume-session-btn');
+        var statusSubMessage = document.getElementById('status-submessage');
+        var connectivityBanner = document.getElementById('connectivity-banner');
+        var connectivityIcon = document.getElementById('connectivity-icon');
+        var connectivityMessage = document.getElementById('connectivity-message');
+        var connectivitySubMessage = document.getElementById('connectivity-submessage');
 
         var currentPollState = {};
-        var pollInterval = null;
+        var pollTimerId = null;
+        var defaultPollInterval = 2500;
+        var maxPollInterval = 12000;
+        var pollFailureCount = 0;
         var proctorPollInterval = null;
         var isInteractionBlocked = false;
         var currentLockVersion = 0;
         var hasAnsweredCurrent = false;
         var violationLogged = false;
         var violationDebounceTimer = null;
+        var pendingSubmission = false;
+        var currentQuestionKey = null;
+        var lastStateVersion = null;
+        var lastSuccessfulPollAt = 0;
+        var pollInFlight = false;
+        var recoveringFromOutage = false;
+        var connectivityHideTimer = null;
+        var lastAdvisedInterval = defaultPollInterval;
+        var optionBaseClass = 'answer-option w-full p-5 rounded-xl border-2 border-primary/20 bg-brand-white dark:bg-brand-dark-gray/30 text-left hover:border-primary/60 hover:bg-primary/5 dark:hover:bg-primary/15 transition-all shadow-sm';
+        var optionSelectedClass = 'answer-option w-full p-5 rounded-xl border-2 border-primary bg-primary/10 dark:bg-primary/25 text-left shadow-md ring-2 ring-primary/30';
+
+        var connectivityThemes = {
+            connecting: ['border-amber-300', 'bg-amber-50', 'text-amber-800', 'dark:border-amber-500', 'dark:bg-amber-900/20', 'dark:text-amber-100'],
+            offline: ['border-red-300', 'bg-red-50', 'text-red-800', 'dark:border-red-600', 'dark:bg-red-900/20', 'dark:text-red-200'],
+            recovered: ['border-green-300', 'bg-green-50', 'text-green-800', 'dark:border-green-600', 'dark:bg-green-900/20', 'dark:text-green-100']
+        };
+        var allConnectivityClasses = connectivityThemes.connecting.concat(connectivityThemes.offline, connectivityThemes.recovered);
+
+        function applyConnectivityTheme(theme) {
+            if (!connectivityBanner) return;
+            for (var i = 0; i < allConnectivityClasses.length; i++) {
+                connectivityBanner.classList.remove(allConnectivityClasses[i]);
+            }
+            var themeClasses = connectivityThemes[theme] || connectivityThemes.connecting;
+            for (var j = 0; j < themeClasses.length; j++) {
+                connectivityBanner.classList.add(themeClasses[j]);
+            }
+        }
+
+        function showConnectivityState(state, options) {
+            if (!connectivityBanner) return;
+            options = options || {};
+            clearTimeout(connectivityHideTimer);
+            connectivityBanner.classList.remove('hidden');
+            applyConnectivityTheme(state);
+            if (connectivityIcon) {
+                var icon = options.icon || (state === 'offline' ? 'signal_wifi_off' : (state === 'recovered' ? 'cloud_done' : 'sync'));
+                connectivityIcon.textContent = icon;
+            }
+            if (connectivityMessage) {
+                var defaults = {
+                    connecting: 'Reconnecting… your poll data’s catching up.',
+                    offline: 'Offline detected — we’ll hold your spot and resync when you’re back.',
+                    recovered: 'Back on track — synced with your teacher.'
+                };
+                connectivityMessage.textContent = options.message || defaults[state] || defaults.connecting;
+            }
+            if (connectivitySubMessage) {
+                var submessage = options.submessage || '';
+                connectivitySubMessage.textContent = submessage;
+                if (submessage) {
+                    connectivitySubMessage.classList.remove('opacity-0');
+                } else {
+                    connectivitySubMessage.classList.add('opacity-0');
+                }
+            }
+            if (options.autoHide) {
+                connectivityHideTimer = setTimeout(hideConnectivityBanner, options.autoHide);
+            }
+        }
+
+        function hideConnectivityBanner() {
+            if (!connectivityBanner) return;
+            clearTimeout(connectivityHideTimer);
+            connectivityBanner.classList.add('hidden');
+            if (connectivitySubMessage) {
+                connectivitySubMessage.textContent = '';
+                connectivitySubMessage.classList.remove('opacity-0');
+            }
+        }
+
+        function stopPolling() {
+            if (pollTimerId) {
+                clearTimeout(pollTimerId);
+                pollTimerId = null;
+            }
+            pollInFlight = false;
+        }
+
+        function scheduleNextPoll(delay) {
+            if (isInteractionBlocked) return;
+            stopPolling();
+            var boundedDelay = Math.min(maxPollInterval, Math.max(1000, delay));
+            var jitter = Math.random() * 0.15 * boundedDelay;
+            pollTimerId = setTimeout(function() {
+                pollTimerId = null;
+                pollForStatus();
+            }, boundedDelay + jitter);
+        }
+
+        function startPolling(immediate) {
+            pollFailureCount = 0;
+            recoveringFromOutage = false;
+            if (immediate) {
+                stopPolling();
+                pollForStatus(true);
+            } else {
+                scheduleNextPoll(defaultPollInterval);
+            }
+        }
+
+        function handlePostPollSuccess(data, hadFailures) {
+            if (typeof data.stateVersion === 'number') {
+                lastStateVersion = data.stateVersion;
+            }
+            if (typeof data.advisedPollIntervalMs === 'number') {
+                lastAdvisedInterval = data.advisedPollIntervalMs;
+            } else {
+                lastAdvisedInterval = defaultPollInterval;
+            }
+
+            if (hadFailures || data.connectionHealth === 'RECOVERED_AFTER_OUTAGE') {
+                showConnectivityState('recovered', {
+                    message: 'Back on track — synced with your teacher.',
+                    icon: 'cloud_done',
+                    autoHide: 2400
+                });
+            } else if (data.connectionHealth === 'RECOVERING') {
+                showConnectivityState('connecting', {
+                    message: 'Syncing up with your teacher’s poll — hold on a sec.',
+                    icon: 'sync'
+                });
+                connectivityHideTimer = setTimeout(hideConnectivityBanner, 2200);
+            } else if (!recoveringFromOutage && !hadFailures) {
+                hideConnectivityBanner();
+            }
+
+            updateStudentView(data);
+            var delay = Math.max(1200, Math.min(maxPollInterval, lastAdvisedInterval));
+            scheduleNextPoll(delay);
+        }
+
+        function handlePollingFailure(error) {
+            var messageText = (error && error.message) ? error.message : (typeof error === 'string' ? error : '');
+            if (messageText && /Authentication|not enrolled|Invalid link/i.test(messageText)) {
+                stopPolling();
+                handleError(error);
+                return;
+            }
+
+            recoveringFromOutage = true;
+            var backoffMultiplier = Math.pow(1.6, Math.max(1, pollFailureCount));
+            var retryDelay = Math.min(maxPollInterval, Math.round((lastAdvisedInterval || defaultPollInterval) * backoffMultiplier));
+            var seconds = Math.max(1, Math.round(retryDelay / 1000));
+
+            var online = typeof navigator !== 'undefined' ? navigator.onLine : true;
+            showConnectivityState(online ? 'connecting' : 'offline', {
+                message: online ? 'Reconnecting… your poll data’s catching up.' : 'Offline detected — we’ll hold your spot and resync when you’re back.',
+                icon: online ? 'sync_problem' : 'signal_wifi_off',
+                submessage: online ? ('Retrying in ' + seconds + 's…') : ''
+            });
+
+            scheduleNextPoll(retryDelay);
+        }
+
+        function pollForStatus() {
+            if (isInteractionBlocked || pollInFlight) return;
+            pollInFlight = true;
+            var context = {
+                lastStateVersion: lastStateVersion,
+                lastSuccessAt: lastSuccessfulPollAt,
+                failureCount: pollFailureCount,
+                advisedInterval: lastAdvisedInterval
+            };
+
+            google.script.run
+                .withSuccessHandler(function(data) {
+                    pollInFlight = false;
+                    var hadFailures = pollFailureCount > 0 || recoveringFromOutage;
+                    pollFailureCount = 0;
+                    recoveringFromOutage = false;
+                    lastSuccessfulPollAt = Date.now();
+                    handlePostPollSuccess(data || {}, hadFailures);
+                })
+                .withFailureHandler(function(error) {
+                    pollInFlight = false;
+                    pollFailureCount += 1;
+                    console.error('Polling error', error);
+                    handlePollingFailure(error);
+                })
+                .getStudentPollStatus(SESSION_TOKEN, context);
+        }
+
+        function isSessionActive() {
+            return studentContainer && studentContainer.style.display !== 'none' && entryScreen && entryScreen.style.display === 'none';
+        }
+
+        window.addEventListener('offline', function() {
+            if (!isSessionActive()) return;
+            recoveringFromOutage = true;
+            showConnectivityState('offline', {
+                message: 'Offline detected — we’ll hold your spot and resync when you’re back.',
+                icon: 'signal_wifi_off'
+            });
+        });
+
+        window.addEventListener('online', function() {
+            if (!isSessionActive()) return;
+            showConnectivityState('connecting', {
+                message: 'Reconnecting… your poll data’s catching up.',
+                icon: 'sync',
+                submessage: 'Syncing now…'
+            });
+            startPolling(true);
+        });
 
         if (resumeSessionBtn) {
             resumeSessionBtn.onclick = function() {
@@ -178,9 +399,8 @@
                                         if (resumeControls) {
                                             resumeControls.style.display = 'none';
                                         }
-                                        if (pollInterval) clearInterval(pollInterval);
-                                        pollInterval = setInterval(pollForStatus, 2500);
-                                        pollForStatus();
+                                        hideConnectivityBanner();
+                                        startPolling(true);
                                     } else {
                                         console.error('Failed to confirm fullscreen:', response);
                                         statusMessage.textContent = 'Failed to resume. Please try again.';
@@ -268,26 +488,12 @@
                 }
             });
 
-            pollForStatus();
-            if (pollInterval) {
-                clearInterval(pollInterval);
-            }
-            pollInterval = setInterval(pollForStatus, 2500);
+            hideConnectivityBanner();
+            startPolling(true);
         };
 
-        function pollForStatus() {
-            if (isInteractionBlocked) return;
-            google.script.run
-                .withSuccessHandler(updateStudentView)
-                .withFailureHandler(handleError)
-                .getStudentPollStatus(SESSION_TOKEN);
-        }
-
         function startProctorPolling() {
-            if (pollInterval) {
-                clearInterval(pollInterval);
-                pollInterval = null;
-            }
+            stopPolling();
             if (proctorPollInterval) {
                 clearInterval(proctorPollInterval);
             }
@@ -322,9 +528,8 @@
                         }
                         isInteractionBlocked = false;
                         violationLogged = false;
-                        if (pollInterval) clearInterval(pollInterval);
-                        pollInterval = setInterval(pollForStatus, 2500);
-                        pollForStatus();
+                        hideConnectivityBanner();
+                        startPolling(true);
                     }
                 })
                 .withFailureHandler(function(error) {
@@ -336,6 +541,11 @@
         function updateStudentView(data) {
             console.log('Status update:', data.status);
             if (studentLoader) studentLoader.style.display = 'none';
+
+            if (statusSubMessage) {
+                statusSubMessage.style.display = 'none';
+                statusSubMessage.textContent = '';
+            }
 
             if (data.status === 'LOCKED' || data.status === 'AWAITING_FULLSCREEN') {
                 console.log('Server confirmed lock status on page load:', data.status);
@@ -362,26 +572,23 @@
             }
 
             if (data.status === 'OPEN') {
-                var isNewQuestion = (
-                    currentPollState.pollId !== data.pollId ||
-                    currentPollState.questionIndex !== data.questionIndex
-                );
+                var questionKey = data.pollId + ':' + data.questionIndex;
+                var isNewQuestion = questionKey !== currentQuestionKey;
 
                 if (isNewQuestion) {
+                    currentQuestionKey = questionKey;
                     hasAnsweredCurrent = !!data.hasSubmitted;
+                    pendingSubmission = false;
                     currentPollState = data;
-                    statusContainer.style.display = 'none';
-                    questionContainer.style.display = 'block';
+                    statusContainer.style.display = hasAnsweredCurrent ? 'block' : 'none';
+                    questionContainer.style.display = hasAnsweredCurrent ? 'none' : 'block';
 
-                    // Set question number
                     var qNum = (data.questionIndex || 0) + 1;
                     var qTotal = data.totalQuestions || '?';
                     document.getElementById('question-number').textContent = 'Question ' + qNum + ' of ' + qTotal;
 
-                    // Set question text
                     document.getElementById('question-text').textContent = data.questionText || '';
 
-                    // Set question image
                     var qImgEl = document.getElementById('question-image');
                     if (data.questionImageURL) {
                         qImgEl.src = data.questionImageURL;
@@ -390,31 +597,27 @@
                         qImgEl.style.display = 'none';
                     }
 
-                    // Render answer options with letter labels
                     optionsList.innerHTML = "";
                     var shuffled = shuffle(data.options || []);
                     var letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
                     shuffled.forEach(function(option, index) {
                         var btn = document.createElement('button');
-                        btn.className = 'answer-option w-full p-5 rounded-xl border-3 border-gray-300 dark:border-gray-600 bg-gradient-to-r from-brand-white to-gray-50 dark:from-brand-dark-gray/20 dark:to-brand-dark-gray/30 hover:border-primary hover:from-primary/5 hover:to-primary/10 dark:hover:from-primary/10 dark:hover:to-primary/15 transition-all hover:shadow-xl hover:scale-[1.02] cursor-pointer active:scale-[0.98]';
+                        btn.type = 'button';
+                        btn.className = optionBaseClass;
                         btn.dataset.answerText = option.text || '';
 
                         var letter = letters[index] || (index + 1).toString();
                         var content = '<div class="flex items-start gap-4">';
-
-                        // Letter badge
-                        content += '<div class="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center border-2 border-primary/30">';
-                        content += '<span class="text-primary dark:text-brand-white font-bold text-lg">' + letter + '</span>';
+                        content += '<div class="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center border border-primary/30">';
+                        content += '<span class="text-primary dark:text-brand-white font-semibold text-lg">' + letter + '</span>';
                         content += '</div>';
-
-                        // Content area
-                        content += '<div class="flex-grow flex flex-col items-center gap-3 min-w-0">';
+                        content += '<div class="flex-grow flex flex-col gap-3 min-w-0">';
                         if (option.imageURL) {
-                            content += '<img src="' + escapeHtml(option.imageURL) + '" alt="Answer ' + letter + '" class="max-w-full max-h-[250px] rounded-lg object-contain shadow-md border-2 border-gray-200 dark:border-gray-600" referrerpolicy="no-referrer">';
+                            content += '<img src="' + escapeHtml(option.imageURL) + '" alt="Answer ' + letter + '" class="max-w-full max-h-[220px] rounded-lg object-contain border border-brand-light-gray/70 dark:border-brand-dark-gray/60" referrerpolicy="no-referrer">';
                         }
                         if (option.text) {
-                            content += '<p class="font-serif text-brand-dark-gray dark:text-brand-white text-2xl font-semibold leading-relaxed text-center w-full">' + escapeHtml(option.text) + '</p>';
+                            content += '<p class="font-serif text-brand-dark-gray dark:text-brand-white text-2xl font-normal leading-relaxed">' + escapeHtml(option.text) + '</p>';
                         }
                         content += '</div></div>';
 
@@ -424,31 +627,35 @@
                         };
                         optionsList.appendChild(btn);
                     });
-                } else if (hasAnsweredCurrent && !data.hasSubmitted) {
-                    hasAnsweredCurrent = false;
-                    questionContainer.style.display = 'block';
-                    statusContainer.style.display = 'none';
-                    var resetButtons = optionsList.querySelectorAll('button');
-                    for (var b = 0; b < resetButtons.length; b++) {
-                        resetButtons[b].disabled = false;
-                        resetButtons[b].className = 'answer-option w-full p-5 rounded-xl border-3 border-gray-300 dark:border-gray-600 bg-gradient-to-r from-brand-white to-gray-50 dark:from-brand-dark-gray/20 dark:to-brand-dark-gray/30 hover:border-primary hover:from-primary/5 hover:to-primary/10 dark:hover:from-primary/10 dark:hover:to-primary/15 transition-all hover:shadow-xl hover:scale-[1.02] cursor-pointer active:scale-[0.98]';
-                    }
+                }
+
+                if (pendingSubmission && !data.hasSubmitted) {
+                    return;
                 }
 
                 if (data.hasSubmitted) {
                     hasAnsweredCurrent = true;
+                    pendingSubmission = false;
                 }
 
                 if (hasAnsweredCurrent) {
                     questionContainer.style.display = 'none';
                     statusContainer.style.display = 'block';
-                    statusMessage.textContent = "Your answer has been submitted! Waiting for the next question...";
+                    statusMessage.textContent = data.hasSubmitted ? (data.message || 'Answer received — nice work.') : 'Answer received — nice work.';
                     statusMessage.className = 'text-green-600 dark:text-green-400 text-2xl font-semibold';
+                    if (statusSubMessage) {
+                        statusSubMessage.textContent = 'Waiting for another question…';
+                        statusSubMessage.style.display = 'block';
+                        statusSubMessage.className = 'text-brand-dark-gray/70 dark:text-brand-white/70 text-lg mt-4';
+                    }
                     var iconEl = statusContainer.querySelector('.material-symbols-outlined');
                     if (iconEl) {
                         iconEl.textContent = 'check_circle';
                         iconEl.className = 'material-symbols-outlined text-6xl text-green-600 dark:text-green-400 mb-4 inline-block';
                     }
+                } else {
+                    questionContainer.style.display = 'block';
+                    statusContainer.style.display = 'none';
                 }
             } else {
                 currentPollState = {};
@@ -461,14 +668,20 @@
                 if (data.status === 'WAITING') {
                     if (data.hasSubmitted) {
                         hasAnsweredCurrent = true;
-                        statusMessage.textContent = data.message || "Your answer has been submitted! Waiting for the next question...";
+                        pendingSubmission = false;
+                        statusMessage.textContent = data.message || 'Answer received — nice work.';
                         statusTextClass = 'text-green-600 dark:text-green-400 text-2xl font-semibold';
                         statusIcon = 'check_circle';
                         statusClass = 'text-green-600 dark:text-green-400';
+                        if (statusSubMessage) {
+                            statusSubMessage.textContent = 'Waiting for another question…';
+                            statusSubMessage.style.display = 'block';
+                            statusSubMessage.className = 'text-brand-dark-gray/70 dark:text-brand-white/70 text-lg mt-4';
+                        }
                     } else {
                         hasAnsweredCurrent = false;
-                        statusMessage.textContent = data.message || "Waiting for next question...";
-                        statusIcon = 'schedule';
+                        statusMessage.textContent = data.message || 'Hang tight — your teacher’s loading the next challenge.';
+                        statusIcon = 'hourglass_top';
                         statusClass = 'text-primary';
                     }
                 } else if (data.status === 'NOT_ENROLLED') {
@@ -477,17 +690,23 @@
                     statusTextClass = 'text-red-600 dark:text-red-400 text-2xl font-bold';
                     statusIcon = 'error';
                     statusClass = 'text-red-600 dark:text-red-400';
-                    clearInterval(pollInterval);
+                    stopPolling();
                 } else if (data.status === 'ERROR') {
                     hasAnsweredCurrent = false;
-                    statusMessage.textContent = data.message || "An error occurred.";
+                    statusMessage.textContent = data.message || "We hit a snag. Try again soon.";
                     statusTextClass = 'text-red-600 dark:text-red-400 text-2xl font-bold';
                     statusIcon = 'error';
                     statusClass = 'text-red-600 dark:text-red-400';
+                } else if (data.status === 'CLOSED') {
+                    hasAnsweredCurrent = false;
+                    statusMessage.textContent = data.message || 'That’s a wrap! You just finished the poll — nicely done.';
+                    statusTextClass = 'text-primary dark:text-brand-white text-2xl font-semibold';
+                    statusIcon = 'emoji_events';
+                    statusClass = 'text-primary';
                 } else {
                     hasAnsweredCurrent = false;
-                    statusMessage.textContent = data.message || "The poll is not active.";
-                    statusIcon = 'schedule';
+                    statusMessage.textContent = data.message || 'Hang tight — your teacher’s loading the next challenge.';
+                    statusIcon = 'hourglass_top';
                     statusClass = 'text-primary';
                 }
                 statusMessage.className = statusTextClass;
@@ -511,20 +730,28 @@
             for (var i = 0; i < buttons.length; i++) {
                 buttons[i].disabled = true;
                 if (buttons[i].dataset.answerText === answerText) {
-                    buttons[i].className = 'answer-option w-full p-5 rounded-xl border-3 border-primary bg-primary/15 dark:bg-primary/25 shadow-xl ring-4 ring-primary/30';
+                    buttons[i].className = optionSelectedClass;
                 } else {
-                    buttons[i].className = 'answer-option w-full p-5 rounded-xl border-3 border-gray-300 dark:border-gray-600 bg-gradient-to-r from-brand-white to-gray-50 dark:from-brand-dark-gray/20 dark:to-brand-dark-gray/30 opacity-40';
+                    buttons[i].className = optionBaseClass + ' opacity-40 pointer-events-none';
                 }
             }
             hasAnsweredCurrent = true;
+            pendingSubmission = true;
             statusContainer.style.display = 'block';
             questionContainer.style.display = 'none';
-            statusMessage.textContent = "Submitting...";
+            statusMessage.textContent = 'Transmitting your genius response…';
+            statusMessage.className = 'text-primary dark:text-brand-white text-2xl font-semibold';
             google.script.run
                 .withSuccessHandler(function(response) {
                     if (!response.success) {
                         hasAnsweredCurrent = false;
-                        statusMessage.textContent = response.error || "Error occurred.";
+                        pendingSubmission = false;
+                        statusMessage.textContent = response.error || 'We hit a hiccup. Try again?';
+                        statusMessage.className = 'text-red-600 dark:text-red-400 text-2xl font-semibold';
+                        if (statusSubMessage) {
+                            statusSubMessage.style.display = 'none';
+                            statusSubMessage.textContent = '';
+                        }
                         setTimeout(function() {
                             if (!isInteractionBlocked) {
                                 questionContainer.style.display = 'block';
@@ -532,14 +759,23 @@
                                 var buttons = optionsList.querySelectorAll('button');
                                 for (var i = 0; i < buttons.length; i++) {
                                     buttons[i].disabled = false;
-                                    buttons[i].className = 'answer-option w-full p-5 rounded-xl border-3 border-gray-300 dark:border-gray-600 bg-gradient-to-r from-brand-white to-gray-50 dark:from-brand-dark-gray/20 dark:to-brand-dark-gray/30 hover:border-primary hover:from-primary/5 hover:to-primary/10 dark:hover:from-primary/10 dark:hover:to-primary/15 transition-all hover:shadow-xl hover:scale-[1.02] cursor-pointer active:scale-[0.98]';
+                                    buttons[i].className = optionBaseClass;
                                 }
                             }
                         }, 2000);
+                    } else {
+                        statusMessage.textContent = 'Answer received — nice work.';
+                        statusMessage.className = 'text-green-600 dark:text-green-400 text-2xl font-semibold';
+                        if (statusSubMessage) {
+                            statusSubMessage.textContent = 'Waiting for another question…';
+                            statusSubMessage.style.display = 'block';
+                            statusSubMessage.className = 'text-brand-dark-gray/70 dark:text-brand-white/70 text-lg mt-4';
+                        }
                     }
                 })
                 .withFailureHandler(function(error) {
                     hasAnsweredCurrent = false;
+                    pendingSubmission = false;
                     handleError(error);
                 })
                 .submitStudentAnswer(pollId, questionIndex, answerText, SESSION_TOKEN);
@@ -565,13 +801,21 @@
 
         function showLockedMessage() {
             console.log('Showing locked message');
+            stopPolling();
+            recoveringFromOutage = false;
+            hideConnectivityBanner();
             studentContainer.style.display = 'block';
             entryScreen.style.display = 'none';
             questionContainer.style.display = 'none';
             statusContainer.style.display = 'block';
             if (studentLoader) studentLoader.style.display = 'none';
 
-            statusMessage.textContent = 'Your session has been locked because you exited fullscreen mode. Your teacher must unlock you.';
+            if (statusSubMessage) {
+                statusSubMessage.style.display = 'none';
+                statusSubMessage.textContent = '';
+            }
+
+            statusMessage.textContent = 'Oops — you left fullscreen. Your poll’s been paused until your teacher lets you back in.';
             statusMessage.className = 'text-red-600 dark:text-red-400 text-xl font-semibold';
 
             var iconEl = statusContainer.querySelector('.material-symbols-outlined');
@@ -586,14 +830,21 @@
 
         function showResumePrompt() {
             console.log('Showing resume prompt');
+            stopPolling();
+            hideConnectivityBanner();
             studentContainer.style.display = 'block';
             entryScreen.style.display = 'none';
             questionContainer.style.display = 'none';
             statusContainer.style.display = 'block';
             if (studentLoader) studentLoader.style.display = 'none';
 
+            if (statusSubMessage) {
+                statusSubMessage.style.display = 'none';
+                statusSubMessage.textContent = '';
+            }
+
             // Use exact text from requirements
-            statusMessage.textContent = 'Your teacher has unlocked your session. Resume fullscreen to continue.';
+            statusMessage.textContent = 'You’re cleared for re-entry. Go fullscreen to get back in the game.';
             statusMessage.className = 'text-primary dark:text-brand-white text-xl font-semibold';
 
             var iconEl = statusContainer.querySelector('.material-symbols-outlined');
@@ -609,10 +860,16 @@
 
         function handleError(error) {
             console.error('Error:', error);
+            hideConnectivityBanner();
             statusContainer.style.display = 'block';
             questionContainer.style.display = 'none';
             if (studentLoader) studentLoader.style.display = 'none';
             if (resumeControls) resumeControls.style.display = 'none';
+
+            if (statusSubMessage) {
+                statusSubMessage.style.display = 'none';
+                statusSubMessage.textContent = '';
+            }
 
             statusMessage.textContent = 'An error occurred: ' + (error.message || error);
             statusMessage.className = 'text-red-600 dark:text-red-400 text-2xl font-bold';

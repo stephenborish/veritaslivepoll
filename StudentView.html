@@ -217,9 +217,17 @@
 
                 // Set a new timer for 300ms
                 violationDebounceTimer = setTimeout(function() {
+                    // Check if already reported to prevent duplicates
+                    if (violationLogged || isInteractionBlocked) {
+                        console.log('Violation already reported, skipping');
+                        return;
+                    }
+
                     console.log('VIOLATION: ' + reason);
-                    isInteractionBlocked = true;
+                    // Set flags BEFORE RPC to prevent retry-based double-bump
                     violationLogged = true;
+                    isInteractionBlocked = true;
+
                     google.script.run
                         .withSuccessHandler(function(response) {
                             if (response.success) {
@@ -228,7 +236,11 @@
                                 startProctorPolling();
                             }
                         })
-                        .withFailureHandler(handleError)
+                        .withFailureHandler(function(error) {
+                            console.error('Violation report failed:', error);
+                            // Keep flags set - student stays locked locally even if server unreachable
+                            showLockedMessage();
+                        })
                         .reportStudentViolation(reason);
                 }, 300);
             }
@@ -287,8 +299,8 @@
                             proctorPollInterval = null;
                         }
                         showResumePrompt();
-                    } else if (response.status === 'LOCKED' && response.lockVersion > currentLockVersion) {
-                        // New violation - update lockVersion
+                    } else if (response.status === 'LOCKED' && response.lockVersion !== currentLockVersion) {
+                        // New violation or version mismatch - update lockVersion
                         currentLockVersion = response.lockVersion;
                         showLockedMessage();
                     } else if (response.status === 'OK') {
@@ -314,16 +326,16 @@
             console.log('Status update:', data.status);
             if (studentLoader) studentLoader.style.display = 'none';
 
-            if (data.status === 'LOCKED') {
-                console.log('Server confirmed LOCKED status on page load');
+            if (data.status === 'LOCKED' || data.status === 'AWAITING_FULLSCREEN') {
+                console.log('Server confirmed lock status on page load:', data.status);
                 isInteractionBlocked = true;
                 google.script.run
                     .withSuccessHandler(function(proctorResponse) {
                         if (proctorResponse.success) {
                             currentLockVersion = proctorResponse.lockVersion;
-                            if (proctorResponse.unlockApproved) {
+                            if (proctorResponse.status === 'AWAITING_FULLSCREEN') {
                                 showResumePrompt();
-                            } else {
+                            } else if (proctorResponse.status === 'LOCKED') {
                                 showLockedMessage();
                                 startProctorPolling();
                             }

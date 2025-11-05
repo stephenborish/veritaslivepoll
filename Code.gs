@@ -42,6 +42,7 @@ function withErrorHandling(fn) {
 // --- ADVANCED CACHE MANAGER (2025 Pattern) ---
 const CacheManager = {
   CACHE_TIMES: {
+    INSTANT: 1,      // 1 second for real-time live data
     SHORT: 5,        // 5 seconds for live data
     MEDIUM: 60,      // 1 minute for semi-static
     LONG: 600,       // 10 minutes for static
@@ -265,17 +266,17 @@ const DataAccess = {
         const ss = SpreadsheetApp.getActiveSpreadsheet();
         const liveSheet = ss.getSheetByName("LiveStatus");
         return liveSheet.getRange("A2:C2").getValues()[0];
-      }, CacheManager.CACHE_TIMES.SHORT);
+      }, CacheManager.CACHE_TIMES.INSTANT);
     },
-    
+
     set: function(pollId, questionIndex, status) {
       const ss = SpreadsheetApp.getActiveSpreadsheet();
       const liveSheet = ss.getSheetByName("LiveStatus");
       const statusData = [pollId, questionIndex, status];
       liveSheet.getRange("A2:C2").setValues([statusData]);
+      // Atomically update cache - put() overwrites existing entry without race condition
       const cache = CacheService.getScriptCache();
-      cache.remove('LIVE_POLL_STATUS');
-      cache.put('LIVE_POLL_STATUS', JSON.stringify(statusData), CacheManager.CACHE_TIMES.SHORT);
+      cache.put('LIVE_POLL_STATUS', JSON.stringify(statusData), CacheManager.CACHE_TIMES.INSTANT);
     }
   }
 };

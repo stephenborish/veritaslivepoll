@@ -98,7 +98,7 @@
     </div>
 
     <!-- Student App Container -->
-    <div class="container max-w-4xl mx-auto" id="student-container" style="display: none;">
+    <div class="container max-w-6xl mx-auto" id="student-container" style="display: none;">
       <div id="student-loader" class="text-center py-12" style="display: block;">
         <div class="h-16 w-16 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4"></div>
         <p class="text-brand-dark-gray/60 dark:text-brand-white/60 text-lg">Connecting to poll...</p>
@@ -132,7 +132,7 @@
         <!-- Question Content -->
         <div id="question-content" class="p-8">
           <img id="question-image" src="" alt="Question" class="max-w-full max-h-[500px] rounded-xl mx-auto mb-8 shadow-xl border-2 border-gray-200 dark:border-gray-700" referrerpolicy="no-referrer" onerror="this.style.display='none';" style="display: none;" />
-          <h2 id="question-text" class="font-serif text-brand-dark-gray dark:text-brand-white text-3xl font-normal leading-relaxed text-left mb-8"></h2>
+          <h2 id="question-text" class="font-serif text-brand-dark-gray dark:text-brand-white text-lg font-normal leading-relaxed text-left mb-8"></h2>
         </div>
 
         <!-- Answer Options -->
@@ -617,7 +617,7 @@
                             content += '<img src="' + escapeHtml(option.imageURL) + '" alt="Answer ' + letter + '" class="max-w-full max-h-[220px] rounded-lg object-contain border border-brand-light-gray/70 dark:border-brand-dark-gray/60" referrerpolicy="no-referrer">';
                         }
                         if (option.text) {
-                            content += '<p class="font-serif text-brand-dark-gray dark:text-brand-white text-2xl font-normal leading-relaxed">' + escapeHtml(option.text) + '</p>';
+                            content += '<p class="font-serif text-brand-dark-gray dark:text-brand-white text-lg font-normal leading-relaxed">' + escapeHtml(option.text) + '</p>';
                         }
                         content += '</div></div>';
 

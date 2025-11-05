@@ -1737,6 +1737,7 @@ function getStudentPollStatus(token, context) {
       status: "OPEN",
       pollId: pollId,
       questionIndex: questionIndex,
+      totalQuestions: poll.questions.length,
       hasSubmitted: false,
       metadata: metadata,
       ...normalizedQuestion

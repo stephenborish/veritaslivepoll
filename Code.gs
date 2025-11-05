@@ -1657,7 +1657,8 @@ function reportStudentViolation(reason) {
 
       ProctorAccess.setState(newState);
 
-      // Log to Responses sheet
+      // Log to Responses sheet for audit trail ONLY (not used for lock state determination)
+      // ProctorAccess is the authoritative source - getStudentPollStatus reads from there
       const responseId = 'V-' + Utilities.getUuid();
       DataAccess.responses.add([
         responseId,
@@ -1701,7 +1702,8 @@ function reportStudentViolation(reason) {
 
     ProctorAccess.setState(newState);
 
-    // Also log to Responses sheet for backward compatibility
+    // Log to Responses sheet for audit trail ONLY (not used for lock state determination)
+    // ProctorAccess is the authoritative source - getStudentPollStatus reads from there
     const responseId = 'V-' + Utilities.getUuid();
     DataAccess.responses.add([
       responseId,

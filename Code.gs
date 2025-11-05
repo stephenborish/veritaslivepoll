@@ -1486,7 +1486,11 @@ function getLivePollData(pollId, questionIndex) {
       // Check proctor state (status-based check, not just old "locked" responses)
       const proctorState = ProctorAccess.getState(pollId, email);
 
-      if (proctorState.status === 'LOCKED' || proctorState.status === 'AWAITING_FULLSCREEN' || lockedStudents.has(email)) {
+      // Get submission if exists
+      const submission = submittedAnswers.has(email) ? submittedAnswers.get(email) : null;
+
+      // If student is locked or awaiting fullscreen, show that status but preserve their answer if they submitted
+      if (proctorState.status === 'LOCKED' || proctorState.status === 'AWAITING_FULLSCREEN') {
         return {
           name: student.name,
           email: email,
@@ -1494,14 +1498,13 @@ function getLivePollData(pollId, questionIndex) {
           lockVersion: proctorState.lockVersion,
           lockReason: proctorState.lockReason,
           lockedAt: proctorState.lockedAt,
-          answer: '---',
-          isCorrect: null,
-          timestamp: 0
+          answer: submission ? submission.answer : '---',
+          isCorrect: submission ? submission.isCorrect : null,
+          timestamp: submission ? submission.timestamp : 0
         };
       }
-      
-      if (submittedAnswers.has(email)) {
-        const submission = submittedAnswers.get(email);
+
+      if (submission) {
         return {
           name: student.name,
           email: email,
@@ -1511,7 +1514,7 @@ function getLivePollData(pollId, questionIndex) {
           timestamp: submission.timestamp
         };
       }
-      
+
       return {
         name: student.name,
         email: email,

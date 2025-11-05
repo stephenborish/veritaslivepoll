@@ -115,12 +115,22 @@
       </div>
 
       <!-- Question Container -->
-      <div id="question-container" class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-8 shadow-lg" style="display: none;">
-        <div id="question-content" class="mb-8">
-          <img id="question-image" src="" alt="Question" class="max-w-full max-h-[400px] rounded-lg mx-auto mb-6 shadow-md" referrerpolicy="no-referrer" onerror="this.style.display='none';" style="display: none;" />
-          <h2 id="question-text" class="font-serif text-brand-dark-gray dark:text-brand-white text-3xl font-bold leading-tight text-center"></h2>
+      <div id="question-container" class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border-2 border-primary/20 dark:border-primary/40 shadow-2xl" style="display: none;">
+        <!-- Question Header -->
+        <div class="bg-primary/5 dark:bg-primary/10 px-6 py-4 border-b-2 border-primary/20">
+          <p id="question-number" class="text-sm font-bold text-primary dark:text-brand-white/80 uppercase tracking-wide"></p>
         </div>
-        <div id="options-list" class="space-y-4"></div>
+
+        <!-- Question Content -->
+        <div id="question-content" class="p-8">
+          <img id="question-image" src="" alt="Question" class="max-w-full max-h-[500px] rounded-xl mx-auto mb-8 shadow-xl border-2 border-gray-200 dark:border-gray-700" referrerpolicy="no-referrer" onerror="this.style.display='none';" style="display: none;" />
+          <h2 id="question-text" class="font-serif text-brand-dark-gray dark:text-brand-white text-4xl font-bold leading-snug text-center mb-8"></h2>
+        </div>
+
+        <!-- Answer Options -->
+        <div class="px-6 pb-8">
+          <div id="options-list" class="space-y-3"></div>
+        </div>
       </div>
     </div>
   </main>
@@ -362,7 +372,16 @@
                     currentPollState = data;
                     statusContainer.style.display = 'none';
                     questionContainer.style.display = 'block';
+
+                    // Set question number
+                    var qNum = (data.questionIndex || 0) + 1;
+                    var qTotal = data.totalQuestions || '?';
+                    document.getElementById('question-number').textContent = 'Question ' + qNum + ' of ' + qTotal;
+
+                    // Set question text
                     document.getElementById('question-text').textContent = data.questionText || '';
+
+                    // Set question image
                     var qImgEl = document.getElementById('question-image');
                     if (data.questionImageURL) {
                         qImgEl.src = data.questionImageURL;
@@ -370,20 +389,35 @@
                     } else {
                         qImgEl.style.display = 'none';
                     }
+
+                    // Render answer options with letter labels
                     optionsList.innerHTML = "";
                     var shuffled = shuffle(data.options || []);
-                    shuffled.forEach(function(option) {
+                    var letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+
+                    shuffled.forEach(function(option, index) {
                         var btn = document.createElement('button');
-                        btn.className = 'answer-option w-full p-6 rounded-lg border-2 border-brand-light-gray dark:border-brand-dark-gray/40 bg-brand-white dark:bg-brand-dark-gray/20 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all hover:shadow-md cursor-pointer';
+                        btn.className = 'answer-option w-full p-5 rounded-xl border-3 border-gray-300 dark:border-gray-600 bg-gradient-to-r from-brand-white to-gray-50 dark:from-brand-dark-gray/20 dark:to-brand-dark-gray/30 hover:border-primary hover:from-primary/5 hover:to-primary/10 dark:hover:from-primary/10 dark:hover:to-primary/15 transition-all hover:shadow-xl hover:scale-[1.02] cursor-pointer active:scale-[0.98]';
                         btn.dataset.answerText = option.text || '';
-                        var content = '<div class="flex flex-col items-center gap-3 text-center">';
+
+                        var letter = letters[index] || (index + 1).toString();
+                        var content = '<div class="flex items-start gap-4">';
+
+                        // Letter badge
+                        content += '<div class="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center border-2 border-primary/30">';
+                        content += '<span class="text-primary dark:text-brand-white font-bold text-lg">' + letter + '</span>';
+                        content += '</div>';
+
+                        // Content area
+                        content += '<div class="flex-grow flex flex-col items-center gap-3 min-w-0">';
                         if (option.imageURL) {
-                            content += '<img src="' + escapeHtml(option.imageURL) + '" alt="Answer" class="max-w-full max-h-[200px] rounded-lg object-contain" referrerpolicy="no-referrer">';
+                            content += '<img src="' + escapeHtml(option.imageURL) + '" alt="Answer ' + letter + '" class="max-w-full max-h-[250px] rounded-lg object-contain shadow-md border-2 border-gray-200 dark:border-gray-600" referrerpolicy="no-referrer">';
                         }
                         if (option.text) {
-                            content += '<p class="font-serif text-brand-dark-gray dark:text-brand-white text-xl font-semibold leading-relaxed">' + escapeHtml(option.text) + '</p>';
+                            content += '<p class="font-serif text-brand-dark-gray dark:text-brand-white text-2xl font-semibold leading-relaxed text-center w-full">' + escapeHtml(option.text) + '</p>';
                         }
-                        content += '</div>';
+                        content += '</div></div>';
+
                         btn.innerHTML = content;
                         btn.onclick = function() {
                             submitAnswer(data.pollId, data.questionIndex, option.text);
@@ -397,7 +431,7 @@
                     var resetButtons = optionsList.querySelectorAll('button');
                     for (var b = 0; b < resetButtons.length; b++) {
                         resetButtons[b].disabled = false;
-                        resetButtons[b].className = 'answer-option w-full p-6 rounded-lg border-2 border-brand-light-gray dark:border-brand-dark-gray/40 bg-brand-white dark:bg-brand-dark-gray/20 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all hover:shadow-md cursor-pointer';
+                        resetButtons[b].className = 'answer-option w-full p-5 rounded-xl border-3 border-gray-300 dark:border-gray-600 bg-gradient-to-r from-brand-white to-gray-50 dark:from-brand-dark-gray/20 dark:to-brand-dark-gray/30 hover:border-primary hover:from-primary/5 hover:to-primary/10 dark:hover:from-primary/10 dark:hover:to-primary/15 transition-all hover:shadow-xl hover:scale-[1.02] cursor-pointer active:scale-[0.98]';
                     }
                 }
 
@@ -477,9 +511,9 @@
             for (var i = 0; i < buttons.length; i++) {
                 buttons[i].disabled = true;
                 if (buttons[i].dataset.answerText === answerText) {
-                    buttons[i].className = 'answer-option w-full p-6 rounded-lg border-2 border-primary bg-primary/10 dark:bg-primary/20 shadow-md';
+                    buttons[i].className = 'answer-option w-full p-5 rounded-xl border-3 border-primary bg-primary/15 dark:bg-primary/25 shadow-xl ring-4 ring-primary/30';
                 } else {
-                    buttons[i].className = 'answer-option w-full p-6 rounded-lg border-2 border-brand-light-gray dark:border-brand-dark-gray/40 bg-brand-white dark:bg-brand-dark-gray/20 opacity-50';
+                    buttons[i].className = 'answer-option w-full p-5 rounded-xl border-3 border-gray-300 dark:border-gray-600 bg-gradient-to-r from-brand-white to-gray-50 dark:from-brand-dark-gray/20 dark:to-brand-dark-gray/30 opacity-40';
                 }
             }
             hasAnsweredCurrent = true;
@@ -498,7 +532,7 @@
                                 var buttons = optionsList.querySelectorAll('button');
                                 for (var i = 0; i < buttons.length; i++) {
                                     buttons[i].disabled = false;
-                                    buttons[i].className = 'answer-option w-full p-6 rounded-lg border-2 border-brand-light-gray dark:border-brand-dark-gray/40 bg-brand-white dark:bg-brand-dark-gray/20 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all hover:shadow-md cursor-pointer';
+                                    buttons[i].className = 'answer-option w-full p-5 rounded-xl border-3 border-gray-300 dark:border-gray-600 bg-gradient-to-r from-brand-white to-gray-50 dark:from-brand-dark-gray/20 dark:to-brand-dark-gray/30 hover:border-primary hover:from-primary/5 hover:to-primary/10 dark:hover:from-primary/10 dark:hover:to-primary/15 transition-all hover:shadow-xl hover:scale-[1.02] cursor-pointer active:scale-[0.98]';
                                 }
                             }
                         }, 2000);

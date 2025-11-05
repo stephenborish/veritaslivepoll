@@ -1496,16 +1496,18 @@
       barHtml+='<span class="font-bold '+textClass+' shrink-0 ml-4 text-sm">'+percentage+'%</span>';
       barHtml+='</div></div>';
 
-      // Add student names who selected this answer (if correct)
-      if(isCorrect){
-        var studentsWithAnswer=studentsList.filter(function(s){return s.answer===answer;});
-        if(studentsWithAnswer.length>0){
-          barHtml+='<div class="bg-primary/5 dark:bg-primary/10 p-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 rounded-b-md">';
-          studentsWithAnswer.forEach(function(student){
-            barHtml+='<span class="text-xs text-primary dark:text-brand-white/80 font-medium px-2 py-1 bg-primary/10 dark:bg-primary/20 rounded">'+escapeHtml(student.name)+'</span>';
-          });
-          barHtml+='</div>';
-        }
+      // Add student names who selected this answer (show for ALL answers)
+      var studentsWithAnswer=studentsList.filter(function(s){return s.answer===answer;});
+      if(studentsWithAnswer.length>0){
+        var studentsBgClass=isCorrect?'bg-primary/5 dark:bg-primary/10':'bg-gray-100 dark:bg-gray-800/50';
+        var studentBadgeBg=isCorrect?'bg-primary/10 dark:bg-primary/20':'bg-gray-200 dark:bg-gray-700';
+        var studentTextClass=isCorrect?'text-primary dark:text-brand-white/80':'text-gray-700 dark:text-gray-300';
+
+        barHtml+='<div class="'+studentsBgClass+' p-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 rounded-b-md">';
+        studentsWithAnswer.forEach(function(student){
+          barHtml+='<span class="text-xs '+studentTextClass+' font-medium px-2 py-1 '+studentBadgeBg+' rounded">'+escapeHtml(student.name)+'</span>';
+        });
+        barHtml+='</div>';
       }
 
       barDiv.innerHTML=barHtml;

@@ -43,6 +43,7 @@
       }
     };
   </script>
+  <script>window.SESSION_TOKEN = '<?= sessionToken ?>';</script>
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-brand-dark-gray dark:text-brand-white min-h-screen">
   <!-- Header -->
@@ -179,7 +180,7 @@
                                     console.error('Error confirming fullscreen:', error);
                                     statusMessage.textContent = 'Error resuming session.';
                                 })
-                                .studentConfirmFullscreen(currentLockVersion);
+                                .studentConfirmFullscreen(currentLockVersion, SESSION_TOKEN);
                         })
                         .catch(function(e) {
                             console.warn('Fullscreen denied on resume:', e);
@@ -241,7 +242,7 @@
                             // Keep flags set - student stays locked locally even if server unreachable
                             showLockedMessage();
                         })
-                        .reportStudentViolation(reason);
+                        .reportStudentViolation(reason, SESSION_TOKEN);
                 }, 300);
             }
 
@@ -269,7 +270,7 @@
             google.script.run
                 .withSuccessHandler(updateStudentView)
                 .withFailureHandler(handleError)
-                .getStudentPollStatus();
+                .getStudentPollStatus(SESSION_TOKEN);
         }
 
         function startProctorPolling() {
@@ -319,7 +320,7 @@
                 .withFailureHandler(function(error) {
                     console.error('Proctor state check error:', error);
                 })
-                .getStudentProctorState();
+                .getStudentProctorState(SESSION_TOKEN);
         }
 
         function updateStudentView(data) {
@@ -342,7 +343,7 @@
                         }
                     })
                     .withFailureHandler(handleError)
-                    .getStudentProctorState();
+                    .getStudentProctorState(SESSION_TOKEN);
                 return;
             }
 
@@ -507,7 +508,7 @@
                     hasAnsweredCurrent = false;
                     handleError(error);
                 })
-                .submitStudentAnswer(pollId, questionIndex, answerText);
+                .submitStudentAnswer(pollId, questionIndex, answerText, SESSION_TOKEN);
         }
 
         function shuffle(array) {

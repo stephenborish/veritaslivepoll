@@ -273,7 +273,9 @@ const DataAccess = {
       const liveSheet = ss.getSheetByName("LiveStatus");
       const statusData = [pollId, questionIndex, status];
       liveSheet.getRange("A2:C2").setValues([statusData]);
-      CacheManager.get('LIVE_POLL_STATUS', () => statusData, CacheManager.CACHE_TIMES.SHORT);
+      const cache = CacheService.getScriptCache();
+      cache.remove('LIVE_POLL_STATUS');
+      cache.put('LIVE_POLL_STATUS', JSON.stringify(statusData), CacheManager.CACHE_TIMES.SHORT);
     }
   }
 };
@@ -309,8 +311,7 @@ function doGet(e) {
         ).setTitle("Veritas Live Poll - Error");
       }
       
-      // Store token in session for subsequent calls
-      TokenManager.setSessionToken(token);
+      // Token will be passed explicitly with each RPC call
       studentEmail = tokenData.email;
       
       Logger.log('Student accessed via token', { 
@@ -345,6 +346,7 @@ function doGet(e) {
       template = HtmlService.createTemplateFromFile('StudentView');
       // Pass student info to template if needed
       template.studentEmail = studentEmail;
+      template.sessionToken = token || '';
     }
     
     return template.evaluate()
@@ -1259,6 +1261,7 @@ function getLivePollData(pollId, questionIndex) {
     
     return {
       status: "OPEN",
+      pollId: pollId,
       pollName: poll.pollName,
       questionText: question.questionText || '',
       questionImageURL: question.questionImageURL || null,
@@ -1278,13 +1281,13 @@ function getLivePollData(pollId, questionIndex) {
 // STUDENT APP FUNCTIONS
 // =============================================================================
 
-function getStudentPollStatus() {
+function getStudentPollStatus(token) {
   return withErrorHandling(() => {
     const statusValues = DataAccess.liveStatus.get();
     const pollId = statusValues[0];
     const questionIndex = statusValues[1];
     const pollStatus = statusValues[2];
-    
+
     const baseWaiting = (message, hasSubmitted = false) => ({ status: "WAITING", message, hasSubmitted });
 
     // If paused or closed, students see waiting message
@@ -1296,7 +1299,7 @@ function getStudentPollStatus() {
       return baseWaiting("The teacher has paused the poll. Waiting to resume...", false);
     }
 
-    const studentEmail = TokenManager.getCurrentStudentEmail();
+    const studentEmail = token ? TokenManager.getStudentEmail(token) : TokenManager.getCurrentStudentEmail();
 
     if (!studentEmail) {
       return {
@@ -1356,9 +1359,9 @@ function getStudentPollStatus() {
 }
 
 
-function submitStudentAnswer(pollId, questionIndex, answerText) {
+function submitStudentAnswer(pollId, questionIndex, answerText, token) {
   return withErrorHandling(() => {
-    const studentEmail = TokenManager.getCurrentStudentEmail();
+    const studentEmail = token ? TokenManager.getStudentEmail(token) : TokenManager.getCurrentStudentEmail();
     
     if (!studentEmail) {
       return { 
@@ -1601,9 +1604,9 @@ const ProctorAccess = {
 /**
  * Report student violation (new authoritative version)
  */
-function reportStudentViolation(reason) {
+function reportStudentViolation(reason, token) {
   return withErrorHandling(() => {
-    const studentEmail = TokenManager.getCurrentStudentEmail();
+    const studentEmail = token ? TokenManager.getStudentEmail(token) : TokenManager.getCurrentStudentEmail();
 
     if (!studentEmail) {
       return { success: false, error: 'Authentication error' };
@@ -1733,9 +1736,9 @@ function reportStudentViolation(reason) {
 /**
  * Get student proctor state (for polling)
  */
-function getStudentProctorState() {
+function getStudentProctorState(token) {
   return withErrorHandling(() => {
-    const studentEmail = TokenManager.getCurrentStudentEmail();
+    const studentEmail = token ? TokenManager.getStudentEmail(token) : TokenManager.getCurrentStudentEmail();
 
     if (!studentEmail) {
       return { success: false, error: 'Authentication error' };
@@ -1819,9 +1822,9 @@ function teacherApproveUnlock(studentEmail, pollId, expectedLockVersion) {
 /**
  * Student confirms fullscreen (completes unlock)
  */
-function studentConfirmFullscreen(expectedLockVersion) {
+function studentConfirmFullscreen(expectedLockVersion, token) {
   return withErrorHandling(() => {
-    const studentEmail = TokenManager.getCurrentStudentEmail();
+    const studentEmail = token ? TokenManager.getStudentEmail(token) : TokenManager.getCurrentStudentEmail();
 
     if (!studentEmail) {
       return { success: false, error: 'Authentication error' };

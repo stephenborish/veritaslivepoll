@@ -672,6 +672,44 @@ function setupSheet() {
 // =============================================================================
 
 /**
+ * IMAGE HANDLING ARCHITECTURE
+ *
+ * This system follows best practices for serving images in Google Apps Script web apps:
+ *
+ * 1. UPLOAD FLOW (uploadImageToDrive):
+ *    - Teacher uploads via HTML file input → base64 data URL
+ *    - Backend creates Drive file in dedicated folder (1kLraHu_V-eGyVh_bOm9Vp_AdPylTToCi)
+ *    - Only fileId is stored in poll data (NOT URLs)
+ *    - Validation: max 5MB, allowed types: jpeg/jpg/png/gif/webp
+ *
+ * 2. STORAGE:
+ *    - Poll questions store: { questionImageFileId, options: [{ imageFileId }] }
+ *    - No raw Drive URLs stored (avoids 403s and permission issues)
+ *
+ * 3. IMAGE PROXY (serveImage_):
+ *    - All images served via: https://script.google.com/.../exec?fn=image&id=<fileId>&v=<version>
+ *    - Validates file is in allowed folder (security)
+ *    - Returns blob with correct MIME type
+ *    - Cache headers: Cache-Control: public, max-age=300 (5 minutes)
+ *
+ * 4. CACHE BUSTING (normalizeQuestionObject_):
+ *    - Appends &v=<pollUpdatedAt> to all image URLs
+ *    - When poll is updated, version changes → browsers fetch fresh images
+ *    - Prevents stale cache issues without fighting browser caching
+ *
+ * 5. CONSISTENT URLS:
+ *    - Same URL pattern for teacher preview, live dashboard, and student view
+ *    - Eliminates "teacher sees it / student doesn't" mismatches
+ *    - All views use normalized question objects with proxy URLs
+ *
+ * WHY THIS APPROACH:
+ * - Drive share URLs (uc?export=view) are unreliable in HtmlService contexts
+ * - ContentService.createOutput(blob) is the canonical way to serve binary content
+ * - Proxy approach removes Drive's permission/CDN quirks from the equation
+ * - Widely recommended by GAS community (Reddit, Stack Overflow, expert bloggers)
+ */
+
+/**
  * Get the web app base URL for generating image proxy links
  */
 function getWebAppUrl_() {
@@ -1453,7 +1491,7 @@ function getLivePollData(pollId, questionIndex) {
 
     let question = poll.questions[questionIndex];
     if (!question) throw new Error("Question not found");
-    question = normalizeQuestionObject_(question);
+    question = normalizeQuestionObject_(question, poll.updatedAt);
     poll.questions[questionIndex] = question;
 
     const liveStatus = DataAccess.liveStatus.get();
@@ -1731,7 +1769,7 @@ function getStudentPollStatus(token, context) {
     }
 
     const question = poll.questions[questionIndex];
-    const normalizedQuestion = normalizeQuestionObject_(question);
+    const normalizedQuestion = normalizeQuestionObject_(question, poll.updatedAt);
 
     return envelope({
       status: "OPEN",
@@ -2454,7 +2492,7 @@ function getPolls_() {
       const questionIndex = typeof row[3] === 'number' ? row[3] : parseInt(row[3], 10) || 0;
       const createdAt = row[5] || '';
       const updatedAt = row[6] || createdAt || '';
-      const questionData = normalizeQuestionObject_(JSON.parse(row[4] || "{}"));
+      const questionData = normalizeQuestionObject_(JSON.parse(row[4] || "{}"), updatedAt);
       questionData.index = questionIndex;
 
       if (!pollsMap.has(pollId)) {
@@ -2591,21 +2629,27 @@ function getDataRangeValues_(sheet) {
   return sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
 }
 
-function normalizeQuestionObject_(questionData) {
+function normalizeQuestionObject_(questionData, pollUpdatedAt = null) {
   const normalized = {};
   const webAppUrl = getWebAppUrl_();
+
+  // Generate version string for cache busting
+  // Use poll's updatedAt timestamp, or current time as fallback
+  const versionParam = pollUpdatedAt
+    ? `&v=${encodeURIComponent(new Date(pollUpdatedAt).getTime())}`
+    : `&v=${Date.now()}`;
 
   // Normalize question text
   normalized.questionText = questionData.questionText || questionData.text || '';
 
-  // NEW APPROACH: Use fileId to generate proxy URL
+  // NEW APPROACH: Use fileId to generate proxy URL with version for cache busting
   // Check for questionImageFileId first (new canonical field)
   // Fall back to questionImageURL for legacy polls
   let questionImageUrl = null;
 
   if (questionData.questionImageFileId && typeof questionData.questionImageFileId === 'string') {
-    // NEW: Generate proxy URL from fileId
-    questionImageUrl = `${webAppUrl}?fn=image&id=${encodeURIComponent(questionData.questionImageFileId)}`;
+    // NEW: Generate proxy URL from fileId with version parameter
+    questionImageUrl = `${webAppUrl}?fn=image&id=${encodeURIComponent(questionData.questionImageFileId)}${versionParam}`;
   } else {
     // LEGACY: Use old URL field (Drive URL)
     let legacyUrl = questionData.questionImageURL || questionData.questionImage || null;
@@ -2632,12 +2676,12 @@ function normalizeQuestionObject_(questionData) {
       return { text: opt, imageURL: null, image: null, imageFileId: null };
     }
 
-    // NEW APPROACH: Use fileId to generate proxy URL
+    // NEW APPROACH: Use fileId to generate proxy URL with version for cache busting
     let optionImageUrl = null;
 
     if (opt.imageFileId && typeof opt.imageFileId === 'string') {
-      // NEW: Generate proxy URL from fileId
-      optionImageUrl = `${webAppUrl}?fn=image&id=${encodeURIComponent(opt.imageFileId)}`;
+      // NEW: Generate proxy URL from fileId with version parameter
+      optionImageUrl = `${webAppUrl}?fn=image&id=${encodeURIComponent(opt.imageFileId)}${versionParam}`;
     } else {
       // LEGACY: Use old URL field
       let legacyUrl = opt.imageURL || opt.image || null;

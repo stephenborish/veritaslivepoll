@@ -83,15 +83,12 @@
     <!-- Entry Screen -->
     <div id="entry-screen" class="w-full max-w-3xl mx-auto text-center animate-fade-in">
       <div class="bg-black/20 backdrop-blur-lg rounded-xl shadow-2xl border border-white/10 p-8 sm:p-12">
-        <img src="https://raw.githubusercontent.com/stephenborish/veritasassets/main/Malvern%20Logo.png" alt="Malvern Prep Logo" class="h-16 w-auto mx-auto mb-4" />
-        <div class="text-3xl font-extrabold tracking-[0.2em] uppercase mb-2">VERITAS</div>
-        <h1 class="text-4xl font-bold mb-8 text-white">Live Poll</h1>
         <p class="text-white/80 text-lg mb-8 leading-relaxed">
           Welcome! Click <strong>"Begin Session"</strong> to start participating in the poll.
         </p>
 
         <!-- Important Security Notice -->
-        <div class="bg-white/10 border border-white/20 rounded-lg p-6 mb-8 text-left">
+        <div class="bg-white/10 border border-white/20 rounded-lg p-6 mb-10 text-left">
           <div class="flex items-start gap-3 mb-3">
             <span class="material-symbols-outlined text-3xl text-yellow-300 flex-shrink-0">warning</span>
             <h4 class="text-yellow-300 text-xl font-bold">Important Security Notice</h4>
@@ -103,10 +100,12 @@
           </p>
         </div>
 
-        <button id="start-session-btn" class="w-full max-w-md mx-auto flex items-center justify-center gap-3 px-12 py-4 rounded-lg bg-green-500 text-white text-xl font-bold hover:bg-green-600 transition-transform duration-300 hover:scale-105 shadow-lg">
-          <span class="material-symbols-outlined text-2xl">play_circle</span>
-          <span>Begin Session</span>
-        </button>
+        <div class="flex justify-center">
+          <button id="start-session-btn" class="flex items-center justify-center gap-3 px-12 py-4 rounded-lg bg-green-500 text-white text-xl font-bold hover:bg-green-600 transition-transform duration-300 hover:scale-105 shadow-lg">
+            <span class="material-symbols-outlined text-2xl">play_circle</span>
+            <span>Begin Session</span>
+          </button>
+        </div>
       </div>
     </div>
 

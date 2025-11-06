@@ -76,7 +76,7 @@
     <div id="connectivity-banner" class="hidden fixed top-20 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-lg flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-800 shadow-lg transition-all duration-200 backdrop-blur-sm">
       <span id="connectivity-icon" class="material-symbols-outlined text-2xl">sync</span>
       <div class="flex flex-col text-left flex-1">
-        <span id="connectivity-message" class="text-sm font-semibold">Reconnecting… your poll data's catching up.</span>
+        <span id="connectivity-message" class="text-sm font-semibold">Reconnecting... your poll data is catching up.</span>
         <span id="connectivity-submessage" class="text-xs text-amber-700/80 opacity-0"></span>
       </div>
     </div>
@@ -228,9 +228,9 @@
             }
             if (connectivityMessage) {
                 var defaults = {
-                    connecting: 'Reconnecting… your poll data’s catching up.',
-                    offline: 'Offline detected — we’ll hold your spot and resync when you’re back.',
-                    recovered: 'Back on track — synced with your teacher.'
+                    connecting: 'Reconnecting... your poll data is catching up.',
+                    offline: 'Offline detected - we will hold your spot and resync when you are back.',
+                    recovered: 'Back on track - synced with your teacher.'
                 };
                 connectivityMessage.textContent = options.message || defaults[state] || defaults.connecting;
             }
@@ -300,13 +300,13 @@
 
             if (hadFailures || data.connectionHealth === 'RECOVERED_AFTER_OUTAGE') {
                 showConnectivityState('recovered', {
-                    message: 'Back on track — synced with your teacher.',
+                    message: 'Back on track - synced with your teacher.',
                     icon: 'cloud_done',
                     autoHide: 2400
                 });
             } else if (data.connectionHealth === 'RECOVERING') {
                 showConnectivityState('connecting', {
-                    message: 'Syncing up with your teacher’s poll — hold on a sec.',
+                    message: 'Syncing up with your teacher poll - hold on a sec.',
                     icon: 'sync'
                 });
                 connectivityHideTimer = setTimeout(hideConnectivityBanner, 2200);
@@ -334,9 +334,9 @@
 
             var online = typeof navigator !== 'undefined' ? navigator.onLine : true;
             showConnectivityState(online ? 'connecting' : 'offline', {
-                message: online ? 'Reconnecting… your poll data’s catching up.' : 'Offline detected — we’ll hold your spot and resync when you’re back.',
+                message: online ? 'Reconnecting... your poll data is catching up.' : 'Offline detected - we will hold your spot and resync when you are back.',
                 icon: online ? 'sync_problem' : 'signal_wifi_off',
-                submessage: online ? ('Retrying in ' + seconds + 's…') : ''
+                submessage: online ? ('Retrying in ' + seconds + 's...') : ''
             });
 
             scheduleNextPoll(retryDelay);
@@ -378,7 +378,7 @@
             if (!isSessionActive()) return;
             recoveringFromOutage = true;
             showConnectivityState('offline', {
-                message: 'Offline detected — we’ll hold your spot and resync when you’re back.',
+                message: 'Offline detected - we will hold your spot and resync when you are back.',
                 icon: 'signal_wifi_off'
             });
         });
@@ -386,9 +386,9 @@
         window.addEventListener('online', function() {
             if (!isSessionActive()) return;
             showConnectivityState('connecting', {
-                message: 'Reconnecting… your poll data’s catching up.',
+                message: 'Reconnecting... your poll data is catching up.',
                 icon: 'sync',
-                submessage: 'Syncing now…'
+                submessage: 'Syncing now...'
             });
             startPolling(true);
         });
@@ -672,10 +672,10 @@
                 if (hasAnsweredCurrent) {
                     questionContainer.style.display = 'none';
                     statusContainer.style.display = 'block';
-                    statusMessage.textContent = data.hasSubmitted ? (data.message || 'Answer received — nice work.') : 'Answer received — nice work.';
+                    statusMessage.textContent = data.hasSubmitted ? (data.message || 'Answer received - nice work.') : 'Answer received - nice work.';
                     statusMessage.className = 'text-green-300 text-2xl font-semibold';
                     if (statusSubMessage) {
-                        statusSubMessage.textContent = 'Waiting for another question…';
+                        statusSubMessage.textContent = 'Waiting for another question...';
                         statusSubMessage.style.display = 'block';
                         statusSubMessage.className = 'text-white/70 text-lg mt-4';
                     }
@@ -700,18 +700,18 @@
                     if (data.hasSubmitted) {
                         hasAnsweredCurrent = true;
                         pendingSubmission = false;
-                        statusMessage.textContent = data.message || 'Answer received — nice work.';
+                        statusMessage.textContent = data.message || 'Answer received - nice work.';
                         statusTextClass = 'text-green-300 text-2xl font-semibold';
                         statusIcon = 'check_circle';
                         statusClass = 'text-green-300';
                         if (statusSubMessage) {
-                            statusSubMessage.textContent = 'Waiting for another question…';
+                            statusSubMessage.textContent = 'Waiting for another question...';
                             statusSubMessage.style.display = 'block';
                             statusSubMessage.className = 'text-white/70 text-lg mt-4';
                         }
                     } else {
                         hasAnsweredCurrent = false;
-                        statusMessage.textContent = data.message || 'Hang tight — your teacher's loading the next challenge.';
+                        statusMessage.textContent = data.message || 'Hang tight - your teacher is loading the next challenge.';
                         statusIcon = 'hourglass_top';
                         statusClass = 'text-white';
                     }
@@ -730,13 +730,13 @@
                     statusClass = 'text-red-300';
                 } else if (data.status === 'CLOSED') {
                     hasAnsweredCurrent = false;
-                    statusMessage.textContent = data.message || 'That's a wrap! You just finished the poll — nicely done.';
+                    statusMessage.textContent = data.message || 'That is a wrap! You just finished the poll - nicely done.';
                     statusTextClass = 'text-white text-2xl font-semibold';
                     statusIcon = 'emoji_events';
                     statusClass = 'text-yellow-300';
                 } else {
                     hasAnsweredCurrent = false;
-                    statusMessage.textContent = data.message || 'Hang tight — your teacher's loading the next challenge.';
+                    statusMessage.textContent = data.message || 'Hang tight - your teacher is loading the next challenge.';
                     statusIcon = 'hourglass_top';
                     statusClass = 'text-white';
                 }
@@ -770,7 +770,7 @@
             pendingSubmission = true;
             statusContainer.style.display = 'block';
             questionContainer.style.display = 'none';
-            statusMessage.textContent = 'Transmitting your genius response…';
+            statusMessage.textContent = 'Transmitting your genius response...';
             statusMessage.className = 'text-white text-2xl font-semibold';
             google.script.run
                 .withSuccessHandler(function(response) {
@@ -795,10 +795,10 @@
                             }
                         }, 2000);
                     } else {
-                        statusMessage.textContent = 'Answer received — nice work.';
+                        statusMessage.textContent = 'Answer received - nice work.';
                         statusMessage.className = 'text-green-300 text-2xl font-semibold';
                         if (statusSubMessage) {
-                            statusSubMessage.textContent = 'Waiting for another question…';
+                            statusSubMessage.textContent = 'Waiting for another question...';
                             statusSubMessage.style.display = 'block';
                             statusSubMessage.className = 'text-white/70 text-lg mt-4';
                         }
@@ -846,7 +846,7 @@
                 statusSubMessage.textContent = '';
             }
 
-            statusMessage.textContent = 'Oops — you left fullscreen. Your poll's been paused until your teacher lets you back in.';
+            statusMessage.textContent = 'Oops - you left fullscreen. Your poll has been paused until your teacher lets you back in.';
             statusMessage.className = 'text-red-300 text-xl font-semibold';
 
             var iconEl = statusContainer.querySelector('.material-symbols-outlined');
@@ -875,7 +875,7 @@
             }
 
             // Use exact text from requirements
-            statusMessage.textContent = 'You're cleared for re-entry. Go fullscreen to get back in the game.';
+            statusMessage.textContent = 'You are cleared for re-entry. Go fullscreen to get back in the game.';
             statusMessage.className = 'text-white text-xl font-semibold';
 
             var iconEl = statusContainer.querySelector('.material-symbols-outlined');

@@ -156,6 +156,7 @@
 
   <script>
     (function() {
+        console.log('Student poll script initializing...');
         var studentLoader = document.getElementById('student-loader');
         var statusContainer = document.getElementById('status-container');
         var statusMessage = document.getElementById('status-message');
@@ -164,6 +165,9 @@
         var entryScreen = document.getElementById('entry-screen');
         var startSessionBtn = document.getElementById('start-session-btn');
         var studentContainer = document.getElementById('student-container');
+
+        console.log('Start session button found:', startSessionBtn ? 'YES' : 'NO');
+        console.log('Entry screen found:', entryScreen ? 'YES' : 'NO');
         var resumeControls = document.getElementById('resume-controls');
         var resumeSessionBtn = document.getElementById('resume-session-btn');
         var statusSubMessage = document.getElementById('status-submessage');
@@ -431,77 +435,83 @@
             };
         }
 
-        startSessionBtn.onclick = function() {
-            console.log('Starting session...');
-            entryScreen.style.display = 'none';
-            studentContainer.style.display = 'block';
-            isInteractionBlocked = false;
-            violationLogged = false;
-            if (resumeControls) {
-                resumeControls.style.display = 'none';
-            }
-
-            try {
-                if (document.documentElement.requestFullscreen) {
-                    document.documentElement.requestFullscreen().catch(function(e) {
-                        console.warn('Fullscreen denied:', e);
-                    });
-                }
-            } catch (e) {
-                console.error('Fullscreen error:', e);
-            }
-
-            function reportViolationDebounced(reason) {
-                // Clear any existing timer
-                if (violationDebounceTimer) {
-                    clearTimeout(violationDebounceTimer);
+        if (startSessionBtn) {
+            console.log('Attaching onclick handler to start session button');
+            startSessionBtn.onclick = function() {
+                console.log('!!! BEGIN SESSION BUTTON CLICKED !!!');
+                console.log('Hiding entry screen, showing student container');
+                entryScreen.style.display = 'none';
+                studentContainer.style.display = 'block';
+                isInteractionBlocked = false;
+                violationLogged = false;
+                if (resumeControls) {
+                    resumeControls.style.display = 'none';
                 }
 
-                // Set a new timer for 300ms
-                violationDebounceTimer = setTimeout(function() {
-                    // Check if already reported to prevent duplicates
-                    if (violationLogged || isInteractionBlocked) {
-                        console.log('Violation already reported, skipping');
-                        return;
+                try {
+                    if (document.documentElement.requestFullscreen) {
+                        document.documentElement.requestFullscreen().catch(function(e) {
+                            console.warn('Fullscreen denied:', e);
+                        });
+                    }
+                } catch (e) {
+                    console.error('Fullscreen error:', e);
+                }
+
+                function reportViolationDebounced(reason) {
+                    // Clear any existing timer
+                    if (violationDebounceTimer) {
+                        clearTimeout(violationDebounceTimer);
                     }
 
-                    console.log('VIOLATION: ' + reason);
-                    // Set flags BEFORE RPC to prevent retry-based double-bump
-                    violationLogged = true;
-                    isInteractionBlocked = true;
+                    // Set a new timer for 300ms
+                    violationDebounceTimer = setTimeout(function() {
+                        // Check if already reported to prevent duplicates
+                        if (violationLogged || isInteractionBlocked) {
+                            console.log('Violation already reported, skipping');
+                            return;
+                        }
 
-                    google.script.run
-                        .withSuccessHandler(function(response) {
-                            if (response.success) {
-                                currentLockVersion = response.lockVersion;
+                        console.log('VIOLATION: ' + reason);
+                        // Set flags BEFORE RPC to prevent retry-based double-bump
+                        violationLogged = true;
+                        isInteractionBlocked = true;
+
+                        google.script.run
+                            .withSuccessHandler(function(response) {
+                                if (response.success) {
+                                    currentLockVersion = response.lockVersion;
+                                    showLockedMessage();
+                                    startProctorPolling();
+                                }
+                            })
+                            .withFailureHandler(function(error) {
+                                console.error('Violation report failed:', error);
+                                // Keep flags set - student stays locked locally even if server unreachable
                                 showLockedMessage();
-                                startProctorPolling();
-                            }
-                        })
-                        .withFailureHandler(function(error) {
-                            console.error('Violation report failed:', error);
-                            // Keep flags set - student stays locked locally even if server unreachable
-                            showLockedMessage();
-                        })
-                        .reportStudentViolation(reason, SESSION_TOKEN);
-                }, 300);
-            }
-
-            document.addEventListener('visibilitychange', function() {
-                if (document.hidden && !isInteractionBlocked && !violationLogged) {
-                    reportViolationDebounced('tab-blur');
+                            })
+                            .reportStudentViolation(reason, SESSION_TOKEN);
+                    }, 300);
                 }
-            });
 
-            document.addEventListener('fullscreenchange', function() {
-                if (!document.fullscreenElement && !isInteractionBlocked && !violationLogged) {
-                    reportViolationDebounced('exit-fullscreen');
-                }
-            });
+                document.addEventListener('visibilitychange', function() {
+                    if (document.hidden && !isInteractionBlocked && !violationLogged) {
+                        reportViolationDebounced('tab-blur');
+                    }
+                });
 
-            hideConnectivityBanner();
-            startPolling(true);
-        };
+                document.addEventListener('fullscreenchange', function() {
+                    if (!document.fullscreenElement && !isInteractionBlocked && !violationLogged) {
+                        reportViolationDebounced('exit-fullscreen');
+                    }
+                });
+
+                hideConnectivityBanner();
+                startPolling(true);
+            };
+        } else {
+            console.error('Start session button not found!');
+        }
 
         function startProctorPolling() {
             stopPolling();

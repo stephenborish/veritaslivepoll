@@ -1669,7 +1669,29 @@ function getLivePollData(pollId, questionIndex) {
 
     let question = poll.questions[questionIndex];
     if (!question) throw new Error("Question not found");
+
+    // DEBUG: Log before normalization
+    Logger.log('=== BEFORE NORMALIZATION ===');
+    Logger.log(`questionImageFileId: ${question.questionImageFileId}`);
+    Logger.log(`options count: ${question.options ? question.options.length : 0}`);
+    if (question.options && question.options.length > 0) {
+      question.options.forEach((opt, idx) => {
+        Logger.log(`  Option ${idx}: imageFileId=${opt.imageFileId}`);
+      });
+    }
+
     question = normalizeQuestionObject_(question, poll.updatedAt);
+
+    // DEBUG: Log after normalization
+    Logger.log('=== AFTER NORMALIZATION ===');
+    Logger.log(`questionImageURL: ${question.questionImageURL}`);
+    Logger.log(`options count: ${question.options ? question.options.length : 0}`);
+    if (question.options && question.options.length > 0) {
+      question.options.forEach((opt, idx) => {
+        Logger.log(`  Option ${idx}: imageURL=${opt.imageURL}`);
+      });
+    }
+
     poll.questions[questionIndex] = question;
 
     const liveStatus = DataAccess.liveStatus.get();
@@ -2700,6 +2722,18 @@ function writePollRows_(pollId, pollName, className, questions, createdAt, updat
   if (!pollSheet) {
     throw new Error('Polls sheet not found. Run setupSheet() first.');
   }
+
+  // DEBUG: Log what we're about to save
+  Logger.log('=== SAVING POLL DATA ===');
+  Logger.log('Poll ID: ' + pollId);
+  questions.forEach((q, idx) => {
+    Logger.log(`Question ${idx}: questionImageFileId=${q.questionImageFileId}, options count=${q.options ? q.options.length : 0}`);
+    if (q.options && q.options.length > 0) {
+      q.options.forEach((opt, optIdx) => {
+        Logger.log(`  Option ${optIdx}: text="${opt.text}", imageFileId=${opt.imageFileId}`);
+      });
+    }
+  });
 
   const payload = questions.map((q, index) => [
     pollId,

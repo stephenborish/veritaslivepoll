@@ -1758,6 +1758,7 @@ function getLivePollData(pollId, questionIndex) {
       pollName: poll.pollName,
       questionText: question.questionText || '',
       questionImageURL: question.questionImageURL || null,
+      options: question.options || [],
       questionIndex: questionIndex,
       totalQuestions: poll.questions.length,
       correctAnswer: question.correctAnswer || null,

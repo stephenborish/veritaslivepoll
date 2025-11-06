@@ -338,6 +338,7 @@
               <div class="flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
                   <button id="add-student-row-btn" class="h-10 px-4 rounded-lg bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-sm font-semibold hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors">+ Add Student</button>
+                  <button id="bulk-add-students-btn" class="h-10 px-4 rounded-lg bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-sm font-semibold hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors">Bulk Add Students</button>
                   <span id="roster-status" class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60"></span>
                 </div>
                 <button id="save-roster-btn" class="h-10 px-5 rounded-lg bg-primary text-brand-white text-sm font-bold hover:bg-primary/90 transition-colors">Save Roster</button>
@@ -477,6 +478,27 @@
     </div>
   </div>
 
+  <!-- Bulk Add Students Modal -->
+  <div id="bulk-add-students-modal" class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div class="sticky top-0 bg-primary px-6 py-4 border-b border-primary/70">
+        <h2 class="text-brand-white text-2xl font-bold">Bulk Add Students</h2>
+        <p class="text-brand-white/80 text-sm mt-1">Add multiple students at once. Enter one student per line in format: Name, Email</p>
+      </div>
+      <div class="p-6 flex-1 overflow-y-auto">
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white">Student Data</label>
+          <textarea id="bulk-student-input" class="w-full h-64 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono" placeholder="John Smith, jsmith@school.edu&#10;Jane Doe, jdoe@school.edu&#10;Bob Johnson, bjohnson@school.edu"></textarea>
+          <p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-2">Format: Name, Email (one per line). Duplicates will be skipped automatically.</p>
+        </div>
+      </div>
+      <div class="sticky bottom-0 bg-brand-white dark:bg-brand-dark-gray px-6 py-4 border-t border-primary/20 flex justify-end gap-3">
+        <button id="cancel-bulk-add-btn" class="h-10 px-5 rounded-lg bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white text-sm font-semibold hover:bg-brand-dark-gray/20 dark:hover:bg-brand-white/20 transition-colors">Cancel</button>
+        <button id="confirm-bulk-add-btn" class="h-10 px-5 rounded-lg bg-primary text-brand-white text-sm font-bold hover:bg-primary/90 transition-colors">Add Students</button>
+      </div>
+    </div>
+  </div>
+
   <script>
 (function(){
   // --- Main App State ---
@@ -592,6 +614,9 @@
   archivedClassFilterSelect.onchange=function(){archivedClassFilter=this.value;renderArchivedList();};
   addClassBtn.onclick=onAddClass;
   addStudentRowBtn.onclick=addRosterRow;
+  document.getElementById('bulk-add-students-btn').onclick=openBulkAddStudentsModal;
+  document.getElementById('cancel-bulk-add-btn').onclick=closeBulkAddStudentsModal;
+  document.getElementById('confirm-bulk-add-btn').onclick=confirmBulkAddStudents;
   saveRosterBtn.onclick=saveRoster;
   renameClassBtn.onclick=onRenameClass;
   deleteClassBtn.onclick=onDeleteClass;
@@ -848,6 +873,7 @@
       htmlParts.push('<td class="px-4 py-3 align-top">');
       htmlParts.push('<div class="flex justify-end gap-2">');
       htmlParts.push('<button class="poll-select-btn h-8 px-3 rounded-md bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-xs font-semibold hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors" data-poll-id="'+poll.pollId+'">Select</button>');
+      htmlParts.push('<button class="poll-copy-btn h-8 px-3 rounded-md bg-green-600/10 text-green-600 dark:text-green-300 dark:bg-green-500/20 text-xs font-semibold hover:bg-green-600/20 dark:hover:bg-green-500/30 transition-colors" data-poll-id="'+poll.pollId+'" title="Copy this poll">Copy</button>');
       htmlParts.push('<button class="poll-edit-btn h-8 px-3 rounded-md bg-primary text-brand-white text-xs font-semibold hover:bg-primary/90 transition-colors" data-poll-id="'+poll.pollId+'">Edit</button>');
       htmlParts.push('<button class="poll-delete-btn h-8 px-3 rounded-md bg-red-600/10 text-red-600 dark:text-red-300 dark:bg-red-500/20 text-xs font-semibold hover:bg-red-600/20 dark:hover:bg-red-500/30 transition-colors" data-poll-id="'+poll.pollId+'">Delete</button>');
       htmlParts.push('</div>');
@@ -862,6 +888,44 @@
         pollSelect.value=id;
         onPollSelectChange();
         showDashboard();
+      };
+    });
+
+    pollsTableBody.querySelectorAll('.poll-copy-btn').forEach(function(btn){
+      btn.onclick=function(){
+        var pollId=this.dataset.pollId;
+        var poll=ALL_POLLS.find(function(p){return p.pollId===pollId;});
+        if(!poll)return;
+
+        var newName=prompt('Enter a name for the copied poll:',poll.pollName+' (Copy)');
+        if(newName===null)return;
+
+        newName=newName.trim();
+        if(newName===''){
+          alert('Poll name cannot be empty');
+          return;
+        }
+
+        btn.disabled=true;
+        btn.textContent='Copying...';
+
+        google.script.run
+          .withSuccessHandler(function(result){
+            if(result.success){
+              refreshPollData(result.polls);
+              alert(result.message);
+            } else {
+              alert('Failed to copy poll: '+(result.error||'Unknown error'));
+            }
+            btn.disabled=false;
+            btn.textContent='Copy';
+          })
+          .withFailureHandler(function(error){
+            handleError(error);
+            btn.disabled=false;
+            btn.textContent='Copy';
+          })
+          .copyPoll(pollId,newName,poll.className);
       };
     });
 
@@ -1101,6 +1165,76 @@
         handleError(error);
       })
       .saveRoster(selectedRosterClass, entries);
+  }
+
+  function openBulkAddStudentsModal(){
+    if(!selectedRosterClass){
+      alert('Select a class first.');
+      return;
+    }
+    document.getElementById('bulk-student-input').value='';
+    document.getElementById('bulk-add-students-modal').style.display='flex';
+  }
+
+  function closeBulkAddStudentsModal(){
+    document.getElementById('bulk-add-students-modal').style.display='none';
+  }
+
+  function confirmBulkAddStudents(){
+    if(!selectedRosterClass){
+      alert('Select a class first.');
+      closeBulkAddStudentsModal();
+      return;
+    }
+
+    var input=document.getElementById('bulk-student-input').value;
+    var lines=input.split('\n');
+    var entries=[];
+
+    lines.forEach(function(line){
+      line=line.trim();
+      if(line==='')return;
+
+      // Parse format: Name, Email
+      var parts=line.split(',');
+      if(parts.length>=2){
+        var name=parts[0].trim();
+        var email=parts.slice(1).join(',').trim();
+        if(name&&email){
+          entries.push({name:name,email:email});
+        }
+      }
+    });
+
+    if(entries.length===0){
+      alert('No valid student entries found. Use format: Name, Email');
+      return;
+    }
+
+    var confirmBtn=document.getElementById('confirm-bulk-add-btn');
+    confirmBtn.disabled=true;
+    confirmBtn.textContent='Adding...';
+
+    google.script.run
+      .withSuccessHandler(function(result){
+        confirmBtn.disabled=false;
+        confirmBtn.textContent='Add Students';
+        closeBulkAddStudentsModal();
+
+        if(result.success){
+          alert(result.message);
+          rosterDirty=false;
+          onRosterDataLoaded(result.data,selectedRosterClass);
+        } else {
+          alert('Failed to add students: '+(result.error||'Unknown error'));
+        }
+      })
+      .withFailureHandler(function(error){
+        confirmBtn.disabled=false;
+        confirmBtn.textContent='Add Students';
+        handleError(error);
+      })
+      .bulkAddStudentsToRoster(selectedRosterClass,entries);
   }
 
   function onAddClass(){
@@ -2099,6 +2233,25 @@
     markPollDirty();
   }
 
+  function duplicateQuestionLocal(index){
+    if(questions.length>=50){
+      alert('Maximum 50 questions per poll. Cannot duplicate.');
+      return;
+    }
+    // Deep copy the question
+    var questionToDuplicate=questions[index];
+    var duplicatedQuestion=JSON.parse(JSON.stringify(questionToDuplicate));
+
+    // Insert the duplicated question right after the original
+    questions.splice(index+1,0,duplicatedQuestion);
+    questionCounter++;
+    selectedQuestionIndex=index+1;
+
+    renderQuestionNavigator();
+    renderQuestionWorkspace();
+    markPollDirty();
+  }
+
   function renderQuestionNavigator(){
     var nav=document.getElementById('question-navigator');
     nav.innerHTML='';
@@ -2110,24 +2263,36 @@
       
       var html='<span class="material-symbols-outlined '+(isSelected?'text-brand-dark-gray dark:text-brand-white':'text-brand-dark-gray/50 dark:text-brand-white/50')+'">drag_indicator</span>';
       html+='<p class="'+(isSelected?'text-primary dark:text-brand-white':'text-brand-dark-gray dark:text-brand-white')+' text-sm font-medium leading-normal">Question '+(index+1)+'</p>';
-      
+
+      html+='<div class="absolute right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">';
+      html+='<button class="duplicate-question-btn p-1 rounded-full hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10" data-index="'+index+'" title="Duplicate question">';
+      html+='<span class="material-symbols-outlined text-brand-dark-gray dark:text-brand-white text-base">content_copy</span>';
+      html+='</button>';
       if(questions.length>1){
-        html+='<div class="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity">';
-        html+='<button class="p-1 rounded-full hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10" data-index="'+index+'">';
+        html+='<button class="delete-question-btn p-1 rounded-full hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10" data-index="'+index+'" title="Delete question">';
         html+='<span class="material-symbols-outlined text-brand-dark-gray dark:text-brand-white text-base">close</span>';
-        html+='</button></div>';
+        html+='</button>';
       }
-      
+      html+='</div>';
+
       div.innerHTML=html;
-      
+
       div.onclick=function(e){
-        if(e.target.classList.contains('material-symbols-outlined')&&e.target.textContent==='close')return;
+        if(e.target.classList.contains('material-symbols-outlined')&&(e.target.textContent==='close'||e.target.textContent==='content_copy'))return;
         selectedQuestionIndex=index;
         renderQuestionNavigator();
         renderQuestionWorkspace();
       };
-      
-      var closeBtn=div.querySelector('button[data-index]');
+
+      var duplicateBtn=div.querySelector('.duplicate-question-btn');
+      if(duplicateBtn){
+        duplicateBtn.onclick=function(e){
+          e.stopPropagation();
+          duplicateQuestionLocal(parseInt(this.dataset.index));
+        };
+      }
+
+      var closeBtn=div.querySelector('.delete-question-btn');
       if(closeBtn){
         closeBtn.onclick=function(e){
           e.stopPropagation();

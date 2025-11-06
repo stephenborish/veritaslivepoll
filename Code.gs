@@ -939,6 +939,76 @@ function saveRoster(className, rosterEntries) {
   })();
 }
 
+function bulkAddStudentsToRoster(className, studentEntries) {
+  return withErrorHandling(() => {
+    if (!className || className.trim() === '') {
+      throw new Error('Class name is required');
+    }
+
+    if (!Array.isArray(studentEntries)) {
+      throw new Error('Student entries must be an array');
+    }
+
+    const cleanedEntries = studentEntries
+      .map(entry => ({
+        name: (entry.name || '').toString().trim(),
+        email: (entry.email || '').toString().trim()
+      }))
+      .filter(entry => entry.name !== '' && entry.email !== '');
+
+    if (cleanedEntries.length === 0) {
+      throw new Error('No valid student entries to add');
+    }
+
+    // Get existing roster to check for duplicates
+    const existingRoster = DataAccess.roster.getByClass(className);
+    const existingEmails = new Set(existingRoster.map(s => s.email.toLowerCase()));
+
+    // Filter out students that already exist
+    const newStudents = cleanedEntries.filter(
+      entry => !existingEmails.has(entry.email.toLowerCase())
+    );
+
+    if (newStudents.length === 0) {
+      return {
+        success: true,
+        message: 'All students already exist in the roster',
+        addedCount: 0,
+        skippedCount: cleanedEntries.length,
+        data: getRosterManagerData()
+      };
+    }
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const rosterSheet = ss.getSheetByName('Rosters');
+    if (!rosterSheet) {
+      throw new Error('Rosters sheet not found');
+    }
+
+    // Append new students to the roster
+    const rows = newStudents.map(entry => [className, entry.name, entry.email]);
+    rosterSheet.getRange(rosterSheet.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+
+    ensureClassExists_(className);
+
+    CacheManager.invalidate(['CLASSES_LIST']);
+
+    Logger.log('Students bulk added to roster', {
+      className: className,
+      addedCount: newStudents.length,
+      skippedCount: cleanedEntries.length - newStudents.length
+    });
+
+    return {
+      success: true,
+      message: `Added ${newStudents.length} student(s). Skipped ${cleanedEntries.length - newStudents.length} duplicate(s).`,
+      addedCount: newStudents.length,
+      skippedCount: cleanedEntries.length - newStudents.length,
+      data: getRosterManagerData()
+    };
+  })();
+}
+
 function renameClass(oldName, newName) {
   return withErrorHandling(() => {
     if (!oldName || !newName) {
@@ -1192,6 +1262,112 @@ function deletePoll(pollId) {
     Logger.log('Poll deleted', { pollId: pollId });
 
     return DataAccess.polls.getAll();
+  })();
+}
+
+function duplicateQuestion(pollId, questionIndex) {
+  return withErrorHandling(() => {
+    if (!pollId) {
+      throw new Error('Poll ID is required');
+    }
+
+    if (questionIndex === undefined || questionIndex === null) {
+      throw new Error('Question index is required');
+    }
+
+    const poll = DataAccess.polls.getById(pollId);
+    if (!poll) {
+      throw new Error('Poll not found');
+    }
+
+    if (questionIndex < 0 || questionIndex >= poll.questions.length) {
+      throw new Error('Invalid question index');
+    }
+
+    // Deep copy the question to duplicate
+    const questionToDuplicate = poll.questions[questionIndex];
+    const duplicatedQuestion = JSON.parse(JSON.stringify(questionToDuplicate));
+
+    // Insert the duplicated question right after the original
+    const newQuestions = [...poll.questions];
+    newQuestions.splice(questionIndex + 1, 0, duplicatedQuestion);
+
+    if (newQuestions.length > 50) {
+      throw new Error('Maximum 50 questions per poll. Cannot duplicate.');
+    }
+
+    // Update the poll with the new questions array
+    removePollRows_(pollId);
+
+    const existingPoll = DataAccess.polls.getById(pollId);
+    const createdAt = existingPoll && existingPoll.createdAt ? existingPoll.createdAt : new Date().toISOString();
+    const updatedAt = new Date().toISOString();
+
+    writePollRows_(pollId, poll.pollName, poll.className, newQuestions, createdAt, updatedAt);
+
+    CacheManager.invalidate('ALL_POLLS_DATA');
+
+    Logger.log('Question duplicated', {
+      pollId: pollId,
+      originalIndex: questionIndex,
+      newIndex: questionIndex + 1,
+      totalQuestions: newQuestions.length
+    });
+
+    return {
+      success: true,
+      message: 'Question duplicated successfully',
+      polls: DataAccess.polls.getAll()
+    };
+  })();
+}
+
+function copyPoll(sourcePollId, newPollName, targetClassName) {
+  return withErrorHandling(() => {
+    if (!sourcePollId) {
+      throw new Error('Source poll ID is required');
+    }
+
+    const sourcePoll = DataAccess.polls.getById(sourcePollId);
+    if (!sourcePoll) {
+      throw new Error('Source poll not found');
+    }
+
+    // Use provided name or append " (Copy)" to original name
+    const pollName = newPollName && newPollName.trim() !== ''
+      ? newPollName.trim()
+      : `${sourcePoll.pollName} (Copy)`;
+
+    // Use provided class or same class as source
+    const className = targetClassName && targetClassName.trim() !== ''
+      ? targetClassName.trim()
+      : sourcePoll.className;
+
+    // Deep copy all questions (images will be shared via fileIds)
+    const copiedQuestions = sourcePoll.questions.map(q => JSON.parse(JSON.stringify(q)));
+
+    // Create new poll with copied questions
+    const newPollId = "P-" + Utilities.getUuid();
+    const timestamp = new Date().toISOString();
+
+    writePollRows_(newPollId, pollName, className, copiedQuestions, timestamp, timestamp);
+
+    CacheManager.invalidate('ALL_POLLS_DATA');
+
+    Logger.log('Poll copied', {
+      sourcePollId: sourcePollId,
+      newPollId: newPollId,
+      newPollName: pollName,
+      className: className,
+      questionCount: copiedQuestions.length
+    });
+
+    return {
+      success: true,
+      message: `Poll copied successfully as "${pollName}"`,
+      newPollId: newPollId,
+      polls: DataAccess.polls.getAll()
+    };
   })();
 }
 

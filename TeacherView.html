@@ -2562,15 +2562,14 @@
     return baseUrl;
   }
 
-  // Helper to generate image proxy URL from fileId
+  // Helper to generate Google Drive thumbnail URL from fileId
   function generateProxyUrl(fileId){
     if(!fileId||typeof fileId!=='string'){
       return'';
     }
-    var baseUrl=getWebAppUrl();
-    // Add version parameter for cache busting (consistent with server-side URL generation)
-    var version=Date.now();
-    return baseUrl+'?fn=image&id='+encodeURIComponent(fileId)+'&v='+version;
+    // Use Google Drive thumbnail API for direct image display
+    // sz=w1000 specifies max width of 1000px (adjustable)
+    return 'https://drive.google.com/thumbnail?id='+encodeURIComponent(fileId)+'&sz=w1000';
   }
 
   function getImagePreviewUrl(imageData,fileId){

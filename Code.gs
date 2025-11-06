@@ -2824,8 +2824,8 @@ function normalizeQuestionObject_(questionData, pollUpdatedAt = null) {
   let questionImageUrl = null;
 
   if (questionData.questionImageFileId && typeof questionData.questionImageFileId === 'string') {
-    // NEW: Generate proxy URL from fileId with version parameter
-    questionImageUrl = `${webAppUrl}?fn=image&id=${encodeURIComponent(questionData.questionImageFileId)}${versionParam}`;
+    // NEW: Use Google Drive thumbnail API for direct image display
+    questionImageUrl = `https://drive.google.com/thumbnail?id=${encodeURIComponent(questionData.questionImageFileId)}&sz=w1000`;
   } else {
     // LEGACY: Use old URL field (Drive URL)
     let legacyUrl = questionData.questionImageURL || questionData.questionImage || null;
@@ -2856,8 +2856,8 @@ function normalizeQuestionObject_(questionData, pollUpdatedAt = null) {
     let optionImageUrl = null;
 
     if (opt.imageFileId && typeof opt.imageFileId === 'string') {
-      // NEW: Generate proxy URL from fileId with version parameter
-      optionImageUrl = `${webAppUrl}?fn=image&id=${encodeURIComponent(opt.imageFileId)}${versionParam}`;
+      // NEW: Use Google Drive thumbnail API for direct image display
+      optionImageUrl = `https://drive.google.com/thumbnail?id=${encodeURIComponent(opt.imageFileId)}&sz=w1000`;
     } else {
       // LEGACY: Use old URL field
       let legacyUrl = opt.imageURL || opt.image || null;

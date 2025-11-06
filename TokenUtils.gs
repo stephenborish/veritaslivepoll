@@ -31,9 +31,48 @@ function sendStudentPollLinks(studentEmails) {
   const links = generateStudentPollLinks(studentEmails);
   links.forEach(item => {
     const subject = "Your Veritas Live Poll Link";
-    const body = `Here is your unique link to access the live poll:\n\n${item.link}\n\nPlease click this link and wait for the poll to begin.`;
+
+    // Shorten the URL for better user experience
+    const shortUrl = URLShortener.shorten(item.link);
+
+    // HTML email template
+    const htmlBody = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body>
+        <div style="text-align:center; margin:25px 0; font-family: Arial, Helvetica, sans-serif;">
+          <p style="margin-bottom: 20px; color: #333333;">Please submit your response using the button below:</p>
+          <a
+            href="${shortUrl}"
+            target="_blank"
+            rel="noopener"
+            style="display:inline-block;font-family:Arial, Helvetica, sans-serif;font-size:16px;font-weight:bold;color:#ffffff;text-decoration:none;text-align:center;background-color:#007bff;padding:12px 25px;border-radius:5px;border:1px solid #0056b3;mso-padding-alt:0px;mso-border-alt:none"
+          >
+            Click HERE to Submit Response
+          </a>
+        </div>
+
+        <p style="font-family:Arial, sans-serif; font-size:13px; color:#555555; text-align:center; margin-top:20px;">
+          If the button above doesn't work, copy and paste this link into your browser:
+          <br/>
+          <a href="${shortUrl}" target="_blank" style="color:#007bff; text-decoration:underline;">
+            ${shortUrl}
+          </a>
+        </p>
+      </body>
+      </html>
+    `;
+
     // send email to each student individually so we can track them
-    MailApp.sendEmail(item.email, subject, body);
+    MailApp.sendEmail({
+      to: item.email,
+      subject: subject,
+      htmlBody: htmlBody
+    });
   });
   return { success: true, count: links.length };
 }

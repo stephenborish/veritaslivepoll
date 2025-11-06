@@ -753,6 +753,33 @@ function getDriveFolder_() {
   }
 }
 
+/**
+ * One-time utility function to fix permissions on all existing images in the Drive folder.
+ * Run this from Apps Script editor: fixAllImagePermissions()
+ * This will make all existing images publicly accessible.
+ */
+function fixAllImagePermissions() {
+  return withErrorHandling(() => {
+    const folder = getDriveFolder_();
+    const files = folder.getFiles();
+    let count = 0;
+
+    while (files.hasNext()) {
+      const file = files.next();
+      try {
+        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        count++;
+        Logger.log('Fixed permissions for: ' + file.getName());
+      } catch (e) {
+        Logger.error('Failed to fix permissions for: ' + file.getName(), e);
+      }
+    }
+
+    Logger.log('Fixed permissions for ' + count + ' files');
+    return { success: true, filesFixed: count };
+  })();
+}
+
 function uploadImageToDrive(dataUrl, fileName) {
   return withErrorHandling(() => {
     // Validate inputs
@@ -792,6 +819,9 @@ function uploadImageToDrive(dataUrl, fileName) {
     const blob = Utilities.newBlob(Utilities.base64Decode(base64Data), mimeType, fileName);
     const file = folder.createFile(blob);
     const fileId = file.getId();
+
+    // CRITICAL: Make the file publicly accessible so thumbnail URLs work
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
 
     Logger.log('Image uploaded successfully', { fileName: fileName, fileId: fileId, size: sizeInBytes });
 

@@ -2145,12 +2145,13 @@
           return {
             text:opt.text||'',
             image:opt.imageURL||null,
-            imageURL:opt.imageURL||null
+            imageURL:opt.imageURL||null,
+            imageFileId:opt.imageFileId||null
           };
         });
         if(answers.length<2){
           while(answers.length<2){
-            answers.push({text:'',image:null,imageURL:null});
+            answers.push({text:'',image:null,imageURL:null,imageFileId:null});
           }
         }
         var correctIndex=0;
@@ -2163,6 +2164,7 @@
           questionText:question.questionText||'',
           questionImage:null,
           questionImageURL:question.questionImageURL||null,
+          questionImageFileId:question.questionImageFileId||null,
           answers:answers,
           correctAnswerIndex:correctIndex,
           timerSeconds:question.timerSeconds||null
@@ -2716,10 +2718,12 @@
       var payloadQuestions=sanitizedQuestions.map(function(question){
         var options=question.answers.map(function(answer){
           var imageUrl=answer.imageURL||null;
+          var imageFileId=answer.imageFileId||null;
           return{
             text:answer.text,
             image:imageUrl,
-            imageURL:imageUrl
+            imageURL:imageUrl,
+            imageFileId:imageFileId
           };
         });
         var correctIndex=question.correctAnswerIndex;
@@ -2728,10 +2732,12 @@
         }
         var correctAnswerText=options[correctIndex]?options[correctIndex].text:null;
         var imageUrl=question.questionImageURL||null;
+        var imageFileId=question.questionImageFileId||null;
         return{
           questionText:question.questionText,
           questionImage:imageUrl,
           questionImageURL:imageUrl,
+          questionImageFileId:imageFileId,
           options:options,
           correctAnswer:correctAnswerText,
           timerSeconds:question.timerSeconds||null

@@ -844,9 +844,11 @@ function getPollForEditing(pollId) {
     const questions = poll.questions.map(question => ({
       questionText: question.questionText || '',
       questionImageURL: question.questionImageURL || null,
+      questionImageFileId: question.questionImageFileId || null,
       options: (question.options || []).map(opt => ({
         text: opt.text || '',
-        imageURL: opt.imageURL || null
+        imageURL: opt.imageURL || null,
+        imageFileId: opt.imageFileId || null
       })),
       correctAnswer: question.correctAnswer || null,
       timerSeconds: question.timerSeconds || null

@@ -601,6 +601,16 @@
                     var shuffled = shuffle(data.options || []);
                     var letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
+                    // DEBUG: Log what we received
+                    console.log('=== STUDENT RECEIVED DATA ===');
+                    console.log('questionImageURL:', data.questionImageURL);
+                    console.log('options:', data.options);
+                    if (data.options && data.options.length > 0) {
+                        data.options.forEach(function(opt, idx) {
+                            console.log('  Option ' + idx + ':', 'text="' + opt.text + '", imageURL=' + opt.imageURL);
+                        });
+                    }
+
                     shuffled.forEach(function(option, index) {
                         var btn = document.createElement('button');
                         btn.type = 'button';

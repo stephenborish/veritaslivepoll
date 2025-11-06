@@ -1601,6 +1601,16 @@
       }
     }
 
+    // DEBUG: Log what teacher received
+    console.log('=== TEACHER RECEIVED DATA ===');
+    console.log('questionImageURL:', data.questionImageURL);
+    console.log('options:', data.options);
+    if(data.options && data.options.length>0){
+      data.options.forEach(function(opt,idx){
+        console.log('  Option '+idx+':', 'text="'+opt.text+'", imageURL='+opt.imageURL);
+      });
+    }
+
     // Update question display
     document.getElementById('live-question-info').textContent='Question '+(data.questionIndex+1)+' of '+data.totalQuestions;
     document.getElementById('live-question-text').textContent=data.questionText;

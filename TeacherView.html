@@ -2205,9 +2205,10 @@
       questionText:'',
       questionImage:null,
       questionImageURL:null,
+      questionImageFileId:null,
       answers:[
-        {text:'',image:null,imageURL:null},
-        {text:'',image:null,imageURL:null}
+        {text:'',image:null,imageURL:null,imageFileId:null},
+        {text:'',image:null,imageURL:null,imageFileId:null}
       ],
       correctAnswerIndex:0,
       timerSeconds:null
@@ -2411,6 +2412,7 @@
       removeQImgBtn.onclick=function(){
         questions[selectedQuestionIndex].questionImage=null;
         questions[selectedQuestionIndex].questionImageURL=null;
+        questions[selectedQuestionIndex].questionImageFileId=null;
         markPollDirty();
         renderQuestionWorkspace();
       };
@@ -2426,7 +2428,7 @@
     }
 
     document.getElementById('add-answer-btn').onclick=function(){
-      questions[selectedQuestionIndex].answers.push({text:'',image:null,imageURL:null});
+      questions[selectedQuestionIndex].answers.push({text:'',image:null,imageURL:null,imageFileId:null});
       markPollDirty();
       renderQuestionWorkspace();
     };
@@ -2488,6 +2490,7 @@
         var idx=parseInt(this.dataset.index,10);
         questions[selectedQuestionIndex].answers[idx].image=null;
         questions[selectedQuestionIndex].answers[idx].imageURL=null;
+        questions[selectedQuestionIndex].answers[idx].imageFileId=null;
         markPollDirty();
         renderQuestionWorkspace();
       };
@@ -2559,13 +2562,14 @@
     return baseUrl;
   }
 
-  // Helper to generate image proxy URL from fileId
+  // Helper to generate Google Drive thumbnail URL from fileId
   function generateProxyUrl(fileId){
     if(!fileId||typeof fileId!=='string'){
       return'';
     }
-    var baseUrl=getWebAppUrl();
-    return baseUrl+'?fn=image&id='+encodeURIComponent(fileId);
+    // Use Google Drive thumbnail API for direct image display
+    // sz=w1000 specifies max width of 1000px (adjustable)
+    return 'https://drive.google.com/thumbnail?id='+encodeURIComponent(fileId)+'&sz=w1000';
   }
 
   function getImagePreviewUrl(imageData,fileId){

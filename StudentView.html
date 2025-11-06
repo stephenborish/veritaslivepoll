@@ -23,6 +23,8 @@
         extend: {
           colors: {
             primary: "#002d6b",
+            "brand-blue": "#002d6b",
+            "brand-accent": "#0066cc",
             "brand-white": "#ffffff",
             "brand-light-gray": "#d9e0e7",
             "brand-dark-gray": "#242424",
@@ -38,6 +40,16 @@
             lg: "0.5rem",
             xl: "0.75rem",
             full: "9999px"
+          },
+          animation: {
+            'fade-in': 'fade-in 0.6s ease-out forwards',
+            'spin-slow': 'spin 3s linear infinite'
+          },
+          keyframes: {
+            'fade-in': {
+              'from': { opacity: '0', transform: 'translateY(10px)' },
+              'to': { opacity: '1', transform: 'translateY(0)' }
+            }
           }
         }
       }
@@ -45,52 +57,53 @@
   </script>
   <script>window.SESSION_TOKEN = '<?= sessionToken ?>';</script>
 </head>
-<body class="font-display bg-background-light dark:bg-background-dark text-brand-dark-gray dark:text-brand-white min-h-screen">
-  <!-- Header -->
-  <header class="flex shrink-0 items-center justify-between whitespace-nowrap border-b border-solid border-primary/80 bg-primary px-6 py-3 shadow-sm">
-    <div class="flex items-center gap-4">
-      <img alt="Malvern Prep Logo" class="h-10 w-auto" src="https://raw.githubusercontent.com/stephenborish/veritasassets/f0a824864d7d66637a13b822bff99fa6830e6123/mplogo.png"/>
+<body class="font-display bg-gradient-to-br from-brand-blue to-brand-accent text-white min-h-screen">
+  <!-- Header - Subtle overlay style -->
+  <header class="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-6 py-4">
+    <div class="flex items-center gap-3">
+      <img alt="Malvern Prep Logo" class="h-12 w-auto" src="https://raw.githubusercontent.com/stephenborish/veritasassets/main/Malvern%20Logo.png"/>
       <div class="flex flex-col">
-        <h1 class="text-brand-white text-lg font-bold leading-tight tracking-[-0.015em]">Veritas Live Poll</h1>
-        <p class="text-brand-white/80 text-sm">Student View</p>
+        <h1 class="text-white text-xl font-extrabold tracking-[0.15em] uppercase">Veritas</h1>
+        <p class="text-white/70 text-xs tracking-wide">Live Poll</p>
       </div>
     </div>
     <div id="loader" class="loader" style="display: none;">
-      <div class="h-6 w-6 animate-spin rounded-full border-2 border-brand-white/80 border-t-transparent"></div>
+      <div class="h-6 w-6 animate-spin rounded-full border-2 border-white/80 border-t-transparent"></div>
     </div>
   </header>
 
-  <main class="flex flex-col items-center justify-center p-6 space-y-4">
-    <div id="connectivity-banner" class="hidden w-full max-w-4xl items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-800 shadow-sm transition-all duration-200 dark:border-amber-500 dark:bg-amber-900/20 dark:text-amber-100">
+  <main class="flex flex-col items-center justify-center min-h-screen p-6 pt-24 space-y-4">
+    <div id="connectivity-banner" class="hidden fixed top-20 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-lg flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-800 shadow-lg transition-all duration-200 backdrop-blur-sm">
       <span id="connectivity-icon" class="material-symbols-outlined text-2xl">sync</span>
-      <div class="flex flex-col text-left">
-        <span id="connectivity-message" class="text-sm font-semibold">Reconnecting… your poll data’s catching up.</span>
-        <span id="connectivity-submessage" class="text-xs text-amber-700/80 dark:text-amber-200/80 opacity-0"></span>
+      <div class="flex flex-col text-left flex-1">
+        <span id="connectivity-message" class="text-sm font-semibold">Reconnecting… your poll data's catching up.</span>
+        <span id="connectivity-submessage" class="text-xs text-amber-700/80 opacity-0"></span>
       </div>
     </div>
     <!-- Entry Screen -->
-    <div id="entry-screen" class="container max-w-3xl mx-auto text-center py-12">
-      <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-8 shadow-lg">
-        <span class="material-symbols-outlined text-6xl text-primary dark:text-brand-white mb-4 inline-block">ballot</span>
-        <h1 class="text-primary dark:text-brand-white text-4xl font-bold mb-4">Live Poll</h1>
-        <p class="text-brand-dark-gray/80 dark:text-brand-white/80 text-lg mb-6 leading-relaxed">
-          Welcome to Veritas Live Poll! Click <strong>"Begin Session"</strong> to start participating.
+    <div id="entry-screen" class="w-full max-w-3xl mx-auto text-center animate-fade-in">
+      <div class="bg-black/20 backdrop-blur-lg rounded-xl shadow-2xl border border-white/10 p-8 sm:p-12">
+        <img src="https://raw.githubusercontent.com/stephenborish/veritasassets/main/Malvern%20Logo.png" alt="Malvern Prep Logo" class="h-16 w-auto mx-auto mb-4" />
+        <div class="text-3xl font-extrabold tracking-[0.2em] uppercase mb-2">VERITAS</div>
+        <h1 class="text-4xl font-bold mb-8 text-white">Live Poll</h1>
+        <p class="text-white/80 text-lg mb-8 leading-relaxed">
+          Welcome! Click <strong>"Begin Session"</strong> to start participating in the poll.
         </p>
 
         <!-- Important Security Notice -->
-        <div class="bg-red-50 dark:bg-red-900/20 border-2 border-red-500 dark:border-red-700 rounded-lg p-6 mb-8">
+        <div class="bg-white/10 border border-white/20 rounded-lg p-6 mb-8 text-left">
           <div class="flex items-start gap-3 mb-3">
-            <span class="material-symbols-outlined text-3xl text-red-600 dark:text-red-400 flex-shrink-0">warning</span>
-            <h4 class="text-red-600 dark:text-red-400 text-xl font-bold text-left">Important Security Notice</h4>
+            <span class="material-symbols-outlined text-3xl text-yellow-300 flex-shrink-0">warning</span>
+            <h4 class="text-yellow-300 text-xl font-bold">Important Security Notice</h4>
           </div>
-          <p class="text-red-800 dark:text-red-300 text-base text-left leading-relaxed">
+          <p class="text-white/90 text-base leading-relaxed">
             This poll must be completed in this tab.
             <strong>Do not switch tabs, open other windows, or exit fullscreen mode</strong>,
-            or your session will be permanently locked and you will need your teacher to unlock you.
+            or your session will be locked and you will need your teacher to unlock you.
           </p>
         </div>
 
-        <button id="start-session-btn" class="flex items-center justify-center gap-3 mx-auto px-12 py-4 rounded-full bg-primary text-brand-white text-xl font-bold hover:bg-primary/90 transition-colors shadow-lg hover:shadow-xl">
+        <button id="start-session-btn" class="w-full max-w-md mx-auto flex items-center justify-center gap-3 px-12 py-4 rounded-lg bg-green-500 text-white text-xl font-bold hover:bg-green-600 transition-transform duration-300 hover:scale-105 shadow-lg">
           <span class="material-symbols-outlined text-2xl">play_circle</span>
           <span>Begin Session</span>
         </button>
@@ -98,23 +111,25 @@
     </div>
 
     <!-- Student App Container -->
-    <div class="container max-w-6xl mx-auto" id="student-container" style="display: none;">
-      <div id="student-loader" class="text-center py-12" style="display: block;">
-        <div class="h-16 w-16 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4"></div>
-        <p class="text-brand-dark-gray/60 dark:text-brand-white/60 text-lg">Connecting to poll...</p>
+    <div class="w-full max-w-6xl mx-auto" id="student-container" style="display: none;">
+      <div id="student-loader" class="text-center py-12 animate-fade-in" style="display: block;">
+        <img src="https://raw.githubusercontent.com/stephenborish/veritasassets/main/Malvern%20Logo.png" alt="Malvern Prep" class="h-16 mx-auto mb-4" />
+        <div class="text-3xl font-extrabold tracking-[0.2em] uppercase text-white mb-8">VERITAS</div>
+        <div class="h-16 w-16 animate-spin rounded-full border-4 border-white/30 border-t-white mx-auto mb-4"></div>
+        <p class="text-white/90 text-lg">Preparing your secure session...</p>
       </div>
 
       <!-- Status Container -->
-      <div id="status-container" class="text-center py-12" style="display: none;">
-        <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-8 shadow-lg">
-          <span class="material-symbols-outlined text-6xl text-primary dark:text-brand-white mb-4 inline-block">schedule</span>
-          <h2 id="status-message" class="text-brand-dark-gray dark:text-brand-white text-2xl font-semibold">Connecting to poll...</h2>
-          <p id="status-submessage" class="text-brand-dark-gray/70 dark:text-brand-white/70 text-lg mt-4" style="display: none;"></p>
-          <div id="resume-controls" class="mt-6 space-y-3" style="display: none;">
-            <p class="text-brand-dark-gray/80 dark:text-brand-white/80 text-base leading-relaxed">
+      <div id="status-container" class="text-center py-12 animate-fade-in" style="display: none;">
+        <div class="bg-black/20 backdrop-blur-lg rounded-xl border border-white/10 p-8 sm:p-12 shadow-2xl max-w-3xl mx-auto">
+          <span class="material-symbols-outlined text-6xl text-white mb-4 inline-block">schedule</span>
+          <h2 id="status-message" class="text-white text-2xl font-semibold">Connecting to poll...</h2>
+          <p id="status-submessage" class="text-white/70 text-lg mt-4" style="display: none;"></p>
+          <div id="resume-controls" class="mt-8 space-y-3" style="display: none;">
+            <p class="text-white/90 text-base leading-relaxed">
               Click below to return to fullscreen and resume the poll.
             </p>
-            <button id="resume-session-btn" class="mx-auto flex items-center justify-center gap-2 px-8 py-3 rounded-full bg-primary text-brand-white text-lg font-semibold hover:bg-primary/90 transition-colors shadow">
+            <button id="resume-session-btn" class="mx-auto flex items-center justify-center gap-2 px-8 py-4 rounded-lg bg-green-500 text-white text-lg font-bold hover:bg-green-600 transition-transform duration-300 hover:scale-105 shadow-lg">
               <span class="material-symbols-outlined text-xl">fullscreen</span>
               <span>Resume Poll</span>
             </button>
@@ -123,16 +138,16 @@
       </div>
 
       <!-- Question Container -->
-      <div id="question-container" class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border-2 border-primary/20 dark:border-primary/40 shadow-2xl" style="display: none;">
+      <div id="question-container" class="bg-black/20 backdrop-blur-lg rounded-xl border border-white/10 shadow-2xl animate-fade-in" style="display: none;">
         <!-- Question Header -->
-        <div class="bg-primary/5 dark:bg-primary/10 px-6 py-4 border-b-2 border-primary/20">
-          <p id="question-number" class="text-sm font-bold text-primary dark:text-brand-white/80 uppercase tracking-wide"></p>
+        <div class="bg-white/5 px-6 py-4 border-b border-white/10">
+          <p id="question-number" class="text-sm font-bold text-white/90 uppercase tracking-wide"></p>
         </div>
 
         <!-- Question Content -->
         <div id="question-content" class="p-8">
-          <img id="question-image" src="" alt="Question" class="max-w-full max-h-[500px] rounded-xl mx-auto mb-8 shadow-xl border-2 border-gray-200 dark:border-gray-700" referrerpolicy="no-referrer" onerror="this.style.display='none';" style="display: none;" />
-          <h2 id="question-text" class="font-serif text-brand-dark-gray dark:text-brand-white text-lg font-normal leading-relaxed text-left mb-8"></h2>
+          <img id="question-image" src="" alt="Question" class="max-w-full max-h-[500px] rounded-xl mx-auto mb-8 shadow-xl border-2 border-white/20" referrerpolicy="no-referrer" onerror="this.style.display='none';" style="display: none;" />
+          <h2 id="question-text" class="font-serif text-white text-lg font-normal leading-relaxed text-left mb-8"></h2>
         </div>
 
         <!-- Answer Options -->
@@ -180,8 +195,8 @@
         var recoveringFromOutage = false;
         var connectivityHideTimer = null;
         var lastAdvisedInterval = defaultPollInterval;
-        var optionBaseClass = 'answer-option w-full p-5 rounded-xl border-2 border-primary/20 bg-brand-white dark:bg-brand-dark-gray/30 text-left hover:border-primary/60 hover:bg-primary/5 dark:hover:bg-primary/15 transition-all shadow-sm';
-        var optionSelectedClass = 'answer-option w-full p-5 rounded-xl border-2 border-primary bg-primary/10 dark:bg-primary/25 text-left shadow-md ring-2 ring-primary/30';
+        var optionBaseClass = 'answer-option w-full p-5 rounded-xl border-2 border-white/20 bg-white/5 backdrop-blur-sm text-left hover:border-white/60 hover:bg-white/10 transition-all shadow-sm';
+        var optionSelectedClass = 'answer-option w-full p-5 rounded-xl border-2 border-green-400 bg-green-500/20 backdrop-blur-sm text-left shadow-md ring-2 ring-green-400/50';
 
         var connectivityThemes = {
             connecting: ['border-amber-300', 'bg-amber-50', 'text-amber-800', 'dark:border-amber-500', 'dark:bg-amber-900/20', 'dark:text-amber-100'],
@@ -619,15 +634,15 @@
 
                         var letter = letters[index] || (index + 1).toString();
                         var content = '<div class="flex items-start gap-4">';
-                        content += '<div class="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center border border-primary/30">';
-                        content += '<span class="text-primary dark:text-brand-white font-semibold text-lg">' + letter + '</span>';
+                        content += '<div class="flex-shrink-0 w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center border border-white/30">';
+                        content += '<span class="text-white font-semibold text-lg">' + letter + '</span>';
                         content += '</div>';
                         content += '<div class="flex-grow flex flex-col gap-3 min-w-0">';
                         if (option.imageURL) {
-                            content += '<img src="' + escapeHtml(option.imageURL) + '" alt="Answer ' + letter + '" class="max-w-full max-h-[220px] rounded-lg object-contain border border-brand-light-gray/70 dark:border-brand-dark-gray/60" referrerpolicy="no-referrer">';
+                            content += '<img src="' + escapeHtml(option.imageURL) + '" alt="Answer ' + letter + '" class="max-w-full max-h-[220px] rounded-lg object-contain border border-white/30" referrerpolicy="no-referrer">';
                         }
                         if (option.text) {
-                            content += '<p class="font-serif text-brand-dark-gray dark:text-brand-white text-lg font-normal leading-relaxed">' + escapeHtml(option.text) + '</p>';
+                            content += '<p class="font-serif text-white text-lg font-normal leading-relaxed">' + escapeHtml(option.text) + '</p>';
                         }
                         content += '</div></div>';
 
@@ -652,16 +667,16 @@
                     questionContainer.style.display = 'none';
                     statusContainer.style.display = 'block';
                     statusMessage.textContent = data.hasSubmitted ? (data.message || 'Answer received — nice work.') : 'Answer received — nice work.';
-                    statusMessage.className = 'text-green-600 dark:text-green-400 text-2xl font-semibold';
+                    statusMessage.className = 'text-green-300 text-2xl font-semibold';
                     if (statusSubMessage) {
                         statusSubMessage.textContent = 'Waiting for another question…';
                         statusSubMessage.style.display = 'block';
-                        statusSubMessage.className = 'text-brand-dark-gray/70 dark:text-brand-white/70 text-lg mt-4';
+                        statusSubMessage.className = 'text-white/70 text-lg mt-4';
                     }
                     var iconEl = statusContainer.querySelector('.material-symbols-outlined');
                     if (iconEl) {
                         iconEl.textContent = 'check_circle';
-                        iconEl.className = 'material-symbols-outlined text-6xl text-green-600 dark:text-green-400 mb-4 inline-block';
+                        iconEl.className = 'material-symbols-outlined text-6xl text-green-300 mb-4 inline-block';
                     }
                 } else {
                     questionContainer.style.display = 'block';
@@ -672,52 +687,52 @@
                 questionContainer.style.display = 'none';
                 statusContainer.style.display = 'block';
                 var statusIcon = 'schedule';
-                var statusClass = 'text-primary';
-                var statusTextClass = 'text-brand-dark-gray dark:text-brand-white text-2xl font-semibold';
+                var statusClass = 'text-white';
+                var statusTextClass = 'text-white text-2xl font-semibold';
 
                 if (data.status === 'WAITING') {
                     if (data.hasSubmitted) {
                         hasAnsweredCurrent = true;
                         pendingSubmission = false;
                         statusMessage.textContent = data.message || 'Answer received — nice work.';
-                        statusTextClass = 'text-green-600 dark:text-green-400 text-2xl font-semibold';
+                        statusTextClass = 'text-green-300 text-2xl font-semibold';
                         statusIcon = 'check_circle';
-                        statusClass = 'text-green-600 dark:text-green-400';
+                        statusClass = 'text-green-300';
                         if (statusSubMessage) {
                             statusSubMessage.textContent = 'Waiting for another question…';
                             statusSubMessage.style.display = 'block';
-                            statusSubMessage.className = 'text-brand-dark-gray/70 dark:text-brand-white/70 text-lg mt-4';
+                            statusSubMessage.className = 'text-white/70 text-lg mt-4';
                         }
                     } else {
                         hasAnsweredCurrent = false;
-                        statusMessage.textContent = data.message || 'Hang tight — your teacher’s loading the next challenge.';
+                        statusMessage.textContent = data.message || 'Hang tight — your teacher's loading the next challenge.';
                         statusIcon = 'hourglass_top';
-                        statusClass = 'text-primary';
+                        statusClass = 'text-white';
                     }
                 } else if (data.status === 'NOT_ENROLLED') {
                     hasAnsweredCurrent = false;
                     statusMessage.textContent = data.message || "You are not enrolled.";
-                    statusTextClass = 'text-red-600 dark:text-red-400 text-2xl font-bold';
+                    statusTextClass = 'text-red-300 text-2xl font-bold';
                     statusIcon = 'error';
-                    statusClass = 'text-red-600 dark:text-red-400';
+                    statusClass = 'text-red-300';
                     stopPolling();
                 } else if (data.status === 'ERROR') {
                     hasAnsweredCurrent = false;
                     statusMessage.textContent = data.message || "We hit a snag. Try again soon.";
-                    statusTextClass = 'text-red-600 dark:text-red-400 text-2xl font-bold';
+                    statusTextClass = 'text-red-300 text-2xl font-bold';
                     statusIcon = 'error';
-                    statusClass = 'text-red-600 dark:text-red-400';
+                    statusClass = 'text-red-300';
                 } else if (data.status === 'CLOSED') {
                     hasAnsweredCurrent = false;
-                    statusMessage.textContent = data.message || 'That’s a wrap! You just finished the poll — nicely done.';
-                    statusTextClass = 'text-primary dark:text-brand-white text-2xl font-semibold';
+                    statusMessage.textContent = data.message || 'That's a wrap! You just finished the poll — nicely done.';
+                    statusTextClass = 'text-white text-2xl font-semibold';
                     statusIcon = 'emoji_events';
-                    statusClass = 'text-primary';
+                    statusClass = 'text-yellow-300';
                 } else {
                     hasAnsweredCurrent = false;
-                    statusMessage.textContent = data.message || 'Hang tight — your teacher’s loading the next challenge.';
+                    statusMessage.textContent = data.message || 'Hang tight — your teacher's loading the next challenge.';
                     statusIcon = 'hourglass_top';
-                    statusClass = 'text-primary';
+                    statusClass = 'text-white';
                 }
                 statusMessage.className = statusTextClass;
                 var iconEl = statusContainer.querySelector('.material-symbols-outlined');
@@ -750,14 +765,14 @@
             statusContainer.style.display = 'block';
             questionContainer.style.display = 'none';
             statusMessage.textContent = 'Transmitting your genius response…';
-            statusMessage.className = 'text-primary dark:text-brand-white text-2xl font-semibold';
+            statusMessage.className = 'text-white text-2xl font-semibold';
             google.script.run
                 .withSuccessHandler(function(response) {
                     if (!response.success) {
                         hasAnsweredCurrent = false;
                         pendingSubmission = false;
                         statusMessage.textContent = response.error || 'We hit a hiccup. Try again?';
-                        statusMessage.className = 'text-red-600 dark:text-red-400 text-2xl font-semibold';
+                        statusMessage.className = 'text-red-300 text-2xl font-semibold';
                         if (statusSubMessage) {
                             statusSubMessage.style.display = 'none';
                             statusSubMessage.textContent = '';
@@ -775,11 +790,11 @@
                         }, 2000);
                     } else {
                         statusMessage.textContent = 'Answer received — nice work.';
-                        statusMessage.className = 'text-green-600 dark:text-green-400 text-2xl font-semibold';
+                        statusMessage.className = 'text-green-300 text-2xl font-semibold';
                         if (statusSubMessage) {
                             statusSubMessage.textContent = 'Waiting for another question…';
                             statusSubMessage.style.display = 'block';
-                            statusSubMessage.className = 'text-brand-dark-gray/70 dark:text-brand-white/70 text-lg mt-4';
+                            statusSubMessage.className = 'text-white/70 text-lg mt-4';
                         }
                     }
                 })
@@ -825,13 +840,13 @@
                 statusSubMessage.textContent = '';
             }
 
-            statusMessage.textContent = 'Oops — you left fullscreen. Your poll’s been paused until your teacher lets you back in.';
-            statusMessage.className = 'text-red-600 dark:text-red-400 text-xl font-semibold';
+            statusMessage.textContent = 'Oops — you left fullscreen. Your poll's been paused until your teacher lets you back in.';
+            statusMessage.className = 'text-red-300 text-xl font-semibold';
 
             var iconEl = statusContainer.querySelector('.material-symbols-outlined');
             if (iconEl) {
                 iconEl.textContent = 'lock';
-                iconEl.className = 'material-symbols-outlined text-6xl text-red-600 dark:text-red-400 mb-4 inline-block';
+                iconEl.className = 'material-symbols-outlined text-6xl text-red-300 mb-4 inline-block';
             }
             if (resumeControls) {
                 resumeControls.style.display = 'none';
@@ -854,13 +869,13 @@
             }
 
             // Use exact text from requirements
-            statusMessage.textContent = 'You’re cleared for re-entry. Go fullscreen to get back in the game.';
-            statusMessage.className = 'text-primary dark:text-brand-white text-xl font-semibold';
+            statusMessage.textContent = 'You're cleared for re-entry. Go fullscreen to get back in the game.';
+            statusMessage.className = 'text-white text-xl font-semibold';
 
             var iconEl = statusContainer.querySelector('.material-symbols-outlined');
             if (iconEl) {
                 iconEl.textContent = 'fullscreen';
-                iconEl.className = 'material-symbols-outlined text-6xl text-primary mb-4 inline-block';
+                iconEl.className = 'material-symbols-outlined text-6xl text-green-300 mb-4 inline-block';
             }
 
             if (resumeControls) {
@@ -882,12 +897,12 @@
             }
 
             statusMessage.textContent = 'An error occurred: ' + (error.message || error);
-            statusMessage.className = 'text-red-600 dark:text-red-400 text-2xl font-bold';
+            statusMessage.className = 'text-yellow-300 text-2xl font-bold';
 
             var iconEl = statusContainer.querySelector('.material-symbols-outlined');
             if (iconEl) {
                 iconEl.textContent = 'error';
-                iconEl.className = 'material-symbols-outlined text-6xl text-red-600 dark:text-red-400 mb-4 inline-block';
+                iconEl.className = 'material-symbols-outlined text-6xl text-yellow-300 mb-4 inline-block';
             }
         }
     })();

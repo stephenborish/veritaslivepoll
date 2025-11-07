@@ -674,10 +674,22 @@ function getPollEditorHtml(className) {
 // ONE-TIME SETUP
 // =============================================================================
 
+function safeUiAlert_(message) {
+  if (typeof SpreadsheetApp.getUi === 'function') {
+    try {
+      SpreadsheetApp.getUi().alert(message);
+      return;
+    } catch (err) {
+      Logger.log('UI alert unavailable: ' + err.message);
+    }
+  }
+  Logger.log(message);
+}
+
 function setupSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) {
-    SpreadsheetApp.getUi().alert("This script must be bound to a Google Sheet.");
+    safeUiAlert_("This script must be bound to a Google Sheet.");
     return;
   }
   
@@ -720,7 +732,7 @@ function setupSheet() {
     sheet.setFrozenRows(1);
   });
   
-  SpreadsheetApp.getUi().alert("Sheet setup complete! All tabs configured with headers.");
+  safeUiAlert_("Sheet setup complete! All tabs configured with headers.");
 }
 
 // =============================================================================

@@ -62,9 +62,197 @@
   </script>
   <script>window.SESSION_TOKEN = '<?= sessionToken ?>';</script>
   <style>
+    .student-card {
+      width: min(75vw, 900px);
+      margin: 32px auto;
+      background: #ffffff;
+      color: #111111;
+      border-radius: 12px;
+      border-top: 4px solid #c5a05a;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+    }
+
+    .student-card.results-stage,
+    .student-card.showing-results {
+      background: #ffffff;
+    }
+
+    .student-card-header {
+      padding: 16px 28px 12px;
+      border-bottom: 1px solid rgba(18, 56, 93, 0.12);
+      background: linear-gradient(135deg, rgba(18, 56, 93, 0.06), rgba(197, 160, 90, 0.08));
+    }
+
+    .student-question-number {
+      font-size: 0.85rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #12385d;
+      font-weight: 600;
+    }
+
+    .student-card-body {
+      padding: 28px 28px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .student-card-options {
+      padding: 12px 28px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .student-pre-live-card {
+      max-width: 720px;
+      text-align: center;
+    }
+
+    .student-pre-live-body {
+      align-items: center;
+      gap: 18px;
+    }
+
+    .student-pre-live-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: rgba(18, 56, 93, 0.1);
+      color: #12385d;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.4rem;
+      margin: 0 auto;
+    }
+
+    .student-pre-live-footer {
+      align-items: center;
+      gap: 16px;
+    }
+
+    .student-pre-live-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 600;
+      letter-spacing: 0.28em;
+      color: #12385d;
+      font-size: 0.75rem;
+    }
+
+    .student-pre-live-label {
+      font-weight: 700;
+    }
+
+    .student-pre-live-pips {
+      display: inline-flex;
+      gap: 6px;
+    }
+
+    .student-pre-live-pips .pip {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(18, 56, 93, 0.35);
+      animation: pulse-dot 1.2s ease-in-out infinite;
+    }
+
+    .student-pre-live-reconnect {
+      font-size: 0.9rem;
+      color: #c62828;
+      margin: 0;
+    }
+
+    .student-stem {
+      font-size: 1.2rem;
+      line-height: 1.6;
+      font-weight: 400;
+      color: #111111;
+      margin: 0;
+      text-align: left;
+    }
+
+    .student-subline {
+      font-size: 0.95rem;
+      color: rgba(17, 17, 17, 0.72);
+      margin: 0;
+    }
+
+    .student-no-responses {
+      font-size: 0.95rem;
+      font-style: italic;
+      color: #12385d;
+      text-align: left;
+      margin: 0;
+    }
+
+    .student-choices {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .student-choices li {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .student-card img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 12px;
+      border: 1px solid rgba(18, 56, 93, 0.12);
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+    }
+
+    .answer-option {
+      position: relative;
+      width: 100%;
+      text-align: left;
+      display: flex;
+      align-items: flex-start;
+      gap: 18px;
+      background: #ffffff;
+      color: #111111;
+      border-radius: 12px;
+      border: 1px solid rgba(18, 56, 93, 0.18);
+      padding: 20px 22px;
+      box-shadow: 0 2px 8px rgba(18, 56, 93, 0.08);
+      transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease, background-color 200ms ease;
+      cursor: pointer;
+      appearance: none;
+    }
+
+    .answer-option:hover {
+      border-color: #12385d;
+      box-shadow: 0 6px 18px rgba(18, 56, 93, 0.16);
+      transform: translateY(-1px);
+    }
+
+    .answer-option:focus-visible {
+      outline: 3px solid rgba(18, 56, 93, 0.4);
+      outline-offset: 2px;
+    }
+
     .answer-option.result-readonly {
       pointer-events: none;
       cursor: default !important;
+      box-shadow: 0 2px 6px rgba(18, 56, 93, 0.05);
+    }
+
+    .answer-option.answer-option-disabled {
+      opacity: 0.55;
+      pointer-events: none;
+      cursor: default;
+      box-shadow: 0 2px 6px rgba(18, 56, 93, 0.05);
     }
 
     .answer-option .result-indicator {
@@ -76,11 +264,11 @@
       border-radius: 9999px;
       font-size: 0.95rem;
       font-weight: 700;
-      background-color: rgba(255, 255, 255, 0.15);
-      color: #ffffff;
+      background-color: rgba(18, 56, 93, 0.08);
+      color: #12385d;
       opacity: 0;
       transform: scale(0.85);
-      transition: opacity 220ms ease, transform 220ms ease;
+      transition: opacity 220ms ease, transform 220ms ease, background-color 220ms ease, color 220ms ease;
     }
 
     #question-container.showing-results .answer-option .result-indicator {
@@ -89,31 +277,73 @@
     }
 
     .answer-option .letter-badge {
-      transition: background-color 220ms ease, border-color 220ms ease, color 220ms ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background-color: rgba(18, 56, 93, 0.08);
+      border: 1px solid rgba(18, 56, 93, 0.22);
+      color: #12385d;
+      font-weight: 600;
+      font-size: 1.05rem;
+      transition: background-color 220ms ease, border-color 220ms ease, color 220ms ease, transform 220ms ease;
+    }
+
+    .answer-option .option-leading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding-top: 4px;
+    }
+
+    .answer-option .option-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .answer-option .option-text {
+      color: #1c1c1c;
+      font-size: 1.05rem;
+      line-height: 1.6;
+      font-family: "Inter", sans-serif;
+    }
+
+    .answer-option .option-image {
+      max-width: 100%;
+      height: auto;
+      border-radius: 12px;
+      border: 1px solid rgba(18, 56, 93, 0.16);
+      box-shadow: 0 3px 10px rgba(18, 56, 93, 0.12);
     }
 
     .answer-option .result-ribbon {
-      width: 66px;
-      font-size: 0.75rem;
-      padding: 4px 0;
-      position: absolute;
-      right: -26px;
-      top: -12px;
-      text-align: center;
-      border-radius: 9999px;
-      transform: rotate(18deg);
-      background-color: #ff9800;
-      color: #ffffff;
+      font-size: 0.9rem;
       font-weight: 600;
-      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25);
+      align-self: flex-end;
+      margin-top: auto;
+      color: #12385d;
       opacity: 0;
       visibility: hidden;
-      transition: opacity 240ms ease;
+      transition: opacity 220ms ease;
     }
 
     #question-container.showing-results .result-ribbon {
       opacity: 1;
       visibility: visible;
+    }
+
+    .answer-option.result-correct .result-ribbon {
+      color: #1b5e20;
+    }
+
+    .answer-option.result-incorrect .result-ribbon {
+      color: #4b5563;
     }
 
     #question-container.results-stage .answer-option {
@@ -122,52 +352,363 @@
     }
 
     #question-container.showing-results .answer-option {
-      transition: background-color 240ms ease, border-color 240ms ease, color 240ms ease, filter 240ms ease;
+      transition: background-color 240ms ease, border-color 240ms ease, color 240ms ease, box-shadow 240ms ease;
+    }
+
+    .answer-option.answer-option-selected {
+      border-color: #12385d;
+      box-shadow: 0 0 0 3px rgba(18, 56, 93, 0.2);
+    }
+
+    .answer-option.answer-option-selected .letter-badge {
+      background-color: #12385d;
+      border-color: #12385d;
+      color: #ffffff;
+      transform: scale(1.02);
+    }
+
+    .answer-option.answer-option-selected .option-text {
+      color: #12385d;
     }
 
     .answer-option.result-correct {
-      background-color: rgba(34, 197, 94, 0.22) !important;
-      border-color: rgba(34, 197, 94, 0.75) !important;
-      color: #f6fff4 !important;
+      background-color: #e8f5ec !important;
+      border-color: #2e7d32 !important;
+      box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.2);
     }
 
     .answer-option.result-correct .letter-badge {
-      background-color: rgba(34, 197, 94, 0.35) !important;
-      border-color: rgba(34, 197, 94, 0.8) !important;
+      background-color: rgba(46, 125, 50, 0.18) !important;
+      border-color: rgba(46, 125, 50, 0.4) !important;
+      color: #1b5e20 !important;
     }
 
     .answer-option.result-correct .option-text {
-      color: #f6fff4 !important;
+      color: #1b5e20 !important;
     }
 
     .answer-option.result-correct .result-indicator {
-      background-color: rgba(34, 197, 94, 0.55);
-      color: #f6fff4;
+      background-color: rgba(46, 125, 50, 0.2);
+      color: #1b5e20;
     }
 
     .answer-option.result-incorrect {
-      background-color: rgba(239, 68, 68, 0.12) !important;
-      border-color: rgba(248, 113, 113, 0.45) !important;
-      color: rgba(255, 255, 255, 0.85) !important;
-      filter: saturate(0.8);
+      background-color: #f5f6f8 !important;
+      border-color: rgba(17, 24, 39, 0.12) !important;
+      color: #1c1c1c !important;
+      box-shadow: none;
     }
 
     .answer-option.result-incorrect .letter-badge {
-      background-color: rgba(255, 255, 255, 0.12) !important;
-      border-color: rgba(248, 113, 113, 0.35) !important;
+      background-color: rgba(18, 56, 93, 0.06) !important;
+      border-color: rgba(18, 56, 93, 0.16) !important;
+      color: #12385d !important;
     }
 
-    .answer-option.result-incorrect .option-text {
-      color: rgba(255, 255, 255, 0.87) !important;
+    .answer-option.result-incorrect .result-indicator {
+      background-color: rgba(244, 67, 54, 0.12);
+      color: #c62828;
     }
 
-    .answer-option.result-incorrect.result-your-choice .result-indicator {
-      background-color: rgba(239, 68, 68, 0.45);
+    .answer-option.result-incorrect.result-your-choice {
+      border-color: rgba(198, 40, 40, 0.45) !important;
+      box-shadow: 0 0 0 2px rgba(198, 40, 40, 0.15);
+    }
+
+    .answer-option.result-your-choice .option-text {
+      color: #c62828 !important;
+    }
+
+    .prevent-select {
+      -webkit-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    .prevent-select button,
+    .prevent-select .material-symbols-outlined {
+      -webkit-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+
+    .student-card img,
+    .student-card video,
+    .student-card figure {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .veritas-modal-root {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .veritas-modal-root.is-active {
+      display: flex;
+    }
+
+    .veritas-modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(9, 17, 34, 0.55);
+      backdrop-filter: blur(3px);
+    }
+
+    .veritas-modal-dialog {
+      position: relative;
+      z-index: 1;
+      width: min(520px, 92vw);
+      border-radius: 16px;
+      background: #ffffff;
+      border-top: 4px solid #c5a05a;
+      box-shadow: 0 24px 48px rgba(9, 17, 34, 0.25);
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      animation: veritas-modal-in 220ms ease;
+    }
+
+    .veritas-modal-header h2 {
+      margin: 0;
+      font-size: 1.25rem;
+      color: #12385d;
+      font-weight: 700;
+    }
+
+    .veritas-modal-body {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      color: #1c1c1c;
+      font-size: 0.98rem;
+      line-height: 1.55;
+    }
+
+    .veritas-modal-subtext {
+      color: #4b5563;
+      font-size: 0.85rem;
+    }
+
+    .veritas-modal-input {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .veritas-modal-input input {
+      border-radius: 10px;
+      border: 1px solid rgba(18, 56, 93, 0.28);
+      padding: 10px 12px;
+      font-size: 0.95rem;
+      transition: border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .veritas-modal-input input:focus-visible {
+      outline: none;
+      border-color: #12385d;
+      box-shadow: 0 0 0 3px rgba(18, 56, 93, 0.2);
+    }
+
+    .veritas-modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .veritas-modal-button {
+      border: none;
+      border-radius: 999px;
+      padding: 10px 22px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: transform 140ms ease, box-shadow 140ms ease, background-color 140ms ease, color 140ms ease;
+    }
+
+    .veritas-modal-button.primary {
+      background: #12385d;
       color: #ffffff;
+      box-shadow: 0 8px 20px rgba(18, 56, 93, 0.25);
     }
 
-    .answer-option.result-your-choice {
-      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25);
+    .veritas-modal-button.primary:hover:not([disabled]) {
+      background: #0f2d4a;
+      transform: translateY(-1px);
+    }
+
+    .veritas-modal-button.secondary {
+      background: transparent;
+      color: #12385d;
+      border: 1px solid rgba(18, 56, 93, 0.3);
+    }
+
+    .veritas-modal-button.secondary:hover:not([disabled]) {
+      background: rgba(18, 56, 93, 0.08);
+    }
+
+    .veritas-modal-button.destructive {
+      background: #c62828;
+      color: #ffffff;
+      box-shadow: 0 8px 18px rgba(198, 40, 40, 0.25);
+    }
+
+    .veritas-modal-button.destructive:hover:not([disabled]) {
+      background: #a61b1b;
+    }
+
+    .veritas-modal-button[disabled] {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .veritas-modal-spinner {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      border: 2px solid rgba(255, 255, 255, 0.6);
+      border-top-color: transparent;
+      animation: veritas-spin 0.7s linear infinite;
+      display: none;
+      margin-left: 10px;
+    }
+
+    .veritas-modal-button.loading .veritas-modal-spinner {
+      display: inline-block;
+    }
+
+    .veritas-modal-button.loading span {
+      opacity: 0.75;
+    }
+
+    .dark .veritas-modal-dialog {
+      background: rgba(15, 23, 35, 0.96);
+      color: #e2e8f0;
+      border-top-color: #c5a05a;
+      box-shadow: 0 24px 48px rgba(2, 6, 23, 0.55);
+    }
+
+    .dark .veritas-modal-header h2 {
+      color: #f8fafc;
+    }
+
+    .dark .veritas-modal-body {
+      color: #f1f5f9;
+    }
+
+    .dark .veritas-modal-subtext {
+      color: #cbd5f5;
+    }
+
+    .dark .veritas-modal-input input {
+      background: rgba(15, 23, 42, 0.7);
+      border-color: rgba(148, 163, 184, 0.4);
+      color: #f8fafc;
+    }
+
+    .dark .veritas-modal-input input:focus-visible {
+      border-color: #93c5fd;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35);
+    }
+
+    .dark .veritas-modal-button.secondary {
+      color: #e2e8f0;
+      border-color: rgba(148, 163, 184, 0.4);
+    }
+
+    .dark .veritas-modal-button.secondary:hover:not([disabled]) {
+      background: rgba(148, 163, 184, 0.16);
+    }
+
+    .dark .veritas-modal-button.primary {
+      background: #234776;
+    }
+
+    .dark .veritas-modal-button.primary:hover:not([disabled]) {
+      background: #1a3456;
+    }
+
+    .dark .veritas-modal-backdrop {
+      background: rgba(2, 6, 23, 0.7);
+      backdrop-filter: blur(4px);
+    }
+
+    body.veritas-modal-open {
+      overflow: hidden;
+    }
+
+    @keyframes veritas-modal-in {
+      from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes veritas-spin {
+      from {
+        transform: rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .student-card {
+        width: min(92vw, 360px);
+        margin: 24px auto;
+      }
+
+      .student-card-header {
+        padding: 14px 20px 10px;
+      }
+
+      .student-card-body {
+        padding: 22px 20px 8px;
+      }
+
+      .student-card-options {
+        padding: 8px 20px 22px;
+        gap: 16px;
+      }
+
+      .answer-option {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .answer-option .letter-badge {
+        width: 40px;
+        height: 40px;
+      }
+
+      .veritas-modal-dialog {
+        width: min(92vw, 360px);
+        padding: 22px;
+        gap: 16px;
+      }
+
+      .veritas-modal-actions {
+        width: 100%;
+        justify-content: stretch;
+      }
+
+      .veritas-modal-button {
+        flex: 1;
+      }
     }
 
     .sr-only {
@@ -240,34 +781,32 @@
       </div>
 
       <!-- Pre-Live Card -->
-      <div id="pre-live-card" class="w-full max-w-3xl mx-auto text-center animate-fade-in" style="display: none;">
-        <div class="bg-black/20 backdrop-blur-lg rounded-xl border border-white/10 p-8 sm:p-12 shadow-2xl flex flex-col items-center gap-8">
-          <div class="flex flex-col items-center gap-6">
-            <div class="flex flex-col items-center gap-3">
-              <span class="material-symbols-outlined text-5xl text-white/80">auto_awesome</span>
-              <h2 id="pre-live-primary" class="text-white text-3xl sm:text-4xl font-semibold leading-snug">
-                Showtime is moments away.
-              </h2>
-            </div>
-            <p id="pre-live-subline" class="text-white/70 text-lg max-w-2xl">
-              Your teacher is lining up the first challenge now — stay focused and we’ll launch together.
-            </p>
+      <section id="pre-live-card" class="student-card student-pre-live-card text-center animate-fade-in" style="display: none;">
+        <div class="student-card-body student-pre-live-body">
+          <div class="student-pre-live-icon" aria-hidden="true">
+            <span class="material-symbols-outlined">auto_awesome</span>
           </div>
-          <div class="flex flex-col items-center gap-4">
-            <div class="flex items-center gap-3 text-white/80 uppercase tracking-[0.35em] text-xs">
-              <span>PRE-LIVE</span>
-              <span class="inline-flex w-16 justify-between">
-                <span class="h-2.5 w-2.5 rounded-full bg-white/60 animate-pulse-dot" style="animation-delay: 0s;"></span>
-                <span class="h-2.5 w-2.5 rounded-full bg-white/60 animate-pulse-dot" style="animation-delay: 0.2s;"></span>
-                <span class="h-2.5 w-2.5 rounded-full bg-white/60 animate-pulse-dot" style="animation-delay: 0.4s;"></span>
-              </span>
-            </div>
-            <p id="pre-live-reconnect-line" class="text-amber-200 text-sm hidden">
-              Reconnecting… syncing you back into place.
-            </p>
-          </div>
+          <h2 id="pre-live-primary" class="student-stem text-3xl sm:text-4xl">
+            Showtime is moments away.
+          </h2>
+          <p id="pre-live-subline" class="student-subline text-lg max-w-2xl mx-auto">
+            Your teacher is lining up the first challenge now — stay focused and we’ll launch together.
+          </p>
         </div>
-      </div>
+        <div class="student-card-options student-pre-live-footer">
+          <div class="student-pre-live-status">
+            <span class="student-pre-live-label">PRE-LIVE</span>
+            <span class="student-pre-live-pips" aria-hidden="true">
+              <span class="pip" style="animation-delay: 0s;"></span>
+              <span class="pip" style="animation-delay: 0.2s;"></span>
+              <span class="pip" style="animation-delay: 0.4s;"></span>
+            </span>
+          </div>
+          <p id="pre-live-reconnect-line" class="student-pre-live-reconnect hidden">
+            Reconnecting… syncing you back into place.
+          </p>
+        </div>
+      </section>
 
       <!-- Status Container -->
       <div id="status-container" class="text-center py-12 animate-fade-in" style="display: none;">
@@ -288,25 +827,20 @@
       </div>
 
       <!-- Question Container -->
-      <div id="question-container" class="bg-black/20 backdrop-blur-lg rounded-xl border border-white/10 shadow-2xl animate-fade-in" style="display: none;">
-        <!-- Question Header -->
-        <div class="bg-white/5 px-6 py-4 border-b border-white/10">
-          <p id="question-number" class="text-sm font-bold text-white/90 uppercase tracking-wide"></p>
+      <section id="question-container" class="student-card prevent-select animate-fade-in" aria-live="polite" style="display: none;">
+        <div class="student-card-header">
+          <p id="question-number" class="student-question-number"></p>
         </div>
-
-        <!-- Question Content -->
-        <div id="question-content" class="p-8">
-          <img id="question-image" src="" alt="Question" class="max-w-full max-h-[500px] rounded-xl mx-auto mb-8 shadow-xl border-2 border-white/20" referrerpolicy="no-referrer" onerror="this.style.display='none';" style="display: none;" />
-          <h2 id="question-text" class="font-serif text-white text-lg font-normal leading-relaxed text-left mb-8"></h2>
-          <p id="question-subline" class="hidden text-sm text-white/70 mt-2"></p>
+        <div id="question-content" class="student-card-body">
+          <img id="question-image" src="" alt="Question" class="student-question-image" referrerpolicy="no-referrer" onerror="this.style.display='none';" style="display: none;" />
+          <h2 id="question-text" class="student-stem"></h2>
+          <p id="question-subline" class="student-subline hidden"></p>
         </div>
-
-        <!-- Answer Options -->
-        <div class="px-6 pb-8">
-          <p id="no-responses-message" class="hidden text-center text-white/80 text-sm italic mb-4"></p>
-          <div id="options-list" class="space-y-3"></div>
+        <div class="student-card-options">
+          <p id="no-responses-message" class="student-no-responses hidden"></p>
+          <ul id="options-list" class="student-choices"></ul>
         </div>
-      </div>
+      </section>
     </div>
   </main>
 
@@ -315,8 +849,6 @@
         console.log('Student poll script initializing...');
         var studentLoader = document.getElementById('student-loader');
         var preLiveCard = document.getElementById('pre-live-card');
-        var preLiveMessage = document.getElementById('pre-live-message');
-        var preLiveSubMessage = document.getElementById('pre-live-submessage');
         var statusContainer = document.getElementById('status-container');
         var statusMessage = document.getElementById('status-message');
         var questionContainer = document.getElementById('question-container');
@@ -329,7 +861,6 @@
         var entryScreen = document.getElementById('entry-screen');
         var startSessionBtn = document.getElementById('start-session-btn');
         var studentContainer = document.getElementById('student-container');
-        var preLiveCard = document.getElementById('pre-live-card');
         var preLivePrimary = document.getElementById('pre-live-primary');
         var preLiveSubline = document.getElementById('pre-live-subline');
         var preLiveReconnectLine = document.getElementById('pre-live-reconnect-line');
@@ -358,15 +889,350 @@
         var violationDebounceTimer = null;
         var pendingSubmission = false;
         var currentQuestionKey = null;
-        var lastUnlockedState = null;
         var lastStateVersion = null;
         var lastSuccessfulPollAt = 0;
         var pollInFlight = false;
         var recoveringFromOutage = false;
         var connectivityHideTimer = null;
         var lastAdvisedInterval = defaultPollInterval;
-        var optionBaseClass = 'answer-option relative w-full p-5 rounded-xl border-2 border-white/20 bg-white/5 backdrop-blur-sm text-left hover:border-white/60 hover:bg-white/10 transition-all shadow-sm';
-        var optionSelectedClass = 'answer-option relative w-full p-5 rounded-xl border-2 border-green-400 bg-green-500/20 backdrop-blur-sm text-left shadow-md ring-2 ring-green-400/50';
+        var optionBaseClass = 'answer-option relative w-full text-left';
+        var optionSelectedClass = optionBaseClass + ' answer-option-selected';
+        var optionDisabledClass = optionBaseClass + ' answer-option-disabled';
+
+        var VeritasModal = window.VeritasModal || null;
+
+        function ensureVeritasModal() {
+            if (!VeritasModal || VeritasModal.__stub) {
+                VeritasModal = createVeritasModal();
+                window.VeritasModal = VeritasModal;
+            }
+            return VeritasModal;
+        }
+
+        function veritasAlert(message, options) {
+            return ensureVeritasModal().alert(Object.assign({ message: message }, options || {}));
+        }
+
+        function veritasConfirm(message, options) {
+            return ensureVeritasModal().confirm(Object.assign({ message: message }, options || {}));
+        }
+
+        function veritasPrompt(message, options) {
+            return ensureVeritasModal().prompt(Object.assign({ message: message }, options || {}));
+        }
+
+        function ensureModalRoot() {
+            var root = document.getElementById('veritas-modal-root');
+            if (root) {
+                return root;
+            }
+            if (!document.body) {
+                return null;
+            }
+            root = document.createElement('div');
+            root.id = 'veritas-modal-root';
+            root.className = 'veritas-modal-root';
+            root.setAttribute('aria-hidden', 'true');
+            root.innerHTML = '' +
+                '<div class="veritas-modal-backdrop"></div>' +
+                '<div class="veritas-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="veritas-modal-title" aria-describedby="veritas-modal-message">' +
+                '<div class="veritas-modal-header">' +
+                '<h2 id="veritas-modal-title">Notice</h2>' +
+                '</div>' +
+                '<div class="veritas-modal-body">' +
+                '<p id="veritas-modal-message"></p>' +
+                '<div id="veritas-modal-subtext" class="veritas-modal-subtext"></div>' +
+                '<div id="veritas-modal-input" class="veritas-modal-input" style="display: none;">' +
+                '<label for="veritas-modal-input-field" class="sr-only">Input</label>' +
+                '<input id="veritas-modal-input-field" type="text" autocomplete="off" />' +
+                '</div>' +
+                '</div>' +
+                '<div class="veritas-modal-actions">' +
+                '<button type="button" class="veritas-modal-button secondary" data-action="cancel">Cancel</button>' +
+                '<button type="button" class="veritas-modal-button primary" data-action="confirm">' +
+                '<span class="veritas-modal-label">Confirm</span>' +
+                '<span class="veritas-modal-spinner" aria-hidden="true"></span>' +
+                '</button>' +
+                '</div>' +
+                '</div>';
+            document.body.appendChild(root);
+            return root;
+        }
+
+        function createVeritasModal() {
+            var root = ensureModalRoot();
+            if (!root) {
+                console.warn('Veritas modal root unavailable. Falling back to native dialogs.');
+                var stub = {
+                    alert: function() { return Promise.resolve(); },
+                    confirm: function() { return Promise.resolve(true); },
+                    prompt: function() { return Promise.resolve(null); }
+                };
+                stub.__stub = true;
+                return stub;
+            }
+
+            var dialog = root.querySelector('.veritas-modal-dialog');
+            var titleEl = root.querySelector('#veritas-modal-title');
+            var messageEl = root.querySelector('#veritas-modal-message');
+            var subtextEl = root.querySelector('#veritas-modal-subtext');
+            var inputWrap = root.querySelector('#veritas-modal-input');
+            var inputField = root.querySelector('#veritas-modal-input-field');
+            var confirmBtn = root.querySelector('[data-action="confirm"]');
+            var cancelBtn = root.querySelector('[data-action="cancel"]');
+            var confirmLabel = confirmBtn.querySelector('span:not(.veritas-modal-spinner)');
+            var active = false;
+            var currentConfig = null;
+            var resolveFn = null;
+            var previousFocus = null;
+            var allowEscape = true;
+            var hiddenNodes = [];
+
+            function toggleBackground(state) {
+                var siblings = [].slice.call(document.body.children);
+                if (state) {
+                    hiddenNodes = [];
+                    siblings.forEach(function(node) {
+                        if (node === root) return;
+                        hiddenNodes.push({
+                            node: node,
+                            ariaHidden: node.getAttribute('aria-hidden'),
+                            inert: ('inert' in node) ? node.inert : null
+                        });
+                        node.setAttribute('aria-hidden', 'true');
+                        if ('inert' in node) {
+                            node.inert = true;
+                        }
+                    });
+                } else {
+                    hiddenNodes.forEach(function(record) {
+                        if (record.ariaHidden === null) {
+                            record.node.removeAttribute('aria-hidden');
+                        } else {
+                            record.node.setAttribute('aria-hidden', record.ariaHidden);
+                        }
+                        if ('inert' in record.node) {
+                            if (record.inert !== null) {
+                                record.node.inert = record.inert;
+                            } else {
+                                record.node.inert = false;
+                            }
+                        }
+                    });
+                    hiddenNodes = [];
+                }
+            }
+
+            function setPending(state) {
+                if (state) {
+                    confirmBtn.classList.add('loading');
+                    confirmBtn.setAttribute('disabled', 'disabled');
+                    if (cancelBtn.style.display !== 'none') {
+                        cancelBtn.setAttribute('disabled', 'disabled');
+                    }
+                } else {
+                    confirmBtn.classList.remove('loading');
+                    confirmBtn.removeAttribute('disabled');
+                    cancelBtn.removeAttribute('disabled');
+                }
+            }
+
+            function getFocusable() {
+                var selectors = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+                var nodes = [].slice.call(dialog.querySelectorAll(selectors));
+                return nodes.filter(function(node) {
+                    return !node.hasAttribute('disabled') && node.offsetParent !== null;
+                });
+            }
+
+            function focusFirst() {
+                var focusable = getFocusable();
+                if (focusable.length > 0) {
+                    focusable[0].focus();
+                } else {
+                    dialog.focus();
+                }
+            }
+
+            function trapKey(event) {
+                if (!active) return;
+                if (event.key === 'Escape') {
+                    if (!allowEscape) return;
+                    event.preventDefault();
+                    handleCancel();
+                } else if (event.key === 'Tab') {
+                    var focusable = getFocusable();
+                    if (focusable.length === 0) {
+                        event.preventDefault();
+                        return;
+                    }
+                    var index = focusable.indexOf(document.activeElement);
+                    if (event.shiftKey) {
+                        if (index <= 0) {
+                            focusable[focusable.length - 1].focus();
+                            event.preventDefault();
+                        }
+                    } else {
+                        if (index === focusable.length - 1) {
+                            focusable[0].focus();
+                            event.preventDefault();
+                        }
+                    }
+                } else if (event.key === 'Enter' && currentConfig && currentConfig.mode === 'prompt') {
+                    if (document.activeElement === inputField) {
+                        event.preventDefault();
+                        handleConfirm();
+                    }
+                }
+            }
+
+            function enforceFocus(event) {
+                if (!active) return;
+                if (!dialog.contains(event.target)) {
+                    event.stopPropagation();
+                    focusFirst();
+                }
+            }
+
+            function closeModal(result) {
+                active = false;
+                root.classList.remove('is-active');
+                root.setAttribute('aria-hidden', 'true');
+                document.body.classList.remove('veritas-modal-open');
+                root.removeEventListener('keydown', trapKey, true);
+                document.removeEventListener('focus', enforceFocus, true);
+                toggleBackground(false);
+                setPending(false);
+                if (previousFocus && typeof previousFocus.focus === 'function') {
+                    setTimeout(function() { previousFocus.focus(); }, 0);
+                }
+                if (resolveFn) {
+                    resolveFn(result);
+                }
+                currentConfig = null;
+                resolveFn = null;
+            }
+
+            function handleConfirm() {
+                if (!active) return;
+                setPending(true);
+                var mode = currentConfig ? currentConfig.mode : 'alert';
+                var result;
+                if (mode === 'prompt') {
+                    result = inputField.value;
+                } else if (mode === 'confirm') {
+                    result = true;
+                }
+                closeModal(result);
+            }
+
+            function handleCancel() {
+                if (!active) return;
+                var mode = currentConfig ? currentConfig.mode : 'alert';
+                if (mode === 'alert') {
+                    closeModal(undefined);
+                    return;
+                }
+                if (mode === 'confirm') {
+                    closeModal(false);
+                } else if (mode === 'prompt') {
+                    closeModal(null);
+                }
+            }
+
+            function openModal(mode, options) {
+                options = options || {};
+                currentConfig = Object.assign({}, options, { mode: mode });
+                allowEscape = options.allowEscape !== false;
+                titleEl.textContent = options.title || (mode === 'confirm' ? 'Please Confirm' : (mode === 'prompt' ? 'Enter Response' : 'Notice'));
+                if (options.html) {
+                    messageEl.innerHTML = options.html;
+                } else {
+                    messageEl.textContent = options.message || '';
+                }
+                if (options.subtext) {
+                    subtextEl.style.display = 'block';
+                    subtextEl.textContent = options.subtext;
+                } else {
+                    subtextEl.style.display = 'none';
+                    subtextEl.textContent = '';
+                }
+                if (mode === 'prompt') {
+                    inputWrap.style.display = 'flex';
+                    inputField.value = options.defaultValue || '';
+                    if (options.placeholder) {
+                        inputField.placeholder = options.placeholder;
+                    } else {
+                        inputField.removeAttribute('placeholder');
+                    }
+                } else {
+                    inputWrap.style.display = 'none';
+                    inputField.value = '';
+                    inputField.removeAttribute('placeholder');
+                }
+                confirmLabel.textContent = options.confirmText || (mode === 'confirm' ? 'Confirm' : (mode === 'prompt' ? 'Submit' : 'OK'));
+                if (options.destructive) {
+                    confirmBtn.classList.add('destructive');
+                } else {
+                    confirmBtn.classList.remove('destructive');
+                }
+                cancelBtn.style.display = mode === 'alert' ? 'none' : 'inline-flex';
+                cancelBtn.textContent = options.cancelText || 'Cancel';
+                setPending(false);
+                previousFocus = document.activeElement;
+                root.classList.add('is-active');
+                root.setAttribute('aria-hidden', 'false');
+                document.body.classList.add('veritas-modal-open');
+                toggleBackground(true);
+                active = true;
+                root.addEventListener('keydown', trapKey, true);
+                document.addEventListener('focus', enforceFocus, true);
+
+                return new Promise(function(resolve) {
+                    resolveFn = resolve;
+                    setTimeout(function() {
+                        if (mode === 'prompt') {
+                            inputField.focus();
+                            inputField.select();
+                        } else if (mode === 'confirm' && options.focusCancel) {
+                            cancelBtn.focus();
+                        } else {
+                            confirmBtn.focus();
+                        }
+                    }, 0);
+                });
+            }
+
+            confirmBtn.addEventListener('click', handleConfirm);
+            cancelBtn.addEventListener('click', handleCancel);
+            root.addEventListener('click', function(event) {
+                if (event.target === root || event.target.classList.contains('veritas-modal-backdrop')) {
+                    if (!currentConfig || currentConfig.allowBackdropClose === false) {
+                        return;
+                    }
+                    handleCancel();
+                }
+            });
+
+            var api = {
+                alert: function(options) {
+                    return openModal('alert', options).then(function() { return; });
+                },
+                confirm: function(options) {
+                    return openModal('confirm', options).then(function(result) { return result !== false; });
+                },
+                prompt: function(options) {
+                    return openModal('prompt', options).then(function(result) { return result; });
+                }
+            };
+            api.__stub = false;
+            return api;
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', ensureVeritasModal);
+        } else {
+            ensureVeritasModal();
+        }
         var currentOptionLayout = [];
 
         var connectivityThemes = {
@@ -499,12 +1365,10 @@
                     autoHide: 2400
                 });
             } else if (data.connectionHealth === 'RECOVERING') {
-                showConnectivityState('connecting', {
-                    message: 'Syncing up with your teacher poll - hold on a sec.',
-                    icon: 'sync',
-                    preLiveMessage: 'Syncing back up — we will take off in a moment.'
-                });
-                connectivityHideTimer = setTimeout(hideConnectivityBanner, 2200);
+                hideConnectivityBanner();
+                if (isPreLiveVisible()) {
+                    setPreLiveReconnectMessage('Syncing back up — we will take off in a moment.');
+                }
             } else if (!recoveringFromOutage && !hadFailures) {
                 hideConnectivityBanner();
             }
@@ -816,12 +1680,13 @@
                 }
                 if (preLiveCard) {
                     preLiveCard.style.display = 'block';
-                    if (preLiveMessage) {
-                        preLiveMessage.textContent = data.message || 'Waiting for your teacher to begin the poll...';
+                    if (preLivePrimary) {
+                        preLivePrimary.textContent = data.message || 'Waiting for your teacher to begin the poll...';
                     }
-                    if (preLiveSubMessage) {
-                        preLiveSubMessage.textContent = 'This page will update automatically.';
-                        preLiveSubMessage.style.display = 'block';
+                    if (preLiveSubline) {
+                        preLiveSubline.textContent = 'This page will update automatically.';
+                        preLiveSubline.style.display = 'block';
+                        preLiveSubline.classList.remove('hidden');
                     }
                 } else {
                     statusContainer.style.display = 'block';
@@ -897,7 +1762,9 @@
                     shuffled.forEach(function(option, index) {
                         var letter = letters[index] || (index + 1).toString();
                         var btn = createOptionButton(option, letter, data.pollId, data.questionIndex);
-                        optionsList.appendChild(btn);
+                        var listItem = document.createElement('li');
+                        listItem.appendChild(btn);
+                        optionsList.appendChild(listItem);
                         currentOptionLayout.push({
                             text: option.text || '',
                             imageURL: option.imageURL || ''
@@ -1090,7 +1957,7 @@
                 if (buttons[i].dataset.answerText === answerText) {
                     buttons[i].className = optionSelectedClass;
                 } else {
-                    buttons[i].className = optionBaseClass + ' opacity-40 pointer-events-none';
+                    buttons[i].className = optionDisabledClass;
                 }
             }
             hasAnsweredCurrent = true;
@@ -1156,23 +2023,20 @@
             btn.className = optionBaseClass;
             btn.dataset.answerText = option.text || '';
 
-            var content = '<div class="flex items-start gap-4">';
-            content += '<div class="flex items-center gap-3 pt-1">';
+            var content = '<div class="option-leading">';
             content += '<span class="result-indicator" aria-hidden="true"></span>';
-            content += '<div class="letter-badge flex-shrink-0 w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center border border-white/30">';
-            content += '<span class="text-white font-semibold text-lg">' + letter + '</span>';
+            content += '<div class="letter-badge" aria-hidden="true">' + letter + '</div>';
             content += '</div>';
-            content += '</div>';
-            content += '<div class="flex-1 flex flex-col gap-3 min-w-0 relative">';
+            content += '<div class="option-body">';
             if (option.imageURL) {
-                content += '<img src="' + escapeHtml(option.imageURL) + '" alt="Answer ' + letter + '" class="max-w-full max-h-[220px] rounded-lg object-contain border border-white/30" referrerpolicy="no-referrer">';
+                content += '<img src="' + escapeHtml(option.imageURL) + '" alt="Answer ' + letter + '" class="option-image" referrerpolicy="no-referrer">';
             }
             if (option.text) {
-                content += '<p class="option-text font-serif text-white text-lg font-normal leading-relaxed">' + escapeHtml(option.text) + '</p>';
+                content += '<p class="option-text">' + escapeHtml(option.text) + '</p>';
             }
             content += '<span class="result-ribbon"></span>';
             content += '<span class="sr-only result-announcement"></span>';
-            content += '</div></div>';
+            content += '</div>';
 
             btn.innerHTML = content;
             btn.onclick = function() {
@@ -1237,7 +2101,9 @@
                 var btn = createOptionButton(normalized, letter, data.pollId, data.questionIndex);
                 btn.disabled = true;
                 btn.classList.add('result-readonly');
-                optionsList.appendChild(btn);
+                var listItem = document.createElement('li');
+                listItem.appendChild(btn);
+                optionsList.appendChild(listItem);
                 currentOptionLayout.push({
                     text: normalized.text || '',
                     imageURL: normalized.imageURL || ''

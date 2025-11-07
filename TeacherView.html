@@ -69,6 +69,557 @@
       }
     }
   </style>
+  <style>
+    .teacher-question-image {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      background: rgba(18, 56, 93, 0.06);
+      border: 1px solid rgba(18, 56, 93, 0.12);
+    }
+
+    .teacher-question-image-el {
+      width: 100%;
+      max-height: 360px;
+      object-fit: contain;
+      display: block;
+      background: #ffffff;
+    }
+
+    .teacher-question-image-zoom {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(18, 24, 40, 0.45);
+      color: #ffffff;
+      opacity: 0;
+      transition: opacity 180ms ease;
+      border: none;
+      cursor: pointer;
+    }
+
+    .teacher-question-image:hover .teacher-question-image-zoom,
+    .teacher-question-image-zoom:focus-visible {
+      opacity: 1;
+    }
+
+    .teacher-question-image-zoom:focus-visible {
+      outline: 3px solid rgba(18, 56, 93, 0.45);
+      outline-offset: 2px;
+    }
+
+    .teacher-result-card {
+      position: relative;
+      overflow: hidden;
+      border-radius: 14px;
+      border: 1px solid rgba(18, 56, 93, 0.14);
+      background: #ffffff;
+      box-shadow: 0 2px 8px rgba(18, 56, 93, 0.08);
+      margin-bottom: 16px;
+    }
+
+    .teacher-result-card:last-child {
+      margin-bottom: 0;
+    }
+
+    .teacher-result-progress {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 0%;
+      background: rgba(18, 56, 93, 0.12);
+      transition: width 220ms ease;
+    }
+
+    .teacher-result-progress.is-correct {
+      background: rgba(46, 125, 50, 0.2);
+    }
+
+    .teacher-result-content-row {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: stretch;
+      gap: 16px;
+      padding: 18px 20px;
+    }
+
+    .teacher-result-leading {
+      display: flex;
+      align-items: center;
+    }
+
+    .teacher-result-letter {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: rgba(18, 56, 93, 0.12);
+      color: #12385d;
+      font-weight: 700;
+      font-size: 1.05rem;
+    }
+
+    .teacher-result-body {
+      flex: 1;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      min-width: 0;
+    }
+
+    .teacher-result-image-wrap {
+      width: 110px;
+      max-width: 110px;
+      flex-shrink: 0;
+    }
+
+    .teacher-result-image {
+      width: 100%;
+      max-height: 110px;
+      object-fit: contain;
+      border-radius: 10px;
+      border: 1px solid rgba(18, 56, 93, 0.18);
+      background: #f8fafc;
+    }
+
+    .teacher-result-text {
+      color: #12385d;
+      font-size: 0.98rem;
+      line-height: 1.55;
+    }
+
+    .teacher-result-text--empty {
+      font-style: italic;
+      color: #6b7280;
+    }
+
+    .teacher-result-percentage {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 4px;
+      min-width: 90px;
+      color: #12385d;
+      font-weight: 700;
+    }
+
+    .teacher-result-percentage span:first-child {
+      font-size: 1.05rem;
+    }
+
+    .teacher-result-count {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #4b5563;
+    }
+
+    .teacher-result-students {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px 20px 18px;
+      border-top: 1px solid rgba(18, 56, 93, 0.12);
+      background: rgba(18, 56, 93, 0.06);
+    }
+
+    .teacher-result-student {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(18, 56, 93, 0.15);
+      color: #12385d;
+    }
+
+    .teacher-result-card.is-correct {
+      border-color: rgba(46, 125, 50, 0.4);
+      background: #edf7f0;
+    }
+
+    .teacher-result-card.is-correct .teacher-result-letter {
+      background: rgba(46, 125, 50, 0.22);
+      color: #1b5e20;
+    }
+
+    .teacher-result-card.is-correct .teacher-result-text {
+      color: #1b5e20;
+    }
+
+    .teacher-result-card.is-correct .teacher-result-count {
+      color: #2f855a;
+    }
+
+    .teacher-result-card.is-correct .teacher-result-students {
+      border-color: rgba(46, 125, 50, 0.28);
+      background: rgba(46, 125, 50, 0.16);
+    }
+
+    .teacher-result-card.is-correct .teacher-result-student {
+      background: rgba(46, 125, 50, 0.2);
+      color: #1b5e20;
+    }
+
+    .dark .teacher-question-image {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+
+    .dark .teacher-question-image-el {
+      background: transparent;
+    }
+
+    .dark .teacher-question-image-zoom {
+      background: rgba(15, 23, 42, 0.65);
+    }
+
+    .dark .teacher-result-card {
+      background: rgba(15, 23, 35, 0.78);
+      border-color: rgba(148, 163, 184, 0.28);
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.4);
+    }
+
+    .dark .teacher-result-progress {
+      background: rgba(59, 130, 246, 0.28);
+    }
+
+    .dark .teacher-result-letter {
+      background: rgba(148, 163, 184, 0.25);
+      color: #e2e8f0;
+    }
+
+    .dark .teacher-result-text {
+      color: #f8fafc;
+    }
+
+    .dark .teacher-result-count {
+      color: #cbd5f5;
+    }
+
+    .dark .teacher-result-students {
+      border-color: rgba(148, 163, 184, 0.25);
+      background: rgba(148, 163, 184, 0.16);
+    }
+
+    .dark .teacher-result-student {
+      background: rgba(148, 163, 184, 0.3);
+      color: #f8fafc;
+    }
+
+    .dark .teacher-result-card.is-correct {
+      background: rgba(34, 197, 94, 0.22);
+      border-color: rgba(34, 197, 94, 0.45);
+    }
+
+    .dark .teacher-result-card.is-correct .teacher-result-letter {
+      background: rgba(34, 197, 94, 0.32);
+      color: #ecfdf5;
+    }
+
+    .dark .teacher-result-card.is-correct .teacher-result-text {
+      color: #ecfdf5;
+    }
+
+    .dark .teacher-result-card.is-correct .teacher-result-count {
+      color: #bbf7d0;
+    }
+
+    .dark .teacher-result-card.is-correct .teacher-result-students {
+      border-color: rgba(34, 197, 94, 0.45);
+      background: rgba(34, 197, 94, 0.3);
+    }
+
+    .dark .teacher-result-card.is-correct .teacher-result-student {
+      background: rgba(34, 197, 94, 0.4);
+      color: #052e16;
+    }
+
+    @media (max-width: 768px) {
+      .teacher-result-content-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .teacher-result-percentage {
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .teacher-result-image-wrap {
+        width: 100%;
+        max-width: 100%;
+      }
+
+      .teacher-result-image {
+        max-height: 220px;
+      }
+    }
+
+    .veritas-modal-root {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .veritas-modal-root.is-active {
+      display: flex;
+    }
+
+    .veritas-modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(9, 17, 34, 0.55);
+      backdrop-filter: blur(3px);
+    }
+
+    .veritas-modal-dialog {
+      position: relative;
+      z-index: 1;
+      width: min(520px, 92vw);
+      border-radius: 16px;
+      background: #ffffff;
+      border-top: 4px solid #c5a05a;
+      box-shadow: 0 24px 48px rgba(9, 17, 34, 0.25);
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      animation: veritas-modal-in 220ms ease;
+    }
+
+    .veritas-modal-header h2 {
+      margin: 0;
+      font-size: 1.25rem;
+      color: #12385d;
+      font-weight: 700;
+    }
+
+    .veritas-modal-body {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      color: #1c1c1c;
+      font-size: 0.98rem;
+      line-height: 1.55;
+    }
+
+    .veritas-modal-subtext {
+      color: #4b5563;
+      font-size: 0.85rem;
+    }
+
+    .veritas-modal-input {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .veritas-modal-input input {
+      border-radius: 10px;
+      border: 1px solid rgba(18, 56, 93, 0.28);
+      padding: 10px 12px;
+      font-size: 0.95rem;
+      transition: border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .veritas-modal-input input:focus-visible {
+      outline: none;
+      border-color: #12385d;
+      box-shadow: 0 0 0 3px rgba(18, 56, 93, 0.2);
+    }
+
+    .veritas-modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .veritas-modal-button {
+      border: none;
+      border-radius: 999px;
+      padding: 10px 22px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: transform 140ms ease, box-shadow 140ms ease, background-color 140ms ease, color 140ms ease;
+    }
+
+    .veritas-modal-button.primary {
+      background: #12385d;
+      color: #ffffff;
+      box-shadow: 0 8px 20px rgba(18, 56, 93, 0.25);
+    }
+
+    .veritas-modal-button.primary:hover:not([disabled]) {
+      background: #0f2d4a;
+      transform: translateY(-1px);
+    }
+
+    .veritas-modal-button.secondary {
+      background: transparent;
+      color: #12385d;
+      border: 1px solid rgba(18, 56, 93, 0.3);
+    }
+
+    .veritas-modal-button.secondary:hover:not([disabled]) {
+      background: rgba(18, 56, 93, 0.08);
+    }
+
+    .veritas-modal-button.destructive {
+      background: #c62828;
+      color: #ffffff;
+      box-shadow: 0 8px 18px rgba(198, 40, 40, 0.25);
+    }
+
+    .veritas-modal-button.destructive:hover:not([disabled]) {
+      background: #a61b1b;
+    }
+
+    .veritas-modal-button[disabled] {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .veritas-modal-spinner {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      border: 2px solid rgba(255, 255, 255, 0.6);
+      border-top-color: transparent;
+      animation: veritas-spin 0.7s linear infinite;
+      display: none;
+      margin-left: 10px;
+    }
+
+    .veritas-modal-button.loading .veritas-modal-spinner {
+      display: inline-block;
+    }
+
+    .veritas-modal-button.loading span {
+      opacity: 0.75;
+    }
+
+    .dark .veritas-modal-dialog {
+      background: rgba(15, 23, 35, 0.96);
+      color: #e2e8f0;
+      border-top-color: #c5a05a;
+      box-shadow: 0 24px 48px rgba(2, 6, 23, 0.55);
+    }
+
+    .dark .veritas-modal-header h2 {
+      color: #f8fafc;
+    }
+
+    .dark .veritas-modal-body {
+      color: #f1f5f9;
+    }
+
+    .dark .veritas-modal-subtext {
+      color: #cbd5f5;
+    }
+
+    .dark .veritas-modal-input input {
+      background: rgba(15, 23, 42, 0.7);
+      border-color: rgba(148, 163, 184, 0.4);
+      color: #f8fafc;
+    }
+
+    .dark .veritas-modal-input input:focus-visible {
+      border-color: #93c5fd;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35);
+    }
+
+    .dark .veritas-modal-button.secondary {
+      color: #e2e8f0;
+      border-color: rgba(148, 163, 184, 0.4);
+    }
+
+    .dark .veritas-modal-button.secondary:hover:not([disabled]) {
+      background: rgba(148, 163, 184, 0.16);
+    }
+
+    .dark .veritas-modal-button.primary {
+      background: #234776;
+    }
+
+    .dark .veritas-modal-button.primary:hover:not([disabled]) {
+      background: #1a3456;
+    }
+
+    .dark .veritas-modal-backdrop {
+      background: rgba(2, 6, 23, 0.7);
+      backdrop-filter: blur(4px);
+    }
+
+    body.veritas-modal-open {
+      overflow: hidden;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @keyframes veritas-modal-in {
+      from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes veritas-spin {
+      from {
+        transform: rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .veritas-modal-dialog {
+        width: min(92vw, 360px);
+        padding: 22px;
+        gap: 16px;
+      }
+
+      .veritas-modal-actions {
+        width: 100%;
+        justify-content: stretch;
+      }
+
+      .veritas-modal-button {
+        flex: 1;
+      }
+    }
+  </style>
+  </style>
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-brand-dark-gray dark:text-brand-white">
   <div class="flex h-screen w-full flex-col">
@@ -219,14 +770,12 @@
           <div class="lg:col-span-2 flex flex-col gap-6">
             <!-- Question Display -->
             <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm">
-              <div class="flex gap-6">
-                <div class="flex-grow">
-                  <p id="live-question-info" class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm font-medium leading-normal mb-1">Question 1 of 10</p>
-                  <h2 id="live-question-text" class="font-serif text-brand-dark-gray dark:text-brand-white tracking-tight text-xl leading-snug mb-4">Question text appears here</h2>
-                </div>
-                <div id="question-image-container" class="relative w-24 h-24 flex-shrink-0" style="display: none;">
-                  <img id="live-question-image" alt="Question" class="rounded-lg object-cover w-full h-full" src="" referrerpolicy="no-referrer" style="max-width:100%;height:auto;display:block" onerror="this.style.display='none';"/>
-                  <button class="absolute inset-0 flex items-center justify-center bg-black/50 text-white rounded-lg opacity-0 hover:opacity-100 transition-opacity" onclick="window.expandQuestionImage()">
+              <div class="flex flex-col gap-4">
+                <p id="live-question-info" class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm font-medium leading-normal">Question 1 of 10</p>
+                <h2 id="live-question-text" class="font-serif text-brand-dark-gray dark:text-brand-white tracking-tight text-xl leading-snug">Question text appears here</h2>
+                <div id="question-image-container" class="teacher-question-image" style="display: none;">
+                  <img id="live-question-image" alt="Question" class="teacher-question-image-el" src="" referrerpolicy="no-referrer" onerror="this.style.display='none';"/>
+                  <button class="teacher-question-image-zoom" type="button" onclick="window.expandQuestionImage()">
                     <span class="material-symbols-outlined">zoom_in</span>
                   </button>
                 </div>
@@ -547,6 +1096,341 @@
   var archivedClassFilter='all';
   var selectedArchivedPollId='';
   var BASE_CLASSES=[];
+
+  var VeritasModal=window.VeritasModal||null;
+
+  function ensureVeritasModal(){
+    if(!VeritasModal||VeritasModal.__stub){
+      VeritasModal=createVeritasModal();
+      window.VeritasModal=VeritasModal;
+    }
+    return VeritasModal;
+  }
+
+  function veritasAlert(message,options){
+    return ensureVeritasModal().alert(Object.assign({message:message},options||{}));
+  }
+
+  function veritasConfirm(message,options){
+    return ensureVeritasModal().confirm(Object.assign({message:message},options||{}));
+  }
+
+  function veritasPrompt(message,options){
+    return ensureVeritasModal().prompt(Object.assign({message:message},options||{}));
+  }
+
+  function ensureModalRoot(){
+    var root=document.getElementById('veritas-modal-root');
+    if(root){
+      return root;
+    }
+    if(!document.body){
+      return null;
+    }
+    root=document.createElement('div');
+    root.id='veritas-modal-root';
+    root.className='veritas-modal-root';
+    root.setAttribute('aria-hidden','true');
+    root.innerHTML=''
+      +'<div class="veritas-modal-backdrop"></div>'
+      +'<div class="veritas-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="veritas-modal-title" aria-describedby="veritas-modal-message">'
+      +'<div class="veritas-modal-header">'
+      +'<h2 id="veritas-modal-title">Notice</h2>'
+      +'</div>'
+      +'<div class="veritas-modal-body">'
+      +'<p id="veritas-modal-message"></p>'
+      +'<div id="veritas-modal-subtext" class="veritas-modal-subtext"></div>'
+      +'<div id="veritas-modal-input" class="veritas-modal-input" style="display: none;">'
+      +'<label for="veritas-modal-input-field" class="sr-only">Input</label>'
+      +'<input id="veritas-modal-input-field" type="text" autocomplete="off" />'
+      +'</div>'
+      +'</div>'
+      +'<div class="veritas-modal-actions">'
+      +'<button type="button" class="veritas-modal-button secondary" data-action="cancel">Cancel</button>'
+      +'<button type="button" class="veritas-modal-button primary" data-action="confirm">'
+      +'<span class="veritas-modal-label">Confirm</span>'
+      +'<span class="veritas-modal-spinner" aria-hidden="true"></span>'
+      +'</button>'
+      +'</div>'
+      +'</div>';
+    document.body.appendChild(root);
+    return root;
+  }
+
+  function createVeritasModal(){
+    var root=ensureModalRoot();
+    if(!root){
+      console.warn('Veritas modal root unavailable. Falling back to native dialogs.');
+      var stub={
+        alert:function(){return Promise.resolve();},
+        confirm:function(){return Promise.resolve(true);},
+        prompt:function(){return Promise.resolve(null);}
+      };
+      stub.__stub=true;
+      return stub;
+    }
+
+    var dialog=root.querySelector('.veritas-modal-dialog');
+    var titleEl=root.querySelector('#veritas-modal-title');
+    var messageEl=root.querySelector('#veritas-modal-message');
+    var subtextEl=root.querySelector('#veritas-modal-subtext');
+    var inputWrap=root.querySelector('#veritas-modal-input');
+    var inputField=root.querySelector('#veritas-modal-input-field');
+    var confirmBtn=root.querySelector('[data-action="confirm"]');
+    var cancelBtn=root.querySelector('[data-action="cancel"]');
+    var confirmLabel=confirmBtn.querySelector('span:not(.veritas-modal-spinner)');
+    var active=false;
+    var currentConfig=null;
+    var resolveFn=null;
+    var previousFocus=null;
+    var allowEscape=true;
+    var hiddenNodes=[];
+
+    function toggleBackground(state){
+      var siblings=[].slice.call(document.body.children);
+      if(state){
+        hiddenNodes=[];
+        siblings.forEach(function(node){
+          if(node===root)return;
+          hiddenNodes.push({
+            node:node,
+            ariaHidden:node.getAttribute('aria-hidden'),
+            inert:('inert' in node)?node.inert:null
+          });
+          node.setAttribute('aria-hidden','true');
+          if('inert' in node){
+            node.inert=true;
+          }
+        });
+      } else {
+        hiddenNodes.forEach(function(record){
+          if(record.ariaHidden===null){
+            record.node.removeAttribute('aria-hidden');
+          } else {
+            record.node.setAttribute('aria-hidden',record.ariaHidden);
+          }
+          if('inert' in record.node){
+            if(record.inert!==null){
+              record.node.inert=record.inert;
+            } else {
+              record.node.inert=false;
+            }
+          }
+        });
+        hiddenNodes=[];
+      }
+    }
+
+    function setPending(state){
+      if(state){
+        confirmBtn.classList.add('loading');
+        confirmBtn.setAttribute('disabled','disabled');
+        if(cancelBtn.style.display!=='none'){
+          cancelBtn.setAttribute('disabled','disabled');
+        }
+      } else {
+        confirmBtn.classList.remove('loading');
+        confirmBtn.removeAttribute('disabled');
+        cancelBtn.removeAttribute('disabled');
+      }
+    }
+
+    function getFocusable(){
+      var selectors='button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+      var nodes=[].slice.call(dialog.querySelectorAll(selectors));
+      return nodes.filter(function(node){
+        return !node.hasAttribute('disabled')&&node.offsetParent!==null;
+      });
+    }
+
+    function focusFirst(){
+      var focusable=getFocusable();
+      if(focusable.length>0){
+        focusable[0].focus();
+      } else {
+        dialog.focus();
+      }
+    }
+
+    function trapKey(event){
+      if(!active)return;
+      if(event.key==='Escape'){
+        if(!allowEscape)return;
+        event.preventDefault();
+        handleCancel();
+      } else if(event.key==='Tab'){
+        var focusable=getFocusable();
+        if(focusable.length===0){
+          event.preventDefault();
+          return;
+        }
+        var index=focusable.indexOf(document.activeElement);
+        if(event.shiftKey){
+          if(index<=0){
+            focusable[focusable.length-1].focus();
+            event.preventDefault();
+          }
+        } else {
+          if(index===focusable.length-1){
+            focusable[0].focus();
+            event.preventDefault();
+          }
+        }
+      } else if(event.key==='Enter'&&currentConfig&&currentConfig.mode==='prompt'){
+        if(document.activeElement===inputField){
+          event.preventDefault();
+          handleConfirm();
+        }
+      }
+    }
+
+    function enforceFocus(event){
+      if(!active)return;
+      if(!dialog.contains(event.target)){
+        event.stopPropagation();
+        focusFirst();
+      }
+    }
+
+    function closeModal(result){
+      active=false;
+      root.classList.remove('is-active');
+      root.setAttribute('aria-hidden','true');
+      document.body.classList.remove('veritas-modal-open');
+      root.removeEventListener('keydown',trapKey,true);
+      document.removeEventListener('focus',enforceFocus,true);
+      toggleBackground(false);
+      setPending(false);
+      if(previousFocus&&typeof previousFocus.focus==='function'){
+        setTimeout(function(){previousFocus.focus();},0);
+      }
+      if(resolveFn){
+        resolveFn(result);
+      }
+      currentConfig=null;
+      resolveFn=null;
+    }
+
+    function handleConfirm(){
+      if(!active)return;
+      setPending(true);
+      var mode=currentConfig?currentConfig.mode:'alert';
+      var result;
+      if(mode==='prompt'){
+        result=inputField.value;
+      } else if(mode==='confirm'){
+        result=true;
+      }
+      closeModal(result);
+    }
+
+    function handleCancel(){
+      if(!active)return;
+      var mode=currentConfig?currentConfig.mode:'alert';
+      if(mode==='alert'){
+        closeModal(undefined);
+        return;
+      }
+      if(mode==='confirm'){
+        closeModal(false);
+      } else if(mode==='prompt'){
+        closeModal(null);
+      }
+    }
+
+    function openModal(mode,options){
+      options=options||{};
+      currentConfig=Object.assign({},options,{mode:mode});
+      allowEscape=options.allowEscape!==false;
+      titleEl.textContent=options.title||(mode==='confirm'?'Please Confirm':(mode==='prompt'?'Enter Response':'Notice'));
+      if(options.html){
+        messageEl.innerHTML=options.html;
+      } else {
+        messageEl.textContent=options.message||'';
+      }
+      if(options.subtext){
+        subtextEl.style.display='block';
+        subtextEl.textContent=options.subtext;
+      } else {
+        subtextEl.style.display='none';
+        subtextEl.textContent='';
+      }
+      if(mode==='prompt'){
+        inputWrap.style.display='flex';
+        inputField.value=options.defaultValue||'';
+        if(options.placeholder){
+          inputField.placeholder=options.placeholder;
+        } else {
+          inputField.removeAttribute('placeholder');
+        }
+      } else {
+        inputWrap.style.display='none';
+        inputField.value='';
+        inputField.removeAttribute('placeholder');
+      }
+      confirmLabel.textContent=options.confirmText||(mode==='confirm'?'Confirm':(mode==='prompt'?'Submit':'OK'));
+      if(options.destructive){
+        confirmBtn.classList.add('destructive');
+      } else {
+        confirmBtn.classList.remove('destructive');
+      }
+      cancelBtn.style.display=mode==='alert'?'none':'inline-flex';
+      cancelBtn.textContent=options.cancelText||'Cancel';
+      setPending(false);
+      previousFocus=document.activeElement;
+      root.classList.add('is-active');
+      root.setAttribute('aria-hidden','false');
+      document.body.classList.add('veritas-modal-open');
+      toggleBackground(true);
+      active=true;
+      root.addEventListener('keydown',trapKey,true);
+      document.addEventListener('focus',enforceFocus,true);
+
+      return new Promise(function(resolve){
+        resolveFn=resolve;
+        setTimeout(function(){
+          if(mode==='prompt'){
+            inputField.focus();
+            inputField.select();
+          } else if(mode==='confirm'&&options.focusCancel){
+            cancelBtn.focus();
+          } else {
+            confirmBtn.focus();
+          }
+        },0);
+      });
+    }
+
+    confirmBtn.addEventListener('click',handleConfirm);
+    cancelBtn.addEventListener('click',handleCancel);
+    root.addEventListener('click',function(event){
+      if(event.target===root||event.target.classList.contains('veritas-modal-backdrop')){
+        if(!currentConfig||currentConfig.allowBackdropClose===false){
+          return;
+        }
+        handleCancel();
+      }
+    });
+
+    var api={
+      alert:function(options){
+        return openModal('alert',options).then(function(){return;});
+      },
+      confirm:function(options){
+        return openModal('confirm',options).then(function(result){return result!==false;});
+      },
+      prompt:function(options){
+        return openModal('prompt',options).then(function(result){return result;});
+      }
+    };
+    api.__stub=false;
+    return api;
+  }
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',ensureVeritasModal);
+  } else {
+    ensureVeritasModal();
+  }
 
   // --- Element Cache ---
   var pollSelect=document.getElementById('poll-select');
@@ -917,17 +1801,20 @@
     });
 
     pollsTableBody.querySelectorAll('.poll-copy-btn').forEach(function(btn){
-      btn.onclick=function(){
+      btn.onclick=async function(){
         var pollId=this.dataset.pollId;
         var poll=ALL_POLLS.find(function(p){return p.pollId===pollId;});
         if(!poll)return;
 
-        var newName=prompt('Enter a name for the copied poll:',poll.pollName+' (Copy)');
+        var newName=await veritasPrompt('Enter a name for the copied poll:',{
+          defaultValue:poll.pollName+' (Copy)',
+          title:'Copy poll'
+        });
         if(newName===null)return;
 
         newName=newName.trim();
         if(newName===''){
-          alert('Poll name cannot be empty');
+          await veritasAlert('Poll name cannot be empty',{title:'Copy poll'});
           return;
         }
 
@@ -935,12 +1822,15 @@
         btn.textContent='Copying...';
 
         google.script.run
-          .withSuccessHandler(function(result){
+          .withSuccessHandler(async function(result){
             if(result.success){
               refreshPollData(result.polls);
-              alert(result.message);
+              await veritasAlert(result.message,{title:'Poll copied'});
             } else {
-              alert('Failed to copy poll: '+(result.error||'Unknown error'));
+              await veritasAlert('Failed to copy poll: '+(result.error||'Unknown error'),{
+                title:'Copy poll failed',
+                destructive:true
+              });
             }
             btn.disabled=false;
             btn.textContent='Copy';
@@ -961,16 +1851,21 @@
     });
 
     pollsTableBody.querySelectorAll('.poll-delete-btn').forEach(function(btn){
-      btn.onclick=function(){
+      btn.onclick=async function(){
         var id=this.dataset.pollId;
-        if(confirm('Delete this poll permanently? This will also remove all responses.')){
-          google.script.run
-            .withSuccessHandler(function(polls){
-              refreshPollData(polls);
-            })
-            .withFailureHandler(handleError)
-            .deletePoll(id);
-        }
+        var confirmed=await veritasConfirm('Delete this poll permanently? This will also remove all responses.',{
+          title:'Delete poll',
+          confirmText:'Delete',
+          destructive:true
+        });
+        if(!confirmed)return;
+
+        google.script.run
+          .withSuccessHandler(function(polls){
+            refreshPollData(polls);
+          })
+          .withFailureHandler(handleError)
+          .deletePoll(id);
       };
     });
   }
@@ -1134,9 +2029,9 @@
     rosterStatus.textContent='Unsaved changes';
   }
 
-  function addRosterRow(){
+  async function addRosterRow(){
     if(!selectedRosterClass){
-      alert('Select a class first.');
+      await veritasAlert('Select a class first.',{title:'Roster'});
       return;
     }
     if(!rosterData[selectedRosterClass]){
@@ -1160,9 +2055,9 @@
     }
   }
 
-  function saveRoster(){
+  async function saveRoster(){
     if(!selectedRosterClass){
-      alert('Select a class to save.');
+      await veritasAlert('Select a class to save.',{title:'Roster'});
       return;
     }
 
@@ -1192,9 +2087,9 @@
       .saveRoster(selectedRosterClass, entries);
   }
 
-  function openBulkAddStudentsModal(){
+  async function openBulkAddStudentsModal(){
     if(!selectedRosterClass){
-      alert('Select a class first.');
+      await veritasAlert('Select a class first.',{title:'Roster'});
       return;
     }
     document.getElementById('bulk-student-input').value='';
@@ -1205,9 +2100,9 @@
     document.getElementById('bulk-add-students-modal').style.display='none';
   }
 
-  function confirmBulkAddStudents(){
+  async function confirmBulkAddStudents(){
     if(!selectedRosterClass){
-      alert('Select a class first.');
+      await veritasAlert('Select a class first.',{title:'Roster'});
       closeBulkAddStudentsModal();
       return;
     }
@@ -1232,7 +2127,7 @@
     });
 
     if(entries.length===0){
-      alert('No valid student entries found. Use format: Name, Email');
+      await veritasAlert('No valid student entries found. Use format: Name, Email',{title:'Bulk add students'});
       return;
     }
 
@@ -1241,17 +2136,20 @@
     confirmBtn.textContent='Adding...';
 
     google.script.run
-      .withSuccessHandler(function(result){
+      .withSuccessHandler(async function(result){
         confirmBtn.disabled=false;
         confirmBtn.textContent='Add Students';
         closeBulkAddStudentsModal();
 
         if(result.success){
-          alert(result.message);
+          await veritasAlert(result.message,{title:'Students added'});
           rosterDirty=false;
           onRosterDataLoaded(result.data,selectedRosterClass);
         } else {
-          alert('Failed to add students: '+(result.error||'Unknown error'));
+          await veritasAlert('Failed to add students: '+(result.error||'Unknown error'),{
+            title:'Bulk add students',
+            destructive:true
+          });
         }
       })
       .withFailureHandler(function(error){
@@ -1262,8 +2160,8 @@
       .bulkAddStudentsToRoster(selectedRosterClass,entries);
   }
 
-  function onAddClass(){
-    var className=prompt('Class name');
+  async function onAddClass(){
+    var className=await veritasPrompt('Class name',{title:'Add class',confirmText:'Create'});
     if(!className)return;
     className=className.trim();
     if(className==='')return;
@@ -1281,12 +2179,12 @@
       .createClassRecord(className,'');
   }
 
-  function onRenameClass(){
+  async function onRenameClass(){
     if(!selectedRosterClass){
-      alert('Select a class first.');
+      await veritasAlert('Select a class first.',{title:'Roster'});
       return;
     }
-    var newName=prompt('Rename class', selectedRosterClass);
+    var newName=await veritasPrompt('Rename class',{title:'Rename class',defaultValue:selectedRosterClass,confirmText:'Rename'});
     if(!newName)return;
     newName=newName.trim();
     if(newName===''){return;}
@@ -1305,12 +2203,17 @@
       .renameClass(selectedRosterClass,newName);
   }
 
-  function onDeleteClass(){
+  async function onDeleteClass(){
     if(!selectedRosterClass){
-      alert('Select a class first.');
+      await veritasAlert('Select a class first.',{title:'Roster'});
       return;
     }
-    if(!confirm('Delete class "'+selectedRosterClass+'" and remove all students?'))return;
+    var confirmed=await veritasConfirm('Delete class "'+selectedRosterClass+'" and remove all students?',{
+      title:'Delete class',
+      confirmText:'Delete',
+      destructive:true
+    });
+    if(!confirmed)return;
     rosterStatus.textContent='Deleting class...';
     var classToDelete=selectedRosterClass;
     google.script.run
@@ -1448,9 +2351,12 @@
   }
 
   // --- Poll Lifecycle Controls ---
-  function onStartPoll(){
+  async function onStartPoll(){
     var pollId=pollSelect.value;
-    if(!pollId){alert("Please select a poll first.");return;}
+    if(!pollId){
+      await veritasAlert('Please select a poll first.',{title:'Live poll'});
+      return;
+    }
     startPollBtn.disabled=true;
     clearLiveIntervals();
     isPaused=false;
@@ -1510,17 +2416,27 @@
       .nextQuestion();
   }
 
-  function onResetQuestion(){
+  async function onResetQuestion(){
     var pollId=CURRENT_POLL_DATA.pollId;
     var questionIndex=CURRENT_POLL_DATA.questionIndex;
     if(!pollId||typeof questionIndex==='undefined'){
-      alert('No active question to reset.');
+      await veritasAlert('No active question to reset.',{title:'Reset question'});
       return;
     }
-    if(!confirm('Reset the current question for all students?')){
+    var proceed=await veritasConfirm('Reset the current question for all students?',{
+      title:'Reset question',
+      confirmText:'Reset question',
+      destructive:true
+    });
+    if(!proceed){
       return;
     }
-    var clearResponses=confirm('Select OK to reset and clear responses, or Cancel to reset while keeping submissions.');
+    var clearResponses=await veritasConfirm('Select OK to reset and clear responses, or Cancel to reset while keeping submissions.',{
+      title:'Responses',
+      confirmText:'Reset & clear',
+      cancelText:'Keep submissions',
+      destructive:true
+    });
     pauseTimerCountdown();
     stopVisualTimer();
     timerExpiredHandled=false;
@@ -1568,8 +2484,13 @@
       .hideResultsFromStudents();
   }
 
-  function onEndPoll(){
-    if(!confirm('Are you sure you want to end this poll completely?'))return;
+  async function onEndPoll(){
+    var confirmed=await veritasConfirm('Are you sure you want to end this poll completely?',{
+      title:'End poll',
+      confirmText:'End poll',
+      destructive:true
+    });
+    if(!confirmed)return;
     showDashboard();
     google.script.run
       .withSuccessHandler(function(data){
@@ -1615,6 +2536,7 @@
     CURRENT_POLL_DATA.correctAnswer=data.correctAnswer;
     CURRENT_POLL_DATA.totalQuestions=data.totalQuestions;
     CURRENT_POLL_DATA.timerSeconds=data.timerSeconds||null;
+    CURRENT_POLL_DATA.options=data.options||[];
 
     var questionChanged=previousQuestionIndex===null||data.questionIndex!==previousQuestionIndex;
 
@@ -1696,6 +2618,7 @@
       var cacheBuster='q='+data.questionIndex;
       var separator=imageUrl.includes('?')?'&':'?';
       questionImageEl.src=imageUrl+separator+cacheBuster;
+      questionImageEl.style.display='block';
 
       // Also set referrerpolicy for cross-origin images
       questionImageEl.setAttribute('referrerpolicy','no-referrer');
@@ -1773,57 +2696,81 @@
     var container=document.getElementById('results-bars');
     container.innerHTML='';
 
-    if(!results||Object.keys(results).length===0){
+    var optionDefs=Array.isArray(CURRENT_POLL_DATA.options)?CURRENT_POLL_DATA.options.slice():[];
+    var knownKeys={};
+    optionDefs.forEach(function(option){
+      knownKeys[(option&&option.text)||'']=true;
+    });
+
+    if(results){
+      Object.keys(results).forEach(function(answerText){
+        if(!knownKeys[answerText||'']){
+          optionDefs.push({text:answerText||'',imageURL:''});
+          knownKeys[answerText||'']=true;
+        }
+      });
+    }
+
+    if(optionDefs.length===0){
+      optionDefs=(results&&Object.keys(results).length>0)?Object.keys(results).map(function(key){return {text:key,imageURL:''};}):[];
+    }
+
+    if(optionDefs.length===0){
       container.innerHTML='<p class="text-center text-gray-500 py-4">Waiting for responses...</p>';
       return;
     }
 
-    var total=Object.values(results).reduce(function(a,b){return a+b;},0);
+    var total=optionDefs.reduce(function(sum,opt){
+      var key=(opt&&opt.text)||'';
+      var value=(results&&typeof results[key]==='number')?results[key]:0;
+      return sum+value;
+    },0);
 
-    Object.keys(results).forEach(function(answer){
-      var count=results[answer];
+    var letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+    optionDefs.forEach(function(option,index){
+      var answerText=(option&&option.text)||'';
+      var count=(results&&typeof results[answerText]==='number')?results[answerText]:0;
       var percentage=total>0?Math.round((count/total)*100):0;
-      var isCorrect=answer===correctAnswer;
+      var isCorrect=answerText===correctAnswer;
+      var letter=letters[index]||String(index+1);
+      var imageURL=option&&option.imageURL;
 
-      var barDiv=document.createElement('div');
-      if(isCorrect){
-        barDiv.className='rounded-lg border-2 border-primary';
+      var card=document.createElement('div');
+      card.className='teacher-result-card'+(isCorrect?' is-correct':'');
+
+      var safePercentage=Math.max(0,Math.min(100,percentage));
+      var progressClass='teacher-result-progress'+(isCorrect?' is-correct':'');
+      var barHtml='<div class="'+progressClass+'" style="width: '+safePercentage+'%;"></div>';
+      barHtml+='<div class="teacher-result-content-row">';
+      barHtml+='<div class="teacher-result-leading" aria-hidden="true"><span class="teacher-result-letter">'+letter+'</span></div>';
+      barHtml+='<div class="teacher-result-body">';
+      if(imageURL){
+        barHtml+='<div class="teacher-result-image-wrap"><img src="'+escapeHtml(imageURL)+'" class="teacher-result-image" alt="Answer '+letter+' image" referrerpolicy="no-referrer"/></div>';
       }
-
-      var correctClass=isCorrect?'correct-answer-bg':'';
-      var bgClass=isCorrect?'bg-primary':'bg-primary/20 dark:bg-primary/50';
-      var textClass=isCorrect?'text-brand-white mix-blend-difference':'text-brand-dark-gray dark:text-brand-white';
-
-      var barHtml='<div class="relative flex items-center min-h-[3rem] '+correctClass+' rounded-lg bg-brand-light-gray dark:bg-brand-dark-gray/50 overflow-hidden cursor-pointer hover:bg-gray-200 dark:hover:bg-brand-dark-gray/60 transition-colors">';
-      barHtml+='<div class="absolute inset-y-0 left-0 '+bgClass+'" style="width: '+percentage+'%;"></div>';
-      barHtml+='<div class="relative flex w-full items-start justify-between p-3">';
-      
-      if(isCorrect){
-        barHtml+='<div class="flex items-start gap-2"><span class="font-serif font-medium '+textClass+' text-sm">'+escapeHtml(answer)+'</span>';
-        barHtml+='<span class="material-symbols-outlined '+textClass+' text-xl">check_circle</span></div>';
-      } else {
-        barHtml+='<span class="font-serif font-medium '+textClass+' text-sm">'+escapeHtml(answer)+'</span>';
+      if(answerText){
+        barHtml+='<p class="teacher-result-text">'+escapeHtml(answerText)+'</p>';
+      } else if(!imageURL){
+        barHtml+='<p class="teacher-result-text teacher-result-text--empty">(No content)</p>';
       }
-      
-      barHtml+='<span class="font-bold '+textClass+' shrink-0 ml-4 text-sm">'+percentage+'%</span>';
-      barHtml+='</div></div>';
+      barHtml+='</div>';
+      barHtml+='<div class="teacher-result-percentage">'+
+        '<span>'+percentage+'%</span>'+
+        '<span class="teacher-result-count">'+count+' votes</span>'+
+      '</div>';
+      barHtml+='</div>';
 
-      // Add student names who selected this answer (show for ALL answers)
-      var studentsWithAnswer=studentsList.filter(function(s){return s.answer===answer;});
+      var studentsWithAnswer=Array.isArray(studentsList)?studentsList.filter(function(s){return s.answer===answerText;}):[];
       if(studentsWithAnswer.length>0){
-        var studentsBgClass=isCorrect?'bg-primary/5 dark:bg-primary/10':'bg-gray-100 dark:bg-gray-800/50';
-        var studentBadgeBg=isCorrect?'bg-primary/10 dark:bg-primary/20':'bg-gray-200 dark:bg-gray-700';
-        var studentTextClass=isCorrect?'text-primary dark:text-brand-white/80':'text-gray-700 dark:text-gray-300';
-
-        barHtml+='<div class="'+studentsBgClass+' p-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 rounded-b-md">';
+        barHtml+='<div class="teacher-result-students">';
         studentsWithAnswer.forEach(function(student){
-          barHtml+='<span class="text-xs '+studentTextClass+' font-medium px-2 py-1 '+studentBadgeBg+' rounded">'+escapeHtml(student.name)+'</span>';
+          barHtml+='<span class="teacher-result-student">'+escapeHtml(student.name)+'</span>';
         });
         barHtml+='</div>';
       }
 
-      barDiv.innerHTML=barHtml;
-      container.appendChild(barDiv);
+      card.innerHTML=barHtml;
+      container.appendChild(card);
     });
   }
 
@@ -1900,14 +2847,18 @@
 
     // Setup unlock listeners
     grid.querySelectorAll('.unlock-btn').forEach(function(btn){
-      btn.onclick=function(){
+      btn.onclick=async function(){
         var email=this.dataset.email;
         var pollId=this.dataset.pollId;
         var lockVersion = parseInt(this.dataset.lockVersion, 10);
 
         if(!email||!pollId)return;
 
-        if(!confirm('Unlock ' + email + '?')) {
+        var approved=await veritasConfirm('Approve unlock for '+email+'?',{
+          title:'Approve unlock',
+          confirmText:'Approve'
+        });
+        if(!approved){
             return;
         }
 
@@ -1915,7 +2866,7 @@
         this.querySelector('span:last-child').textContent='Unlocking...';
 
         google.script.run
-          .withSuccessHandler(function(response) {
+          .withSuccessHandler(async function(response) {
             if (response.ok) {
               currentStudentStatusData=currentStudentStatusData.map(function(s){
                 if(s.email===email){
@@ -1936,18 +2887,31 @@
               renderStudentStatus();
               pollForResults();
             } else if (response.reason === 'version_mismatch') {
-              alert('Student has a newer violation (v' + response.lockVersion + '). Please refresh and try again.');
+              await veritasAlert('Student has a newer violation (v' + response.lockVersion + '). Please refresh and try again.',{
+                title:'Approve unlock',
+                destructive:true
+              });
               pollForResults();
             } else if (response.reason === 'not_locked') {
-              alert('Student is not locked. Status: ' + (response.status || 'unknown'));
+              await veritasAlert('Student is not locked. Status: ' + (response.status || 'unknown'),{
+                title:'Approve unlock'
+              });
               pollForResults();
             } else {
-              alert('Unlock failed: ' + (response.reason || 'Unknown error'));
+              await veritasAlert('Unlock failed: ' + (response.reason || 'Unknown error'),{
+                title:'Approve unlock',
+                destructive:true
+              });
               pollForResults();
             }
+            btn.disabled=false;
+            btn.querySelector('span:last-child').textContent='Approve';
           })
-          .withFailureHandler(function(error) {
-            alert('Error: ' + error.message);
+          .withFailureHandler(async function(error) {
+            await veritasAlert('Error: ' + (error && error.message ? error.message : error),{
+              title:'Approve unlock',
+              destructive:true
+            });
             btn.disabled = false;
             btn.querySelector('span:last-child').textContent = 'Approve';
           })
@@ -2130,18 +3094,25 @@
   }
 
   // --- Student Link Controls ---
-  function onSendLink(){
+  async function onSendLink(){
     var btn=document.getElementById('send-link-btn');
     var className=btn.dataset.className;
-    if(!className){alert('Please select a poll first.');return;}
-    if(!confirm('This will email a new, unique poll link to all students in '+className+'. Are you sure?'))return;
+    if(!className){
+      await veritasAlert('Please select a poll first.',{title:'Send poll links'});
+      return;
+    }
+    var confirmed=await veritasConfirm('This will email a new, unique poll link to all students in '+className+'. Are you sure?',{
+      title:'Send poll links',
+      confirmText:'Send links'
+    });
+    if(!confirmed)return;
 
     btn.disabled=true;
     btn.innerHTML='<div class="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>';
 
     google.script.run
-      .withSuccessHandler(function(response){
-        alert('✅ Successfully sent '+response.count+' poll links.');
+      .withSuccessHandler(async function(response){
+        await veritasAlert('✅ Successfully sent '+response.count+' poll links.',{title:'Send poll links'});
         btn.disabled=false;
         btn.innerHTML='<span class="material-symbols-outlined text-xl">mail</span><span class="truncate">Send Student Links</span>';
       })
@@ -2153,10 +3124,13 @@
       .sendPollLinkToClass(className);
   }
 
-  function onViewLinks(){
+  async function onViewLinks(){
     var btn=document.getElementById('view-links-btn');
     var className=btn.dataset.className;
-    if(!className){alert('Please select a poll first.');return;}
+    if(!className){
+      await veritasAlert('Please select a poll first.',{title:'View links'});
+      return;
+    }
     btn.disabled=true;
 
     google.script.run
@@ -2188,7 +3162,7 @@
         container.innerHTML=html;
 
         container.querySelectorAll('.copy-link-btn').forEach(function(btn){
-          btn.onclick=function(){
+          btn.onclick=async function(){
             var url=this.dataset.url;
             try{
               var tempInput=document.createElement('input');
@@ -2205,7 +3179,7 @@
                 btn.className='copy-link-btn px-3 py-1.5 text-xs font-semibold rounded-md bg-primary text-brand-white hover:bg-primary/90 transition-colors';
               }, 2000);
             } catch(err) {
-              alert('Could not copy link. Please copy it manually.');
+              await veritasAlert('Could not copy link. Please copy it manually.',{title:'Copy link',destructive:true});
             }
           };
         });
@@ -2342,9 +3316,9 @@
     renderQuestionWorkspace();
   }
 
-  function deleteQuestion(index){
+  async function deleteQuestion(index){
     if(questions.length<=1){
-      alert('A poll must have at least one question.');
+      await veritasAlert('A poll must have at least one question.',{title:'Edit poll'});
       return;
     }
     questions.splice(index,1);
@@ -2354,9 +3328,9 @@
     markPollDirty();
   }
 
-  function duplicateQuestionLocal(index){
+  async function duplicateQuestionLocal(index){
     if(questions.length>=50){
-      alert('Maximum 50 questions per poll. Cannot duplicate.');
+      await veritasAlert('Maximum 50 questions per poll. Cannot duplicate.',{title:'Edit poll'});
       return;
     }
     // Deep copy the question
@@ -2516,8 +3490,8 @@
             questions[selectedQuestionIndex].questionImageURL=null;
             markPollDirty();
             renderQuestionWorkspace();
-          }).catch(function(error){
-            alert('Image upload failed: '+(error.message||error));
+          }).catch(async function(error){
+            await veritasAlert('Image upload failed: '+(error.message||error),{title:'Upload image',destructive:true});
             questions[selectedQuestionIndex].questionImage=null;
             questions[selectedQuestionIndex].questionImageFileId=null;
             questions[selectedQuestionIndex].questionImageURL=null;
@@ -2594,8 +3568,8 @@
             questions[selectedQuestionIndex].answers[index].imageURL=null;
             markPollDirty();
             renderQuestionWorkspace();
-          }).catch(function(error){
-            alert('Image upload failed: '+(error.message||error));
+          }).catch(async function(error){
+            await veritasAlert('Image upload failed: '+(error.message||error),{title:'Upload image',destructive:true});
             questions[selectedQuestionIndex].answers[index].image=null;
             questions[selectedQuestionIndex].answers[index].imageFileId=null;
             questions[selectedQuestionIndex].answers[index].imageURL=null;
@@ -2660,9 +3634,9 @@
     return html;
   }
 
-  function deleteAnswer(index){
+  async function deleteAnswer(index){
     if(questions[selectedQuestionIndex].answers.length<=2){
-      alert('A question must have at least two answer choices.');
+      await veritasAlert('A question must have at least two answer choices.',{title:'Edit poll'});
       return;
     }
     questions[selectedQuestionIndex].answers.splice(index,1);
@@ -2713,7 +3687,7 @@
   }
 
   // --- Poll & Image Uploader ---
-  function savePoll(){
+  async function savePoll(){
     var savePollBtn=document.getElementById('save-poll-btn');
     var defaultLabel=editingPollId?'<span class="truncate">Save Changes</span>':'<span class="truncate">Publish Poll</span>';
 
@@ -2724,14 +3698,14 @@
     var className=(classSelect.value||'').trim();
 
     if(!pollName||!className){
-      alert('Please enter a poll name and select a class.');
+      await veritasAlert('Please enter a poll name and select a class.',{title:'Save poll'});
       savePollBtn.disabled=false;
       savePollBtn.innerHTML=defaultLabel;
       return;
     }
 
     if(questions.length===0){
-      alert('Please add at least one question.');
+      await veritasAlert('Please add at least one question.',{title:'Save poll'});
       savePollBtn.disabled=false;
       savePollBtn.innerHTML=defaultLabel;
       return;
@@ -2762,7 +3736,7 @@
     });
 
     if(validationError){
-      alert(validationError);
+      await veritasAlert(validationError,{title:'Save poll'});
       savePollBtn.disabled=false;
       savePollBtn.innerHTML=defaultLabel;
       return;
@@ -2770,20 +3744,22 @@
 
     // Check for any images still uploading
     var uploadsInProgress=false;
+    var uploadMessages=[];
     questions.forEach(function(question,index){
       if(question.questionImage==='UPLOADING'){
         uploadsInProgress=true;
-        alert('Question '+(index+1)+' image is still uploading. Please wait for upload to complete.');
+        uploadMessages.push('Question '+(index+1)+' image is still uploading. Please wait for upload to complete.');
       }
       question.answers.forEach(function(answer,aIndex){
         if(answer.image==='UPLOADING'){
           uploadsInProgress=true;
-          alert('Question '+(index+1)+', answer '+(aIndex+1)+' image is still uploading. Please wait for upload to complete.');
+          uploadMessages.push('Question '+(index+1)+', answer '+(aIndex+1)+' image is still uploading. Please wait for upload to complete.');
         }
       });
     });
 
     if(uploadsInProgress){
+      await veritasAlert(uploadMessages.join('\n'),{title:'Save poll'});
       savePollBtn.disabled=false;
       savePollBtn.innerHTML=defaultLabel;
       return;
@@ -2831,8 +3807,7 @@
       };
     });
 
-    // No upload tasks needed - images are uploaded immediately when selected
-    Promise.resolve().then(function(){
+    try{
       var payloadQuestions=sanitizedQuestions.map(function(question){
         var options=question.answers.map(function(answer){
           var imageUrl=answer.imageURL||null;
@@ -2864,7 +3839,7 @@
 
       // Validate payload before sending
       if(!payloadQuestions||payloadQuestions.length===0){
-        alert('❌ Error: No valid questions to save. Please check your poll data.');
+        await veritasAlert('❌ Error: No valid questions to save. Please check your poll data.',{title:'Save poll',destructive:true});
         savePollBtn.disabled=false;
         savePollBtn.innerHTML=defaultLabel;
         return;
@@ -2875,7 +3850,7 @@
       console.log('Saving poll with '+questionCount+' questions');
 
       var request=google.script.run
-        .withSuccessHandler(function(updatedPolls){
+        .withSuccessHandler(async function(updatedPolls){
           // Use the captured questionCount variable (not from server response)
           refreshPollData(updatedPolls);
           resetPollDirty('All changes saved');
@@ -2895,7 +3870,7 @@
             pollSelect.value='';
             onPollSelectChange();
           }
-          alert(successMessage);
+          await veritasAlert(successMessage,{title:'Save poll'});
         })
         .withFailureHandler(function(error){
           console.error('Poll save error:',error);
@@ -2909,12 +3884,12 @@
       } else {
         request.createNewPoll(pollName,className,payloadQuestions);
       }
-    }).catch(function(err){
+    } catch(err){
       console.error('Upload/save error:',err);
-      alert('❌ Upload error: '+(err.message||err));
+      await veritasAlert('❌ Upload error: '+(err.message||err),{title:'Save poll',destructive:true});
       savePollBtn.disabled=false;
       savePollBtn.innerHTML=defaultLabel;
-    });
+    }
   }
 
   function fileToBase64(file){
@@ -3011,10 +3986,13 @@
     return div.innerHTML;
   }
 
-  function handleError(error){
+  async function handleError(error){
     mainLoader.style.display='none';
     console.error('Error:',error);
-    alert('Error: '+(error.message||error));
+    await veritasAlert('Error: '+(error&&error.message?error.message:error),{
+      title:'Something went wrong',
+      destructive:true
+    });
   }
 
   // Expand question image in modal

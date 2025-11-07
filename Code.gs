@@ -201,6 +201,37 @@ const TokenManager = {
   }
 };
 
+// --- URL SHORTENER UTILITY ---
+const URLShortener = {
+  /**
+   * Shorten a URL using TinyURL API
+   * Falls back to original URL if shortening fails
+   */
+  shorten: function(longUrl) {
+    try {
+      const apiUrl = 'https://tinyurl.com/api-create.php?url=' + encodeURIComponent(longUrl);
+      const response = UrlFetchApp.fetch(apiUrl, {
+        muteHttpExceptions: true,
+        followRedirects: true
+      });
+
+      if (response.getResponseCode() === 200) {
+        const shortUrl = response.getContentText().trim();
+        if (shortUrl && shortUrl.startsWith('http')) {
+          Logger.log('URL shortened successfully', { original: longUrl, shortened: shortUrl });
+          return shortUrl;
+        }
+      }
+
+      Logger.log('URL shortening failed, using original URL', { url: longUrl });
+      return longUrl;
+    } catch (e) {
+      Logger.error('Error shortening URL, using original', e);
+      return longUrl;
+    }
+  }
+};
+
 // --- DATA ACCESS LAYER (Database-Style Queries) ---
 const DataAccess = {
   responses: {
@@ -2620,29 +2651,58 @@ function sendPollLinkToClass(className) {
     roster.forEach(student => {
       const token = TokenManager.generateToken(student.email, className);
       const personalizedUrl = `${baseUrl}?token=${token}`;
+      // Shorten the URL for better user experience
+      const shortUrl = URLShortener.shorten(personalizedUrl);
       links.push({
         email: student.email,
         name: student.name,
-        url: personalizedUrl,
+        url: shortUrl,
+        fullUrl: personalizedUrl,
         token: token
       });
     });
-    
+
     // Send individual emails with personalized links
     links.forEach(link => {
       const subject = "Your Personalized Link for Veritas Live Poll";
-      const body = `Hi ${link.name},\n\n` +
-        `Here is your unique link to access today's live poll:\n\n` +
-        `${link.url}\n\n` +
-        `Important:\n` +
-        `• This link is personalized for you only\n` +
-        `• Do not share this link with others\n` +
-        `• Click the link and wait for the poll to begin\n` +
-        `• Keep this tab open and do not switch tabs during the poll\n\n` +
-        `If you have any issues, please contact your teacher.\n\n` +
-        `- Veritas Live Poll System`;
-      
-      MailApp.sendEmail(link.email, subject, body);
+
+      // HTML email template
+      const htmlBody = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body>
+          <div style="text-align:center; margin:25px 0; font-family: Arial, Helvetica, sans-serif;">
+            <p style="margin-bottom: 20px; color: #333333;">Please submit your response using the button below:</p>
+            <a
+              href="${link.url}"
+              target="_blank"
+              rel="noopener"
+              style="display:inline-block;font-family:Arial, Helvetica, sans-serif;font-size:16px;font-weight:bold;color:#ffffff;text-decoration:none;text-align:center;background-color:#007bff;padding:12px 25px;border-radius:5px;border:1px solid #0056b3;mso-padding-alt:0px;mso-border-alt:none"
+            >
+              Click HERE to Submit Response
+            </a>
+          </div>
+
+          <p style="font-family:Arial, sans-serif; font-size:13px; color:#555555; text-align:center; margin-top:20px;">
+            If the button above doesn't work, copy and paste this link into your browser:
+            <br/>
+            <a href="${link.url}" target="_blank" style="color:#007bff; text-decoration:underline;">
+              ${link.url}
+            </a>
+          </p>
+        </body>
+        </html>
+      `;
+
+      MailApp.sendEmail({
+        to: link.email,
+        subject: subject,
+        htmlBody: htmlBody
+      });
     });
     
     Logger.log('Personalized poll links sent', { 

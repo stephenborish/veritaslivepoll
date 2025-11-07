@@ -2629,6 +2629,52 @@ function resetStudentResponse(studentEmail, pollId, questionIndex) {
   })();
 }
 /**
+ * Generate HTML email for VERITAS poll link
+ * @param {string} pollUrl - The shortened poll URL to include in email
+ * @return {string} HTML email body
+ */
+function generatePollEmailHtml(pollUrl) {
+  return `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>VERITAS Poll Link</title>
+      </head>
+      <body style="margin:0; padding:0; background-color:#f7f8fa; font-family:Arial, Helvetica, sans-serif;">
+        <div style="max-width:640px; margin:48px auto; background-color:#ffffff; padding:40px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08); text-align:center; border-top:5px solid #c5a05a;">
+          <p style="font-size:16px; color:#1c1c1c; margin-bottom:28px; line-height:1.6; font-weight:400;">
+            Hi there — your <strong style="color:#12385d;">VERITAS</strong> link is ready.<br>
+            Use the button below to begin participating.<br>
+            Once you begin, stay in fullscreen and don't navigate to any other browser tabs or apps.
+          </p>
+
+          <a href="${pollUrl}" target="_blank" rel="noopener"
+            style="display:inline-block; font-size:16px; font-weight:600; color:#ffffff; background-color:#12385d; text-decoration:none; padding:14px 36px; border-radius:8px; border:1px solid #0f2f4d; letter-spacing:0.3px;">
+            Begin Your VERITAS Session
+          </a>
+
+          <p style="font-size:13px; color:#555555; margin-top:36px; line-height:1.7;">
+            If the button doesn't work, copy and paste this link into your browser:<br>
+            <a href="${pollUrl}" target="_blank" style="color:#12385d; text-decoration:underline; word-break:break-word;">
+              ${pollUrl}
+            </a>
+          </p>
+
+          <hr style="border:none; border-top:1px solid #e6e6e6; margin:36px 0;">
+
+          <p style="font-size:12px; color:#888888; line-height:1.6; margin:0;">
+            This link is unique to you.<br>
+            Do not share it — it connects directly to your personal session in <span style="color:#12385d; font-weight:600;">VERITAS</span>.
+          </p>
+        </div>
+      </body>
+      </html>
+      `;
+}
+
+/**
  * Sends unique personalized poll links to all students in a class.
  * Each student receives their own token-based URL.
  */
@@ -2662,41 +2708,13 @@ function sendPollLinkToClass(className) {
       });
     });
 
+    // Get current date formatted like "November 6, 2025"
+    const today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "MMMM d, yyyy");
+
     // Send individual emails with personalized links
     links.forEach(link => {
-      const subject = "Your Personalized Link for Veritas Live Poll";
-
-      // HTML email template
-      const htmlBody = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        </head>
-        <body>
-          <div style="text-align:center; margin:25px 0; font-family: Arial, Helvetica, sans-serif;">
-            <p style="margin-bottom: 20px; color: #333333;">Please submit your response using the button below:</p>
-            <a
-              href="${link.url}"
-              target="_blank"
-              rel="noopener"
-              style="display:inline-block;font-family:Arial, Helvetica, sans-serif;font-size:16px;font-weight:bold;color:#ffffff;text-decoration:none;text-align:center;background-color:#007bff;padding:12px 25px;border-radius:5px;border:1px solid #0056b3;mso-padding-alt:0px;mso-border-alt:none"
-            >
-              Click HERE to Submit Response
-            </a>
-          </div>
-
-          <p style="font-family:Arial, sans-serif; font-size:13px; color:#555555; text-align:center; margin-top:20px;">
-            If the button above doesn't work, copy and paste this link into your browser:
-            <br/>
-            <a href="${link.url}" target="_blank" style="color:#007bff; text-decoration:underline;">
-              ${link.url}
-            </a>
-          </p>
-        </body>
-        </html>
-      `;
+      const subject = `Your VERITAS Live Poll Link – ${today}`;
+      const htmlBody = generatePollEmailHtml(link.url);
 
       MailApp.sendEmail({
         to: link.email,

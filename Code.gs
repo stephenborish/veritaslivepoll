@@ -326,6 +326,12 @@ const DataAccess = {
               : (questionIndex < 0 ? 'PRE_LIVE' : 'ENDED'));
 
       const enrichedMetadata = { ...metadata, sessionPhase };
+      if (typeof enrichedMetadata.isCollecting !== 'boolean') {
+        enrichedMetadata.isCollecting = (status === 'OPEN');
+      }
+      if (!enrichedMetadata.resultsVisibility) {
+        enrichedMetadata.resultsVisibility = 'HIDDEN';
+      }
       if (sessionPhase !== 'ENDED' && enrichedMetadata.endedAt === undefined) {
         // Ensure endedAt is cleared when resuming or before completion
         enrichedMetadata.endedAt = null;
@@ -1287,7 +1293,11 @@ function startPoll(pollId) {
       sessionPhase: 'LIVE',
       startedAt: nowIso,
       endedAt: null,
-      timer: null
+      timer: null,
+      isCollecting: true,
+      resultsVisibility: 'HIDDEN',
+      responsesClosedAt: null,
+      revealedAt: null
     });
 
     Logger.log('Poll started', { pollId: pollId, pollName: poll.pollName });
@@ -1480,7 +1490,11 @@ function nextQuestion() {
       timer: null,
       startedAt: previousMetadata.startedAt || nowIso,
       endedAt: null,
-      sessionPhase: 'LIVE'
+      sessionPhase: 'LIVE',
+      isCollecting: true,
+      resultsVisibility: 'HIDDEN',
+      responsesClosedAt: null,
+      revealedAt: null
     });
 
     Logger.log('Next question', { pollId: pollId, questionIndex: newIndex });
@@ -1500,14 +1514,18 @@ function stopPoll() {
     const nowIso = new Date().toISOString();
     DataAccess.liveStatus.set(pollId, questionIndex, "PAUSED", {
       ...previousMetadata,
-      reason: 'MANUAL_PAUSE',
+      reason: 'RESPONSES_CLOSED',
       pausedAt: nowIso,
       startedAt: previousMetadata.startedAt || nowIso,
       endedAt: null,
-      sessionPhase: 'PAUSED'
+      sessionPhase: 'RESULTS_HOLD',
+      isCollecting: false,
+      resultsVisibility: 'HIDDEN',
+      responsesClosedAt: nowIso,
+      revealedAt: null
     });
 
-    Logger.log('Poll paused', { pollId: pollId, questionIndex: questionIndex });
+    Logger.log('Responses closed for question', { pollId: pollId, questionIndex: questionIndex });
 
     // Return current data so view stays visible
     return getLivePollData(pollId, questionIndex);
@@ -1536,7 +1554,11 @@ function resumePoll() {
       resumedAt: nowIso,
       startedAt: previousMetadata.startedAt || nowIso,
       endedAt: null,
-      sessionPhase: 'LIVE'
+      sessionPhase: 'LIVE',
+      isCollecting: true,
+      resultsVisibility: 'HIDDEN',
+      responsesClosedAt: null,
+      revealedAt: null
     });
 
     Logger.log('Poll resumed', { pollId: pollId, questionIndex: questionIndex });
@@ -1560,7 +1582,11 @@ function closePoll() {
       reason: 'COMPLETED',
       sessionPhase: 'ENDED',
       endedAt: nowIso,
-      startedAt: previousMetadata.startedAt || null
+      startedAt: previousMetadata.startedAt || null,
+      isCollecting: false,
+      resultsVisibility: 'HIDDEN',
+      responsesClosedAt: previousMetadata.responsesClosedAt || nowIso,
+      revealedAt: null
     });
 
     Logger.log('Poll closed completely', { pollId: pollId });
@@ -1587,10 +1613,84 @@ function pausePollForTimerExpiry() {
       pausedAt: nowIso,
       startedAt: previousMetadata.startedAt || nowIso,
       endedAt: null,
-      sessionPhase: 'PAUSED'
+      sessionPhase: 'RESULTS_HOLD',
+      isCollecting: false,
+      resultsVisibility: 'HIDDEN',
+      responsesClosedAt: nowIso,
+      revealedAt: null
     });
 
-    Logger.log('Poll paused due to timer expiry', { pollId, questionIndex });
+    Logger.log('Responses closed due to timer expiry', { pollId, questionIndex });
+
+    return getLivePollData(pollId, questionIndex);
+  })();
+}
+
+function revealResultsToStudents() {
+  return withErrorHandling(() => {
+    const currentStatus = DataAccess.liveStatus.get();
+    const pollId = currentStatus[0];
+    const questionIndex = currentStatus[1];
+
+    if (!pollId || questionIndex < 0) {
+      throw new Error('No closed question to reveal.');
+    }
+
+    const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
+    if (previousMetadata && typeof previousMetadata.isCollecting === 'boolean' && previousMetadata.isCollecting) {
+      throw new Error('Responses are still collecting. Close the question before revealing results.');
+    }
+    const nowIso = new Date().toISOString();
+
+    DataAccess.liveStatus.set(pollId, questionIndex, "PAUSED", {
+      ...previousMetadata,
+      reason: 'RESULTS_REVEALED',
+      pausedAt: previousMetadata.pausedAt || nowIso,
+      startedAt: previousMetadata.startedAt || nowIso,
+      endedAt: null,
+      sessionPhase: 'RESULTS_REVEALED',
+      isCollecting: false,
+      resultsVisibility: 'REVEALED',
+      responsesClosedAt: previousMetadata.responsesClosedAt || nowIso,
+      revealedAt: nowIso
+    });
+
+    Logger.log('Results revealed to students', { pollId, questionIndex });
+
+    return getLivePollData(pollId, questionIndex);
+  })();
+}
+
+function hideResultsFromStudents() {
+  return withErrorHandling(() => {
+    const currentStatus = DataAccess.liveStatus.get();
+    const pollId = currentStatus[0];
+    const questionIndex = currentStatus[1];
+
+    if (!pollId || questionIndex < 0) {
+      throw new Error('No active question to hide results for.');
+    }
+
+    const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
+    if (previousMetadata && typeof previousMetadata.isCollecting === 'boolean' && previousMetadata.isCollecting) {
+      throw new Error('Results can only be hidden after responses close.');
+    }
+    const nowIso = new Date().toISOString();
+
+    DataAccess.liveStatus.set(pollId, questionIndex, "PAUSED", {
+      ...previousMetadata,
+      reason: 'RESULTS_HIDDEN',
+      pausedAt: previousMetadata.pausedAt || nowIso,
+      startedAt: previousMetadata.startedAt || nowIso,
+      endedAt: null,
+      sessionPhase: 'RESULTS_HOLD',
+      isCollecting: false,
+      resultsVisibility: 'HIDDEN',
+      responsesClosedAt: previousMetadata.responsesClosedAt || nowIso,
+      revealedAt: null
+    });
+
+    Logger.log('Results hidden from students', { pollId, questionIndex });
 
     return getLivePollData(pollId, questionIndex);
   })();
@@ -1638,7 +1738,11 @@ function resetLiveQuestion(pollId, questionIndex, clearResponses) {
       clearedResponses: !!clearResponses,
       startedAt: previousMetadata.startedAt || nowIso,
       endedAt: null,
-      sessionPhase: 'LIVE'
+      sessionPhase: 'LIVE',
+      isCollecting: true,
+      resultsVisibility: 'HIDDEN',
+      responsesClosedAt: null,
+      revealedAt: null
     });
 
     Logger.log('Question reset', {
@@ -1943,6 +2047,63 @@ function getLivePollData(pollId, questionIndex) {
   })();
 }
 
+
+function buildSubmittedAnswersMap_(pollId, questionIndex) {
+  const responses = DataAccess.responses.getByPollAndQuestion(pollId, questionIndex) || [];
+  const submissions = new Map();
+
+  responses.forEach(row => {
+    const email = (row[4] || '').toString().trim();
+    if (!email) {
+      return;
+    }
+    const answer = row[5];
+    const rawCorrect = row[6];
+    const isCorrect = (rawCorrect === true) || (rawCorrect === 'TRUE') || (rawCorrect === 'true') || (rawCorrect === 1);
+    const timestamp = typeof row[1] === 'number' ? row[1] : null;
+
+    submissions.set(email, {
+      answer: answer,
+      isCorrect: isCorrect,
+      timestamp: timestamp
+    });
+  });
+
+  return submissions;
+}
+
+function computeAnswerCounts_(question, submissionsMap) {
+  const counts = {};
+  const options = (question && Array.isArray(question.options)) ? question.options : [];
+  options.forEach(opt => {
+    if (opt && Object.prototype.hasOwnProperty.call(opt, 'text') && opt.text) {
+      counts[opt.text] = 0;
+    }
+  });
+
+  submissionsMap.forEach(submission => {
+    const key = submission.answer;
+    if (key && Object.prototype.hasOwnProperty.call(counts, key)) {
+      counts[key]++;
+    }
+  });
+
+  return counts;
+}
+
+function computeAnswerPercentages_(answerCounts) {
+  const percentages = {};
+  const values = Object.values(answerCounts || {});
+  const total = values.reduce((sum, value) => sum + (typeof value === 'number' ? value : 0), 0);
+
+  Object.keys(answerCounts || {}).forEach(key => {
+    const count = typeof answerCounts[key] === 'number' ? answerCounts[key] : 0;
+    percentages[key] = total > 0 ? Math.round((count / total) * 100) : 0;
+  });
+
+  return { percentages, totalResponses: total };
+}
+
 // =============================================================================
 // STUDENT APP FUNCTIONS
 // =============================================================================
@@ -2141,26 +2302,63 @@ function getStudentPollStatus(token, context) {
     }
 
     const hasSubmitted = DataAccess.responses.hasAnswered(pollId, questionIndex, studentEmail);
-
-    if (hasSubmitted) {
-      return baseWaiting('LIVE', pickMessage([
-        "Answer received — nice work.",
-        "Got it! Your response is locked in."
-      ], "Answer received — nice work."), true);
-    }
-
     const question = poll.questions[questionIndex];
     const normalizedQuestion = normalizeQuestionObject_(question, poll.updatedAt);
 
-    return envelope({
-      status: 'LIVE',
+    const isCollecting = (metadata && typeof metadata.isCollecting === 'boolean')
+      ? metadata.isCollecting
+      : (pollStatus === 'OPEN');
+    const resultsVisibility = (metadata && metadata.resultsVisibility) ? metadata.resultsVisibility : 'HIDDEN';
+
+    if (isCollecting) {
+      if (hasSubmitted) {
+        return baseWaiting('LIVE', pickMessage([
+          "Answer received — nice work.",
+          "Got it! Your response is locked in."
+        ], "Answer received — nice work."), true);
+      }
+
+      return envelope({
+        status: 'LIVE',
+        pollId: pollId,
+        questionIndex: questionIndex,
+        totalQuestions: poll.questions.length,
+        hasSubmitted: false,
+        metadata: metadata,
+        ...normalizedQuestion
+      });
+    }
+
+    const submissionsMap = buildSubmittedAnswersMap_(pollId, questionIndex);
+    const basePayload = {
+      status: resultsVisibility === 'REVEALED' ? 'RESULTS_REVEALED' : 'RESULTS_HOLD',
       pollId: pollId,
       questionIndex: questionIndex,
       totalQuestions: poll.questions.length,
-      hasSubmitted: false,
+      hasSubmitted: hasSubmitted,
       metadata: metadata,
+      resultsVisibility: resultsVisibility,
+      isCollecting: false,
       ...normalizedQuestion
-    });
+    };
+
+    if (resultsVisibility === 'REVEALED') {
+      const answerCounts = computeAnswerCounts_(normalizedQuestion, submissionsMap);
+      const { percentages, totalResponses } = computeAnswerPercentages_(answerCounts);
+      const studentSubmission = submissionsMap.get(studentEmail) || null;
+
+      basePayload.correctAnswer = question.correctAnswer || null;
+      basePayload.results = answerCounts;
+      basePayload.resultPercentages = percentages;
+      basePayload.totalResponses = totalResponses;
+      basePayload.studentAnswer = studentSubmission ? (studentSubmission.answer || null) : null;
+      basePayload.studentIsCorrect = studentSubmission ? !!studentSubmission.isCorrect : null;
+    } else {
+      basePayload.totalResponses = submissionsMap.size;
+      basePayload.correctAnswer = null;
+    }
+
+    return envelope(basePayload);
   })();
 }
 

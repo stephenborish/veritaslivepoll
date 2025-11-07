@@ -46,7 +46,7 @@ Rosters: Stores class lists (ClassName, StudentName, StudentEmail).
 
 Polls: Stores all poll questions. Each row is one question, linked by a PollID.
 
-LiveStatus: A 1-row sheet that acts as the "state manager" for the entire app, tracking the active poll, question, and status (OPEN, PAUSED, CLOSED).
+LiveStatus: A 1-row sheet that acts as the "state manager" for the entire app, tracking the active poll, question, and sessionPhase metadata (PRE_LIVE, LIVE, PAUSED, ENDED).
 
 Responses: A log of all student submissions, including violation locks.
 
@@ -98,7 +98,7 @@ The teacher selects the poll from the dropdown.
 
 They click "Start Poll."
 
-This calls startPoll(), which sets the LiveStatus sheet to (PollID, 0, "OPEN").
+This calls startPoll(), which sets the LiveStatus sheet to (PollID, 0, "OPEN") and marks the sessionPhase metadata as "LIVE" with a fresh startedAt timestamp.
 
 Step 5: Conduct the Poll:
 
@@ -106,7 +106,7 @@ The "Live Dashboard" view appears. The teacher sees the first question, the live
 
 Students can now answer. As responses come in, the chart and student grid update automatically (by polling getLivePollData).
 
-PAUSED: If the timer runs out or the teacher clicks "Pause Poll," the LiveStatus is set to PAUSED. Students can no longer submit answers and see a "Waiting" message. The teacher can click "Resume Poll" to reopen it.
+PAUSED: If the timer runs out or the teacher clicks "Pause Poll," the LiveStatus is set to PAUSED and the sessionPhase becomes "PAUSED." Students can no longer submit answers and see a pause banner while the teacher can click "Resume Poll" to reopen it.
 
 NEXT: The teacher clicks "Next Question." This calls nextQuestion(), which increments the question index in LiveStatus. Students who have answered will now see the new question.
 
@@ -116,7 +116,7 @@ Step 6: End the Poll:
 
 When the last question is finished, the teacher clicks "End Poll" (or "Finish Poll").
 
-This calls closePoll(), which sets the LiveStatus to ("", -1, "CLOSED").
+This calls closePoll(), which clears the active poll row and records a sessionPhase of "ENDED" (with an endedAt timestamp) so every client recognizes the session as finished.
 
 The poll is over for all participants.
 
@@ -140,13 +140,13 @@ The app's main loop starts, polling getStudentPollStatus() every 2.5 seconds.
 
 Step 4: Wait for Question:
 
-getStudentPollStatus() returns { status: "CLOSED" } or { status: "WAITING" }.
+getStudentPollStatus() returns { status: "PRE_LIVE", ... } until the teacher starts the poll.
 
 The student sees the "Waiting for the poll to begin..." message.
 
 Step 5: Answer Question:
 
-The teacher starts the poll. getStudentPollStatus() now returns { status: "OPEN", ...questionData }.
+The teacher starts the poll. getStudentPollStatus() now returns { status: "LIVE", ...questionData }.
 
 The "Waiting" message disappears, and the question text, image, and answer buttons appear.
 
@@ -154,9 +154,9 @@ The student clicks an answer. This calls submitStudentAnswer() with their choice
 
 Step 6: Wait Again:
 
-After submission, getStudentPollStatus() sees they have already answered (DataAccess.responses.hasAnswered(...)) and returns { status: "WAITING", message: "Your answer has been submitted..." }.
+After submission, getStudentPollStatus() sees they have already answered (DataAccess.responses.hasAnswered(...)) and returns { status: "LIVE", message: "Your answer has been submitted...", hasSubmitted: true }.
 
-The student sees this "Waiting" message until the teacher clicks "Next Question," at which point the cycle repeats from Step 5.
+The student sees this confirmation until the teacher clicks "Next Question," at which point the cycle repeats from Step 5.
 
 Student Violation Workflow
 

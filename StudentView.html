@@ -590,9 +590,9 @@
                 resumeControls.style.display = 'none';
             }
 
-            if (data.status === 'OPEN') {
-                var questionKey = data.pollId + ':' + data.questionIndex;
-                var isNewQuestion = questionKey !== currentQuestionKey;
+            if (data.status === 'LIVE' && typeof data.questionIndex === 'number' && data.questionIndex >= 0) {
+              var questionKey = data.pollId + ':' + data.questionIndex;
+              var isNewQuestion = questionKey !== currentQuestionKey;
 
                 if (isNewQuestion) {
                     currentQuestionKey = questionKey;
@@ -694,24 +694,33 @@
                 var statusClass = 'text-white';
                 var statusTextClass = 'text-white text-2xl font-semibold';
 
-                if (data.status === 'WAITING') {
-                    if (data.hasSubmitted) {
-                        hasAnsweredCurrent = true;
-                        pendingSubmission = false;
-                        statusMessage.textContent = data.message || 'Answer received - nice work.';
-                        statusTextClass = 'text-green-300 text-2xl font-semibold';
-                        statusIcon = 'check_circle';
-                        statusClass = 'text-green-300';
-                        if (statusSubMessage) {
-                            statusSubMessage.textContent = 'Waiting for another question...';
-                            statusSubMessage.style.display = 'block';
-                            statusSubMessage.className = 'text-white/70 text-lg mt-4';
-                        }
-                    } else {
-                        hasAnsweredCurrent = false;
-                        statusMessage.textContent = data.message || 'Hang tight - your teacher is loading the next challenge.';
-                        statusIcon = 'hourglass_top';
-                        statusClass = 'text-white';
+                if (data.status === 'PRE_LIVE') {
+                    hasAnsweredCurrent = false;
+                    statusMessage.textContent = data.message || 'Waiting for your teacher to begin the poll...';
+                    statusIcon = 'schedule';
+                    statusClass = 'text-white';
+                    if (statusSubMessage) {
+                        statusSubMessage.textContent = 'This page will update automatically.';
+                        statusSubMessage.style.display = 'block';
+                        statusSubMessage.className = 'text-white/60 text-base mt-4';
+                    }
+                } else if (data.status === 'PAUSED') {
+                    hasAnsweredCurrent = false;
+                    statusMessage.textContent = data.message || 'Intermission! Your teacher’s cooking up the next one.';
+                    statusIcon = 'hourglass_top';
+                    statusClass = 'text-white';
+                    if (statusSubMessage) {
+                        statusSubMessage.style.display = 'none';
+                        statusSubMessage.textContent = '';
+                    }
+                } else if (data.status === 'ENDED') {
+                    hasAnsweredCurrent = false;
+                    statusMessage.textContent = data.message || 'That’s a wrap! You just finished the poll — nicely done.';
+                    statusIcon = 'emoji_events';
+                    statusClass = 'text-yellow-300';
+                    if (statusSubMessage) {
+                        statusSubMessage.style.display = 'none';
+                        statusSubMessage.textContent = '';
                     }
                 } else if (data.status === 'NOT_ENROLLED') {
                     hasAnsweredCurrent = false;
@@ -719,6 +728,10 @@
                     statusTextClass = 'text-red-300 text-2xl font-bold';
                     statusIcon = 'error';
                     statusClass = 'text-red-300';
+                    if (statusSubMessage) {
+                        statusSubMessage.style.display = 'none';
+                        statusSubMessage.textContent = '';
+                    }
                     stopPolling();
                 } else if (data.status === 'ERROR') {
                     hasAnsweredCurrent = false;
@@ -726,38 +739,19 @@
                     statusTextClass = 'text-red-300 text-2xl font-bold';
                     statusIcon = 'error';
                     statusClass = 'text-red-300';
-                } else if (data.status === 'CLOSED') {
-                    hasAnsweredCurrent = false;
-                    // Check if poll hasn't started yet vs has finished
-                    // If no questions have been presented, poll hasn't started
-                    var pollHasStarted = data.totalQuestions > 0 || (typeof data.questionIndex === 'number' && data.questionIndex >= 0);
-
-                    if (!pollHasStarted) {
-                        // Poll hasn't started yet - waiting for teacher
-                        statusMessage.textContent = data.message || 'Waiting for your teacher to begin the poll...';
-                        statusTextClass = 'text-white text-2xl font-semibold';
-                        statusIcon = 'schedule';
-                        statusClass = 'text-white';
-                        if (statusSubMessage) {
-                            statusSubMessage.textContent = 'This page will update automatically.';
-                            statusSubMessage.style.display = 'block';
-                            statusSubMessage.className = 'text-white/60 text-base mt-4';
-                        }
-                    } else {
-                        // Poll has finished
-                        statusMessage.textContent = data.message || 'That is a wrap! You just finished the poll - nicely done.';
-                        statusTextClass = 'text-white text-2xl font-semibold';
-                        statusIcon = 'emoji_events';
-                        statusClass = 'text-yellow-300';
-                        if (statusSubMessage) {
-                            statusSubMessage.style.display = 'none';
-                        }
+                    if (statusSubMessage) {
+                        statusSubMessage.style.display = 'none';
+                        statusSubMessage.textContent = '';
                     }
                 } else {
                     hasAnsweredCurrent = false;
-                    statusMessage.textContent = data.message || 'Hang tight - your teacher is loading the next challenge.';
+                    statusMessage.textContent = data.message || 'Hang tight — your teacher’s loading the next challenge.';
                     statusIcon = 'hourglass_top';
                     statusClass = 'text-white';
+                    if (statusSubMessage) {
+                        statusSubMessage.style.display = 'none';
+                        statusSubMessage.textContent = '';
+                    }
                 }
                 statusMessage.className = statusTextClass;
                 var iconEl = statusContainer.querySelector('.material-symbols-outlined');

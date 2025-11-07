@@ -317,22 +317,36 @@ const DataAccess = {
       const statusData = [pollId, questionIndex, status];
       liveSheet.getRange("A2:C2").setValues([statusData]);
 
+      const sessionPhase = (metadata && metadata.sessionPhase)
+        ? metadata.sessionPhase
+        : (status === 'OPEN'
+            ? 'LIVE'
+            : status === 'PAUSED'
+              ? 'PAUSED'
+              : (questionIndex < 0 ? 'PRE_LIVE' : 'ENDED'));
+
+      const enrichedMetadata = { ...metadata, sessionPhase };
+      if (sessionPhase !== 'ENDED' && enrichedMetadata.endedAt === undefined) {
+        // Ensure endedAt is cleared when resuming or before completion
+        enrichedMetadata.endedAt = null;
+      }
+
       // Persist metadata for downstream consumers (students/teacher views)
-      this.setMetadata_(metadata);
+      this.setMetadata_(enrichedMetadata);
 
       // Atomically update cache - put() overwrites existing entry without race condition
       const cache = CacheService.getScriptCache();
       cache.put('LIVE_POLL_STATUS', JSON.stringify(statusData), CacheManager.CACHE_TIMES.INSTANT);
 
-      const reason = (metadata && metadata.reason) ? metadata.reason : `STATUS_${status}`;
+      const reason = (enrichedMetadata && enrichedMetadata.reason) ? enrichedMetadata.reason : `STATUS_${status}`;
       StateVersionManager.bump({
         pollId: pollId || '',
         questionIndex: typeof questionIndex === 'number' ? questionIndex : -1,
-        status: status,
+        status: sessionPhase,
         reason: reason,
-        metadata: metadata,
-        timerRemainingSeconds: (metadata && typeof metadata.timerRemainingSeconds === 'number')
-          ? metadata.timerRemainingSeconds
+        metadata: enrichedMetadata,
+        timerRemainingSeconds: (enrichedMetadata && typeof enrichedMetadata.timerRemainingSeconds === 'number')
+          ? enrichedMetadata.timerRemainingSeconds
           : null
       });
     },
@@ -424,7 +438,7 @@ const StateVersionManager = {
         updatedAt: null,
         pollId: '',
         questionIndex: -1,
-        status: 'CLOSED',
+        status: 'PRE_LIVE',
         reason: 'boot'
       };
     }
@@ -438,7 +452,7 @@ const StateVersionManager = {
         updatedAt: null,
         pollId: '',
         questionIndex: -1,
-        status: 'CLOSED',
+        status: 'PRE_LIVE',
         reason: 'boot'
       };
     }
@@ -684,7 +698,12 @@ function setupSheet() {
   const liveSheet = ss.getSheetByName("LiveStatus");
   liveSheet.getRange("A1:C1").setValues([["ActivePollID", "ActiveQuestionIndex", "PollStatus"]])
     .setFontWeight("bold").setBackground("#4285f4").setFontColor("#ffffff");
-  liveSheet.getRange("A2:C2").setValues([["", -1, "CLOSED"]]);
+  DataAccess.liveStatus.set("", -1, "CLOSED", {
+    sessionPhase: 'PRE_LIVE',
+    startedAt: null,
+    endedAt: null,
+    reason: 'SETUP'
+  });
   
   const responsesSheet = ss.getSheetByName("Responses");
   responsesSheet.getRange("A1:G1").setValues([["ResponseID", "Timestamp", "PollID", "QuestionIndex", "StudentEmail", "Answer", "IsCorrect"]])
@@ -1262,9 +1281,12 @@ function startPoll(pollId) {
     const poll = DataAccess.polls.getById(pollId);
     if (!poll) throw new Error('Poll not found');
 
+    const nowIso = new Date().toISOString();
     DataAccess.liveStatus.set(pollId, 0, "OPEN", {
       reason: 'RUNNING',
-      startedAt: new Date().toISOString(),
+      sessionPhase: 'LIVE',
+      startedAt: nowIso,
+      endedAt: null,
       timer: null
     });
 
@@ -1449,10 +1471,16 @@ function nextQuestion() {
       return stopPoll();
     }
 
+    const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
+    const nowIso = new Date().toISOString();
     DataAccess.liveStatus.set(pollId, newIndex, "OPEN", {
+      ...previousMetadata,
       reason: 'RUNNING',
-      advancedAt: new Date().toISOString(),
-      timer: null
+      advancedAt: nowIso,
+      timer: null,
+      startedAt: previousMetadata.startedAt || nowIso,
+      endedAt: null,
+      sessionPhase: 'LIVE'
     });
 
     Logger.log('Next question', { pollId: pollId, questionIndex: newIndex });
@@ -1468,9 +1496,15 @@ function stopPoll() {
     const questionIndex = currentStatus[1];
 
     // Instead of closing completely, set to PAUSED state
+    const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
+    const nowIso = new Date().toISOString();
     DataAccess.liveStatus.set(pollId, questionIndex, "PAUSED", {
+      ...previousMetadata,
       reason: 'MANUAL_PAUSE',
-      pausedAt: new Date().toISOString()
+      pausedAt: nowIso,
+      startedAt: previousMetadata.startedAt || nowIso,
+      endedAt: null,
+      sessionPhase: 'PAUSED'
     });
 
     Logger.log('Poll paused', { pollId: pollId, questionIndex: questionIndex });
@@ -1494,9 +1528,15 @@ function resumePoll() {
     }
 
     // Set back to OPEN
+    const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
+    const nowIso = new Date().toISOString();
     DataAccess.liveStatus.set(pollId, questionIndex, "OPEN", {
+      ...previousMetadata,
       reason: 'RUNNING',
-      resumedAt: new Date().toISOString()
+      resumedAt: nowIso,
+      startedAt: previousMetadata.startedAt || nowIso,
+      endedAt: null,
+      sessionPhase: 'LIVE'
     });
 
     Logger.log('Poll resumed', { pollId: pollId, questionIndex: questionIndex });
@@ -1513,11 +1553,19 @@ function closePoll() {
     const currentStatus = DataAccess.liveStatus.get();
     const pollId = currentStatus[0];
 
-    DataAccess.liveStatus.set("", -1, "CLOSED", {});
+    const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
+    const nowIso = new Date().toISOString();
+    DataAccess.liveStatus.set("", -1, "CLOSED", {
+      ...previousMetadata,
+      reason: 'COMPLETED',
+      sessionPhase: 'ENDED',
+      endedAt: nowIso,
+      startedAt: previousMetadata.startedAt || null
+    });
 
     Logger.log('Poll closed completely', { pollId: pollId });
 
-    return { status: "CLOSED" };
+    return { status: "ENDED" };
   })();
 }
 
@@ -1531,9 +1579,15 @@ function pausePollForTimerExpiry() {
       throw new Error('No active question to pause');
     }
 
+    const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
+    const nowIso = new Date().toISOString();
     DataAccess.liveStatus.set(pollId, questionIndex, "PAUSED", {
+      ...previousMetadata,
       reason: 'TIMER_EXPIRED',
-      pausedAt: new Date().toISOString()
+      pausedAt: nowIso,
+      startedAt: previousMetadata.startedAt || nowIso,
+      endedAt: null,
+      sessionPhase: 'PAUSED'
     });
 
     Logger.log('Poll paused due to timer expiry', { pollId, questionIndex });
@@ -1574,10 +1628,17 @@ function resetLiveQuestion(pollId, questionIndex, clearResponses) {
       }
     }
 
+    const currentStatus = DataAccess.liveStatus.get();
+    const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
+    const nowIso = new Date().toISOString();
     DataAccess.liveStatus.set(pollId, questionIndex, "OPEN", {
+      ...previousMetadata,
       reason: 'RUNNING',
-      resetAt: new Date().toISOString(),
-      clearedResponses: !!clearResponses
+      resetAt: nowIso,
+      clearedResponses: !!clearResponses,
+      startedAt: previousMetadata.startedAt || nowIso,
+      endedAt: null,
+      sessionPhase: 'LIVE'
     });
 
     Logger.log('Question reset', {
@@ -1757,7 +1818,33 @@ function getLivePollData(pollId, questionIndex) {
 
     const liveStatus = DataAccess.liveStatus.get();
     const pollStatus = Array.isArray(liveStatus) ? (liveStatus[2] || 'OPEN') : 'OPEN';
+    const statusQuestionIndex = Array.isArray(liveStatus) ? liveStatus[1] : -1;
     const metadata = (liveStatus && liveStatus.metadata) ? liveStatus.metadata : {};
+    const endedAt = metadata && Object.prototype.hasOwnProperty.call(metadata, 'endedAt') ? metadata.endedAt : null;
+    const ended = (metadata && metadata.sessionPhase === 'ENDED') || (!!endedAt && endedAt !== null && endedAt !== '');
+    let derivedStatus = metadata && metadata.sessionPhase ? metadata.sessionPhase : null;
+
+    if (!derivedStatus) {
+      if (ended) {
+        derivedStatus = 'ENDED';
+      } else if (pollStatus === 'PAUSED') {
+        derivedStatus = 'PAUSED';
+      } else if (pollStatus === 'OPEN') {
+        derivedStatus = statusQuestionIndex >= 0 ? 'LIVE' : 'PRE_LIVE';
+      } else if (pollStatus === 'CLOSED') {
+        derivedStatus = statusQuestionIndex >= 0 ? 'ENDED' : 'PRE_LIVE';
+      } else {
+        derivedStatus = 'PRE_LIVE';
+      }
+    }
+
+    if (derivedStatus === 'LIVE' && statusQuestionIndex < 0 && !ended) {
+      derivedStatus = 'PRE_LIVE';
+    }
+
+    if (ended) {
+      derivedStatus = 'ENDED';
+    }
 
     const roster = DataAccess.roster.getByClass(poll.className);
     const pollResponses = DataAccess.responses.getByPoll(pollId);
@@ -1836,7 +1923,7 @@ function getLivePollData(pollId, questionIndex) {
     }
     
     return {
-      status: pollStatus || "OPEN",
+      status: derivedStatus,
       pollId: pollId,
       pollName: poll.pollName,
       questionText: question.questionText || '',
@@ -1850,7 +1937,8 @@ function getLivePollData(pollId, questionIndex) {
       totalStudents: roster.length,
       totalResponses: submittedAnswers.size,
       timerSeconds: question.timerSeconds || null,
-      metadata: metadata
+      metadata: metadata,
+      authoritativeStatus: derivedStatus
     };
   })();
 }
@@ -1866,6 +1954,9 @@ function getStudentPollStatus(token, context) {
     const questionIndex = statusValues[1];
     const pollStatus = statusValues[2];
     const metadata = (statusValues && statusValues.metadata) ? statusValues.metadata : {};
+    const sessionPhaseFromMetadata = metadata && metadata.sessionPhase ? metadata.sessionPhase : null;
+    const endedAtMetadata = metadata && Object.prototype.hasOwnProperty.call(metadata, 'endedAt') ? metadata.endedAt : null;
+    const sessionEnded = sessionPhaseFromMetadata === 'ENDED' || (!!endedAtMetadata && endedAtMetadata !== null && endedAtMetadata !== '');
 
     const pickMessage = (choices, fallback) => {
       if (Array.isArray(choices) && choices.length > 0) {
@@ -1903,6 +1994,25 @@ function getStudentPollStatus(token, context) {
     }
     advisedPollIntervalMs = Math.min(5000, Math.max(2000, advisedPollIntervalMs));
 
+    const fallbackPhase = () => {
+      if (sessionEnded) {
+        return 'ENDED';
+      }
+      if (sessionPhaseFromMetadata) {
+        return sessionPhaseFromMetadata;
+      }
+      if (pollStatus === 'PAUSED') {
+        return 'PAUSED';
+      }
+      if (pollStatus === 'OPEN') {
+        return questionIndex >= 0 ? 'LIVE' : 'PRE_LIVE';
+      }
+      if (pollStatus === 'CLOSED') {
+        return questionIndex >= 0 ? 'ENDED' : 'PRE_LIVE';
+      }
+      return questionIndex >= 0 ? 'LIVE' : 'PRE_LIVE';
+    };
+
     const envelope = (payload) => {
       const response = {
         ...payload,
@@ -1934,15 +2044,24 @@ function getStudentPollStatus(token, context) {
         response.questionIndex = stateSnapshot.questionIndex;
       }
 
+      if (!response.status) {
+        response.status = fallbackPhase();
+      } else if (response.status === 'OPEN') {
+        response.status = 'LIVE';
+      } else if (response.status === 'WAITING') {
+        response.status = fallbackPhase();
+      } else if (response.status === 'CLOSED') {
+        response.status = sessionEnded ? 'ENDED' : 'PRE_LIVE';
+      }
+
       return response;
     };
 
-    const baseWaiting = (message, hasSubmitted = false) => envelope({ status: "WAITING", message, hasSubmitted, pollId: pollId });
+    const baseWaiting = (status, message, hasSubmitted = false) => envelope({ status, message, hasSubmitted, pollId: pollId });
 
-    // If paused or closed, students see waiting message
-    if (pollStatus === "CLOSED" || !pollId) {
+    if (sessionEnded) {
       return envelope({
-        status: "CLOSED",
+        status: 'ENDED',
         hasSubmitted: false,
         message: pickMessage([
           "That’s a wrap! You just finished the poll — nicely done.",
@@ -1952,7 +2071,14 @@ function getStudentPollStatus(token, context) {
       });
     }
 
-    if (pollStatus === "PAUSED") {
+    if (!pollId || questionIndex < 0) {
+      return baseWaiting('PRE_LIVE', pickMessage([
+        "Hang tight — your teacher’s loading the next challenge.",
+        "Get your brain in gear. The poll’s about to begin!"
+      ], "Hang tight — your teacher’s loading the next challenge."), false);
+    }
+
+    if (pollStatus === "PAUSED" || sessionPhaseFromMetadata === 'PAUSED') {
       const reason = metadata.reason || '';
       let message;
       if (reason === 'TIMER_EXPIRED') {
@@ -1966,7 +2092,7 @@ function getStudentPollStatus(token, context) {
           "Breathe. Blink. Hydrate. A new question is on the way."
         ], "Intermission! Your teacher’s cooking up the next one.");
       }
-      return envelope({ status: "PAUSED", message: message, hasSubmitted: false, pollId: pollId });
+      return envelope({ status: 'PAUSED', message: message, hasSubmitted: false, pollId: pollId });
     }
 
     if (!studentEmail) {
@@ -1981,7 +2107,7 @@ function getStudentPollStatus(token, context) {
 
     if (!poll) {
       return envelope({
-        status: "CLOSED",
+        status: 'ERROR',
         message: "Poll configuration error.",
         hasSubmitted: false
       });
@@ -2014,17 +2140,10 @@ function getStudentPollStatus(token, context) {
       });
     }
 
-    if (questionIndex < 0) {
-      return baseWaiting(pickMessage([
-        "Hang tight — your teacher’s loading the next challenge.",
-        "Get your brain in gear. The poll’s about to begin!"
-      ], "Hang tight — your teacher’s loading the next challenge."), false);
-    }
-
     const hasSubmitted = DataAccess.responses.hasAnswered(pollId, questionIndex, studentEmail);
 
     if (hasSubmitted) {
-      return baseWaiting(pickMessage([
+      return baseWaiting('LIVE', pickMessage([
         "Answer received — nice work.",
         "Got it! Your response is locked in."
       ], "Answer received — nice work."), true);
@@ -2034,7 +2153,7 @@ function getStudentPollStatus(token, context) {
     const normalizedQuestion = normalizeQuestionObject_(question, poll.updatedAt);
 
     return envelope({
-      status: "OPEN",
+      status: 'LIVE',
       pollId: pollId,
       questionIndex: questionIndex,
       totalQuestions: poll.questions.length,

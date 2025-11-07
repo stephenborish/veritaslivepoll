@@ -1518,7 +1518,7 @@
     showDashboard();
     google.script.run
       .withSuccessHandler(function(data){
-        if(data&&data.status!=='CLOSED'){
+        if(data&&data.status!=='ENDED'){
           showDashboard();
         }
       })
@@ -1533,11 +1533,15 @@
 
     if(!data){return;}
 
-    if(!isLiveSession && data.status!=="CLOSED"){
+    var status=data.status||'PRE_LIVE';
+    var isPreLive=status==='PRE_LIVE';
+    var isEnded=status==='ENDED';
+
+    if(!isLiveSession && !isPreLive){
       return;
     }
 
-    if(data.status==="CLOSED"){
+    if(isPreLive||isEnded){
       showDashboard();
       return;
     }
@@ -1545,7 +1549,7 @@
     if(data.error){handleError(data.error);return;}
 
     var previousQuestionIndex=typeof CURRENT_POLL_DATA.questionIndex==='number'?CURRENT_POLL_DATA.questionIndex:null;
-    isPaused=data.status==='PAUSED';
+    isPaused=status==='PAUSED';
 
     CURRENT_POLL_DATA.pollId=data.pollId||pollSelect.value;
     CURRENT_POLL_DATA.questionIndex=data.questionIndex;

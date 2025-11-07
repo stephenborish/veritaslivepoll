@@ -1758,6 +1758,39 @@ function hideResultsFromStudents() {
   })();
 }
 
+function endQuestionAndRevealResults() {
+  return withErrorHandling(() => {
+    const currentStatus = DataAccess.liveStatus.get();
+    const pollId = currentStatus[0];
+    const questionIndex = currentStatus[1];
+
+    if (!pollId || questionIndex < 0) {
+      throw new Error('No active question to end.');
+    }
+
+    const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
+    const nowIso = new Date().toISOString();
+
+    // Close responses and immediately reveal results
+    DataAccess.liveStatus.set(pollId, questionIndex, "PAUSED", {
+      ...previousMetadata,
+      reason: 'RESULTS_REVEALED',
+      pausedAt: nowIso,
+      startedAt: previousMetadata.startedAt || nowIso,
+      endedAt: null,
+      sessionPhase: 'RESULTS_REVEALED',
+      isCollecting: false,
+      resultsVisibility: 'REVEALED',
+      responsesClosedAt: nowIso,
+      revealedAt: nowIso
+    });
+
+    Logger.log('Question ended and results revealed', { pollId, questionIndex });
+
+    return getLivePollData(pollId, questionIndex);
+  })();
+}
+
 function resetLiveQuestion(pollId, questionIndex, clearResponses) {
   return withErrorHandling(() => {
     if (!pollId) {

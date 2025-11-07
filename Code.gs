@@ -670,6 +670,26 @@ function getPollEditorHtml(className) {
   return template.evaluate().getContent();
 }
 
+function safeUiAlert(message, title) {
+  try {
+    const ui = SpreadsheetApp.getUi();
+    if (!ui || typeof ui.alert !== 'function') {
+      Logger.log('Spreadsheet UI unavailable for alert', { message, title: title || null });
+      return false;
+    }
+
+    if (title) {
+      ui.alert(title, message, ui.ButtonSet.OK);
+    } else {
+      ui.alert(message);
+    }
+    return true;
+  } catch (err) {
+    Logger.log('Spreadsheet UI alert failed', { message, title: title || null, error: err.toString() });
+    return false;
+  }
+}
+
 // =============================================================================
 // ONE-TIME SETUP
 // =============================================================================
@@ -677,7 +697,9 @@ function getPollEditorHtml(className) {
 function setupSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) {
-    SpreadsheetApp.getUi().alert("This script must be bound to a Google Sheet.");
+    if (!safeUiAlert('This script must be bound to a Google Sheet.', 'Veritas Live Poll')) {
+      Logger.log('Setup aborted: active spreadsheet not available');
+    }
     return;
   }
   
@@ -720,7 +742,9 @@ function setupSheet() {
     sheet.setFrozenRows(1);
   });
   
-  SpreadsheetApp.getUi().alert("Sheet setup complete! All tabs configured with headers.");
+  if (!safeUiAlert('Sheet setup complete! All tabs configured with headers.', 'Veritas Live Poll')) {
+    Logger.log('Sheet setup complete! All tabs configured with headers.');
+  }
 }
 
 // =============================================================================

@@ -1097,31 +1097,84 @@
   var selectedArchivedPollId='';
   var BASE_CLASSES=[];
 
-  var VeritasModal=window.VeritasModal||createVeritasModal();
-  window.VeritasModal=VeritasModal;
+  var VeritasModal=null;
+  var veritasModalReady=new Promise(function(resolve){
+    function initializeModal(){
+      VeritasModal=window.VeritasModal||createVeritasModal();
+      window.VeritasModal=VeritasModal;
+      resolve(VeritasModal);
+    }
+
+    if(document.readyState==='loading'){
+      document.addEventListener('DOMContentLoaded',initializeModal,{once:true});
+    }else{
+      initializeModal();
+    }
+  });
+
+  function withVeritasModal(callback){
+    return veritasModalReady.then(function(controller){
+      return callback(controller);
+    });
+  }
 
   function veritasAlert(message,options){
-    return VeritasModal.alert(Object.assign({message:message},options||{}));
+    return withVeritasModal(function(modal){
+      return modal.alert(Object.assign({message:message},options||{}));
+    });
   }
 
   function veritasConfirm(message,options){
-    return VeritasModal.confirm(Object.assign({message:message},options||{}));
+    return withVeritasModal(function(modal){
+      return modal.confirm(Object.assign({message:message},options||{}));
+    });
   }
 
   function veritasPrompt(message,options){
-    return VeritasModal.prompt(Object.assign({message:message},options||{}));
+    return withVeritasModal(function(modal){
+      return modal.prompt(Object.assign({message:message},options||{}));
+    });
+  }
+
+  function ensureVeritasModalRoot(){
+    var existing=document.getElementById('veritas-modal-root');
+    if(existing){
+      return existing;
+    }
+
+    var root=document.createElement('div');
+    root.id='veritas-modal-root';
+    root.className='veritas-modal-root';
+    root.setAttribute('aria-hidden','true');
+    root.innerHTML=''+
+      '<div class="veritas-modal-backdrop"></div>'+
+      '<div class="veritas-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="veritas-modal-title" aria-describedby="veritas-modal-message">'+
+        '<div class="veritas-modal-header">'+
+          '<h2 id="veritas-modal-title">Notice</h2>'+
+        '</div>'+
+        '<div class="veritas-modal-body">'+
+          '<p id="veritas-modal-message"></p>'+
+          '<div id="veritas-modal-subtext" class="veritas-modal-subtext"></div>'+
+          '<div id="veritas-modal-input" class="veritas-modal-input" style="display: none;">'+
+            '<label for="veritas-modal-input-field" class="sr-only">Input</label>'+
+            '<input id="veritas-modal-input-field" type="text" autocomplete="off" />'+
+          '</div>'+
+        '</div>'+
+        '<div class="veritas-modal-actions">'+
+          '<button type="button" class="veritas-modal-button secondary" data-action="cancel">Cancel</button>'+
+          '<button type="button" class="veritas-modal-button primary" data-action="confirm">'+
+            '<span class="veritas-modal-spinner" aria-hidden="true"></span>'+
+            '<span>Confirm</span>'+
+          '</button>'+
+        '</div>'+
+      '</div>';
+
+    (document.body||document.documentElement).appendChild(root);
+    return root;
   }
 
   function createVeritasModal(){
-    var root=document.getElementById('veritas-modal-root');
-    if(!root){
-      console.warn('Veritas modal root not found.');
-      return {
-        alert:function(){return Promise.resolve();},
-        confirm:function(){return Promise.resolve(true);},
-        prompt:function(){return Promise.resolve(null);}
-      };
-    }
+    var root=ensureVeritasModalRoot();
 
     var dialog=root.querySelector('.veritas-modal-dialog');
     var titleEl=root.querySelector('#veritas-modal-title');
@@ -3953,28 +4006,6 @@
   console.log('✓ Teacher Panel Ready');
 })();
   </script>
-  <div id="veritas-modal-root" class="veritas-modal-root" aria-hidden="true">
-    <div class="veritas-modal-backdrop"></div>
-    <div class="veritas-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="veritas-modal-title" aria-describedby="veritas-modal-message">
-      <div class="veritas-modal-header">
-        <h2 id="veritas-modal-title">Notice</h2>
-      </div>
-      <div class="veritas-modal-body">
-        <p id="veritas-modal-message"></p>
-        <div id="veritas-modal-subtext" class="veritas-modal-subtext"></div>
-        <div id="veritas-modal-input" class="veritas-modal-input" style="display: none;">
-          <label for="veritas-modal-input-field" class="sr-only">Input</label>
-          <input id="veritas-modal-input-field" type="text" autocomplete="off" />
-        </div>
-      </div>
-      <div class="veritas-modal-actions">
-        <button type="button" class="veritas-modal-button secondary" data-action="cancel">Cancel</button>
-        <button type="button" class="veritas-modal-button primary" data-action="confirm">
-          <span>Confirm</span>
-          <span class="veritas-modal-spinner" aria-hidden="true"></span>
-        </button>
-      </div>
-    </div>
-  </div>
+  
 </body>
 </html>

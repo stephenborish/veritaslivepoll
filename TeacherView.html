@@ -986,6 +986,144 @@
             </div>
           </div>
         </div>
+
+        <!-- Analytics Hub View -->
+        <div id="analytics-view" class="p-6 flex flex-col gap-6" style="display: none;">
+          <!-- Filter Bar -->
+          <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-4 shadow-sm">
+            <div class="flex flex-wrap items-center gap-3">
+              <select id="analytics-class-filter" class="rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+                <option value="all">All Classes</option>
+              </select>
+              <div class="flex items-center gap-2">
+                <label class="text-xs font-semibold text-brand-dark-gray/60 dark:text-brand-white/60">From:</label>
+                <input type="date" id="analytics-date-from" class="rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+              </div>
+              <div class="flex items-center gap-2">
+                <label class="text-xs font-semibold text-brand-dark-gray/60 dark:text-brand-white/60">To:</label>
+                <input type="date" id="analytics-date-to" class="rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+              </div>
+              <button id="analytics-apply-filters-btn" class="px-4 py-2 rounded-lg bg-primary text-brand-white hover:bg-primary/90 transition-colors text-sm font-semibold">
+                Apply Filters
+              </button>
+              <button id="analytics-clear-filters-btn" class="px-4 py-2 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/50 transition-colors text-sm">
+                Clear
+              </button>
+              <button id="analytics-refresh-btn" class="ml-auto flex items-center justify-center h-9 w-9 rounded-full bg-primary text-brand-white hover:bg-primary/90 transition-colors" title="Refresh">
+                <span class="material-symbols-outlined text-base">refresh</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Tab Navigation -->
+          <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 shadow-sm overflow-hidden">
+            <div class="flex border-b border-brand-light-gray dark:border-brand-dark-gray/40">
+              <button id="analytics-tab-overview" class="flex-1 px-6 py-3 font-semibold text-sm transition-colors analytics-tab bg-primary text-brand-white">
+                Overview
+              </button>
+              <button id="analytics-tab-items" class="flex-1 px-6 py-3 font-semibold text-sm transition-colors analytics-tab text-brand-dark-gray/70 dark:text-brand-white/70 hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/30">
+                Item Analysis
+              </button>
+              <button id="analytics-tab-students" class="flex-1 px-6 py-3 font-semibold text-sm transition-colors analytics-tab text-brand-dark-gray/70 dark:text-brand-white/70 hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/30">
+                Student Trends
+              </button>
+            </div>
+
+            <!-- Overview Tab Content -->
+            <div id="analytics-content-overview" class="p-6 analytics-tab-content">
+              <div id="analytics-overview-loading" class="text-center py-12">
+                <p class="text-brand-dark-gray/60 dark:text-brand-white/60">Loading analytics...</p>
+              </div>
+              <div id="analytics-overview-content" class="hidden">
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                  <div id="analytics-kpi-container"></div>
+                </div>
+
+                <!-- Topic Heat Strip -->
+                <div class="bg-background-light dark:bg-brand-dark-gray/40 rounded-xl p-5 mb-6">
+                  <h3 class="text-lg font-bold text-brand-dark-gray dark:text-brand-white mb-4">Topic Mastery Over Time</h3>
+                  <div id="analytics-topic-heat" class="overflow-x-auto">
+                    <p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No topic data available</p>
+                  </div>
+                </div>
+
+                <!-- Item Quality Scatter -->
+                <div class="bg-background-light dark:bg-brand-dark-gray/40 rounded-xl p-5">
+                  <h3 class="text-lg font-bold text-brand-dark-gray dark:text-brand-white mb-4">Item Quality Map</h3>
+                  <div id="analytics-item-scatter" style="height: 300px;">
+                    <p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No item data available</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Item Analysis Tab Content -->
+            <div id="analytics-content-items" class="p-6 analytics-tab-content hidden">
+              <div id="analytics-items-loading" class="text-center py-12">
+                <p class="text-brand-dark-gray/60 dark:text-brand-white/60">Loading item analysis...</p>
+              </div>
+              <div id="analytics-items-content" class="hidden">
+                <!-- Item Table -->
+                <div class="overflow-x-auto">
+                  <table id="analytics-items-table" class="min-w-full text-sm">
+                    <thead class="sticky top-0 bg-brand-light-gray dark:bg-brand-dark-gray text-xs uppercase tracking-wide text-brand-dark-gray/80 dark:text-brand-white/70">
+                      <tr>
+                        <th class="py-3 px-4 text-left cursor-pointer hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/80" data-sort="qNum">Q#</th>
+                        <th class="py-3 px-4 text-left cursor-pointer hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/80" data-sort="topic">Topic</th>
+                        <th class="py-3 px-4 text-left cursor-pointer hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/80" data-sort="correctPct">Correct%</th>
+                        <th class="py-3 px-4 text-left cursor-pointer hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/80" data-sort="rbis">Disc</th>
+                        <th class="py-3 px-4 text-left">Choices</th>
+                        <th class="py-3 px-4 text-left cursor-pointer hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/80" data-sort="medianTimeSec">Time(s)</th>
+                        <th class="py-3 px-4 text-left">Flags</th>
+                      </tr>
+                    </thead>
+                    <tbody id="analytics-items-tbody" class="divide-y divide-brand-light-gray/70 dark:divide-brand-dark-gray/40">
+                      <!-- Items will be rendered here -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Student Trends Tab Content -->
+            <div id="analytics-content-students" class="p-6 analytics-tab-content hidden">
+              <div id="analytics-students-loading" class="text-center py-12">
+                <p class="text-brand-dark-gray/60 dark:text-brand-white/60">Loading student data...</p>
+              </div>
+              <div id="analytics-students-content" class="hidden">
+                <!-- Student Search -->
+                <div class="mb-6">
+                  <input type="text" id="analytics-student-search" placeholder="Search for a student..." class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                  <div id="analytics-student-suggestions" class="hidden mt-2 bg-brand-white dark:bg-brand-dark-gray/40 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 shadow-lg max-h-60 overflow-y-auto">
+                    <!-- Search suggestions -->
+                  </div>
+                </div>
+
+                <!-- Student Detail -->
+                <div id="analytics-student-detail" class="hidden">
+                  <div id="analytics-student-summary" class="bg-background-light dark:bg-brand-dark-gray/40 rounded-xl p-5 mb-6">
+                    <!-- Student summary card -->
+                  </div>
+                  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-background-light dark:bg-brand-dark-gray/40 rounded-xl p-5">
+                      <h3 class="text-lg font-bold text-brand-dark-gray dark:text-brand-white mb-4">Consistency Trend</h3>
+                      <div id="analytics-student-sparkline"></div>
+                    </div>
+                    <div class="bg-background-light dark:bg-brand-dark-gray/40 rounded-xl p-5">
+                      <h3 class="text-lg font-bold text-brand-dark-gray dark:text-brand-white mb-4">Topic Mastery</h3>
+                      <div id="analytics-student-topics"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="analytics-student-empty" class="text-center py-12 text-brand-dark-gray/60 dark:text-brand-white/60">
+                  <p>Search for a student to view their analytics</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </main>
 
       <!-- Right Sidebar Navigation -->
@@ -1006,6 +1144,10 @@
           <button id="nav-archived" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-brand-white/70 hover:bg-brand-white/20 hover:text-brand-white transition-colors text-left">
             <span class="material-symbols-outlined">inventory_2</span>
             <span>Archived Polls</span>
+          </button>
+          <button id="nav-analytics" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-brand-white/70 hover:bg-brand-white/20 hover:text-brand-white transition-colors text-left">
+            <span class="material-symbols-outlined">analytics</span>
+            <span>Analytics Hub</span>
           </button>
         </nav>
       </aside>
@@ -1468,6 +1610,7 @@
   var liveView=document.getElementById('live-view');
   var rosterManager=document.getElementById('roster-manager');
   var archivedView=document.getElementById('archived-view');
+  var analyticsView=document.getElementById('analytics-view');
   var headerDefault=document.getElementById('header-default');
   var headerLive=document.getElementById('header-live');
   var modal=document.getElementById('poll-creator-modal');
@@ -1509,6 +1652,7 @@
   document.getElementById('nav-polls-list').onclick=showDashboard;
   document.getElementById('nav-rosters').onclick=showRosterManager;
   document.getElementById('nav-archived').onclick=showArchivedView;
+  document.getElementById('nav-analytics').onclick=showAnalyticsView;
   document.getElementById('close-modal-btn').onclick=closePollCreator;
   document.getElementById('close-links-modal-btn').onclick=closeLinksModal;
   document.getElementById('add-question-btn').onclick=addQuestion;
@@ -1586,6 +1730,7 @@
     liveView.style.display=section==='live'?'grid':'none';
     rosterManager.style.display=section==='roster'?'grid':'none';
     archivedView.style.display=section==='archived'?'grid':'none';
+    analyticsView.style.display=section==='analytics'?'flex':'none';
   }
 
   function clearLiveIntervals(){
@@ -2399,6 +2544,423 @@
       archivedQuestionsContainer.appendChild(card);
     });
   }
+
+  // =============================================================================
+  // ANALYTICS HUB - CLIENT-SIDE CODE
+  // =============================================================================
+
+  var analyticsData = null;
+  var analyticsCurrentTab = 'overview';
+  var analyticsFilters = { className: 'all' };
+  var analyticsItemsSort = { field: 'qNum', direction: 'asc' };
+  var analyticsSelectedStudent = null;
+
+  function showAnalyticsView() {
+    clearLiveIntervals();
+    headerDefault.style.display = 'flex';
+    headerLive.style.display = 'none';
+    setMainSection('analytics');
+
+    // Populate class filter
+    var analyticsClassFilter = document.getElementById('analytics-class-filter');
+    analyticsClassFilter.innerHTML = '<option value="all">All Classes</option>';
+    var classes = Array.from(new Set(ALL_POLLS.map(function(p) { return p.className; })));
+    classes.forEach(function(className) {
+      var opt = document.createElement('option');
+      opt.value = className;
+      opt.textContent = className;
+      analyticsClassFilter.appendChild(opt);
+    });
+
+    if (!analyticsData) {
+      loadAnalytics();
+    } else {
+      renderAnalyticsByTab();
+    }
+  }
+
+  function loadAnalytics(filters) {
+    analyticsFilters = filters || analyticsFilters;
+
+    // Show loading states
+    document.getElementById('analytics-overview-loading').classList.remove('hidden');
+    document.getElementById('analytics-overview-content').classList.add('hidden');
+    document.getElementById('analytics-items-loading').classList.remove('hidden');
+    document.getElementById('analytics-items-content').classList.add('hidden');
+    document.getElementById('analytics-students-loading').classList.remove('hidden');
+    document.getElementById('analytics-students-content').classList.add('hidden');
+
+    google.script.run
+      .withSuccessHandler(function(data) {
+        analyticsData = data;
+        renderAnalyticsByTab();
+      })
+      .withFailureHandler(handleError)
+      .getAnalyticsData(analyticsFilters);
+  }
+
+  function renderAnalyticsByTab() {
+    if (analyticsCurrentTab === 'overview') {
+      renderAnalyticsOverview();
+    } else if (analyticsCurrentTab === 'items') {
+      renderAnalyticsItems();
+    } else if (analyticsCurrentTab === 'students') {
+      renderAnalyticsStudents();
+    }
+  }
+
+  // --- Overview Tab ---
+  function renderAnalyticsOverview() {
+    document.getElementById('analytics-overview-loading').classList.add('hidden');
+    document.getElementById('analytics-overview-content').classList.remove('hidden');
+
+    if (!analyticsData) return;
+
+    // Render KPIs
+    var kpiContainer = document.getElementById('analytics-kpi-container');
+    kpiContainer.innerHTML = '';
+
+    (analyticsData.kpis || []).forEach(function(kpi) {
+      var card = document.createElement('div');
+      card.className = 'bg-brand-white dark:bg-brand-dark-gray/40 rounded-xl p-5 border border-brand-light-gray dark:border-brand-dark-gray/40 shadow-sm hover:shadow-md transition-shadow cursor-pointer';
+      card.title = kpi.tooltip;
+
+      var deltaHtml = '';
+      if (kpi.delta !== undefined && kpi.delta !== null) {
+        var deltaColor = kpi.delta >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
+        var deltaIcon = kpi.delta >= 0 ? '▲' : '▼';
+        deltaHtml = '<div class="text-xs font-semibold ' + deltaColor + ' mt-1">' + deltaIcon + ' ' + Math.abs(kpi.delta) + '</div>';
+      }
+
+      card.innerHTML = '<div class="text-xs font-semibold uppercase tracking-wide text-brand-dark-gray/60 dark:text-brand-white/60 mb-2">' +
+        escapeHtml(kpi.label) + '</div>' +
+        '<div class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">' +
+        escapeHtml(kpi.value) + '</div>' + deltaHtml;
+
+      kpiContainer.appendChild(card);
+    });
+
+    // Render Topic Heat (simplified version)
+    var topicHeat = document.getElementById('analytics-topic-heat');
+    if (analyticsData.topics && analyticsData.topics.length > 0) {
+      var topicHtml = '<div class="space-y-2">';
+      analyticsData.topics.forEach(function(topic) {
+        var color = topic.masteryPct >= 70 ? 'bg-green-500' : topic.masteryPct >= 50 ? 'bg-yellow-500' : 'bg-red-500';
+        topicHtml += '<div class="flex items-center gap-3">';
+        topicHtml += '<div class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white min-w-[120px]">' + escapeHtml(topic.topic) + '</div>';
+        topicHtml += '<div class="flex-1 bg-brand-light-gray dark:bg-brand-dark-gray/30 rounded-full h-6 overflow-hidden">';
+        topicHtml += '<div class="' + color + ' h-full flex items-center justify-end px-2 text-xs text-white font-semibold" style="width: ' + topic.masteryPct + '%">';
+        if (topic.masteryPct > 15) topicHtml += topic.masteryPct + '%';
+        topicHtml += '</div></div>';
+        topicHtml += '<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 min-w-[60px] text-right">' + topic.questionCount + ' items</div>';
+        topicHtml += '</div>';
+      });
+      topicHtml += '</div>';
+      topicHeat.innerHTML = topicHtml;
+    } else {
+      topicHeat.innerHTML = '<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No topic data available. Add topic tags to your questions.</p>';
+    }
+
+    // Render Item Scatter (simplified - using Google Charts)
+    if (analyticsData.items && analyticsData.items.length > 0 && typeof google !== 'undefined') {
+      var scatterData = [['Difficulty (% Correct)', 'Discrimination', 'Question']];
+      analyticsData.items.forEach(function(item) {
+        scatterData.push([item.correctPct, item.rbis, 'Q' + item.qNum]);
+      });
+
+      var data = google.visualization.arrayToDataTable(scatterData);
+      var options = {
+        title: 'Item Difficulty vs Discrimination',
+        hAxis: { title: 'Difficulty (% Correct)', minValue: 0, maxValue: 100 },
+        vAxis: { title: 'Discrimination (r_bis)', minValue: -0.5, maxValue: 1.0 },
+        legend: 'none',
+        pointSize: 5,
+        backgroundColor: 'transparent',
+        chartArea: { width: '85%', height: '75%' }
+      };
+
+      var chart = new google.visualization.ScatterChart(document.getElementById('analytics-item-scatter'));
+      chart.draw(data, options);
+    }
+  }
+
+  // --- Items Tab ---
+  function renderAnalyticsItems() {
+    document.getElementById('analytics-items-loading').classList.add('hidden');
+    document.getElementById('analytics-items-content').classList.remove('hidden');
+
+    if (!analyticsData || !analyticsData.items) return;
+
+    var items = analyticsData.items.slice();
+
+    // Sort items
+    items.sort(function(a, b) {
+      var aVal = a[analyticsItemsSort.field];
+      var bVal = b[analyticsItemsSort.field];
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        return analyticsItemsSort.direction === 'asc' ? aVal - bVal : bVal - aVal;
+      }
+      var aStr = String(aVal || '');
+      var bStr = String(bVal || '');
+      return analyticsItemsSort.direction === 'asc'
+        ? aStr.localeCompare(bStr)
+        : bStr.localeCompare(aStr);
+    });
+
+    var tbody = document.getElementById('analytics-items-tbody');
+    tbody.innerHTML = '';
+
+    items.forEach(function(item) {
+      var row = document.createElement('tr');
+      row.className = 'hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/30 cursor-pointer';
+
+      // Q#
+      var qNumCell = document.createElement('td');
+      qNumCell.className = 'py-3 px-4 font-semibold';
+      qNumCell.textContent = item.qNum;
+      row.appendChild(qNumCell);
+
+      // Topic
+      var topicCell = document.createElement('td');
+      topicCell.className = 'py-3 px-4 text-xs';
+      topicCell.textContent = item.topic || 'Untagged';
+      row.appendChild(topicCell);
+
+      // Correct%
+      var correctCell = document.createElement('td');
+      correctCell.className = 'py-3 px-4 font-semibold';
+      var correctColor = item.correctPct >= 70 ? 'text-green-600 dark:text-green-400' :
+                        item.correctPct >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
+                        'text-red-600 dark:text-red-400';
+      correctCell.innerHTML = '<span class="' + correctColor + '">' + item.correctPct + '%</span>';
+      row.appendChild(correctCell);
+
+      // Discrimination
+      var discCell = document.createElement('td');
+      discCell.className = 'py-3 px-4 font-semibold';
+      var discColor = item.rbis >= 0.3 ? 'text-green-600 dark:text-green-400' :
+                     item.rbis >= 0.15 ? 'text-yellow-600 dark:text-yellow-400' :
+                     'text-red-600 dark:text-red-400';
+      discCell.innerHTML = '<span class="' + discColor + '">' + item.rbis.toFixed(2) + '</span>';
+      row.appendChild(discCell);
+
+      // Choices (inline bar)
+      var choicesCell = document.createElement('td');
+      choicesCell.className = 'py-3 px-4';
+      choicesCell.innerHTML = renderChoiceBar(item);
+      row.appendChild(choicesCell);
+
+      // Time
+      var timeCell = document.createElement('td');
+      timeCell.className = 'py-3 px-4';
+      timeCell.textContent = item.medianTimeSec + 's';
+      row.appendChild(timeCell);
+
+      // Flags
+      var flagsCell = document.createElement('td');
+      flagsCell.className = 'py-3 px-4';
+      if (item.flags && item.flags.length > 0) {
+        var flagsHtml = '';
+        item.flags.forEach(function(flag) {
+          var flagColor = 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
+          if (flag === 'low-disc') flagColor = 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
+          flagsHtml += '<span class="inline-block px-2 py-0.5 rounded text-xs font-semibold ' + flagColor + ' mr-1">' + escapeHtml(flag) + '</span>';
+        });
+        flagsCell.innerHTML = flagsHtml;
+      }
+      row.appendChild(flagsCell);
+
+      tbody.appendChild(row);
+    });
+  }
+
+  function renderChoiceBar(item) {
+    var total = item.total || 1;
+    var choices = ['A', 'B', 'C', 'D'];
+    var colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
+    var html = '<div class="flex items-center gap-1 text-xs">';
+
+    choices.forEach(function(choice, idx) {
+      var count = item.choiceCounts[choice] || 0;
+      var pct = (count / total * 100).toFixed(0);
+      var isCorrect = idx === item.correctIndex;
+      var borderStyle = isCorrect ? 'border-2 border-brand-dark-gray dark:border-brand-white' : '';
+
+      if (count > 0) {
+        html += '<div class="flex items-center gap-0.5">';
+        html += '<span class="font-semibold">' + choice + '</span>';
+        html += '<div class="h-4 rounded ' + borderStyle + '" style="width: ' + (pct * 0.8) + 'px; background-color: ' + colors[idx] + '; opacity: 0.7;"></div>';
+        html += '<span class="text-brand-dark-gray/60 dark:text-brand-white/60">' + pct + '%</span>';
+        html += '</div>';
+      }
+    });
+
+    html += '</div>';
+    return html;
+  }
+
+  // --- Students Tab ---
+  function renderAnalyticsStudents() {
+    document.getElementById('analytics-students-loading').classList.add('hidden');
+    document.getElementById('analytics-students-content').classList.remove('hidden');
+
+    if (!analyticsData || !analyticsData.students) return;
+
+    var studentsArray = Object.values(analyticsData.students);
+
+    // Setup student search
+    var searchInput = document.getElementById('analytics-student-search');
+    var suggestions = document.getElementById('analytics-student-suggestions');
+
+    searchInput.oninput = function() {
+      var query = searchInput.value.toLowerCase();
+      if (query.length < 2) {
+        suggestions.classList.add('hidden');
+        return;
+      }
+
+      var matches = studentsArray.filter(function(s) {
+        return s.name.toLowerCase().includes(query) || s.email.toLowerCase().includes(query);
+      }).slice(0, 10);
+
+      if (matches.length > 0) {
+        suggestions.innerHTML = '';
+        matches.forEach(function(student) {
+          var div = document.createElement('div');
+          div.className = 'px-4 py-2 hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/50 cursor-pointer';
+          div.textContent = student.name;
+          div.onclick = function() {
+            selectStudent(student);
+            suggestions.classList.add('hidden');
+            searchInput.value = '';
+          };
+          suggestions.appendChild(div);
+        });
+        suggestions.classList.remove('hidden');
+      } else {
+        suggestions.classList.add('hidden');
+      }
+    };
+  }
+
+  function selectStudent(student) {
+    analyticsSelectedStudent = student;
+    document.getElementById('analytics-student-empty').classList.add('hidden');
+    document.getElementById('analytics-student-detail').classList.remove('hidden');
+
+    // Render student summary
+    var summary = document.getElementById('analytics-student-summary');
+    summary.innerHTML = '<div class="flex flex-wrap items-center justify-between gap-4">' +
+      '<div><h3 class="text-xl font-bold text-brand-dark-gray dark:text-brand-white">' + escapeHtml(student.name) + '</h3>' +
+      '<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">' + escapeHtml(student.email) + '</p></div>' +
+      '<div class="grid grid-cols-3 gap-4 text-center">' +
+      '<div><div class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">' + student.successLast10.toFixed(1) + '%</div>' +
+      '<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">Success Rate</div></div>' +
+      '<div><div class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">' + student.participationPct.toFixed(0) + '%</div>' +
+      '<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">Participation</div></div>' +
+      '<div><div class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">' + student.integrityCount + '</div>' +
+      '<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">Integrity Events</div></div>' +
+      '</div></div>';
+
+    // Render sparkline (last 10 sessions)
+    var sparkline = document.getElementById('analytics-student-sparkline');
+    var sessions = student.sessions || [];
+    if (sessions.length > 0) {
+      var sparkHtml = '<div class="flex gap-2">';
+      sessions.slice(0, 10).reverse().forEach(function(session) {
+        var color = session.scorePct >= 70 ? 'bg-green-500' : session.scorePct >= 50 ? 'bg-yellow-500' : 'bg-red-500';
+        sparkHtml += '<div class="flex-1 flex flex-col items-center gap-1" title="' + escapeHtml(session.sessionName) + ': ' + session.scorePct + '%">';
+        sparkHtml += '<div class="w-full rounded ' + color + '" style="height: ' + (session.scorePct * 0.8) + 'px; min-height: 20px;"></div>';
+        sparkHtml += '<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">' + session.scorePct.toFixed(0) + '%</div>';
+        sparkHtml += '</div>';
+      });
+      sparkHtml += '</div>';
+      sparkline.innerHTML = sparkHtml;
+    } else {
+      sparkline.innerHTML = '<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No session data</p>';
+    }
+
+    // Render topic bands
+    var topicsDiv = document.getElementById('analytics-student-topics');
+    var topics = Object.keys(student.topicPerformance || {});
+    if (topics.length > 0) {
+      var topicsHtml = '<div class="space-y-2">';
+      topics.forEach(function(topic) {
+        var perf = student.topicPerformance[topic];
+        var pct = perf.total > 0 ? (perf.correct / perf.total * 100).toFixed(0) : 0;
+        var color = pct >= 70 ? 'bg-green-500' : pct >= 50 ? 'bg-yellow-500' : 'bg-red-500';
+        topicsHtml += '<div class="flex items-center gap-2">';
+        topicsHtml += '<div class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white min-w-[100px]">' + escapeHtml(topic) + '</div>';
+        topicsHtml += '<div class="flex-1 bg-brand-light-gray dark:bg-brand-dark-gray/30 rounded-full h-5 overflow-hidden">';
+        topicsHtml += '<div class="' + color + ' h-full flex items-center justify-end px-2 text-xs text-white font-semibold" style="width: ' + pct + '%">';
+        if (pct > 15) topicsHtml += pct + '%';
+        topicsHtml += '</div></div>';
+        topicsHtml += '<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">' + perf.correct + '/' + perf.total + '</div>';
+        topicsHtml += '</div>';
+      });
+      topicsHtml += '</div>';
+      topicsDiv.innerHTML = topicsHtml;
+    } else {
+      topicsDiv.innerHTML = '<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No topic data</p>';
+    }
+  }
+
+  // --- Analytics Event Listeners ---
+  document.getElementById('analytics-apply-filters-btn').onclick = function() {
+    var className = document.getElementById('analytics-class-filter').value;
+    var dateFrom = document.getElementById('analytics-date-from').value;
+    var dateTo = document.getElementById('analytics-date-to').value;
+    loadAnalytics({ className: className, dateFrom: dateFrom, dateTo: dateTo });
+  };
+
+  document.getElementById('analytics-clear-filters-btn').onclick = function() {
+    document.getElementById('analytics-class-filter').value = 'all';
+    document.getElementById('analytics-date-from').value = '';
+    document.getElementById('analytics-date-to').value = '';
+    loadAnalytics({ className: 'all' });
+  };
+
+  document.getElementById('analytics-refresh-btn').onclick = function() {
+    loadAnalytics(analyticsFilters);
+  };
+
+  // Tab switching
+  document.querySelectorAll('.analytics-tab').forEach(function(tab) {
+    tab.onclick = function() {
+      var tabId = tab.id.replace('analytics-tab-', '');
+      analyticsCurrentTab = tabId;
+
+      // Update tab styles
+      document.querySelectorAll('.analytics-tab').forEach(function(t) {
+        t.classList.remove('bg-primary', 'text-brand-white');
+        t.classList.add('text-brand-dark-gray/70', 'dark:text-brand-white/70', 'hover:bg-brand-light-gray/20', 'dark:hover:bg-brand-dark-gray/30');
+      });
+      tab.classList.add('bg-primary', 'text-brand-white');
+      tab.classList.remove('text-brand-dark-gray/70', 'dark:text-brand-white/70', 'hover:bg-brand-light-gray/20', 'dark:hover:bg-brand-dark-gray/30');
+
+      // Update content
+      document.querySelectorAll('.analytics-tab-content').forEach(function(content) {
+        content.classList.add('hidden');
+      });
+      document.getElementById('analytics-content-' + tabId).classList.remove('hidden');
+
+      renderAnalyticsByTab();
+    };
+  });
+
+  // Item table sorting
+  document.querySelectorAll('#analytics-items-table th[data-sort]').forEach(function(th) {
+    th.onclick = function() {
+      var field = th.getAttribute('data-sort');
+      if (analyticsItemsSort.field === field) {
+        analyticsItemsSort.direction = analyticsItemsSort.direction === 'asc' ? 'desc' : 'asc';
+      } else {
+        analyticsItemsSort.field = field;
+        analyticsItemsSort.direction = 'asc';
+      }
+      renderAnalyticsItems();
+    };
+  });
 
   // --- Poll Lifecycle Controls ---
   async function onStartPoll(){

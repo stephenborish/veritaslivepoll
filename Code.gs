@@ -1982,6 +1982,598 @@ function getArchivedPolls() {
   })();
 }
 
+// =============================================================================
+// ANALYTICS HUB - COMPREHENSIVE TEACHER ANALYTICS (2025)
+// =============================================================================
+
+/**
+ * Get comprehensive analytics data for the Analytics Hub
+ * Computes aggregates across sessions, items, and students
+ */
+function getAnalyticsData(filters = {}) {
+  return withErrorHandling(() => {
+    const cacheKey = 'ANALYTICS_DATA_' + JSON.stringify(filters);
+
+    return CacheManager.get(cacheKey, () => {
+      const polls = DataAccess.polls.getAll();
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const responsesSheet = ss.getSheetByName('Responses');
+      const responseValues = responsesSheet ? getDataRangeValues_(responsesSheet) : [];
+
+      // Filter polls by class and date range if specified
+      let filteredPolls = polls;
+      if (filters.className && filters.className !== 'all') {
+        filteredPolls = filteredPolls.filter(p => p.className === filters.className);
+      }
+      if (filters.dateFrom || filters.dateTo) {
+        filteredPolls = filteredPolls.filter(p => {
+          const pollDate = new Date(p.updatedAt || p.createdAt);
+          if (filters.dateFrom && pollDate < new Date(filters.dateFrom)) return false;
+          if (filters.dateTo && pollDate > new Date(filters.dateTo)) return false;
+          return true;
+        });
+      }
+
+      // Build response maps
+      const responsesByPoll = buildResponseMaps_(responseValues);
+
+      // Compute aggregates
+      const sessionAggregates = computeSessionAggregates_(filteredPolls, responsesByPoll);
+      const itemAggregates = computeItemAggregates_(filteredPolls, responsesByPoll);
+      const studentAggregates = computeStudentAggregates_(filteredPolls, responsesByPoll);
+      const topicAggregates = computeTopicAggregates_(filteredPolls, responsesByPoll);
+
+      // Compute KPIs
+      const kpis = computeKPIs_(sessionAggregates, studentAggregates);
+
+      Logger.log('Analytics data computed', {
+        sessions: sessionAggregates.length,
+        items: itemAggregates.length,
+        students: Object.keys(studentAggregates).length
+      });
+
+      return {
+        kpis: kpis,
+        sessions: sessionAggregates,
+        items: itemAggregates,
+        students: studentAggregates,
+        topics: topicAggregates,
+        filters: filters
+      };
+    }, CacheManager.CACHE_TIMES.MEDIUM);
+  })();
+}
+
+/**
+ * Build response maps from raw response data
+ */
+function buildResponseMaps_(responseValues) {
+  const responsesByPoll = new Map();
+
+  responseValues.forEach(row => {
+    const pollId = row[2];
+    const questionIndex = typeof row[3] === 'number' ? row[3] : parseInt(row[3], 10);
+    if (isNaN(questionIndex)) return;
+
+    const studentEmail = (row[4] || '').toString().trim();
+    const answer = row[5];
+    const isCorrectRaw = row[6];
+    const timestamp = row[1];
+
+    if (!responsesByPoll.has(pollId)) {
+      responsesByPoll.set(pollId, {
+        responses: new Map(),
+        violations: new Map(),
+        timestamps: new Map()
+      });
+    }
+
+    const pollEntry = responsesByPoll.get(pollId);
+
+    // Track violations
+    if (questionIndex === -1 && answer === 'VIOLATION_LOCKED') {
+      pollEntry.violations.set(studentEmail, true);
+      return;
+    }
+
+    // Track responses
+    if (!pollEntry.responses.has(questionIndex)) {
+      pollEntry.responses.set(questionIndex, []);
+    }
+
+    const isCorrect = (isCorrectRaw === true) || (isCorrectRaw === 'TRUE') || (isCorrectRaw === 'true') || (isCorrectRaw === 1);
+
+    // Track timestamps for time analysis
+    if (!pollEntry.timestamps.has(questionIndex)) {
+      pollEntry.timestamps.set(questionIndex, []);
+    }
+    if (timestamp) {
+      pollEntry.timestamps.get(questionIndex).push({
+        email: studentEmail,
+        timestamp: timestamp
+      });
+    }
+
+    pollEntry.responses.get(questionIndex).push({
+      email: studentEmail,
+      answer: answer,
+      isCorrect: isCorrect,
+      timestamp: timestamp
+    });
+  });
+
+  return responsesByPoll;
+}
+
+/**
+ * Compute session-level aggregates
+ */
+function computeSessionAggregates_(polls, responsesByPoll) {
+  return polls.map(poll => {
+    const pollData = responsesByPoll.get(poll.pollId) || { responses: new Map(), violations: new Map() };
+    const roster = DataAccess.roster.getByClass(poll.className);
+    const totalStudents = roster.length;
+
+    // Calculate overall statistics
+    let totalCorrect = 0;
+    let totalAnswered = 0;
+    let participatingStudents = new Set();
+    let totalTime = 0;
+    let timeCount = 0;
+
+    poll.questions.forEach((question, qIdx) => {
+      const responses = pollData.responses.get(qIdx) || [];
+      responses.forEach(r => {
+        participatingStudents.add(r.email);
+        totalAnswered++;
+        if (r.isCorrect) totalCorrect++;
+      });
+
+      // Calculate median time (simplified - using average for now)
+      const timestamps = pollData.timestamps?.get(qIdx) || [];
+      if (timestamps.length >= 2) {
+        const sorted = timestamps.sort((a, b) => a.timestamp - b.timestamp);
+        const firstTimestamp = sorted[0].timestamp;
+        timestamps.forEach(t => {
+          const timeDiff = (t.timestamp - firstTimestamp) / 1000; // seconds
+          if (timeDiff > 0 && timeDiff < 600) { // Ignore outliers > 10 minutes
+            totalTime += timeDiff;
+            timeCount++;
+          }
+        });
+      }
+    });
+
+    const masteryPct = totalAnswered > 0 ? (totalCorrect / totalAnswered) * 100 : 0;
+    const participationPct = totalStudents > 0 ? (participatingStudents.size / totalStudents) * 100 : 0;
+    const medianTimeSec = timeCount > 0 ? totalTime / timeCount : 0;
+    const violationCount = pollData.violations.size;
+    const integrityRate = totalStudents > 0 ? (violationCount / totalStudents) * 10 : 0; // per 10 students
+
+    return {
+      sessionId: poll.pollId,
+      sessionName: poll.pollName,
+      className: poll.className,
+      date: poll.updatedAt || poll.createdAt,
+      questionCount: poll.questions.length,
+      participants: participatingStudents.size,
+      totalStudents: totalStudents,
+      masteryPct: Math.round(masteryPct * 10) / 10,
+      participationPct: Math.round(participationPct * 10) / 10,
+      medianTimeSec: Math.round(medianTimeSec),
+      integrityRate: Math.round(integrityRate * 10) / 10
+    };
+  });
+}
+
+/**
+ * Calculate point-biserial correlation for item discrimination
+ */
+function calculatePointBiserial_(itemScores, totalScores) {
+  if (itemScores.length < 5) return 0; // Need minimum sample size
+
+  const n = itemScores.length;
+  let sumCorrect = 0;
+  let countCorrect = 0;
+  let sumIncorrect = 0;
+  let countIncorrect = 0;
+
+  itemScores.forEach((correct, idx) => {
+    if (correct) {
+      sumCorrect += totalScores[idx];
+      countCorrect++;
+    } else {
+      sumIncorrect += totalScores[idx];
+      countIncorrect++;
+    }
+  });
+
+  if (countCorrect === 0 || countIncorrect === 0) return 0;
+
+  const meanCorrect = sumCorrect / countCorrect;
+  const meanIncorrect = sumIncorrect / countIncorrect;
+
+  // Calculate overall standard deviation
+  const overallMean = totalScores.reduce((a, b) => a + b, 0) / n;
+  const variance = totalScores.reduce((sum, score) => sum + Math.pow(score - overallMean, 2), 0) / n;
+  const sd = Math.sqrt(variance);
+
+  if (sd === 0) return 0;
+
+  // Point-biserial formula
+  const p = countCorrect / n;
+  const q = countIncorrect / n;
+  const rbis = ((meanCorrect - meanIncorrect) / sd) * Math.sqrt(p * q);
+
+  return Math.round(rbis * 100) / 100;
+}
+
+/**
+ * Compute item-level aggregates with discrimination analysis
+ */
+function computeItemAggregates_(polls, responsesByPoll) {
+  const items = [];
+
+  polls.forEach(poll => {
+    const pollData = responsesByPoll.get(poll.pollId) || { responses: new Map(), timestamps: new Map() };
+    const roster = DataAccess.roster.getByClass(poll.className);
+
+    // Calculate total scores for each student for discrimination analysis
+    const studentTotalScores = new Map();
+    roster.forEach(student => studentTotalScores.set(student.email, 0));
+
+    poll.questions.forEach((question, qIdx) => {
+      const responses = pollData.responses.get(qIdx) || [];
+      responses.forEach(r => {
+        if (r.isCorrect) {
+          studentTotalScores.set(r.email, (studentTotalScores.get(r.email) || 0) + 1);
+        }
+      });
+    });
+
+    poll.questions.forEach((question, qIdx) => {
+      const responses = pollData.responses.get(qIdx) || [];
+      const totalStudents = roster.length;
+
+      // Choice distribution
+      const choiceCounts = { A: 0, B: 0, C: 0, D: 0 };
+      const itemScores = [];
+      const totalScoresForItem = [];
+
+      responses.forEach(r => {
+        if (choiceCounts.hasOwnProperty(r.answer)) {
+          choiceCounts[r.answer]++;
+        }
+        itemScores.push(r.isCorrect);
+        totalScoresForItem.push(studentTotalScores.get(r.email) || 0);
+      });
+
+      const correctCount = responses.filter(r => r.isCorrect).length;
+      const correctPct = responses.length > 0 ? (correctCount / responses.length) * 100 : 0;
+      const nonresponsePct = totalStudents > 0 ? ((totalStudents - responses.length) / totalStudents) * 100 : 0;
+
+      // Calculate discrimination (point-biserial)
+      const rbis = calculatePointBiserial_(itemScores, totalScoresForItem);
+
+      // Find most chosen distractor
+      const correctAnswer = question.correctAnswer || 'A';
+      let mostChosenDistractor = null;
+      let maxDistractorCount = 0;
+      Object.keys(choiceCounts).forEach(choice => {
+        if (choice !== correctAnswer && choiceCounts[choice] > maxDistractorCount) {
+          maxDistractorCount = choiceCounts[choice];
+          mostChosenDistractor = choice;
+        }
+      });
+
+      // Calculate median time
+      const timestamps = pollData.timestamps?.get(qIdx) || [];
+      let medianTimeSec = 0;
+      if (timestamps.length >= 2) {
+        const sorted = timestamps.sort((a, b) => a.timestamp - b.timestamp);
+        const firstTimestamp = sorted[0].timestamp;
+        const times = timestamps.map(t => (t.timestamp - firstTimestamp) / 1000).filter(t => t > 0 && t < 600);
+        if (times.length > 0) {
+          times.sort((a, b) => a - b);
+          medianTimeSec = times[Math.floor(times.length / 2)];
+        }
+      }
+
+      // Auto-flag items
+      const flags = [];
+      if (rbis < 0.15) flags.push('low-disc');
+      if (correctPct > 90) flags.push('too-easy');
+      if (correctPct < 30) flags.push('too-hard');
+      if (medianTimeSec > 120) flags.push('slow');
+      if (nonresponsePct > 20) flags.push('high-nonresponse');
+
+      // Get topic/standard from question data (defaults if not present)
+      const topic = question.topicTag || question.topic || 'Untagged';
+      const standard = question.standardTag || question.standard || '';
+
+      items.push({
+        questionId: poll.pollId + '_Q' + qIdx,
+        sessionId: poll.pollId,
+        sessionName: poll.pollName,
+        qNum: qIdx + 1,
+        topic: topic,
+        standard: standard,
+        correctPct: Math.round(correctPct * 10) / 10,
+        rbis: rbis,
+        mostChosenDistractor: mostChosenDistractor,
+        medianTimeSec: Math.round(medianTimeSec),
+        nonresponsePct: Math.round(nonresponsePct * 10) / 10,
+        flags: flags,
+        choiceCounts: choiceCounts,
+        total: responses.length,
+        correctIndex: correctAnswer.charCodeAt(0) - 65, // A=0, B=1, C=2, D=3
+        stemText: question.questionText || '',
+        stemImageURL: question.questionImageURL || null,
+        correctAnswer: correctAnswer,
+        misconceptionTag: question.misconceptionTag || null
+      });
+    });
+  });
+
+  return items;
+}
+
+/**
+ * Compute student-level aggregates
+ */
+function computeStudentAggregates_(polls, responsesByPoll) {
+  const studentData = {};
+  const allClasses = new Set();
+
+  polls.forEach(poll => {
+    allClasses.add(poll.className);
+    const roster = DataAccess.roster.getByClass(poll.className);
+    roster.forEach(student => {
+      if (!studentData[student.email]) {
+        studentData[student.email] = {
+          studentId: student.email,
+          name: student.name,
+          email: student.email,
+          sessions: [],
+          totalCorrect: 0,
+          totalAnswered: 0,
+          participationCount: 0,
+          totalTime: 0,
+          timeCount: 0,
+          integrityCount: 0,
+          topicPerformance: {}
+        };
+      }
+    });
+  });
+
+  polls.forEach(poll => {
+    const pollData = responsesByPoll.get(poll.pollId) || { responses: new Map(), violations: new Map(), timestamps: new Map() };
+    const roster = DataAccess.roster.getByClass(poll.className);
+
+    roster.forEach(student => {
+      if (!studentData[student.email]) return;
+
+      let sessionCorrect = 0;
+      let sessionTotal = 0;
+      let participated = false;
+
+      poll.questions.forEach((question, qIdx) => {
+        const responses = pollData.responses.get(qIdx) || [];
+        const studentResponse = responses.find(r => r.email === student.email);
+
+        if (studentResponse) {
+          participated = true;
+          sessionTotal++;
+          if (studentResponse.isCorrect) sessionCorrect++;
+
+          // Track topic performance
+          const topic = question.topicTag || question.topic || 'Untagged';
+          if (!studentData[student.email].topicPerformance[topic]) {
+            studentData[student.email].topicPerformance[topic] = { correct: 0, total: 0 };
+          }
+          studentData[student.email].topicPerformance[topic].total++;
+          if (studentResponse.isCorrect) {
+            studentData[student.email].topicPerformance[topic].correct++;
+          }
+        }
+      });
+
+      if (participated) {
+        studentData[student.email].participationCount++;
+        studentData[student.email].totalCorrect += sessionCorrect;
+        studentData[student.email].totalAnswered += sessionTotal;
+
+        const sessionPct = sessionTotal > 0 ? (sessionCorrect / sessionTotal) * 100 : 0;
+        studentData[student.email].sessions.push({
+          sessionId: poll.pollId,
+          sessionName: poll.pollName,
+          date: poll.updatedAt || poll.createdAt,
+          scorePct: Math.round(sessionPct * 10) / 10,
+          correct: sessionCorrect,
+          total: sessionTotal
+        });
+      }
+
+      // Track integrity violations
+      if (pollData.violations.has(student.email)) {
+        studentData[student.email].integrityCount++;
+      }
+    });
+  });
+
+  // Calculate summary stats for each student
+  Object.keys(studentData).forEach(email => {
+    const student = studentData[email];
+    student.successLast10 = student.totalAnswered > 0 ? (student.totalCorrect / student.totalAnswered) * 100 : 0;
+    student.participationPct = polls.length > 0 ? (student.participationCount / polls.length) * 100 : 0;
+    student.successLast10 = Math.round(student.successLast10 * 10) / 10;
+    student.participationPct = Math.round(student.participationPct * 10) / 10;
+
+    // Sort sessions by date (most recent first)
+    student.sessions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Keep only last 10 sessions
+    student.sessions = student.sessions.slice(0, 10);
+  });
+
+  return studentData;
+}
+
+/**
+ * Compute topic-level aggregates
+ */
+function computeTopicAggregates_(polls, responsesByPoll) {
+  const topicData = {};
+
+  polls.forEach(poll => {
+    const pollData = responsesByPoll.get(poll.pollId) || { responses: new Map() };
+
+    poll.questions.forEach((question, qIdx) => {
+      const topic = question.topicTag || question.topic || 'Untagged';
+      const responses = pollData.responses.get(qIdx) || [];
+
+      if (!topicData[topic]) {
+        topicData[topic] = {
+          topic: topic,
+          totalCorrect: 0,
+          totalAnswered: 0,
+          questionCount: 0,
+          sessionCounts: new Map()
+        };
+      }
+
+      topicData[topic].questionCount++;
+
+      responses.forEach(r => {
+        topicData[topic].totalAnswered++;
+        if (r.isCorrect) topicData[topic].totalCorrect++;
+      });
+
+      // Track per-session performance
+      const correctCount = responses.filter(r => r.isCorrect).length;
+      const sessionKey = poll.pollId + '_' + poll.updatedAt;
+      topicData[topic].sessionCounts.set(sessionKey, {
+        sessionId: poll.pollId,
+        sessionName: poll.pollName,
+        date: poll.updatedAt || poll.createdAt,
+        masteryPct: responses.length > 0 ? (correctCount / responses.length) * 100 : 0,
+        n: responses.length
+      });
+    });
+  });
+
+  // Convert to array and calculate mastery percentages
+  return Object.keys(topicData).map(topic => {
+    const data = topicData[topic];
+    const masteryPct = data.totalAnswered > 0 ? (data.totalCorrect / data.totalAnswered) * 100 : 0;
+
+    return {
+      topic: topic,
+      masteryPct: Math.round(masteryPct * 10) / 10,
+      questionCount: data.questionCount,
+      totalAnswered: data.totalAnswered,
+      sessions: Array.from(data.sessionCounts.values())
+    };
+  });
+}
+
+/**
+ * Compute KPIs for the overview dashboard
+ */
+function computeKPIs_(sessionAggregates, studentAggregates) {
+  // Sort sessions by date
+  const sortedSessions = sessionAggregates.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  // Last 5 sessions
+  const last5 = sortedSessions.slice(0, 5);
+  const prior5 = sortedSessions.slice(5, 10);
+
+  // Mastery (Last 5)
+  const masteryLast5 = last5.length > 0
+    ? last5.reduce((sum, s) => sum + s.masteryPct, 0) / last5.length
+    : 0;
+  const masteryPrior5 = prior5.length > 0
+    ? prior5.reduce((sum, s) => sum + s.masteryPct, 0) / prior5.length
+    : masteryLast5;
+  const masteryDelta = masteryLast5 - masteryPrior5;
+
+  // Participation
+  const totalStudents = last5.length > 0 ? last5[0].totalStudents : 0;
+  const studentsWithSubmission = Object.values(studentAggregates).filter(s => s.participationCount > 0).length;
+  const participationPct = totalStudents > 0 ? (studentsWithSubmission / totalStudents) * 100 : 0;
+
+  // Time discipline (simplified - would need more detailed timestamp data)
+  const avgTime = last5.length > 0
+    ? last5.reduce((sum, s) => sum + s.medianTimeSec, 0) / last5.length
+    : 0;
+  const presetTime = 60; // Assume 60s preset for now
+  const timeDelta = avgTime - presetTime;
+
+  // Integrity pulse
+  const avgIntegrity = last5.length > 0
+    ? last5.reduce((sum, s) => sum + s.integrityRate, 0) / last5.length
+    : 0;
+
+  return [
+    {
+      label: 'Mastery (Last 5)',
+      value: Math.round(masteryLast5 * 10) / 10 + '%',
+      delta: Math.round(masteryDelta * 10) / 10,
+      tooltip: `Average score across last 5 sessions. ${masteryDelta >= 0 ? 'Up' : 'Down'} ${Math.abs(Math.round(masteryDelta))} pts vs prior 5.`,
+      route: '/analytics/overview'
+    },
+    {
+      label: 'Participation',
+      value: Math.round(participationPct) + '%',
+      tooltip: `${studentsWithSubmission} of ${totalStudents} students have submitted at least one response.`,
+      route: '/analytics/students'
+    },
+    {
+      label: 'Time Discipline',
+      value: (timeDelta >= 0 ? '+' : '') + Math.round(timeDelta) + 's',
+      tooltip: `Median time to submit is ${Math.round(timeDelta)}s ${timeDelta >= 0 ? 'over' : 'under'} preset.`,
+      route: '/analytics/items'
+    },
+    {
+      label: 'Integrity Pulse',
+      value: Math.round(avgIntegrity * 10) / 10,
+      tooltip: `${Math.round(avgIntegrity * 10) / 10} lockout/tab-exit events per 10 students. ${avgIntegrity < 0.5 ? 'Excellent focus!' : avgIntegrity < 1.0 ? 'Good focus.' : 'Some integrity concerns.'}`,
+      route: '/analytics/overview'
+    }
+  ];
+}
+
+/**
+ * Save misconception tag for an item
+ */
+function saveMisconceptionTag(pollId, questionIndex, tag) {
+  return withErrorHandling(() => {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const pollSheet = ss.getSheetByName("Polls");
+    const values = getDataRangeValues_(pollSheet);
+
+    // Find the row for this poll and question
+    for (let i = 0; i < values.length; i++) {
+      if (values[i][0] === pollId && values[i][3] === questionIndex) {
+        const questionData = JSON.parse(values[i][4] || "{}");
+        questionData.misconceptionTag = tag;
+
+        // Update the cell
+        pollSheet.getRange(i + 2, 5).setValue(JSON.stringify(questionData)); // +2 because of header and 0-index
+
+        // Invalidate caches
+        CacheManager.invalidate(['ALL_POLLS_DATA', 'ANALYTICS_DATA_' + JSON.stringify({})]);
+
+        Logger.log('Misconception tag saved', { pollId, questionIndex, tag });
+        return { success: true };
+      }
+    }
+
+    throw new Error('Question not found');
+  })();
+}
+
 
 function getLivePollData(pollId, questionIndex) {
   return withErrorHandling(() => {

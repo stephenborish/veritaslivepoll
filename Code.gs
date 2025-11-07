@@ -2334,19 +2334,22 @@ function getStudentPollStatus(token, context) {
       ], "Hang tight — your teacher’s loading the next challenge."), false);
     }
 
-    if (pollStatus === "PAUSED" || sessionPhaseFromMetadata === 'PAUSED') {
+    // Don't show PAUSED state if we're in results phase
+    if ((pollStatus === "PAUSED" || sessionPhaseFromMetadata === 'PAUSED') &&
+        sessionPhaseFromMetadata !== 'RESULTS_HOLD' &&
+        sessionPhaseFromMetadata !== 'RESULTS_REVEALED') {
       const reason = metadata.reason || '';
       let message;
       if (reason === 'TIMER_EXPIRED') {
         message = pickMessage([
-          "Time’s up! Hope you picked wisely.",
-          "That’s the bell — time to see how you did."
-        ], "Time’s up! Hope you picked wisely.");
+          "Time's up! Hope you picked wisely.",
+          "That's the bell — time to see how you did."
+        ], "Time's up! Hope you picked wisely.");
       } else {
         message = pickMessage([
-          "Intermission! Your teacher’s cooking up the next one.",
+          "Intermission! Your teacher's cooking up the next one.",
           "Breathe. Blink. Hydrate. A new question is on the way."
-        ], "Intermission! Your teacher’s cooking up the next one.");
+        ], "Intermission! Your teacher's cooking up the next one.");
       }
       return envelope({ status: 'PAUSED', message: message, hasSubmitted: false, pollId: pollId });
     }

@@ -1246,14 +1246,8 @@
         }
 
         function setPreLiveReconnectMessage(text) {
-            if (!preLiveReconnectLine) return;
-            if (text) {
-                preLiveReconnectLine.textContent = text;
-                preLiveReconnectLine.classList.remove('hidden');
-            } else {
-                preLiveReconnectLine.textContent = '';
-                preLiveReconnectLine.classList.add('hidden');
-            }
+            // Disabled for student view - students don't need to see sync notifications
+            return;
         }
 
         function applyConnectivityTheme(theme) {
@@ -1268,42 +1262,9 @@
         }
 
         function showConnectivityState(state, options) {
-            if (!connectivityBanner) return;
-            options = options || {};
-            clearTimeout(connectivityHideTimer);
-            connectivityBanner.classList.remove('hidden');
-            applyConnectivityTheme(state);
-            if (connectivityIcon) {
-                var icon = options.icon || (state === 'offline' ? 'signal_wifi_off' : (state === 'recovered' ? 'cloud_done' : 'sync'));
-                connectivityIcon.textContent = icon;
-            }
-            if (connectivityMessage) {
-                var defaults = {
-                    connecting: 'Reconnecting... your poll data is catching up.',
-                    offline: 'Offline detected - we will hold your spot and resync when you are back.',
-                    recovered: 'Back on track - synced with your teacher.'
-                };
-                connectivityMessage.textContent = options.message || defaults[state] || defaults.connecting;
-            }
-            if (connectivitySubMessage) {
-                var submessage = options.submessage || '';
-                connectivitySubMessage.textContent = submessage;
-                if (submessage) {
-                    connectivitySubMessage.classList.remove('opacity-0');
-                } else {
-                    connectivitySubMessage.classList.add('opacity-0');
-                }
-            }
-            if (state === 'connecting' || state === 'offline') {
-                if (isPreLiveVisible()) {
-                    setPreLiveReconnectMessage(options.preLiveMessage || 'Reconnecting… syncing you back into place.');
-                }
-            } else if (state === 'recovered') {
-                setPreLiveReconnectMessage('');
-            }
-            if (options.autoHide) {
-                connectivityHideTimer = setTimeout(hideConnectivityBanner, options.autoHide);
-            }
+            // Disabled for student view - students don't need to see sync notifications
+            // Background sync continues to work normally
+            return;
         }
 
         function hideConnectivityBanner() {

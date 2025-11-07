@@ -2325,6 +2325,9 @@ function computeStudentAggregates_(polls, responsesByPoll) {
   const studentData = {};
   const allClasses = new Set();
 
+  // Track which polls are relevant to each student (based on their class)
+  const studentRelevantPolls = new Map(); // email -> count of relevant polls
+
   polls.forEach(poll => {
     allClasses.add(poll.className);
     const roster = DataAccess.roster.getByClass(poll.className);
@@ -2344,6 +2347,9 @@ function computeStudentAggregates_(polls, responsesByPoll) {
           topicPerformance: {}
         };
       }
+
+      // Count this poll as relevant to this student
+      studentRelevantPolls.set(student.email, (studentRelevantPolls.get(student.email) || 0) + 1);
     });
   });
 
@@ -2406,7 +2412,11 @@ function computeStudentAggregates_(polls, responsesByPoll) {
   Object.keys(studentData).forEach(email => {
     const student = studentData[email];
     student.successLast10 = student.totalAnswered > 0 ? (student.totalCorrect / student.totalAnswered) * 100 : 0;
-    student.participationPct = polls.length > 0 ? (student.participationCount / polls.length) * 100 : 0;
+
+    // Fix: Divide by the number of polls relevant to THIS student, not all polls
+    const relevantPollCount = studentRelevantPolls.get(email) || 1;
+    student.participationPct = relevantPollCount > 0 ? (student.participationCount / relevantPollCount) * 100 : 0;
+
     student.successLast10 = Math.round(student.successLast10 * 10) / 10;
     student.participationPct = Math.round(student.participationPct * 10) / 10;
 
@@ -2498,10 +2508,18 @@ function computeKPIs_(sessionAggregates, studentAggregates) {
     : masteryLast5;
   const masteryDelta = masteryLast5 - masteryPrior5;
 
-  // Participation
-  const totalStudents = last5.length > 0 ? last5[0].totalStudents : 0;
-  const studentsWithSubmission = Object.values(studentAggregates).filter(s => s.participationCount > 0).length;
-  const participationPct = totalStudents > 0 ? (studentsWithSubmission / totalStudents) * 100 : 0;
+  // Participation: Average participation per session instead of mixing aggregates from different populations
+  const participationPct = last5.length > 0
+    ? last5.reduce((sum, s) => sum + s.participationPct, 0) / last5.length
+    : 0;
+
+  // Calculate total participating students and average roster size for tooltip
+  const avgRosterSize = last5.length > 0
+    ? last5.reduce((sum, s) => sum + s.totalStudents, 0) / last5.length
+    : 0;
+  const avgParticipants = last5.length > 0
+    ? last5.reduce((sum, s) => sum + s.participants, 0) / last5.length
+    : 0;
 
   // Time discipline (simplified - would need more detailed timestamp data)
   const avgTime = last5.length > 0
@@ -2526,7 +2544,7 @@ function computeKPIs_(sessionAggregates, studentAggregates) {
     {
       label: 'Participation',
       value: Math.round(participationPct) + '%',
-      tooltip: `${studentsWithSubmission} of ${totalStudents} students have submitted at least one response.`,
+      tooltip: `Average participation across last 5 sessions: ${Math.round(avgParticipants)} of ${Math.round(avgRosterSize)} students per session.`,
       route: '/analytics/students'
     },
     {

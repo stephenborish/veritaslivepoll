@@ -113,6 +113,19 @@
         <p class="text-white/90 text-lg">Preparing your secure session...</p>
       </div>
 
+      <!-- Pre-Live Card -->
+      <div id="pre-live-card" class="text-center py-12 animate-fade-in" style="display: none;">
+        <div class="bg-black/20 backdrop-blur-lg rounded-xl border border-white/10 p-8 sm:p-12 shadow-2xl max-w-3xl mx-auto">
+          <span class="material-symbols-outlined text-6xl text-white mb-4 inline-block">schedule</span>
+          <h2 id="pre-live-message" class="text-white text-2xl font-semibold">
+            Waiting for your teacher to begin the poll...
+          </h2>
+          <p id="pre-live-submessage" class="text-white/60 text-base mt-4">
+            This page will update automatically.
+          </p>
+        </div>
+      </div>
+
       <!-- Status Container -->
       <div id="status-container" class="text-center py-12 animate-fade-in" style="display: none;">
         <div class="bg-black/20 backdrop-blur-lg rounded-xl border border-white/10 p-8 sm:p-12 shadow-2xl max-w-3xl mx-auto">
@@ -156,6 +169,9 @@
     (function() {
         console.log('Student poll script initializing...');
         var studentLoader = document.getElementById('student-loader');
+        var preLiveCard = document.getElementById('pre-live-card');
+        var preLiveMessage = document.getElementById('pre-live-message');
+        var preLiveSubMessage = document.getElementById('pre-live-submessage');
         var statusContainer = document.getElementById('status-container');
         var statusMessage = document.getElementById('status-message');
         var questionContainer = document.getElementById('question-container');
@@ -187,6 +203,7 @@
         var violationDebounceTimer = null;
         var pendingSubmission = false;
         var currentQuestionKey = null;
+        var lastUnlockedState = null;
         var lastStateVersion = null;
         var lastSuccessfulPollAt = 0;
         var pollInFlight = false;
@@ -586,11 +603,50 @@
                 return;
             }
 
+            if (preLiveCard) {
+                preLiveCard.style.display = 'none';
+            }
+
+            if (data.status !== 'LOCKED' && data.status !== 'AWAITING_FULLSCREEN') {
+                lastUnlockedState = data;
+            }
+
             if (resumeControls) {
                 resumeControls.style.display = 'none';
             }
 
+            if (data.status === 'PRE_LIVE') {
+                hasAnsweredCurrent = false;
+                pendingSubmission = false;
+                currentQuestionKey = null;
+                questionContainer.style.display = 'none';
+                if (statusContainer) {
+                    statusContainer.style.display = 'none';
+                }
+                if (preLiveCard) {
+                    preLiveCard.style.display = 'block';
+                    if (preLiveMessage) {
+                        preLiveMessage.textContent = data.message || 'Waiting for your teacher to begin the poll...';
+                    }
+                    if (preLiveSubMessage) {
+                        preLiveSubMessage.textContent = 'This page will update automatically.';
+                        preLiveSubMessage.style.display = 'block';
+                    }
+                } else {
+                    statusContainer.style.display = 'block';
+                    statusMessage.textContent = data.message || 'Waiting for your teacher to begin the poll...';
+                    statusMessage.className = 'text-white text-2xl font-semibold';
+                    if (statusSubMessage) {
+                        statusSubMessage.textContent = 'This page will update automatically.';
+                        statusSubMessage.style.display = 'block';
+                        statusSubMessage.className = 'text-white/60 text-base mt-4';
+                    }
+                }
+                return;
+            }
+
             if (data.status === 'LIVE' && typeof data.questionIndex === 'number' && data.questionIndex >= 0) {
+              lastUnlockedState = data;
               var questionKey = data.pollId + ':' + data.questionIndex;
               var isNewQuestion = questionKey !== currentQuestionKey;
 
@@ -689,6 +745,9 @@
             } else {
                 currentPollState = {};
                 questionContainer.style.display = 'none';
+                if (preLiveCard) {
+                    preLiveCard.style.display = 'none';
+                }
                 statusContainer.style.display = 'block';
                 var statusIcon = 'schedule';
                 var statusClass = 'text-white';

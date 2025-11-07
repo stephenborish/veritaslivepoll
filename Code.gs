@@ -1527,6 +1527,44 @@ function nextQuestion() {
   })();
 }
 
+function previousQuestion() {
+  return withErrorHandling(() => {
+    const currentStatus = DataAccess.liveStatus.get();
+    const pollId = currentStatus[0];
+
+    if (!pollId) {
+      throw new Error('No active poll');
+    }
+
+    let newIndex = currentStatus[1] - 1;
+    const poll = DataAccess.polls.getById(pollId);
+
+    if (!poll || newIndex < 0) {
+      throw new Error('Already at first question');
+    }
+
+    const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
+    const nowIso = new Date().toISOString();
+    DataAccess.liveStatus.set(pollId, newIndex, "OPEN", {
+      ...previousMetadata,
+      reason: 'RUNNING',
+      movedBackAt: nowIso,
+      timer: null,
+      startedAt: previousMetadata.startedAt || nowIso,
+      endedAt: null,
+      sessionPhase: 'LIVE',
+      isCollecting: true,
+      resultsVisibility: 'HIDDEN',
+      responsesClosedAt: null,
+      revealedAt: null
+    });
+
+    Logger.log('Previous question', { pollId: pollId, questionIndex: newIndex });
+
+    return getLivePollData(pollId, newIndex);
+  })();
+}
+
 function stopPoll() {
   return withErrorHandling(() => {
     const currentStatus = DataAccess.liveStatus.get();

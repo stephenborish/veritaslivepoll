@@ -663,6 +663,10 @@
         <div id="question-dots" class="flex items-center gap-1.5 rounded-full bg-brand-white/20 px-3 py-1.5 text-sm font-medium text-brand-white">
           <!-- Question dots will be populated dynamically -->
         </div>
+        <button id="header-back-btn" class="flex min-w-[80px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-brand-white/20 text-brand-white text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-brand-white/30 transition-colors">
+          <span class="material-symbols-outlined text-xl">skip_previous</span>
+          <span class="truncate">Back</span>
+        </button>
         <button id="header-next-btn" class="flex min-w-[80px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-brand-white/20 text-brand-white text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-brand-white/30 transition-colors">
           <span class="material-symbols-outlined text-xl">skip_next</span>
           <span class="truncate">Next</span>
@@ -1489,6 +1493,7 @@
   document.getElementById('header-start-btn').onclick=onResumePoll;
   document.getElementById('header-pause-btn').onclick=onStopPoll;
   document.getElementById('header-stop-btn').onclick=onEndPoll;
+  document.getElementById('header-back-btn').onclick=onPreviousQuestion;
   document.getElementById('header-next-btn').onclick=onNextQuestion;
   document.getElementById('header-reset-question-btn').onclick=onResetQuestion;
   document.getElementById('header-skip-btn').onclick=onNextQuestion;
@@ -2399,6 +2404,22 @@
       .stopPoll();
   }
 
+  function onPreviousQuestion(){
+    if(pollInterval)clearInterval(pollInterval);
+    pauseTimerCountdown();
+    stopVisualTimer();
+    timerExpiredHandled=false;
+    timerActive=false;
+    timerRemainingSeconds=timerPresetSeconds;
+    updateTimerDisplay();
+    updateTimerStatus('Timer ready for previous question.','info');
+    isPaused=false;
+    google.script.run
+      .withSuccessHandler(updateLiveView)
+      .withFailureHandler(handleError)
+      .previousQuestion();
+  }
+
   function onNextQuestion(){
     if(pollInterval)clearInterval(pollInterval);
     pauseTimerCountdown();
@@ -2549,6 +2570,31 @@
 
     // Update question dots
     updateQuestionDots(data.questionIndex,data.totalQuestions);
+
+    // Enable/disable navigation buttons
+    var backBtn=document.getElementById('header-back-btn');
+    var nextBtn=document.getElementById('header-next-btn');
+    if(backBtn){
+      backBtn.disabled=data.questionIndex<=0;
+      if(data.questionIndex<=0){
+        backBtn.style.opacity='0.5';
+        backBtn.style.cursor='not-allowed';
+      } else {
+        backBtn.style.opacity='1';
+        backBtn.style.cursor='pointer';
+      }
+    }
+    if(nextBtn){
+      var isLastQuestion=data.questionIndex>=data.totalQuestions-1;
+      nextBtn.disabled=isLastQuestion;
+      if(isLastQuestion){
+        nextBtn.style.opacity='0.5';
+        nextBtn.style.cursor='not-allowed';
+      } else {
+        nextBtn.style.opacity='1';
+        nextBtn.style.cursor='pointer';
+      }
+    }
 
     // Show/hide pause/start buttons
     if(isPaused){

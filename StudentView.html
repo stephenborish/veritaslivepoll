@@ -1664,7 +1664,8 @@
             if (data.status === 'LIVE' && typeof data.questionIndex === 'number' && data.questionIndex >= 0) {
                 resetResultDecorations();
                 lastUnlockedState = data;
-                var questionKey = data.pollId + ':' + data.questionIndex;
+                var resetTimestamp = (data.metadata && data.metadata.resetAt) ? data.metadata.resetAt : '';
+                var questionKey = data.pollId + ':' + data.questionIndex + ':' + resetTimestamp;
                 var isNewQuestion = questionKey !== currentQuestionKey;
 
                 if (isNewQuestion) {
@@ -2161,7 +2162,8 @@
 
         function renderResultsStage(data) {
             currentPollState = data;
-            currentQuestionKey = data.pollId + ':' + data.questionIndex;
+            var resetTimestamp = (data.metadata && data.metadata.resetAt) ? data.metadata.resetAt : '';
+            currentQuestionKey = data.pollId + ':' + data.questionIndex + ':' + resetTimestamp;
             hasAnsweredCurrent = !!data.hasSubmitted;
             questionContainer.style.display = 'block';
             statusContainer.style.display = 'none';

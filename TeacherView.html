@@ -1107,16 +1107,54 @@
     return VeritasModal;
   }
 
+  function runWithModal(executor){
+    var modal=ensureVeritasModal();
+    if(!modal||!modal.__stub){
+      return Promise.resolve().then(function(){
+        return executor(modal);
+      });
+    }
+
+    return new Promise(function(resolve){
+      function finalize(){
+        var readyModal=ensureVeritasModal();
+        if(readyModal&&!readyModal.__stub){
+          resolve(readyModal);
+        }else{
+          resolve(modal);
+        }
+      }
+
+      if(document.readyState==='loading'){
+        function handleReady(){
+          document.removeEventListener('DOMContentLoaded',handleReady);
+          finalize();
+        }
+        document.addEventListener('DOMContentLoaded',handleReady);
+      }else{
+        setTimeout(finalize,0);
+      }
+    }).then(function(instance){
+      return executor(instance);
+    });
+  }
+
   function veritasAlert(message,options){
-    return ensureVeritasModal().alert(Object.assign({message:message},options||{}));
+    return runWithModal(function(modal){
+      return modal.alert(Object.assign({message:message},options||{}));
+    });
   }
 
   function veritasConfirm(message,options){
-    return ensureVeritasModal().confirm(Object.assign({message:message},options||{}));
+    return runWithModal(function(modal){
+      return modal.confirm(Object.assign({message:message},options||{}));
+    });
   }
 
   function veritasPrompt(message,options){
-    return ensureVeritasModal().prompt(Object.assign({message:message},options||{}));
+    return runWithModal(function(modal){
+      return modal.prompt(Object.assign({message:message},options||{}));
+    });
   }
 
   function ensureModalRoot(){
@@ -1162,9 +1200,21 @@
     if(!root){
       console.warn('Veritas modal root unavailable. Falling back to native dialogs.');
       var stub={
-        alert:function(){return Promise.resolve();},
-        confirm:function(){return Promise.resolve(true);},
-        prompt:function(){return Promise.resolve(null);}
+        alert:function(config){
+          if(config&&typeof config.message==='string'){
+            window.alert(config.message);
+          }
+          return Promise.resolve();
+        },
+        confirm:function(config){
+          var message=config&&typeof config.message==='string'?config.message:'';
+          return Promise.resolve(window.confirm(message));
+        },
+        prompt:function(config){
+          var promptMessage=config&&typeof config.message==='string'?config.message:'';
+          var defaultValue=config&&typeof config.defaultValue==='string'?config.defaultValue:'';
+          return Promise.resolve(window.prompt(promptMessage,defaultValue));
+        }
       };
       stub.__stub=true;
       return stub;

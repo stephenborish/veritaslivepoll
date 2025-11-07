@@ -651,13 +651,13 @@
           <span class="material-symbols-outlined text-xl">play_arrow</span>
           <span class="truncate">Start</span>
         </button>
-        <button id="header-pause-btn" class="flex min-w-[80px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-brand-white/20 text-brand-white text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-brand-white/30 transition-colors" style="display: none;">
-          <span class="material-symbols-outlined text-xl">pause</span>
-          <span class="truncate">Pause</span>
+        <button id="header-end-show-btn" class="flex min-w-[80px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-green-600 text-brand-white text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-green-700 transition-colors" style="display: none;" title="Close responses and reveal answer to students">
+          <span class="material-symbols-outlined text-xl">check_circle</span>
+          <span class="truncate">End & Show Answer</span>
         </button>
-        <button id="header-stop-btn" class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-red-600 text-brand-white text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-red-700 transition-colors">
+        <button id="header-stop-btn" class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-red-600 text-brand-white text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-red-700 transition-colors" title="End the entire poll">
           <span class="material-symbols-outlined text-xl">stop</span>
-          <span class="truncate">Stop</span>
+          <span class="truncate">Stop Poll</span>
         </button>
         <div class="mx-2 h-6 w-px bg-brand-white/30"></div>
         <div id="question-dots" class="flex items-center gap-1.5 rounded-full bg-brand-white/20 px-3 py-1.5 text-sm font-medium text-brand-white">
@@ -799,21 +799,17 @@
                 <!-- Results bars will be populated dynamically -->
               </div>
               <div id="results-reveal-strip" class="mt-6 hidden">
-                <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 dark:border-brand-white/10 dark:bg-brand-white/5">
+                <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-green-600/20 bg-green-600/5 px-4 py-3 dark:border-green-500/20 dark:bg-green-500/5">
                   <div class="min-w-[200px]">
-                    <p class="text-sm font-semibold text-primary dark:text-brand-white">Post-question actions</p>
-                    <p id="results-strip-status" class="text-xs text-primary/70 dark:text-brand-white/70">Responses closed. Ready when you are.</p>
+                    <p class="text-sm font-semibold text-green-700 dark:text-green-400">Answer revealed to students</p>
+                    <p id="results-strip-status" class="text-xs text-green-700/70 dark:text-green-400/70">Students can now see the correct answer and results.</p>
                   </div>
                   <div class="flex flex-wrap items-center gap-2">
-                    <button id="reveal-results-btn" class="flex items-center gap-2 rounded-full bg-primary text-brand-white px-4 py-2 text-sm font-semibold tracking-[0.015em] shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60" type="button">
-                      <span class="material-symbols-outlined text-base">visibility</span>
-                      <span>Reveal to Students</span>
-                    </button>
-                    <button id="hide-results-btn" class="flex items-center gap-2 rounded-full bg-brand-light-gray/60 text-primary px-4 py-2 text-sm font-semibold tracking-[0.015em] transition-colors hover:bg-brand-light-gray disabled:cursor-not-allowed disabled:opacity-60 dark:bg-brand-white/10 dark:text-brand-white dark:hover:bg-brand-white/20" type="button">
+                    <button id="hide-results-btn" class="flex items-center gap-2 rounded-full bg-brand-light-gray/60 text-brand-dark-gray px-4 py-2 text-sm font-semibold tracking-[0.015em] transition-colors hover:bg-brand-light-gray disabled:cursor-not-allowed disabled:opacity-60 dark:bg-brand-white/10 dark:text-brand-white dark:hover:bg-brand-white/20" type="button">
                       <span class="material-symbols-outlined text-base">visibility_off</span>
                       <span>Hide Results</span>
                     </button>
-                    <button id="strip-next-btn" class="flex items-center gap-2 rounded-full bg-primary/10 text-primary px-4 py-2 text-sm font-semibold tracking-[0.015em] transition-colors hover:bg-primary/20 dark:text-brand-white dark:bg-brand-white/10 dark:hover:bg-brand-white/20" type="button">
+                    <button id="strip-next-btn" class="flex items-center gap-2 rounded-full bg-primary text-brand-white px-4 py-2 text-sm font-semibold tracking-[0.015em] shadow-sm transition-colors hover:bg-primary/90 dark:text-brand-white dark:bg-primary dark:hover:bg-primary/90" type="button">
                       <span class="material-symbols-outlined text-base">skip_next</span>
                       <span>Next Question</span>
                     </button>
@@ -1491,13 +1487,12 @@
   classSelect.addEventListener('change',markPollDirty);
   startPollBtn.onclick=onStartPoll;
   document.getElementById('header-start-btn').onclick=onResumePoll;
-  document.getElementById('header-pause-btn').onclick=onStopPoll;
+  document.getElementById('header-end-show-btn').onclick=onEndQuestionAndShowAnswer;
   document.getElementById('header-stop-btn').onclick=onEndPoll;
   document.getElementById('header-back-btn').onclick=onPreviousQuestion;
   document.getElementById('header-next-btn').onclick=onNextQuestion;
   document.getElementById('header-reset-question-btn').onclick=onResetQuestion;
   document.getElementById('header-skip-btn').onclick=onNextQuestion;
-  document.getElementById('reveal-results-btn').onclick=onRevealResults;
   document.getElementById('hide-results-btn').onclick=onHideResults;
   document.getElementById('strip-next-btn').onclick=onNextQuestion;
   document.getElementById('timer-start-btn').onclick=startTimerCountdown;
@@ -2404,6 +2399,28 @@
       .stopPoll();
   }
 
+  function onEndQuestionAndShowAnswer(){
+    pauseTimerCountdown();
+    stopVisualTimer();
+    timerActive=false;
+    timerRemainingSeconds=timerPresetSeconds;
+    updateTimerDisplay();
+    updateTimerStatus('Timer idle.','info');
+    var endShowBtn=document.getElementById('header-end-show-btn');
+    if(endShowBtn){endShowBtn.disabled=true;}
+    google.script.run
+      .withSuccessHandler(function(data){
+        if(endShowBtn){endShowBtn.disabled=false;}
+        isPaused=true;
+        updateLiveView(data);
+      })
+      .withFailureHandler(function(error){
+        if(endShowBtn){endShowBtn.disabled=false;}
+        handleError(error);
+      })
+      .endQuestionAndRevealResults();
+  }
+
   function onPreviousQuestion(){
     if(pollInterval)clearInterval(pollInterval);
     pauseTimerCountdown();
@@ -2596,13 +2613,13 @@
       }
     }
 
-    // Show/hide pause/start buttons
+    // Show/hide end-show/start buttons
     if(isPaused){
       document.getElementById('header-start-btn').style.display='flex';
-      document.getElementById('header-pause-btn').style.display='none';
+      document.getElementById('header-end-show-btn').style.display='none';
     } else {
       document.getElementById('header-start-btn').style.display='none';
-      document.getElementById('header-pause-btn').style.display='flex';
+      document.getElementById('header-end-show-btn').style.display='flex';
     }
 
     if(questionChanged){
@@ -2681,38 +2698,23 @@
     var resultsStrip=document.getElementById('results-reveal-strip');
     if(resultsStrip){
       var hasQuestion=typeof data.questionIndex==='number'&&data.questionIndex>=0;
-      if(isCollecting||!hasQuestion){
+      // Only show the strip when results are revealed
+      if(isCollecting||!hasQuestion||!isResultsRevealed){
         resultsStrip.classList.add('hidden');
       } else {
         resultsStrip.classList.remove('hidden');
-        var revealBtn=document.getElementById('reveal-results-btn');
         var hideBtn=document.getElementById('hide-results-btn');
         var stripNextBtn=document.getElementById('strip-next-btn');
         var stripStatus=document.getElementById('results-strip-status');
-        if(revealBtn){
-          revealBtn.disabled=!hasQuestion||isResultsRevealed;
-        }
         if(hideBtn){
-          hideBtn.disabled=!hasQuestion||!isResultsRevealed;
+          hideBtn.disabled=!hasQuestion;
         }
         if(stripNextBtn){
           stripNextBtn.disabled=!hasQuestion;
         }
         if(stripStatus){
-          if(isResultsRevealed){
-            var suffix=data.totalResponses===0?' • no responses yet.':'';
-            stripStatus.textContent='Shared with students'+suffix;
-          } else if(data.totalResponses===0){
-            stripStatus.textContent='No responses recorded for this question.';
-          } else {
-            if(metadata.reason==='TIMER_EXPIRED'){
-              stripStatus.textContent='Timer expired — ready to reveal.';
-            } else if(metadata.reason==='RESPONSES_CLOSED'){
-              stripStatus.textContent='Responses closed. Ready to reveal.';
-            } else {
-              stripStatus.textContent='Responses closed. Ready to reveal.';
-            }
-          }
+          var suffix=data.totalResponses===0?' No responses were recorded.':'';
+          stripStatus.textContent='Students can now see the correct answer and results.'+suffix;
         }
       }
     }

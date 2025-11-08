@@ -4,6 +4,7 @@
 
 // --- CONFIGURATION ---
 const TEACHER_EMAIL = "sborish@malvernprep.org";
+const ADDITIONAL_TEACHER_PROP_KEY = 'TEACHER_EMAILS';
 const TOKEN_EXPIRY_DAYS = 30; // Tokens valid for 30 days
 
 // --- ENHANCED LOGGING (2025 Standard) ---
@@ -200,6 +201,40 @@ const TokenManager = {
     return null;
   }
 };
+
+// --- TEACHER EMAIL HELPERS ---
+let teacherEmailSetCache = null;
+
+function getTeacherEmailSet_() {
+  if (teacherEmailSetCache) {
+    return teacherEmailSetCache;
+  }
+
+  const normalized = new Set();
+  normalized.add(TEACHER_EMAIL.toLowerCase());
+
+  try {
+    const scriptProps = PropertiesService.getScriptProperties();
+    const extrasRaw = scriptProps.getProperty(ADDITIONAL_TEACHER_PROP_KEY) || '';
+    if (extrasRaw) {
+      extrasRaw
+        .split(',')
+        .map(email => email.trim().toLowerCase())
+        .filter(email => email)
+        .forEach(email => normalized.add(email));
+    }
+  } catch (e) {
+    Logger.error('Failed to load additional teacher emails', e);
+  }
+
+  teacherEmailSetCache = normalized;
+  return teacherEmailSetCache;
+}
+
+function isTeacherEmail_(email) {
+  if (!email) return false;
+  return getTeacherEmailSet_().has(email.trim().toLowerCase());
+}
 
 // --- URL SHORTENER UTILITY ---
 const URLShortener = {
@@ -562,10 +597,15 @@ function doGet(e) {
     } else {
       // Try Google authentication (teacher or fallback)
       try {
-        const userEmail = Session.getActiveUser().getEmail();
-        isTeacher = (userEmail === TEACHER_EMAIL);
-        
-        if (!isTeacher) {
+        const userEmail = (Session.getActiveUser().getEmail() || '').trim();
+        isTeacher = isTeacherEmail_(userEmail);
+
+        Logger.log('Resolved active user identity', {
+          userEmail: userEmail || '(empty)',
+          routedAsTeacher: isTeacher
+        });
+
+        if (!isTeacher && userEmail) {
           studentEmail = userEmail;
         }
       } catch (authError) {

@@ -2570,85 +2570,96 @@ function getDashboardSummary() {
     const cacheKey = 'DASHBOARD_SUMMARY';
 
     return CacheManager.get(cacheKey, () => {
-      const analyticsData = getAnalyticsData({});
-      const sessions = analyticsData.sessions || [];
+      try {
+        const analyticsData = getAnalyticsData({});
+        const sessions = analyticsData.sessions || [];
 
-      // Get recent 5 sessions
-      const recentSessions = sessions
-        .sort((a, b) => new Date(b.date) - new Date(a.date))
-        .slice(0, 5)
-        .map(session => ({
-          sessionId: session.sessionId,
-          sessionName: session.sessionName,
-          className: session.className,
-          date: session.date,
-          masteryPct: session.masteryPct,
-          participationPct: session.participationPct,
-          flags: session.integrityRate > 1.5 ? Math.round(session.integrityRate * session.totalStudents / 10) : 0
-        }));
+        // Get recent 5 sessions
+        const recentSessions = sessions
+          .sort((a, b) => new Date(b.date) - new Date(a.date))
+          .slice(0, 5)
+          .map(session => ({
+            sessionId: session.sessionId || '',
+            sessionName: session.sessionName || 'Untitled',
+            className: session.className || '',
+            date: session.date || new Date().toISOString(),
+            masteryPct: session.masteryPct || 0,
+            participationPct: session.participationPct || 0,
+            flags: (session.integrityRate > 1.5 && session.totalStudents) ? Math.round(session.integrityRate * session.totalStudents / 10) : 0
+          }));
 
-      // Calculate daily activity for the last 7 days
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      const responsesSheet = ss.getSheetByName('Responses');
-      const responseValues = responsesSheet ? getDataRangeValues_(responsesSheet) : [];
+        // Calculate daily activity for the last 7 days
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const responsesSheet = ss.getSheetByName('Responses');
+        const responseValues = responsesSheet ? getDataRangeValues_(responsesSheet) : [];
 
-      const now = new Date();
-      const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+        const now = new Date();
+        const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
 
-      const dailyActivity = {};
-      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dailyActivity = {};
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-      // Initialize last 7 days
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date(now.getTime() - (i * 24 * 60 * 60 * 1000));
-        const dateKey = date.toISOString().split('T')[0];
-        const dayName = i === 0 ? 'Today' : dayNames[date.getDay()];
-        dailyActivity[dateKey] = {
-          date: dateKey,
-          dayName: dayName,
-          count: 0
+        // Initialize last 7 days
+        for (let i = 6; i >= 0; i--) {
+          const date = new Date(now.getTime() - (i * 24 * 60 * 60 * 1000));
+          const dateKey = date.toISOString().split('T')[0];
+          const dayName = i === 0 ? 'Today' : dayNames[date.getDay()];
+          dailyActivity[dateKey] = {
+            date: dateKey,
+            dayName: dayName,
+            count: 0
+          };
+        }
+
+        // Count responses by day
+        responseValues.forEach(row => {
+          const timestamp = row[1]; // Timestamp column
+          if (timestamp && timestamp >= sevenDaysAgo) {
+            const dateKey = new Date(timestamp).toISOString().split('T')[0];
+            if (dailyActivity[dateKey]) {
+              dailyActivity[dateKey].count++;
+            }
+          }
+        });
+
+        const activityArray = Object.values(dailyActivity);
+        const totalThisWeek = activityArray.reduce((sum, day) => sum + day.count, 0);
+
+        // Calculate previous week for comparison
+        const fourteenDaysAgo = new Date(now.getTime() - (14 * 24 * 60 * 60 * 1000));
+        let totalLastWeek = 0;
+        responseValues.forEach(row => {
+          const timestamp = row[1];
+          if (timestamp && timestamp >= fourteenDaysAgo && timestamp < sevenDaysAgo) {
+            totalLastWeek++;
+          }
+        });
+
+        const weekOverWeekChange = totalLastWeek > 0
+          ? Math.round(((totalThisWeek - totalLastWeek) / totalLastWeek) * 100)
+          : 0;
+
+        Logger.log('Dashboard summary computed', {
+          recentSessions: recentSessions.length,
+          totalActivityThisWeek: totalThisWeek
+        });
+
+        return {
+          recentSessions: recentSessions,
+          dailyActivity: activityArray,
+          weekOverWeekChange: weekOverWeekChange,
+          totalActivityThisWeek: totalThisWeek
+        };
+      } catch (error) {
+        Logger.error('Error in getDashboardSummary', error);
+        // Return empty but valid structure
+        return {
+          recentSessions: [],
+          dailyActivity: [],
+          weekOverWeekChange: 0,
+          totalActivityThisWeek: 0
         };
       }
-
-      // Count responses by day
-      responseValues.forEach(row => {
-        const timestamp = row[1]; // Timestamp column
-        if (timestamp && timestamp >= sevenDaysAgo) {
-          const dateKey = new Date(timestamp).toISOString().split('T')[0];
-          if (dailyActivity[dateKey]) {
-            dailyActivity[dateKey].count++;
-          }
-        }
-      });
-
-      const activityArray = Object.values(dailyActivity);
-      const totalThisWeek = activityArray.reduce((sum, day) => sum + day.count, 0);
-
-      // Calculate previous week for comparison
-      const fourteenDaysAgo = new Date(now.getTime() - (14 * 24 * 60 * 60 * 1000));
-      let totalLastWeek = 0;
-      responseValues.forEach(row => {
-        const timestamp = row[1];
-        if (timestamp && timestamp >= fourteenDaysAgo && timestamp < sevenDaysAgo) {
-          totalLastWeek++;
-        }
-      });
-
-      const weekOverWeekChange = totalLastWeek > 0
-        ? Math.round(((totalThisWeek - totalLastWeek) / totalLastWeek) * 100)
-        : 0;
-
-      Logger.log('Dashboard summary computed', {
-        recentSessions: recentSessions.length,
-        totalActivityThisWeek: totalThisWeek
-      });
-
-      return {
-        recentSessions: recentSessions,
-        dailyActivity: activityArray,
-        weekOverWeekChange: weekOverWeekChange,
-        totalActivityThisWeek: totalThisWeek
-      };
     }, CacheManager.CACHE_TIMES.SHORT);
   })();
 }

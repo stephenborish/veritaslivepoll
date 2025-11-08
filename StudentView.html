@@ -722,6 +722,71 @@
       white-space: nowrap;
       border: 0;
     }
+
+    /* Student Landing Page Animations */
+    @keyframes drawLine {
+      from {
+        transform: scaleX(0);
+      }
+      to {
+        transform: scaleX(1);
+      }
+    }
+
+    @keyframes shimmerBg {
+      0% {
+        background-position: -1000px 0;
+      }
+      100% {
+        background-position: 1000px 0;
+      }
+    }
+
+    @keyframes floatParticle {
+      0%, 100% {
+        transform: translateY(0) translateX(0);
+        opacity: 0.4;
+      }
+      50% {
+        transform: translateY(-20px) translateX(10px);
+        opacity: 0.8;
+      }
+    }
+
+    @keyframes pulseDot {
+      0%, 80%, 100% {
+        opacity: 0.3;
+        transform: scale(1);
+      }
+      40% {
+        opacity: 1;
+        transform: scale(1.2);
+      }
+    }
+
+    .shimmer-particle {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: radial-gradient(circle, #c5a05a, transparent);
+      border-radius: 50%;
+      animation: floatParticle 6s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .waiting-dots .dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      margin: 0 4px;
+      background: #12385d;
+      border-radius: 50%;
+      animation: pulseDot 1.4s ease-in-out infinite;
+    }
+
+    .waiting-dots .dot:nth-child(1) { animation-delay: 0s; }
+    .waiting-dots .dot:nth-child(2) { animation-delay: 0.2s; }
+    .waiting-dots .dot:nth-child(3) { animation-delay: 0.4s; }
   </style>
 </head>
 <body class="font-display bg-gradient-to-br from-brand-blue to-brand-accent text-white min-h-screen">
@@ -747,29 +812,42 @@
         <span id="connectivity-submessage" class="text-xs text-amber-700/80 opacity-0"></span>
       </div>
     </div>
-    <!-- Entry Screen -->
-    <div id="entry-screen" class="w-full max-w-3xl mx-auto text-center animate-fade-in">
-      <div class="bg-black/20 backdrop-blur-lg rounded-xl shadow-2xl border border-white/10 p-8 sm:p-12">
-        <p class="text-white text-xl mb-10 leading-relaxed">
-          Welcome! Click <strong>&quot;Begin Session&quot;</strong> to join now.
-        </p>
+    <!-- Entry Screen - Redesigned Landing Panel -->
+    <div id="entry-screen" class="w-full max-w-4xl mx-auto text-center animate-fade-in px-6">
+      <!-- Main Welcome Card -->
+      <div class="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-10 sm:p-16 relative overflow-hidden">
+        <!-- Subtle shimmer background -->
+        <div class="absolute inset-0 bg-gradient-to-br from-white via-gray-50 to-blue-50 opacity-60"></div>
 
-        <!-- Important Security Notice -->
-        <div class="bg-white/10 border-2 border-yellow-300 rounded-lg p-8 mb-10 text-center">
-          <h4 class="text-yellow-300 text-2xl font-bold mb-4 tracking-wide">
-            <span class="text-3xl">&#9888;</span> ATTENTION
-          </h4>
-          <p class="text-white text-lg leading-relaxed">
-            Do <strong class="underline">NOT</strong> switch tabs, open other windows, or exit fullscreen mode &mdash; your session will be locked.
-          </p>
-        </div>
+        <div class="relative z-10">
+          <!-- Welcome Message with Animated Gold Line -->
+          <div class="mb-12">
+            <h1 class="text-5xl sm:text-6xl font-bold mb-4" style="color: #12385d;">
+              Welcome to <span style="color: #c5a05a; position: relative; display: inline-block;">
+                VERITAS
+                <span class="gold-underline" style="position: absolute; bottom: -8px; left: 0; right: 0; height: 3px; background: #c5a05a; transform-origin: left; animation: drawLine 0.6s ease-out forwards;"></span>
+              </span>
+            </h1>
+            <p class="text-xl text-gray-700 mt-8 leading-relaxed max-w-2xl mx-auto">
+              Get ready to respond in real time — focus up, it's your turn.
+            </p>
+          </div>
 
-        <div class="flex justify-center">
-          <button id="start-session-btn" class="flex items-center justify-center gap-3 px-12 py-4 rounded-lg bg-green-500 text-white text-xl font-bold hover:bg-green-600 transition-transform duration-300 hover:scale-105 shadow-lg">
+          <!-- Begin Button -->
+          <button id="start-session-btn" class="inline-flex items-center justify-center gap-3 px-14 py-5 rounded-full text-white text-xl font-bold transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105" style="background: #12385d; border: 2px solid #c5a05a;">
             <span class="material-symbols-outlined text-2xl">play_circle</span>
             <span>Begin Session</span>
           </button>
+
+          <!-- Subtle Hint -->
+          <p class="mt-8 text-sm text-gray-500 italic">
+            Prepare to enter fullscreen mode for your session
+          </p>
         </div>
+
+        <!-- Decorative element -->
+        <div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-100/30 to-gold-100/20 rounded-full blur-3xl -z-0"></div>
+        <div class="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-gold-100/20 to-transparent rounded-full blur-2xl -z-0"></div>
       </div>
     </div>
 
@@ -780,29 +858,51 @@
         <p class="text-white/90 text-lg">Preparing your secure session...</p>
       </div>
 
-      <!-- Pre-Live Card -->
-      <section id="pre-live-card" class="student-card student-pre-live-card text-center animate-fade-in" style="display: none;">
-        <div class="student-card-body student-pre-live-body">
-          <div class="student-pre-live-icon" aria-hidden="true">
-            <span class="material-symbols-outlined">auto_awesome</span>
+      <!-- Pre-Live Card - Redesigned Waiting Screen -->
+      <section id="pre-live-card" class="student-card student-pre-live-card text-center animate-fade-in" style="display: none; max-width: 900px; background: white; color: #111;">
+        <div class="student-card-body student-pre-live-body" style="padding: 48px 32px;">
+          <!-- Animated Icon -->
+          <div class="student-pre-live-icon mb-6" aria-hidden="true" style="width: 96px; height: 96px; margin: 0 auto; background: rgba(18, 56, 93, 0.08); color: #12385d; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;">
+            <span class="material-symbols-outlined" style="font-size: 3.5rem;">hourglass_top</span>
           </div>
-          <h2 id="pre-live-primary" class="student-stem text-3xl sm:text-4xl">
-            Showtime is moments away.
+
+          <!-- Main Message -->
+          <h2 id="pre-live-primary" class="student-stem text-4xl sm:text-5xl font-bold mb-4" style="color: #12385d;">
+            Waiting for your teacher to start the poll
+            <span class="waiting-dots ml-2">
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="dot"></span>
+            </span>
           </h2>
-          <p id="pre-live-subline" class="student-subline text-lg max-w-2xl mx-auto">
-            Your teacher is lining up the first challenge now — stay focused and we’ll launch together.
+
+          <!-- Subtext -->
+          <p id="pre-live-subline" class="student-subline text-lg max-w-2xl mx-auto mb-6" style="color: #6b7280;">
+            Keep this tab open — the question will appear automatically.
           </p>
+
+          <!-- Humorous Footer -->
+          <p class="text-sm italic mt-8" style="color: #9ca3af;">
+            Patience is a virtue (and a graded skill).
+          </p>
+
+          <!-- Optional Shimmer Particles -->
+          <div class="shimmer-particle" style="top: 20%; left: 15%; animation-delay: 0s;"></div>
+          <div class="shimmer-particle" style="top: 60%; right: 20%; animation-delay: 2s;"></div>
+          <div class="shimmer-particle" style="bottom: 30%; left: 25%; animation-delay: 4s;"></div>
         </div>
-        <div class="student-card-options student-pre-live-footer">
-          <div class="student-pre-live-status">
-            <span class="student-pre-live-label">PRE-LIVE</span>
+
+        <!-- Status Footer -->
+        <div class="student-card-options student-pre-live-footer" style="background: rgba(18, 56, 93, 0.04); padding: 20px 32px; border-top: 1px solid rgba(18, 56, 93, 0.1);">
+          <div class="student-pre-live-status" style="color: #12385d;">
+            <span class="student-pre-live-label font-bold">PRE-LIVE</span>
             <span class="student-pre-live-pips" aria-hidden="true">
-              <span class="pip" style="animation-delay: 0s;"></span>
-              <span class="pip" style="animation-delay: 0.2s;"></span>
-              <span class="pip" style="animation-delay: 0.4s;"></span>
+              <span class="pip" style="animation-delay: 0s; background: #12385d;"></span>
+              <span class="pip" style="animation-delay: 0.2s; background: #12385d;"></span>
+              <span class="pip" style="animation-delay: 0.4s; background: #12385d;"></span>
             </span>
           </div>
-          <p id="pre-live-reconnect-line" class="student-pre-live-reconnect hidden">
+          <p id="pre-live-reconnect-line" class="student-pre-live-reconnect hidden" style="color: #12385d;">
             Reconnecting… syncing you back into place.
           </p>
         </div>

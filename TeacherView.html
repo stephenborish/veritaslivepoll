@@ -641,6 +641,38 @@
     }
 
     /* New Dashboard Styles */
+    .sidebar-nav-btn {
+      background: transparent;
+      color: rgba(255, 255, 255, 0.72);
+      transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .sidebar-nav-btn .material-symbols-outlined {
+      transition: transform 160ms ease, color 160ms ease;
+    }
+
+    .sidebar-nav-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+    }
+
+    .sidebar-nav-btn:hover .material-symbols-outlined {
+      transform: translateX(2px);
+    }
+
+    .sidebar-nav-btn.is-active,
+    .sidebar-nav-btn[aria-current="page"] {
+      background: rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+    }
+
+    .sidebar-nav-btn.is-active .material-symbols-outlined,
+    .sidebar-nav-btn[aria-current="page"] .material-symbols-outlined {
+      color: #ffffff;
+      transform: translateX(2px);
+    }
+
     .dashboard-card {
       background: white;
       border-radius: 16px;
@@ -886,6 +918,36 @@
     .activity-bar:hover {
       filter: brightness(1.2);
       transform: scaleY(1.05);
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(18px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes pulseGlow {
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(197, 160, 90, 0.35);
+      }
+      50% {
+        box-shadow: 0 0 18px 3px rgba(197, 160, 90, 0.45);
+      }
+    }
+
+    @keyframes shimmer {
+      from {
+        background-position: -1000px 0;
+      }
+      to {
+        background-position: 1000px 0;
+      }
     }
 
     /* Stagger animation delays */
@@ -1534,7 +1596,7 @@
       <!-- Right Sidebar Navigation -->
       <aside class="w-64 bg-veritas-navy flex-col items-center p-4 border-l border-veritas-navy/20 hidden lg:flex">
         <nav class="flex flex-col w-full gap-2">
-          <button id="nav-polls-list" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-brand-white/10 text-brand-white hover:bg-brand-white/20 font-semibold transition-colors text-left">
+          <button id="nav-polls-list" data-section-target="dashboard" class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg font-semibold transition-colors text-left">
             <span class="material-symbols-outlined">monitoring</span>
             <span>Live Dashboard</span>
           </button>
@@ -1542,15 +1604,15 @@
             <span class="material-symbols-outlined">add_circle</span>
             <span>Create New Poll</span>
           </button>
-          <button id="nav-rosters" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-brand-white/70 hover:bg-brand-white/20 hover:text-brand-white transition-colors text-left">
+          <button id="nav-rosters" data-section-target="roster" class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left">
             <span class="material-symbols-outlined">group</span>
             <span>Classes &amp; Rosters</span>
           </button>
-          <button id="nav-archived" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-brand-white/70 hover:bg-brand-white/20 hover:text-brand-white transition-colors text-left">
+          <button id="nav-archived" data-section-target="archived" class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left">
             <span class="material-symbols-outlined">inventory_2</span>
             <span>Archived Polls</span>
           </button>
-          <button id="nav-analytics" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-brand-white/70 hover:bg-brand-white/20 hover:text-brand-white transition-colors text-left">
+          <button id="nav-analytics" data-section-target="analytics" class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left">
             <span class="material-symbols-outlined">analytics</span>
             <span>Analytics Hub</span>
           </button>
@@ -1675,6 +1737,9 @@
   var BASE_CLASSES=[];
   var dashboardSummary=null;
   var analyticsRefreshInterval=null;
+  var googleChartsReady=false;
+  var googleChartsLoading=false;
+  var googleChartsBootstrapTimer=null;
 
   var appsScriptAvailable=!!(window.google&&window.google.script&&window.google.script.run);
   var PREVIEW_MODE=!appsScriptAvailable;
@@ -2261,6 +2326,47 @@
     element.addEventListener('change',handler);
   }
 
+  function bootstrapGoogleCharts(){
+    if(googleChartsReady||googleChartsLoading){
+      return;
+    }
+    if(!(window.google&&google.charts&&typeof google.charts.load==='function')){
+      return;
+    }
+    googleChartsLoading=true;
+    google.charts.load('current',{'packages':['corechart']});
+    google.charts.setOnLoadCallback(function(){
+      googleChartsReady=true;
+      googleChartsLoading=false;
+      if(googleChartsBootstrapTimer){
+        clearInterval(googleChartsBootstrapTimer);
+        googleChartsBootstrapTimer=null;
+      }
+      try{
+        onGoogleChartsReady();
+      }catch(err){
+        console.error('Post-chart bootstrap failed:',err);
+      }
+    });
+  }
+
+  function onGoogleChartsReady(){
+    if(dashboardSummary){
+      try{
+        renderActivityPulse();
+      }catch(err){
+        console.error('Activity pulse refresh failed:',err);
+      }
+    }
+    if(typeof renderAnalyticsByTab==='function'&&typeof analyticsData!=='undefined'&&analyticsData){
+      try{
+        renderAnalyticsByTab();
+      }catch(err){
+        console.error('Analytics redraw failed:',err);
+      }
+    }
+  }
+
   // --- Element Cache ---
   var pollSelect=document.getElementById('poll-select');
   var startPollBtn=document.getElementById('start-poll-btn');
@@ -2301,8 +2407,24 @@
   var refreshArchivedBtn=document.getElementById('refresh-archived-btn');
 
   // --- Initialization ---
-  google.charts.load('current',{'packages':['corechart']});
-  google.charts.setOnLoadCallback(loadInitialData);
+  loadInitialData();
+
+  if(window.google&&google.charts&&typeof google.charts.load==='function'){
+    bootstrapGoogleCharts();
+  }else{
+    console.warn('Google Charts unavailable – continuing initialization without charts.');
+    googleChartsBootstrapTimer=setInterval(function(){
+      if(window.google&&google.charts&&typeof google.charts.load==='function'){
+        bootstrapGoogleCharts();
+      }
+    },400);
+    setTimeout(function(){
+      if(googleChartsBootstrapTimer){
+        clearInterval(googleChartsBootstrapTimer);
+        googleChartsBootstrapTimer=null;
+      }
+    },8000);
+  }
 
   // --- Event Listeners ---
   bindClick('open-creator-btn',function(){openPollCreator();});
@@ -2434,22 +2556,15 @@
     archivedView.style.display=section==='archived'?'grid':'none';
     analyticsView.style.display=section==='analytics'?'flex':'none';
 
-    var navMap={
-      dashboard:'nav-polls-list',
-      roster:'nav-rosters',
-      archived:'nav-archived',
-      analytics:'nav-analytics'
-    };
-    Object.keys(navMap).forEach(function(key){
-      var btn=document.getElementById(navMap[key]);
-      if(!btn)return;
-      if(key===section){
-        btn.style.backgroundColor='rgba(255,255,255,0.18)';
-        btn.style.color='#ffffff';
+    var navButtons=document.querySelectorAll('.sidebar-nav-btn[data-section-target]');
+    navButtons.forEach(function(btn){
+      var target=btn.getAttribute('data-section-target');
+      var isActive=target===section;
+      btn.classList.toggle('is-active',isActive);
+      btn.setAttribute('aria-current',isActive?'page':'false');
+      if(isActive){
         btn.classList.add('font-semibold');
       }else{
-        btn.style.backgroundColor='transparent';
-        btn.style.color='rgba(255,255,255,0.72)';
         btn.classList.remove('font-semibold');
       }
     });
@@ -3720,25 +3835,33 @@
     }
 
     // Render Item Scatter (simplified - using Google Charts)
-    if (analyticsData.items && analyticsData.items.length > 0 && typeof google !== 'undefined') {
-      var scatterData = [['Difficulty (% Correct)', 'Discrimination', 'Question']];
-      analyticsData.items.forEach(function(item) {
-        scatterData.push([item.correctPct, item.rbis, 'Q' + item.qNum]);
+    var scatterHost=document.getElementById('analytics-item-scatter');
+    if(!scatterHost){
+      return;
+    }
+    if(!analyticsData.items||analyticsData.items.length===0){
+      scatterHost.innerHTML='<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No item data available</p>';
+    }else if(googleChartsReady&&window.google&&google.visualization&&typeof google.visualization.ScatterChart==='function'){
+      var scatterData=[['Difficulty (% Correct)','Discrimination','Question']];
+      analyticsData.items.forEach(function(item){
+        scatterData.push([item.correctPct,item.rbis,'Q'+item.qNum]);
       });
 
-      var data = google.visualization.arrayToDataTable(scatterData);
-      var options = {
-        title: 'Item Difficulty vs Discrimination',
-        hAxis: { title: 'Difficulty (% Correct)', minValue: 0, maxValue: 100 },
-        vAxis: { title: 'Discrimination (r_bis)', minValue: -0.5, maxValue: 1.0 },
-        legend: 'none',
-        pointSize: 5,
-        backgroundColor: 'transparent',
-        chartArea: { width: '85%', height: '75%' }
+      var data=google.visualization.arrayToDataTable(scatterData);
+      var options={
+        title:'Item Difficulty vs Discrimination',
+        hAxis:{title:'Difficulty (% Correct)',minValue:0,maxValue:100},
+        vAxis:{title:'Discrimination (r_bis)',minValue:-0.5,maxValue:1.0},
+        legend:'none',
+        pointSize:5,
+        backgroundColor:'transparent',
+        chartArea:{width:'85%',height:'75%'}
       };
 
-      var chart = new google.visualization.ScatterChart(document.getElementById('analytics-item-scatter'));
-      chart.draw(data, options);
+      var chart=new google.visualization.ScatterChart(scatterHost);
+      chart.draw(data,options);
+    }else{
+      scatterHost.innerHTML='<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">Preparing analytics visuals…</p>';
     }
   }
 

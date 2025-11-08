@@ -1047,73 +1047,10 @@
               <h2 class="dashboard-card-title">Recent Sessions</h2>
               <p class="dashboard-card-subtitle">Your last 5 live poll sessions</p>
 
-              <div class="space-y-0">
-                <div class="dashboard-list-item">
-                  <div class="flex-1 min-w-0">
-                    <p class="font-semibold text-sm text-veritas-navy">Unit 3 Assessment</p>
-                    <p class="text-xs text-gray-500 mt-0.5">Nov 5, 2025 · AP Biology</p>
-                  </div>
-                  <div class="flex items-center gap-3">
-                    <div class="dashboard-stat-badge success">
-                      <span class="material-symbols-outlined text-sm">check_circle</span>
-                      <span>92%</span>
-                    </div>
-                    <span class="text-xs text-gray-500">Avg 78%</span>
-                  </div>
-                </div>
-
-                <div class="dashboard-list-item">
-                  <div class="flex-1 min-w-0">
-                    <p class="font-semibold text-sm text-veritas-navy">Enzyme Kinetics Quiz</p>
-                    <p class="text-xs text-gray-500 mt-0.5">Nov 3, 2025 · Chemistry</p>
-                  </div>
-                  <div class="flex items-center gap-3">
-                    <div class="dashboard-stat-badge warning">
-                      <span class="material-symbols-outlined text-sm">warning</span>
-                      <span>2 flags</span>
-                    </div>
-                    <span class="text-xs text-gray-500">Avg 65%</span>
-                  </div>
-                </div>
-
-                <div class="dashboard-list-item">
-                  <div class="flex-1 min-w-0">
-                    <p class="font-semibold text-sm text-veritas-navy">Cell Division Review</p>
-                    <p class="text-xs text-gray-500 mt-0.5">Oct 30, 2025 · AP Biology</p>
-                  </div>
-                  <div class="flex items-center gap-3">
-                    <div class="dashboard-stat-badge success">
-                      <span class="material-symbols-outlined text-sm">check_circle</span>
-                      <span>88%</span>
-                    </div>
-                    <span class="text-xs text-gray-500">Avg 81%</span>
-                  </div>
-                </div>
-
-                <div class="dashboard-list-item">
-                  <div class="flex-1 min-w-0">
-                    <p class="font-semibold text-sm text-veritas-navy">Periodic Table Challenge</p>
-                    <p class="text-xs text-gray-500 mt-0.5">Oct 28, 2025 · Chemistry</p>
-                  </div>
-                  <div class="flex items-center gap-3">
-                    <div class="dashboard-stat-badge neutral">
-                      <span>85%</span>
-                    </div>
-                    <span class="text-xs text-gray-500">Avg 72%</span>
-                  </div>
-                </div>
-
-                <div class="dashboard-list-item">
-                  <div class="flex-1 min-w-0">
-                    <p class="font-semibold text-sm text-veritas-navy">DNA Replication Pop Quiz</p>
-                    <p class="text-xs text-gray-500 mt-0.5">Oct 25, 2025 · AP Biology</p>
-                  </div>
-                  <div class="flex items-center gap-3">
-                    <div class="dashboard-stat-badge success">
-                      <span>94%</span>
-                    </div>
-                    <span class="text-xs text-gray-500">Avg 85%</span>
-                  </div>
+              <div id="recent-sessions-container" class="space-y-0">
+                <!-- Populated dynamically -->
+                <div class="text-center py-6 text-gray-500 text-sm">
+                  Loading recent sessions...
                 </div>
               </div>
 
@@ -1128,26 +1065,13 @@
               <h2 class="dashboard-card-title">Student Activity Pulse</h2>
               <p class="dashboard-card-subtitle">Total interactions over the last 7 days</p>
 
-              <div class="activity-chart-placeholder">
-                <div class="activity-bar" style="height: 45%;" title="Monday: 23 interactions"></div>
-                <div class="activity-bar" style="height: 62%;" title="Tuesday: 31 interactions"></div>
-                <div class="activity-bar" style="height: 38%;" title="Wednesday: 19 interactions"></div>
-                <div class="activity-bar" style="height: 78%;" title="Thursday: 39 interactions"></div>
-                <div class="activity-bar" style="height: 85%;" title="Friday: 42 interactions"></div>
-                <div class="activity-bar" style="height: 28%;" title="Saturday: 14 interactions"></div>
-                <div class="activity-bar" style="height: 52%;" title="Today: 26 interactions"></div>
+              <div id="activity-chart-container" class="activity-chart-placeholder">
+                <!-- Populated dynamically -->
               </div>
 
-              <div class="mt-4 flex items-center justify-between">
-                <p class="text-sm text-gray-600">
-                  <span class="font-semibold text-veritas-gold">↑ 12%</span> compared to last week
-                </p>
-                <span class="text-xs text-gray-400 italic">Nicely done.</span>
+              <div id="activity-summary" class="mt-4">
+                <!-- Populated dynamically -->
               </div>
-
-              <p class="mt-3 text-xs text-gray-400 italic">
-                Correlation ≠ causation, but we'll take it.
-              </p>
             </div>
 
             <!-- 4. Quick Access Tools -->
@@ -1447,7 +1371,7 @@
         <div id="analytics-view" class="p-6 flex flex-col gap-6" style="display: none;">
           <!-- Filter Bar -->
           <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-4 shadow-sm">
-            <div class="flex flex-wrap items-center gap-3">
+            <div class="flex flex-wrap items-center gap-3 mb-3">
               <select id="analytics-class-filter" class="rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
                 <option value="all">All Classes</option>
               </select>
@@ -1465,8 +1389,33 @@
               <button id="analytics-clear-filters-btn" class="px-4 py-2 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/50 transition-colors text-sm">
                 Clear
               </button>
-              <button id="analytics-refresh-btn" class="ml-auto flex items-center justify-center h-9 w-9 rounded-full bg-primary text-brand-white hover:bg-primary/90 transition-colors" title="Refresh">
+              <button id="analytics-refresh-btn" class="flex items-center justify-center h-9 w-9 rounded-full bg-primary text-brand-white hover:bg-primary/90 transition-colors" title="Refresh">
                 <span class="material-symbols-outlined text-base">refresh</span>
+              </button>
+              <button id="analytics-export-btn" class="ml-auto flex items-center gap-2 px-4 py-2 rounded-lg bg-veritas-gold text-brand-white hover:bg-veritas-gold/90 transition-colors text-sm font-semibold" title="Export Data">
+                <span class="material-symbols-outlined text-base">download</span>
+                <span>Export</span>
+              </button>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-xs font-semibold text-brand-dark-gray/60 dark:text-brand-white/60">Quick Filters:</span>
+              <button class="analytics-date-preset px-3 py-1 rounded-md bg-brand-light-gray/30 dark:bg-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray dark:hover:bg-brand-dark-gray transition-colors text-xs font-semibold" data-days="7">
+                Last 7 Days
+              </button>
+              <button class="analytics-date-preset px-3 py-1 rounded-md bg-brand-light-gray/30 dark:bg-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray dark:hover:bg-brand-dark-gray transition-colors text-xs font-semibold" data-days="30">
+                Last 30 Days
+              </button>
+              <button class="analytics-date-preset px-3 py-1 rounded-md bg-brand-light-gray/30 dark:bg-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray dark:hover:bg-brand-dark-gray transition-colors text-xs font-semibold" data-days="90">
+                Last 90 Days
+              </button>
+              <button class="analytics-date-preset px-3 py-1 rounded-md bg-brand-light-gray/30 dark:bg-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray dark:hover:bg-brand-dark-gray transition-colors text-xs font-semibold" data-preset="thisMonth">
+                This Month
+              </button>
+              <button class="analytics-date-preset px-3 py-1 rounded-md bg-brand-light-gray/30 dark:bg-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray dark:hover:bg-brand-dark-gray transition-colors text-xs font-semibold" data-preset="lastMonth">
+                Last Month
+              </button>
+              <button class="analytics-date-preset px-3 py-1 rounded-md bg-brand-light-gray/30 dark:bg-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray dark:hover:bg-brand-dark-gray transition-colors text-xs font-semibold" data-preset="all">
+                All Time
               </button>
             </div>
           </div>
@@ -1724,6 +1673,8 @@
   var archivedClassFilter='all';
   var selectedArchivedPollId='';
   var BASE_CLASSES=[];
+  var dashboardSummary=null;
+  var analyticsRefreshInterval=null;
 
   // Update header datetime
   function updateHeaderDateTime() {
@@ -2206,6 +2157,10 @@
       clearInterval(pollInterval);
       pollInterval=null;
     }
+    if(analyticsRefreshInterval){
+      clearInterval(analyticsRefreshInterval);
+      analyticsRefreshInterval=null;
+    }
     pauseTimerCountdown();
     stopVisualTimer();
     timerRemainingSeconds=timerPresetSeconds;
@@ -2221,6 +2176,121 @@
     headerDefault.style.display='flex';
     headerLive.style.display='none';
     setMainSection('dashboard');
+
+    // Load dashboard summary data
+    if (!dashboardSummary) {
+      loadDashboardSummary();
+    } else {
+      renderDashboardSummary();
+    }
+  }
+
+  function loadDashboardSummary() {
+    google.script.run
+      .withSuccessHandler(function(data) {
+        dashboardSummary = data;
+        renderDashboardSummary();
+      })
+      .withFailureHandler(function(error) {
+        console.error('Error loading dashboard summary:', error);
+        // Show empty states if loading fails
+        renderDashboardSummary();
+      })
+      .getDashboardSummary();
+  }
+
+  function renderDashboardSummary() {
+    renderRecentSessions();
+    renderActivityPulse();
+  }
+
+  function renderRecentSessions() {
+    var container = document.getElementById('recent-sessions-container');
+    if (!container) return;
+
+    if (!dashboardSummary || !dashboardSummary.recentSessions || dashboardSummary.recentSessions.length === 0) {
+      container.innerHTML = '<div class="text-center py-6 text-gray-500 text-sm">No recent sessions found. Create your first poll to get started!</div>';
+      return;
+    }
+
+    container.innerHTML = '';
+    dashboardSummary.recentSessions.forEach(function(session) {
+      var item = document.createElement('div');
+      item.className = 'dashboard-list-item';
+
+      // Format date
+      var date = new Date(session.date);
+      var formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+      // Determine badge class and content
+      var badgeClass = 'success';
+      var badgeIcon = 'check_circle';
+      var badgeText = Math.round(session.participationPct) + '%';
+
+      if (session.flags > 0) {
+        badgeClass = 'warning';
+        badgeIcon = 'warning';
+        badgeText = session.flags + ' flags';
+      } else if (session.masteryPct >= 80) {
+        badgeClass = 'success';
+      } else if (session.masteryPct >= 60) {
+        badgeClass = 'neutral';
+      }
+
+      item.innerHTML = '<div class="flex-1 min-w-0">' +
+        '<p class="font-semibold text-sm text-veritas-navy">' + escapeHtml(session.sessionName) + '</p>' +
+        '<p class="text-xs text-gray-500 mt-0.5">' + formattedDate + ' · ' + escapeHtml(session.className) + '</p>' +
+        '</div>' +
+        '<div class="flex items-center gap-3">' +
+        '<div class="dashboard-stat-badge ' + badgeClass + '">' +
+        (session.flags > 0 ? '<span class="material-symbols-outlined text-sm">' + badgeIcon + '</span>' : '') +
+        '<span>' + badgeText + '</span>' +
+        '</div>' +
+        '<span class="text-xs text-gray-500">Avg ' + Math.round(session.masteryPct) + '%</span>' +
+        '</div>';
+
+      container.appendChild(item);
+    });
+  }
+
+  function renderActivityPulse() {
+    var chartContainer = document.getElementById('activity-chart-container');
+    var summaryContainer = document.getElementById('activity-summary');
+    if (!chartContainer || !summaryContainer) return;
+
+    if (!dashboardSummary || !dashboardSummary.dailyActivity || dashboardSummary.dailyActivity.length === 0) {
+      chartContainer.innerHTML = '<div class="text-center py-6 text-gray-500 text-sm">No activity data available</div>';
+      summaryContainer.innerHTML = '';
+      return;
+    }
+
+    // Find max count for scaling
+    var maxCount = Math.max.apply(Math, dashboardSummary.dailyActivity.map(function(d) { return d.count; }));
+    if (maxCount === 0) maxCount = 1; // Avoid division by zero
+
+    // Render bars
+    chartContainer.innerHTML = '';
+    dashboardSummary.dailyActivity.forEach(function(day) {
+      var bar = document.createElement('div');
+      bar.className = 'activity-bar';
+      var heightPct = maxCount > 0 ? (day.count / maxCount * 100) : 0;
+      bar.style.height = heightPct + '%';
+      bar.title = day.dayName + ': ' + day.count + ' interactions';
+      chartContainer.appendChild(bar);
+    });
+
+    // Render summary
+    var change = dashboardSummary.weekOverWeekChange || 0;
+    var changeSymbol = change >= 0 ? '↑' : '↓';
+    var changeClass = change >= 0 ? 'text-veritas-gold' : 'text-gray-500';
+    var totalActivity = dashboardSummary.totalActivityThisWeek || 0;
+
+    summaryContainer.innerHTML = '<div class="flex items-center justify-between">' +
+      '<p class="text-sm text-gray-600">' +
+      '<span class="font-semibold ' + changeClass + '">' + changeSymbol + ' ' + Math.abs(change) + '%</span> compared to last week' +
+      '</p>' +
+      '<span class="text-xs text-gray-400 italic">' + totalActivity + ' total interactions</span>' +
+      '</div>';
   }
 
   function showRosterManager(){
@@ -3045,6 +3115,16 @@
     } else {
       renderAnalyticsByTab();
     }
+
+    // Start auto-refresh every 30 seconds
+    if (analyticsRefreshInterval) {
+      clearInterval(analyticsRefreshInterval);
+    }
+    analyticsRefreshInterval = setInterval(function() {
+      // Silently refresh in the background
+      analyticsData = null; // Clear cache
+      loadAnalytics(analyticsFilters);
+    }, 30000); // 30 seconds
   }
 
   function loadAnalytics(filters) {
@@ -3061,9 +3141,19 @@
     google.script.run
       .withSuccessHandler(function(data) {
         analyticsData = data;
+        // Clear loading states
+        document.getElementById('analytics-overview-loading').classList.add('hidden');
+        document.getElementById('analytics-items-loading').classList.add('hidden');
+        document.getElementById('analytics-students-loading').classList.add('hidden');
         renderAnalyticsByTab();
       })
-      .withFailureHandler(handleError)
+      .withFailureHandler(function(error) {
+        console.error('Analytics loading error:', error);
+        // Show error states
+        document.getElementById('analytics-overview-loading').innerHTML = '<p class="text-red-600">Error loading analytics: ' + escapeHtml(error.message || 'Unknown error') + '</p>';
+        document.getElementById('analytics-items-loading').innerHTML = '<p class="text-red-600">Error loading analytics: ' + escapeHtml(error.message || 'Unknown error') + '</p>';
+        document.getElementById('analytics-students-loading').innerHTML = '<p class="text-red-600">Error loading analytics: ' + escapeHtml(error.message || 'Unknown error') + '</p>';
+      })
       .getAnalyticsData(analyticsFilters);
   }
 
@@ -3390,6 +3480,84 @@
 
   document.getElementById('analytics-refresh-btn').onclick = function() {
     loadAnalytics(analyticsFilters);
+  };
+
+  // Date preset handlers
+  document.querySelectorAll('.analytics-date-preset').forEach(function(btn) {
+    btn.onclick = function() {
+      var days = btn.getAttribute('data-days');
+      var preset = btn.getAttribute('data-preset');
+      var today = new Date();
+      var dateFrom = '';
+      var dateTo = today.toISOString().split('T')[0];
+
+      if (days) {
+        var pastDate = new Date();
+        pastDate.setDate(pastDate.getDate() - parseInt(days));
+        dateFrom = pastDate.toISOString().split('T')[0];
+      } else if (preset === 'thisMonth') {
+        var firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        dateFrom = firstDay.toISOString().split('T')[0];
+      } else if (preset === 'lastMonth') {
+        var lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        var lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+        dateFrom = lastMonthStart.toISOString().split('T')[0];
+        dateTo = lastMonthEnd.toISOString().split('T')[0];
+      } else if (preset === 'all') {
+        dateFrom = '';
+        dateTo = '';
+      }
+
+      document.getElementById('analytics-date-from').value = dateFrom;
+      document.getElementById('analytics-date-to').value = dateTo;
+
+      var className = document.getElementById('analytics-class-filter').value;
+      loadAnalytics({ className: className, dateFrom: dateFrom, dateTo: dateTo });
+    };
+  });
+
+  // Export analytics data
+  document.getElementById('analytics-export-btn').onclick = function() {
+    if (!analyticsData) {
+      alert('No data to export. Please load analytics first.');
+      return;
+    }
+
+    var exportData = {
+      exportDate: new Date().toISOString(),
+      filters: analyticsFilters,
+      kpis: analyticsData.kpis || [],
+      sessions: analyticsData.sessions || [],
+      items: analyticsData.items || [],
+      students: Object.values(analyticsData.students || {}),
+      topics: analyticsData.topics || []
+    };
+
+    // Convert to CSV format (sessions only for now)
+    var csv = 'Session Name,Class,Date,Questions,Participants,Total Students,Mastery %,Participation %,Median Time (s),Integrity Rate\n';
+    (exportData.sessions || []).forEach(function(session) {
+      csv += '"' + (session.sessionName || '').replace(/"/g, '""') + '",';
+      csv += '"' + (session.className || '').replace(/"/g, '""') + '",';
+      csv += '"' + (session.date || '') + '",';
+      csv += session.questionCount + ',';
+      csv += session.participants + ',';
+      csv += session.totalStudents + ',';
+      csv += session.masteryPct + ',';
+      csv += session.participationPct + ',';
+      csv += session.medianTimeSec + ',';
+      csv += session.integrityRate + '\n';
+    });
+
+    // Download CSV
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var link = document.createElement('a');
+    var url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'veritas-analytics-' + new Date().toISOString().split('T')[0] + '.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Tab switching
@@ -4610,6 +4778,19 @@
     html+='<p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-1">Leave blank to control the timer manually during the live poll.</p>';
     html+='</div>';
 
+    html+='<div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">';
+    html+='<div>';
+    html+='<label class="text-brand-dark-gray dark:text-brand-white text-sm font-medium leading-normal block pb-2" for="question-topic-input">Topic/Standard Tag</label>';
+    html+='<input id="question-topic-input" type="text" class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="e.g., Cell Division, Algebra, etc." value="'+escapeHtml(question.topicTag||question.topic||'')+'">';
+    html+='<p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-1">Used for topic-level analytics and reporting.</p>';
+    html+='</div>';
+    html+='<div>';
+    html+='<label class="text-brand-dark-gray dark:text-brand-white text-sm font-medium leading-normal block pb-2" for="question-standard-input">Standard (optional)</label>';
+    html+='<input id="question-standard-input" type="text" class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="e.g., NGSS MS-LS1-2" value="'+escapeHtml(question.standardTag||question.standard||'')+'">';
+    html+='<p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-1">Learning standard or curriculum code.</p>';
+    html+='</div>';
+    html+='</div>';
+
     html+='</div>';
 
     html+='<div class="bg-brand-white dark:bg-brand-dark-gray/20 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/30 p-6 shadow-sm">';
@@ -4680,6 +4861,24 @@
       timerInput.oninput=function(){
         var value=parseInt(this.value,10);
         questions[selectedQuestionIndex].timerSeconds=isNaN(value)||value<=0?null:value;
+        markPollDirty();
+      };
+    }
+
+    var topicInput=document.getElementById('question-topic-input');
+    if(topicInput){
+      topicInput.oninput=function(){
+        questions[selectedQuestionIndex].topicTag=this.value.trim();
+        questions[selectedQuestionIndex].topic=this.value.trim(); // Backward compatibility
+        markPollDirty();
+      };
+    }
+
+    var standardInput=document.getElementById('question-standard-input');
+    if(standardInput){
+      standardInput.oninput=function(){
+        questions[selectedQuestionIndex].standardTag=this.value.trim();
+        questions[selectedQuestionIndex].standard=this.value.trim(); // Backward compatibility
         markPollDirty();
       };
     }

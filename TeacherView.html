@@ -2022,6 +2022,35 @@
     };
   }
 
+  // --- DOM Utilities ---
+  function bindClick(id, handler){
+    var el=document.getElementById(id);
+    if(!el){
+      console.warn('Missing click target:',id);
+      return null;
+    }
+    el.addEventListener('click',handler);
+    return el;
+  }
+
+  function bindInput(id,eventName,handler){
+    var el=document.getElementById(id);
+    if(!el){
+      console.warn('Missing input target:',id);
+      return null;
+    }
+    el.addEventListener(eventName,handler);
+    return el;
+  }
+
+  function bindChange(element,handler,debugId){
+    if(!element){
+      console.warn('Missing change target:',debugId);
+      return;
+    }
+    element.addEventListener('change',handler);
+  }
+
   // --- Element Cache ---
   var pollSelect=document.getElementById('poll-select');
   var startPollBtn=document.getElementById('start-poll-btn');
@@ -2066,38 +2095,42 @@
   google.charts.setOnLoadCallback(loadInitialData);
 
   // --- Event Listeners ---
-  document.getElementById('open-creator-btn').onclick=function(){openPollCreator();};
-  document.getElementById('nav-create-poll').onclick=function(){openPollCreator();};
-  document.getElementById('nav-polls-list').onclick=showDashboard;
-  document.getElementById('nav-rosters').onclick=showRosterManager;
-  document.getElementById('nav-archived').onclick=showArchivedView;
-  document.getElementById('nav-analytics').onclick=showAnalyticsView;
-  document.getElementById('close-modal-btn').onclick=closePollCreator;
-  document.getElementById('close-links-modal-btn').onclick=closeLinksModal;
-  document.getElementById('add-question-btn').onclick=addQuestion;
-  document.getElementById('save-poll-btn').onclick=savePoll;
-  document.getElementById('new-poll-name').addEventListener('input',markPollDirty);
-  classSelect.addEventListener('change',markPollDirty);
-  startPollBtn.onclick=onStartPoll;
-  document.getElementById('header-start-btn').onclick=onResumePoll;
-  document.getElementById('header-end-show-btn').onclick=onEndQuestionAndShowAnswer;
-  document.getElementById('header-stop-btn').onclick=onEndPoll;
-  document.getElementById('header-back-btn').onclick=onPreviousQuestion;
-  document.getElementById('header-next-btn').onclick=onNextQuestion;
-  document.getElementById('header-reset-question-btn').onclick=onResetQuestion;
-  document.getElementById('header-skip-btn').onclick=onNextQuestion;
-  document.getElementById('hide-results-btn').onclick=onHideResults;
-  document.getElementById('strip-next-btn').onclick=onNextQuestion;
-  document.getElementById('timer-start-btn').onclick=function(){
+  bindClick('open-creator-btn',function(){openPollCreator();});
+  bindClick('nav-create-poll',function(){openPollCreator();});
+  bindClick('nav-polls-list',showDashboard);
+  bindClick('nav-rosters',showRosterManager);
+  bindClick('nav-archived',showArchivedView);
+  bindClick('nav-analytics',showAnalyticsView);
+  bindClick('close-modal-btn',closePollCreator);
+  bindClick('close-links-modal-btn',closeLinksModal);
+  bindClick('add-question-btn',addQuestion);
+  bindClick('save-poll-btn',savePoll);
+  bindInput('new-poll-name','input',markPollDirty);
+  bindChange(classSelect,markPollDirty,'class-select');
+  if(startPollBtn){
+    startPollBtn.addEventListener('click',onStartPoll);
+  }else{
+    console.warn('Missing click target: start-poll-btn');
+  }
+  bindClick('header-start-btn',onResumePoll);
+  bindClick('header-end-show-btn',onEndQuestionAndShowAnswer);
+  bindClick('header-stop-btn',onEndPoll);
+  bindClick('header-back-btn',onPreviousQuestion);
+  bindClick('header-next-btn',onNextQuestion);
+  bindClick('header-reset-question-btn',onResetQuestion);
+  bindClick('header-skip-btn',onNextQuestion);
+  bindClick('hide-results-btn',onHideResults);
+  bindClick('strip-next-btn',onNextQuestion);
+  bindClick('timer-start-btn',function(){
     if(timerActive){
       pauseTimerCountdown();
     } else {
       startTimerCountdown();
     }
-  };
-  document.getElementById('timer-reset-btn').onclick=resetTimerCountdown;
-  document.getElementById('timer-decrease-btn').onclick=function(){adjustTimerPreset(-15);};
-  document.getElementById('timer-increase-btn').onclick=function(){adjustTimerPreset(15);};
+  });
+  bindClick('timer-reset-btn',resetTimerCountdown);
+  bindClick('timer-decrease-btn',function(){adjustTimerPreset(-15);});
+  bindClick('timer-increase-btn',function(){adjustTimerPreset(15);});
 
   // Keyboard shortcuts for timer (when timer bar is focused or in view)
   document.addEventListener('keydown',function(e){
@@ -2128,21 +2161,61 @@
 
   updateTimerInputs();
   updateTimerStatus('Timer idle.','info');
-  document.getElementById('send-link-btn').onclick=onSendLink;
-  document.getElementById('view-links-btn').onclick=onViewLinks;
-  pollSelect.onchange=onPollSelectChange;
-  pollSortSelect.onchange=function(){pollSortMode=this.value;refreshPollViews();};
-  pollFilterSelect.onchange=function(){pollClassFilter=this.value;refreshPollViews();};
-  archivedClassFilterSelect.onchange=function(){archivedClassFilter=this.value;renderArchivedList();};
-  addClassBtn.onclick=onAddClass;
-  addStudentRowBtn.onclick=addRosterRow;
-  document.getElementById('bulk-add-students-btn').onclick=openBulkAddStudentsModal;
-  document.getElementById('cancel-bulk-add-btn').onclick=closeBulkAddStudentsModal;
-  document.getElementById('confirm-bulk-add-btn').onclick=confirmBulkAddStudents;
-  saveRosterBtn.onclick=saveRoster;
-  renameClassBtn.onclick=onRenameClass;
-  deleteClassBtn.onclick=onDeleteClass;
-  refreshArchivedBtn.onclick=function(){loadArchivedPolls(true);};
+  bindClick('send-link-btn',onSendLink);
+  bindClick('view-links-btn',onViewLinks);
+  if(pollSelect){
+    pollSelect.addEventListener('change',onPollSelectChange);
+  }else{
+    console.warn('Missing change target: poll-select');
+  }
+  if(pollSortSelect){
+    pollSortSelect.addEventListener('change',function(){pollSortMode=this.value;refreshPollViews();});
+  }else{
+    console.warn('Missing change target: poll-sort-select');
+  }
+  if(pollFilterSelect){
+    pollFilterSelect.addEventListener('change',function(){pollClassFilter=this.value;refreshPollViews();});
+  }else{
+    console.warn('Missing change target: poll-filter-select');
+  }
+  if(archivedClassFilterSelect){
+    archivedClassFilterSelect.addEventListener('change',function(){archivedClassFilter=this.value;renderArchivedList();});
+  }else{
+    console.warn('Missing change target: archived-class-filter');
+  }
+  if(addClassBtn){
+    addClassBtn.addEventListener('click',onAddClass);
+  }else{
+    console.warn('Missing click target: add-class-btn');
+  }
+  if(addStudentRowBtn){
+    addStudentRowBtn.addEventListener('click',addRosterRow);
+  }else{
+    console.warn('Missing click target: add-student-row-btn');
+  }
+  bindClick('bulk-add-students-btn',openBulkAddStudentsModal);
+  bindClick('cancel-bulk-add-btn',closeBulkAddStudentsModal);
+  bindClick('confirm-bulk-add-btn',confirmBulkAddStudents);
+  if(saveRosterBtn){
+    saveRosterBtn.addEventListener('click',saveRoster);
+  }else{
+    console.warn('Missing click target: save-roster-btn');
+  }
+  if(renameClassBtn){
+    renameClassBtn.addEventListener('click',onRenameClass);
+  }else{
+    console.warn('Missing click target: rename-class-btn');
+  }
+  if(deleteClassBtn){
+    deleteClassBtn.addEventListener('click',onDeleteClass);
+  }else{
+    console.warn('Missing click target: delete-class-btn');
+  }
+  if(refreshArchivedBtn){
+    refreshArchivedBtn.addEventListener('click',function(){loadArchivedPolls(true);});
+  }else{
+    console.warn('Missing click target: refresh-archived-btn');
+  }
 
   function setMainSection(section){
     dashboard.style.display=section==='dashboard'?'block':'none';

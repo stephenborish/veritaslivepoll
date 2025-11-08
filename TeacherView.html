@@ -1676,6 +1676,216 @@
   var dashboardSummary=null;
   var analyticsRefreshInterval=null;
 
+  var appsScriptAvailable=!!(window.google&&window.google.script&&window.google.script.run);
+  var PREVIEW_MODE=!appsScriptAvailable;
+
+  function deepClone(value){
+    try{
+      return JSON.parse(JSON.stringify(value));
+    }catch(err){
+      console.warn('Preview clone fallback failed:',err);
+      return value;
+    }
+  }
+
+  var PREVIEW_PAYLOAD=PREVIEW_MODE?{
+    classes:['AP Biology – Period 5','Chemistry – Period 2','World History – Period 7'],
+    polls:[
+      {
+        pollId:'demo-bio-1',
+        pollName:'Photosynthesis Pulse Check',
+        className:'AP Biology – Period 5',
+        updatedAt:new Date(Date.now()-3600*1000).toISOString(),
+        lastRunAt:new Date(Date.now()-7200*1000).toISOString(),
+        createdAt:new Date(Date.now()-86400*1000*3).toISOString(),
+        questions:[
+          {
+            questionText:'Which organelle performs photosynthesis in plant cells?',
+            options:[
+              {text:'Mitochondrion'},
+              {text:'Chloroplast'},
+              {text:'Golgi apparatus'},
+              {text:'Nucleus'}
+            ],
+            correctAnswer:'Chloroplast',
+            correctAnswerLetter:'B',
+            timerSeconds:90
+          },
+          {
+            questionText:'What pigment captures light energy for photosynthesis?',
+            options:[
+              {text:'Hemoglobin'},
+              {text:'Chlorophyll'},
+              {text:'Keratin'},
+              {text:'Melanin'}
+            ],
+            correctAnswer:'Chlorophyll',
+            correctAnswerLetter:'B',
+            timerSeconds:75
+          }
+        ]
+      },
+      {
+        pollId:'demo-chem-1',
+        pollName:'Stoichiometry Warm-Up',
+        className:'Chemistry – Period 2',
+        updatedAt:new Date(Date.now()-5400*1000).toISOString(),
+        lastRunAt:new Date(Date.now()-86400*1000).toISOString(),
+        createdAt:new Date(Date.now()-86400*1000*5).toISOString(),
+        questions:[
+          {
+            questionText:'How many moles are in 36 grams of water (H₂O)?',
+            options:[
+              {text:'1.0 mol'},
+              {text:'2.0 mol'},
+              {text:'0.5 mol'},
+              {text:'4.0 mol'}
+            ],
+            correctAnswer:'2.0 mol',
+            correctAnswerLetter:'B',
+            timerSeconds:60
+          },
+          {
+            questionText:'What is the limiting reactant when 2 mol of H₂ reacts with 1 mol of O₂?',
+            options:[
+              {text:'Hydrogen'},
+              {text:'Oxygen'},
+              {text:'Water'},
+              {text:'None'}
+            ],
+            correctAnswer:'Hydrogen',
+            correctAnswerLetter:'A',
+            timerSeconds:65
+          }
+        ]
+      }
+    ],
+    dashboardSummary:{
+      recentSessions:[
+        {sessionName:'Cell Energy Exit Ticket',date:new Date(Date.now()-3600*1000*20).toISOString(),className:'AP Biology – Period 5',participationPct:92,masteryPct:78,flags:1},
+        {sessionName:'Stoichiometry Practice',date:new Date(Date.now()-3600*1000*42).toISOString(),className:'Chemistry – Period 2',participationPct:88,masteryPct:74,flags:0},
+        {sessionName:'Industrial Revolution Check',date:new Date(Date.now()-3600*1000*65).toISOString(),className:'World History – Period 7',participationPct:83,masteryPct:69,flags:0}
+      ],
+      dailyActivity:[
+        {dayName:'Mon',count:18},
+        {dayName:'Tue',count:22},
+        {dayName:'Wed',count:31},
+        {dayName:'Thu',count:26},
+        {dayName:'Fri',count:19},
+        {dayName:'Sat',count:9},
+        {dayName:'Sun',count:6}
+      ],
+      weekOverWeekChange:6,
+      totalActivityThisWeek:131
+    },
+    rosters:{
+      'AP Biology – Period 5':[
+        {name:'Ava Martinez',email:'ava.martinez@school.edu'},
+        {name:'Ethan Patel',email:'ethan.patel@school.edu'},
+        {name:'Grace Lee',email:'grace.lee@school.edu'},
+        {name:'Noah Williams',email:'noah.williams@school.edu'}
+      ],
+      'Chemistry – Period 2':[
+        {name:'Liam Johnson',email:'liam.johnson@school.edu'},
+        {name:'Sophia Chen',email:'sophia.chen@school.edu'},
+        {name:'Mason Rivera',email:'mason.rivera@school.edu'}
+      ],
+      'World History – Period 7':[
+        {name:'Olivia Brooks',email:'olivia.brooks@school.edu'},
+        {name:'Henry Adams',email:'henry.adams@school.edu'}
+      ]
+    },
+    archivedPolls:[
+      {
+        pollId:'arch-bio-1',
+        pollName:'Cell Processes Review',
+        className:'AP Biology – Period 5',
+        lastRunAt:new Date(Date.now()-86400*1000*9).toISOString(),
+        createdAt:new Date(Date.now()-86400*1000*20).toISOString(),
+        questionCount:4,
+        totalResponses:22,
+        totalStudents:24,
+        questions:[
+          {
+            questionText:'What is ATP often called within the cell?',
+            options:[{text:'Energy currency'},{text:'Protein factory'},{text:'Genetic blueprint'},{text:'Cell wall'}],
+            correctAnswer:'Energy currency',
+            summary:{correct:18,incorrect:3,noResponse:3,violations:0},
+            responses:[
+              {name:'Ava Martinez',answer:'Energy currency',isCorrect:true},
+              {name:'Ethan Patel',answer:'Energy currency',isCorrect:true},
+              {name:'Grace Lee',answer:'Protein factory',isCorrect:false}
+            ],
+            nonResponders:[
+              {name:'Noah Williams'},
+              {name:'Miles Turner'}
+            ]
+          }
+        ]
+      }
+    ],
+    analytics:{
+      kpis:[
+        {label:'Avg Participation',value:'88%',delta:5,tooltip:'Average participation over the last 7 days.'},
+        {label:'Mastery Trend',value:'74%',delta:3,tooltip:'Average mastery compared to last week.'},
+        {label:'Integrity Events',value:'2',delta:-1,tooltip:'Academic integrity events this week.'}
+      ],
+      topics:[
+        {topic:'Cell Biology',masteryPct:82,questionCount:12},
+        {topic:'Metabolism',masteryPct:68,questionCount:9},
+        {topic:'Industrialization',masteryPct:74,questionCount:7}
+      ],
+      items:[
+        {qNum:1,topic:'Cell Biology',correctPct:84,rbis:0.38,choiceCounts:{A:2,B:18,C:4,D:1},correctIndex:1,medianTimeSec:32,total:25,flags:[]},
+        {qNum:2,topic:'Metabolism',correctPct:61,rbis:0.22,choiceCounts:{A:5,B:9,C:8,D:3},correctIndex:2,medianTimeSec:45,total:25,flags:['watch']},
+        {qNum:3,topic:'Industrialization',correctPct:47,rbis:0.11,choiceCounts:{A:10,B:6,C:7,D:2},correctIndex:0,medianTimeSec:38,total:25,flags:['low-disc']}
+      ],
+      students:{
+        'ava.martinez@school.edu':{
+          name:'Ava Martinez',
+          email:'ava.martinez@school.edu',
+          successLast10:92.0,
+          participationPct:100,
+          integrityCount:0,
+          sessions:[
+            {sessionName:'Cell Energy Exit Ticket',scorePct:95},
+            {sessionName:'Metabolism Pop Quiz',scorePct:88},
+            {sessionName:'Photosynthesis Check',scorePct:93}
+          ],
+          topicPerformance:{
+            'Cell Biology':{correct:18,total:20},
+            'Metabolism':{correct:14,total:16},
+            'Industrialization':{correct:6,total:8}
+          }
+        },
+        'ethan.patel@school.edu':{
+          name:'Ethan Patel',
+          email:'ethan.patel@school.edu',
+          successLast10:78.0,
+          participationPct:86,
+          integrityCount:1,
+          sessions:[
+            {sessionName:'Cell Energy Exit Ticket',scorePct:82},
+            {sessionName:'Metabolism Pop Quiz',scorePct:74},
+            {sessionName:'Photosynthesis Check',scorePct:78}
+          ],
+          topicPerformance:{
+            'Cell Biology':{correct:15,total:20},
+            'Metabolism':{correct:10,total:16},
+            'Industrialization':{correct:5,total:8}
+          }
+        }
+      }
+    }
+  }:null;
+
+  function previewOnlyNotice(actionLabel){
+    var actionText=actionLabel||'complete this action';
+    return veritasAlert('This feature is disabled in preview mode. Open the deployed Veritas dashboard to '+actionText+'.',{
+      title:'Preview mode'
+    });
+  }
+
   // Update header datetime
   function updateHeaderDateTime() {
     var datetimeEl = document.getElementById('header-datetime');
@@ -2022,6 +2232,35 @@
     };
   }
 
+  // --- DOM Utilities ---
+  function bindClick(id, handler){
+    var el=document.getElementById(id);
+    if(!el){
+      console.warn('Missing click target:',id);
+      return null;
+    }
+    el.addEventListener('click',handler);
+    return el;
+  }
+
+  function bindInput(id,eventName,handler){
+    var el=document.getElementById(id);
+    if(!el){
+      console.warn('Missing input target:',id);
+      return null;
+    }
+    el.addEventListener(eventName,handler);
+    return el;
+  }
+
+  function bindChange(element,handler,debugId){
+    if(!element){
+      console.warn('Missing change target:',debugId);
+      return;
+    }
+    element.addEventListener('change',handler);
+  }
+
   // --- Element Cache ---
   var pollSelect=document.getElementById('poll-select');
   var startPollBtn=document.getElementById('start-poll-btn');
@@ -2066,38 +2305,42 @@
   google.charts.setOnLoadCallback(loadInitialData);
 
   // --- Event Listeners ---
-  document.getElementById('open-creator-btn').onclick=function(){openPollCreator();};
-  document.getElementById('nav-create-poll').onclick=function(){openPollCreator();};
-  document.getElementById('nav-polls-list').onclick=showDashboard;
-  document.getElementById('nav-rosters').onclick=showRosterManager;
-  document.getElementById('nav-archived').onclick=showArchivedView;
-  document.getElementById('nav-analytics').onclick=showAnalyticsView;
-  document.getElementById('close-modal-btn').onclick=closePollCreator;
-  document.getElementById('close-links-modal-btn').onclick=closeLinksModal;
-  document.getElementById('add-question-btn').onclick=addQuestion;
-  document.getElementById('save-poll-btn').onclick=savePoll;
-  document.getElementById('new-poll-name').addEventListener('input',markPollDirty);
-  classSelect.addEventListener('change',markPollDirty);
-  startPollBtn.onclick=onStartPoll;
-  document.getElementById('header-start-btn').onclick=onResumePoll;
-  document.getElementById('header-end-show-btn').onclick=onEndQuestionAndShowAnswer;
-  document.getElementById('header-stop-btn').onclick=onEndPoll;
-  document.getElementById('header-back-btn').onclick=onPreviousQuestion;
-  document.getElementById('header-next-btn').onclick=onNextQuestion;
-  document.getElementById('header-reset-question-btn').onclick=onResetQuestion;
-  document.getElementById('header-skip-btn').onclick=onNextQuestion;
-  document.getElementById('hide-results-btn').onclick=onHideResults;
-  document.getElementById('strip-next-btn').onclick=onNextQuestion;
-  document.getElementById('timer-start-btn').onclick=function(){
+  bindClick('open-creator-btn',function(){openPollCreator();});
+  bindClick('nav-create-poll',function(){openPollCreator();});
+  bindClick('nav-polls-list',showDashboard);
+  bindClick('nav-rosters',showRosterManager);
+  bindClick('nav-archived',showArchivedView);
+  bindClick('nav-analytics',showAnalyticsView);
+  bindClick('close-modal-btn',closePollCreator);
+  bindClick('close-links-modal-btn',closeLinksModal);
+  bindClick('add-question-btn',addQuestion);
+  bindClick('save-poll-btn',savePoll);
+  bindInput('new-poll-name','input',markPollDirty);
+  bindChange(classSelect,markPollDirty,'class-select');
+  if(startPollBtn){
+    startPollBtn.addEventListener('click',onStartPoll);
+  }else{
+    console.warn('Missing click target: start-poll-btn');
+  }
+  bindClick('header-start-btn',onResumePoll);
+  bindClick('header-end-show-btn',onEndQuestionAndShowAnswer);
+  bindClick('header-stop-btn',onEndPoll);
+  bindClick('header-back-btn',onPreviousQuestion);
+  bindClick('header-next-btn',onNextQuestion);
+  bindClick('header-reset-question-btn',onResetQuestion);
+  bindClick('header-skip-btn',onNextQuestion);
+  bindClick('hide-results-btn',onHideResults);
+  bindClick('strip-next-btn',onNextQuestion);
+  bindClick('timer-start-btn',function(){
     if(timerActive){
       pauseTimerCountdown();
     } else {
       startTimerCountdown();
     }
-  };
-  document.getElementById('timer-reset-btn').onclick=resetTimerCountdown;
-  document.getElementById('timer-decrease-btn').onclick=function(){adjustTimerPreset(-15);};
-  document.getElementById('timer-increase-btn').onclick=function(){adjustTimerPreset(15);};
+  });
+  bindClick('timer-reset-btn',resetTimerCountdown);
+  bindClick('timer-decrease-btn',function(){adjustTimerPreset(-15);});
+  bindClick('timer-increase-btn',function(){adjustTimerPreset(15);});
 
   // Keyboard shortcuts for timer (when timer bar is focused or in view)
   document.addEventListener('keydown',function(e){
@@ -2128,21 +2371,61 @@
 
   updateTimerInputs();
   updateTimerStatus('Timer idle.','info');
-  document.getElementById('send-link-btn').onclick=onSendLink;
-  document.getElementById('view-links-btn').onclick=onViewLinks;
-  pollSelect.onchange=onPollSelectChange;
-  pollSortSelect.onchange=function(){pollSortMode=this.value;refreshPollViews();};
-  pollFilterSelect.onchange=function(){pollClassFilter=this.value;refreshPollViews();};
-  archivedClassFilterSelect.onchange=function(){archivedClassFilter=this.value;renderArchivedList();};
-  addClassBtn.onclick=onAddClass;
-  addStudentRowBtn.onclick=addRosterRow;
-  document.getElementById('bulk-add-students-btn').onclick=openBulkAddStudentsModal;
-  document.getElementById('cancel-bulk-add-btn').onclick=closeBulkAddStudentsModal;
-  document.getElementById('confirm-bulk-add-btn').onclick=confirmBulkAddStudents;
-  saveRosterBtn.onclick=saveRoster;
-  renameClassBtn.onclick=onRenameClass;
-  deleteClassBtn.onclick=onDeleteClass;
-  refreshArchivedBtn.onclick=function(){loadArchivedPolls(true);};
+  bindClick('send-link-btn',onSendLink);
+  bindClick('view-links-btn',onViewLinks);
+  if(pollSelect){
+    pollSelect.addEventListener('change',onPollSelectChange);
+  }else{
+    console.warn('Missing change target: poll-select');
+  }
+  if(pollSortSelect){
+    pollSortSelect.addEventListener('change',function(){pollSortMode=this.value;refreshPollViews();});
+  }else{
+    console.warn('Missing change target: poll-sort-select');
+  }
+  if(pollFilterSelect){
+    pollFilterSelect.addEventListener('change',function(){pollClassFilter=this.value;refreshPollViews();});
+  }else{
+    console.warn('Missing change target: poll-filter-select');
+  }
+  if(archivedClassFilterSelect){
+    archivedClassFilterSelect.addEventListener('change',function(){archivedClassFilter=this.value;renderArchivedList();});
+  }else{
+    console.warn('Missing change target: archived-class-filter');
+  }
+  if(addClassBtn){
+    addClassBtn.addEventListener('click',onAddClass);
+  }else{
+    console.warn('Missing click target: add-class-btn');
+  }
+  if(addStudentRowBtn){
+    addStudentRowBtn.addEventListener('click',addRosterRow);
+  }else{
+    console.warn('Missing click target: add-student-row-btn');
+  }
+  bindClick('bulk-add-students-btn',openBulkAddStudentsModal);
+  bindClick('cancel-bulk-add-btn',closeBulkAddStudentsModal);
+  bindClick('confirm-bulk-add-btn',confirmBulkAddStudents);
+  if(saveRosterBtn){
+    saveRosterBtn.addEventListener('click',saveRoster);
+  }else{
+    console.warn('Missing click target: save-roster-btn');
+  }
+  if(renameClassBtn){
+    renameClassBtn.addEventListener('click',onRenameClass);
+  }else{
+    console.warn('Missing click target: rename-class-btn');
+  }
+  if(deleteClassBtn){
+    deleteClassBtn.addEventListener('click',onDeleteClass);
+  }else{
+    console.warn('Missing click target: delete-class-btn');
+  }
+  if(refreshArchivedBtn){
+    refreshArchivedBtn.addEventListener('click',function(){loadArchivedPolls(true);});
+  }else{
+    console.warn('Missing click target: refresh-archived-btn');
+  }
 
   function setMainSection(section){
     dashboard.style.display=section==='dashboard'?'block':'none';
@@ -2150,6 +2433,26 @@
     rosterManager.style.display=section==='roster'?'grid':'none';
     archivedView.style.display=section==='archived'?'grid':'none';
     analyticsView.style.display=section==='analytics'?'flex':'none';
+
+    var navMap={
+      dashboard:'nav-polls-list',
+      roster:'nav-rosters',
+      archived:'nav-archived',
+      analytics:'nav-analytics'
+    };
+    Object.keys(navMap).forEach(function(key){
+      var btn=document.getElementById(navMap[key]);
+      if(!btn)return;
+      if(key===section){
+        btn.style.backgroundColor='rgba(255,255,255,0.18)';
+        btn.style.color='#ffffff';
+        btn.classList.add('font-semibold');
+      }else{
+        btn.style.backgroundColor='transparent';
+        btn.style.color='rgba(255,255,255,0.72)';
+        btn.classList.remove('font-semibold');
+      }
+    });
   }
 
   function clearLiveIntervals(){
@@ -2188,6 +2491,12 @@
   }
 
   function loadDashboardSummary() {
+    if(PREVIEW_MODE&&PREVIEW_PAYLOAD){
+      dashboardSummary=deepClone(PREVIEW_PAYLOAD.dashboardSummary||null);
+      renderDashboardSummary();
+      return;
+    }
+
     google.script.run
       .withSuccessHandler(function(data) {
         dashboardSummary = data;
@@ -2359,6 +2668,17 @@
 
   // --- Initial Data Load ---
   function loadInitialData(){
+    if(PREVIEW_MODE&&PREVIEW_PAYLOAD){
+      console.info('Apps Script runtime not detected – rendering preview data.');
+      setTimeout(function(){
+        onDashboardDataLoaded({
+          polls:deepClone(PREVIEW_PAYLOAD.polls||[]),
+          classes:deepClone(PREVIEW_PAYLOAD.classes||[])
+        });
+      },120);
+      return;
+    }
+
     google.script.run
       .withSuccessHandler(onDashboardDataLoaded)
       .withFailureHandler(handleError)
@@ -2514,6 +2834,20 @@
       button.textContent='Loading...';
     }
 
+    if(PREVIEW_MODE){
+      var previewPoll=ALL_POLLS.find(function(p){return p.pollId===pollId;});
+      if(button){
+        button.disabled=false;
+        button.innerHTML=originalLabel;
+      }
+      if(previewPoll){
+        openPollCreator(deepClone(previewPoll));
+      }else{
+        veritasAlert('Unable to locate this poll in preview mode.',{title:'Edit poll'});
+      }
+      return;
+    }
+
     google.script.run
       .withSuccessHandler(function(poll){
         if(button){
@@ -2595,6 +2929,22 @@
         btn.disabled=true;
         btn.textContent='Copying...';
 
+        if(PREVIEW_MODE){
+          setTimeout(async function(){
+            var clone=deepClone(poll);
+            clone.pollId=poll.pollId+'-copy-'+Date.now();
+            clone.pollName=newName;
+            clone.createdAt=new Date().toISOString();
+            clone.updatedAt=clone.createdAt;
+            ALL_POLLS.push(clone);
+            refreshPollViews();
+            btn.disabled=false;
+            btn.textContent='Copy';
+            await veritasAlert('Poll copied (preview data only).',{title:'Poll copied'});
+          },140);
+          return;
+        }
+
         google.script.run
           .withSuccessHandler(async function(result){
             if(result.success){
@@ -2634,6 +2984,15 @@
         });
         if(!confirmed)return;
 
+        if(PREVIEW_MODE){
+          setTimeout(function(){
+            ALL_POLLS=ALL_POLLS.filter(function(p){return p.pollId!==id;});
+            refreshPollViews();
+            veritasAlert('Poll deleted (preview data only).',{title:'Delete poll'});
+          },120);
+          return;
+        }
+
         google.script.run
           .withSuccessHandler(function(polls){
             refreshPollData(polls);
@@ -2671,6 +3030,17 @@
   // --- Roster Management ---
   function loadRosterData(){
     rosterStatus.textContent='Loading roster...';
+    if(PREVIEW_MODE&&PREVIEW_PAYLOAD){
+      setTimeout(function(){
+        rosterStatus.textContent='';
+        onRosterDataLoaded({
+          classes:deepClone(PREVIEW_PAYLOAD.classes||[]),
+          rosters:deepClone(PREVIEW_PAYLOAD.rosters||{})
+        },selectedRosterClass);
+      },150);
+      return;
+    }
+
     google.script.run
       .withSuccessHandler(function(data){
         rosterStatus.textContent='';
@@ -2847,6 +3217,16 @@
     saveRosterBtn.disabled=true;
     rosterStatus.textContent='Saving roster...';
 
+    if(PREVIEW_MODE){
+      setTimeout(function(){
+        rosterData[selectedRosterClass]=entries;
+        saveRosterBtn.disabled=false;
+        rosterStatus.textContent='Roster saved (preview)';
+        rosterDirty=false;
+      },140);
+      return;
+    }
+
     google.script.run
       .withSuccessHandler(function(data){
         saveRosterBtn.disabled=false;
@@ -2909,6 +3289,19 @@
     confirmBtn.disabled=true;
     confirmBtn.textContent='Adding...';
 
+    if(PREVIEW_MODE){
+      setTimeout(async function(){
+        confirmBtn.disabled=false;
+        confirmBtn.textContent='Add Students';
+        closeBulkAddStudentsModal();
+        rosterData[selectedRosterClass]=(rosterData[selectedRosterClass]||[]).concat(entries);
+        rosterDirty=false;
+        renderRosterTable();
+        await veritasAlert('Students added (preview data only).',{title:'Bulk add students'});
+      },160);
+      return;
+    }
+
     google.script.run
       .withSuccessHandler(async function(result){
         confirmBtn.disabled=false;
@@ -2940,6 +3333,19 @@
     className=className.trim();
     if(className==='')return;
     rosterStatus.textContent='Creating class...';
+    if(PREVIEW_MODE){
+      setTimeout(function(){
+        rosterStatus.textContent='Class created (preview).';
+        rosterData[className]=rosterData[className]||[];
+        selectedRosterClass=className;
+        onRosterDataLoaded({
+          classes:deepClone(Object.keys(rosterData)),
+          rosters:deepClone(rosterData)
+        },className);
+      },120);
+      return;
+    }
+
     google.script.run
       .withSuccessHandler(function(data){
         rosterStatus.textContent='Class created.';
@@ -2964,6 +3370,21 @@
     if(newName===''){return;}
     if(newName===selectedRosterClass)return;
     rosterStatus.textContent='Renaming class...';
+    if(PREVIEW_MODE){
+      setTimeout(function(){
+        var existing=rosterData[selectedRosterClass]||[];
+        delete rosterData[selectedRosterClass];
+        rosterData[newName]=existing;
+        rosterStatus.textContent='Class renamed (preview).';
+        selectedRosterClass=newName;
+        onRosterDataLoaded({
+          classes:deepClone(Object.keys(rosterData)),
+          rosters:deepClone(rosterData)
+        },newName);
+      },140);
+      return;
+    }
+
     google.script.run
       .withSuccessHandler(function(data){
         rosterStatus.textContent='Class renamed.';
@@ -2990,6 +3411,19 @@
     if(!confirmed)return;
     rosterStatus.textContent='Deleting class...';
     var classToDelete=selectedRosterClass;
+    if(PREVIEW_MODE){
+      setTimeout(function(){
+        delete rosterData[classToDelete];
+        selectedRosterClass='';
+        rosterStatus.textContent='Class deleted (preview).';
+        onRosterDataLoaded({
+          classes:deepClone(Object.keys(rosterData)),
+          rosters:deepClone(rosterData)
+        },'');
+      },140);
+      return;
+    }
+
     google.script.run
       .withSuccessHandler(function(data){
         rosterStatus.textContent='Class deleted.';
@@ -3014,6 +3448,20 @@
     archivedList.innerHTML='<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">Loading archived polls...</p>';
     archivedEmptyState.classList.remove('hidden');
     archivedDetail.classList.add('hidden');
+
+    if(PREVIEW_MODE&&PREVIEW_PAYLOAD){
+      setTimeout(function(){
+        archivedPolls=deepClone(PREVIEW_PAYLOAD.archivedPolls||[]);
+        if(archivedPolls.length>0){
+          selectedArchivedPollId=archivedPolls[0].pollId;
+        }else{
+          selectedArchivedPollId='';
+        }
+        renderArchivedList();
+        renderArchivedDetail();
+      },150);
+      return;
+    }
 
     google.script.run
       .withSuccessHandler(function(polls){
@@ -3178,6 +3626,17 @@
     document.getElementById('analytics-items-content').classList.add('hidden');
     document.getElementById('analytics-students-loading').classList.remove('hidden');
     document.getElementById('analytics-students-content').classList.add('hidden');
+
+    if(PREVIEW_MODE&&PREVIEW_PAYLOAD){
+      setTimeout(function(){
+        analyticsData=deepClone(PREVIEW_PAYLOAD.analytics||{});
+        document.getElementById('analytics-overview-loading').classList.add('hidden');
+        document.getElementById('analytics-items-loading').classList.add('hidden');
+        document.getElementById('analytics-students-loading').classList.add('hidden');
+        renderAnalyticsByTab();
+      },160);
+      return;
+    }
 
     google.script.run
       .withSuccessHandler(function(data) {
@@ -3650,6 +4109,11 @@
     clearLiveIntervals();
     isPaused=false;
     isLiveSession=true;
+    if(PREVIEW_MODE){
+      startPollBtn.disabled=false;
+      await previewOnlyNotice('start a live poll');
+      return;
+    }
     google.script.run
       .withSuccessHandler(updateLiveView)
       .withFailureHandler(handleError)
@@ -3667,6 +4131,10 @@
     updateTimerStatus('Timer idle.','info');
     isPaused=false;
     isLiveSession=true;
+    if(PREVIEW_MODE){
+      previewOnlyNotice('resume a live poll');
+      return;
+    }
     google.script.run
       .withSuccessHandler(updateLiveView)
       .withFailureHandler(handleError)
@@ -3680,6 +4148,10 @@
     timerRemainingSeconds=timerPresetSeconds;
     updateTimerDisplay();
     updateTimerStatus('Timer idle.','info');
+    if(PREVIEW_MODE){
+      previewOnlyNotice('pause the live poll');
+      return;
+    }
     google.script.run
       .withSuccessHandler(function(data){
         isPaused=true;
@@ -3698,6 +4170,11 @@
     updateTimerStatus('Timer idle.','info');
     var endShowBtn=document.getElementById('header-end-show-btn');
     if(endShowBtn){endShowBtn.disabled=true;}
+    if(PREVIEW_MODE){
+      if(endShowBtn){endShowBtn.disabled=false;}
+      previewOnlyNotice('reveal answers');
+      return;
+    }
     google.script.run
       .withSuccessHandler(function(data){
         if(endShowBtn){endShowBtn.disabled=false;}
@@ -3721,6 +4198,10 @@
     updateTimerDisplay();
     updateTimerStatus('Timer ready for previous question.','info');
     isPaused=false;
+    if(PREVIEW_MODE){
+      previewOnlyNotice('navigate to a previous question');
+      return;
+    }
     google.script.run
       .withSuccessHandler(updateLiveView)
       .withFailureHandler(handleError)
@@ -3737,6 +4218,10 @@
     updateTimerDisplay();
     updateTimerStatus('Timer ready for next question.','info');
     isPaused=false;
+    if(PREVIEW_MODE){
+      previewOnlyNotice('advance to the next question');
+      return;
+    }
     google.script.run
       .withSuccessHandler(updateLiveView)
       .withFailureHandler(handleError)
@@ -3772,6 +4257,11 @@
     updateTimerDisplay();
     updateTimerStatus('Timer idle.','info');
 
+    if(PREVIEW_MODE){
+      await previewOnlyNotice('reset the live question');
+      return;
+    }
+
     google.script.run
       .withSuccessHandler(function(data){
         isPaused=false;
@@ -3784,6 +4274,11 @@
   function onRevealResults(){
     var revealBtn=document.getElementById('reveal-results-btn');
     if(revealBtn){revealBtn.disabled=true;}
+    if(PREVIEW_MODE){
+      if(revealBtn){revealBtn.disabled=false;}
+      previewOnlyNotice('reveal results to students');
+      return;
+    }
     google.script.run
       .withSuccessHandler(function(data){
         if(revealBtn){revealBtn.disabled=false;}
@@ -3799,6 +4294,11 @@
   function onHideResults(){
     var hideBtn=document.getElementById('hide-results-btn');
     if(hideBtn){hideBtn.disabled=true;}
+    if(PREVIEW_MODE){
+      if(hideBtn){hideBtn.disabled=false;}
+      previewOnlyNotice('hide results from students');
+      return;
+    }
     google.script.run
       .withSuccessHandler(function(data){
         if(hideBtn){hideBtn.disabled=false;}
@@ -3819,6 +4319,10 @@
     });
     if(!confirmed)return;
     showDashboard();
+    if(PREVIEW_MODE){
+      previewOnlyNotice('end the live poll');
+      return;
+    }
     google.script.run
       .withSuccessHandler(function(data){
         if(data&&data.status!=='ENDED'){
@@ -4202,6 +4706,13 @@
         this.disabled=true;
         this.querySelector('span:last-child').textContent='Unlocking...';
 
+        if(PREVIEW_MODE){
+          await previewOnlyNotice('approve unlock requests');
+          this.disabled=false;
+          this.querySelector('span:last-child').textContent='Approve';
+          return;
+        }
+
         google.script.run
           .withSuccessHandler(async function(response) {
             if (response.ok) {
@@ -4430,13 +4941,17 @@
         if(!timerExpiredHandled){
           timerExpiredHandled=true;
           updateTimerStatus('Time expired — poll paused.','danger');
-          google.script.run
-            .withSuccessHandler(function(data){
-              isPaused=true;
-              updateLiveView(data);
-            })
-            .withFailureHandler(handleError)
-            .pausePollForTimerExpiry();
+          if(PREVIEW_MODE){
+            previewOnlyNotice('auto-pause the poll when the timer expires');
+          }else{
+            google.script.run
+              .withSuccessHandler(function(data){
+                isPaused=true;
+                updateLiveView(data);
+              })
+              .withFailureHandler(handleError)
+              .pausePollForTimerExpiry();
+          }
         }
       }
     },1000);
@@ -4482,6 +4997,13 @@
     btn.disabled=true;
     btn.innerHTML='<div class="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>';
 
+    if(PREVIEW_MODE){
+      await previewOnlyNotice('email poll links');
+      btn.disabled=false;
+      btn.innerHTML='<span class="material-symbols-outlined text-xl">mail</span><span class="truncate">Send Student Links</span>';
+      return;
+    }
+
     google.script.run
       .withSuccessHandler(async function(response){
         await veritasAlert('✅ Successfully sent '+response.count+' poll links.',{title:'Send poll links'});
@@ -4504,6 +5026,34 @@
       return;
     }
     btn.disabled=true;
+
+    if(PREVIEW_MODE){
+      var container=document.getElementById('links-container');
+      var roster=(PREVIEW_PAYLOAD&&PREVIEW_PAYLOAD.rosters&&PREVIEW_PAYLOAD.rosters[className])||[];
+      var html='<div class="overflow-x-auto"><table class="w-full border-collapse">';
+      html+='<thead><tr class="bg-brand-light-gray dark:bg-brand-dark-gray/50 border-b-2 border-brand-light-gray dark:border-brand-dark-gray/40">';
+      html+='<th class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Student Name</th>';
+      html+='<th class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Email</th>';
+      html+='<th class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Link</th>';
+      html+='<th class="px-4 py-3 text-center text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Actions</th>';
+      html+='</tr></thead><tbody>';
+      roster.forEach(function(student){
+        html+='<tr class="border-b border-brand-light-gray/50 dark:border-brand-dark-gray/20">';
+        html+='<td class="px-4 py-3 text-sm text-brand-dark-gray dark:text-brand-white">'+escapeHtml(student.name||'Student')+'</td>';
+        html+='<td class="px-4 py-3 text-sm text-brand-dark-gray dark:text-brand-white">'+escapeHtml(student.email||'student@example.com')+'</td>';
+        html+='<td class="px-4 py-3 text-xs text-brand-dark-gray/70 dark:text-brand-white/70 italic">Preview links unavailable</td>';
+        html+='<td class="px-4 py-3 text-center text-xs text-brand-dark-gray/60 dark:text-brand-white/60">—</td>';
+        html+='</tr>';
+      });
+      if(roster.length===0){
+        html+='<tr><td colspan="4" class="px-4 py-6 text-center text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No roster data available in preview.</td></tr>';
+      }
+      html+='</tbody></table></div>';
+      container.innerHTML=html;
+      linksModal.style.display='flex';
+      btn.disabled=false;
+      return;
+    }
 
     google.script.run
       .withSuccessHandler(function(response){
@@ -5252,6 +5802,41 @@
       var questionCount=payloadQuestions.length;
       console.log('Saving poll with '+questionCount+' questions');
 
+      if(PREVIEW_MODE){
+        var newPollRecord={
+          pollId:editingPollId||('preview-poll-'+Date.now()),
+          pollName:pollName,
+          className:className,
+          questions:payloadQuestions.map(function(q){
+            return {
+              questionText:q.questionText,
+              options:q.options,
+              correctAnswer:q.correctAnswer,
+              timerSeconds:q.timerSeconds||null
+            };
+          }),
+          updatedAt:new Date().toISOString(),
+          lastRunAt:null,
+          createdAt:new Date().toISOString()
+        };
+        if(editingPollId){
+          var existingIndex=ALL_POLLS.findIndex(function(p){return p.pollId===editingPollId;});
+          if(existingIndex!==-1){
+            newPollRecord.createdAt=ALL_POLLS[existingIndex].createdAt||newPollRecord.createdAt;
+            ALL_POLLS[existingIndex]=newPollRecord;
+          }
+        } else {
+          ALL_POLLS.push(newPollRecord);
+        }
+        refreshPollData(ALL_POLLS);
+        resetPollDirty('Preview changes saved');
+        savePollBtn.disabled=false;
+        savePollBtn.innerHTML=defaultLabel;
+        closePollCreator();
+        await veritasAlert('Poll saved locally for preview. Use the live dashboard to publish changes.',{title:'Save poll'});
+        return;
+      }
+
       var request=google.script.run
         .withSuccessHandler(async function(updatedPolls){
           // Use the captured questionCount variable (not from server response)
@@ -5350,6 +5935,13 @@
         // Double-check dataUrl before sending
         if(!dataUrl||typeof dataUrl!=='string'){
           reject(new Error('Invalid data URL generated from file'));
+          return;
+        }
+
+        if(PREVIEW_MODE){
+          setTimeout(function(){
+            resolve('preview-file-'+Date.now());
+          },120);
           return;
         }
 

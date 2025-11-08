@@ -641,6 +641,38 @@
     }
 
     /* New Dashboard Styles */
+    .sidebar-nav-btn {
+      background: transparent;
+      color: rgba(255, 255, 255, 0.72);
+      transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .sidebar-nav-btn .material-symbols-outlined {
+      transition: transform 160ms ease, color 160ms ease;
+    }
+
+    .sidebar-nav-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+    }
+
+    .sidebar-nav-btn:hover .material-symbols-outlined {
+      transform: translateX(2px);
+    }
+
+    .sidebar-nav-btn.is-active,
+    .sidebar-nav-btn[aria-current="page"] {
+      background: rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+    }
+
+    .sidebar-nav-btn.is-active .material-symbols-outlined,
+    .sidebar-nav-btn[aria-current="page"] .material-symbols-outlined {
+      color: #ffffff;
+      transform: translateX(2px);
+    }
+
     .dashboard-card {
       background: white;
       border-radius: 16px;
@@ -888,6 +920,36 @@
       transform: scaleY(1.05);
     }
 
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(18px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes pulseGlow {
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(197, 160, 90, 0.35);
+      }
+      50% {
+        box-shadow: 0 0 18px 3px rgba(197, 160, 90, 0.45);
+      }
+    }
+
+    @keyframes shimmer {
+      from {
+        background-position: -1000px 0;
+      }
+      to {
+        background-position: 1000px 0;
+      }
+    }
+
     /* Stagger animation delays */
     .dashboard-card:nth-child(1) { animation-delay: 0ms; }
     .dashboard-card:nth-child(2) { animation-delay: 100ms; }
@@ -953,49 +1015,53 @@
     </header>
 
     <!-- Header - Live Poll State -->
-    <header id="header-live" class="flex shrink-0 items-center justify-between whitespace-nowrap border-b border-solid border-primary/80 bg-primary px-6 py-3 shadow-sm" style="display: none;">
-      <div class="flex items-center gap-4">
-        <img alt="Malvern Prep Logo" class="h-10 w-auto" src="https://raw.githubusercontent.com/stephenborish/veritasassets/f0a824864d7d66637a13b822bff99fa6830e6123/mplogo.png"/>
-        <div class="flex flex-col">
-          <h1 id="header-poll-name" class="text-brand-white text-lg font-bold leading-tight tracking-[-0.015em]">Poll Name</h1>
-          <p class="text-brand-white/80 text-sm">Live Poll</p>
-        </div>
-      </div>
-      <div class="flex items-center gap-2 flex-wrap justify-between flex-1">
-        <div class="flex items-center gap-2">
-          <button id="header-start-btn" class="flex min-w-[80px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-brand-white text-primary text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-brand-light-gray transition-colors">
-            <span class="material-symbols-outlined text-xl">play_arrow</span>
-            <span class="truncate">Start</span>
-          </button>
-          <button id="header-end-show-btn" class="flex min-w-[80px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-green-600 text-brand-white text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-green-700 transition-colors" style="display: none;" title="Close responses and reveal answer to students">
-            <span class="material-symbols-outlined text-xl">check_circle</span>
-            <span class="truncate">End & Reveal Answer</span>
-          </button>
-          <div class="mx-2 h-6 w-px bg-brand-white/30"></div>
-          <button id="header-back-btn" class="flex min-w-[80px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-brand-white/20 text-brand-white text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-brand-white/30 transition-colors">
-            <span class="material-symbols-outlined text-xl">skip_previous</span>
-            <span class="truncate">Back</span>
-          </button>
-          <div id="question-dots" class="flex items-center gap-1.5 rounded-full bg-brand-white/20 px-3 py-1.5 text-sm font-medium text-brand-white">
-            <!-- Question dots will be populated dynamically -->
+    <header id="header-live" class="shrink-0 bg-veritas-navy px-6 py-4 shadow-lg border-b border-veritas-navy/70" style="display: none;">
+      <div class="flex w-full flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div class="flex items-center gap-4">
+          <img alt="Malvern Prep Logo" class="h-10 w-auto" src="https://raw.githubusercontent.com/stephenborish/veritasassets/f0a824864d7d66637a13b822bff99fa6830e6123/mplogo.png"/>
+          <div class="flex flex-col">
+            <h1 id="header-poll-name" class="text-brand-white text-lg font-bold leading-tight tracking-[-0.015em]">Poll Name</h1>
+            <p class="text-brand-white/80 text-sm">Live Poll</p>
           </div>
-          <button id="header-next-btn" class="flex min-w-[80px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-brand-white/20 text-brand-white text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-brand-white/30 transition-colors">
-            <span class="material-symbols-outlined text-xl">skip_next</span>
-            <span class="truncate">Next</span>
-          </button>
-          <button id="header-reset-question-btn" class="flex min-w-[110px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-brand-white/20 text-brand-white text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-brand-white/30 transition-colors">
-            <span class="material-symbols-outlined text-xl">replay</span>
-            <span class="truncate">Reset Question</span>
-          </button>
-          <button id="header-skip-btn" class="flex min-w-[80px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-brand-white/20 text-brand-white text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-brand-white/30 transition-colors">
-            <span class="material-symbols-outlined text-xl">fast_forward</span>
-            <span class="truncate">Skip Question</span>
+        </div>
+        <div class="flex flex-1 flex-col gap-3 lg:flex-row lg:items-center lg:justify-end">
+          <div class="flex flex-wrap items-center gap-2 lg:justify-end">
+            <button id="header-start-btn" class="flex min-w-[88px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-brand-white text-veritas-navy text-sm font-semibold leading-normal tracking-[0.01em] gap-2 hover:bg-brand-light-gray transition-colors">
+              <span class="material-symbols-outlined text-lg">play_arrow</span>
+              <span class="truncate">Start</span>
+            </button>
+            <button id="header-end-show-btn" class="flex min-w-[120px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-emerald-600 text-brand-white text-sm font-semibold leading-normal tracking-[0.01em] gap-2 hover:bg-emerald-700 transition-colors" style="display: none;" title="Close responses and reveal answer to students">
+              <span class="material-symbols-outlined text-lg">check_circle</span>
+              <span class="truncate">End &amp; Reveal</span>
+            </button>
+            <div class="mx-2 hidden h-6 w-px bg-brand-white/30 lg:block"></div>
+            <div class="flex flex-wrap items-center gap-2">
+              <button id="header-back-btn" class="flex min-w-[80px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-brand-white/15 text-brand-white text-sm font-semibold leading-normal tracking-[0.01em] gap-2 hover:bg-brand-white/25 transition-colors">
+                <span class="material-symbols-outlined text-lg">skip_previous</span>
+                <span class="truncate">Back</span>
+              </button>
+              <div id="question-dots" class="flex items-center gap-1.5 rounded-full bg-brand-white/15 px-3 py-1.5 text-sm font-medium text-brand-white">
+                <!-- Question dots will be populated dynamically -->
+              </div>
+              <button id="header-next-btn" class="flex min-w-[80px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-brand-white/15 text-brand-white text-sm font-semibold leading-normal tracking-[0.01em] gap-2 hover:bg-brand-white/25 transition-colors">
+                <span class="material-symbols-outlined text-lg">skip_next</span>
+                <span class="truncate">Next</span>
+              </button>
+              <button id="header-reset-question-btn" class="flex min-w-[120px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-brand-white/15 text-brand-white text-sm font-semibold leading-normal tracking-[0.01em] gap-2 hover:bg-brand-white/25 transition-colors">
+                <span class="material-symbols-outlined text-lg">replay</span>
+                <span class="truncate">Reset Question</span>
+              </button>
+              <button id="header-skip-btn" class="flex min-w-[96px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-brand-white/15 text-brand-white text-sm font-semibold leading-normal tracking-[0.01em] gap-2 hover:bg-brand-white/25 transition-colors">
+                <span class="material-symbols-outlined text-lg">fast_forward</span>
+                <span class="truncate">Skip</span>
+              </button>
+            </div>
+          </div>
+          <button id="header-stop-btn" class="flex min-w-[120px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-5 bg-rose-600 text-brand-white text-sm font-semibold leading-normal tracking-[0.01em] gap-2 hover:bg-rose-700 transition-colors" title="End the entire session and finish the poll">
+            <span class="material-symbols-outlined text-lg">stop</span>
+            <span class="truncate">Finish Session</span>
           </button>
         </div>
-        <button id="header-stop-btn" class="flex min-w-[100px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-red-600 text-brand-white text-sm font-bold leading-normal tracking-[0.015em] gap-2 hover:bg-red-700 transition-colors" title="End the entire session and finish the poll">
-          <span class="material-symbols-outlined text-xl">stop</span>
-          <span class="truncate">Finish Session</span>
-        </button>
       </div>
     </header>
 
@@ -1151,7 +1217,7 @@
         </div>
 
         <!-- Live Poll View -->
-        <div id="live-view" class="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6" style="display: none;">
+        <div id="live-view" class="px-6 pb-6 pt-8 grid grid-cols-1 lg:grid-cols-3 gap-6" style="display: none;">
           <!-- Main Content (2/3) -->
           <div class="lg:col-span-2 flex flex-col gap-6">
             <!-- Question Display -->
@@ -1223,47 +1289,55 @@
                 </div>
 
                 <!-- Start/Pause Toggle -->
-                <button id="timer-start-btn" class="btn btn-primary" data-act="toggle" type="button">▶ Start</button>
+                <button id="timer-start-btn" class="btn btn-primary" data-act="toggle" type="button">
+                  <span class="material-symbols-outlined text-base">play_arrow</span>
+                  <span class="label">Start</span>
+                </button>
 
                 <!-- Reset Button -->
-                <button id="timer-reset-btn" class="btn btn-icon" data-act="reset" aria-label="Reset timer" type="button">↺</button>
+                <button id="timer-reset-btn" class="btn btn-icon" data-act="reset" aria-label="Reset timer" type="button">
+                  <span class="material-symbols-outlined text-base">restart_alt</span>
+                </button>
               </div>
 
               <p id="timer-status-message" class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 text-center mt-3">Timer idle.</p>
             </div>
 
             <style>
-              .timer-bar{display:flex;align-items:center;gap:10px;height:44px;padding:6px 10px;background:#eff3f9;border-radius:10px;flex-wrap:wrap}
-              .dark .timer-bar{background:rgba(255,255,255,0.05)}
-              .timer-chip{display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:92px;padding:2px 8px;border:1px solid #cbd5e1;border-radius:999px;background:#fff}
-              .dark .timer-chip{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2)}
-              .timer-chip .time{font:600 20px/1 'Inter',Arial;color:#12385d}
+              .timer-bar{display:flex;align-items:center;gap:12px;padding:10px 12px;background:linear-gradient(135deg,rgba(239,243,249,0.92)0%,rgba(221,230,241,0.9)100%);border-radius:14px;border:1px solid rgba(18,56,93,0.12);flex-wrap:wrap}
+              .dark .timer-bar{background:rgba(15,23,35,0.65);border-color:rgba(148,163,184,0.35)}
+              .timer-chip{display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:120px;padding:10px 16px;border-radius:16px;background:linear-gradient(135deg,#ffffff 0%,#f5f7fb 100%);border:1px solid rgba(18,56,93,0.14);box-shadow:0 6px 16px rgba(18,56,93,0.12)}
+              .dark .timer-chip{background:rgba(15,23,35,0.85);border-color:rgba(148,163,184,0.4);box-shadow:0 6px 18px rgba(0,0,0,0.25)}
+              .timer-chip .time{font-family:'Inter','SFMono-Regular','Roboto Mono',monospace;font-weight:700;font-size:26px;line-height:1;letter-spacing:0.08em;color:#12385d;font-variant-numeric:tabular-nums}
               .dark .timer-chip .time{color:#f8fafc}
-              .timer-chip .state{font:500 10px/1.2 Arial;color:#6b7280;margin-top:2px}
-              .dark .timer-chip .state{color:#cbd5e1}
-              .preset{display:flex;align-items:center;gap:8px;color:#555}
-              .dark .preset{color:#cbd5e1}
-              .preset-val{min-width:42px;text-align:center;font:600 13px/1 Arial}
-              .btn{height:32px;padding:0 12px;border-radius:8px;border:1px solid transparent;font:600 13px/1 Arial;cursor:pointer;transition:all 140ms ease}
-              .btn-primary{background:#12385d;color:#fff;border-color:#0f2f4d}
+              .timer-chip .state{margin-top:6px;padding:4px 12px;border-radius:999px;background:rgba(148,163,184,0.18);font-size:11px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:#475569}
+              .dark .timer-chip .state{background:rgba(148,163,184,0.25);color:#e2e8f0}
+              .preset{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,0.8);border:1px solid rgba(148,163,184,0.35);color:#334155}
+              .dark .preset{background:rgba(15,23,35,0.9);border-color:rgba(148,163,184,0.4);color:#e2e8f0}
+              .preset-val{min-width:48px;text-align:center;font:600 13px/1 'Inter',Arial;font-variant-numeric:tabular-nums;color:#0f172a}
+              .dark .preset-val{color:#f8fafc}
+              .btn{height:36px;padding:0 14px;border-radius:10px;border:1px solid transparent;font:600 13px/1 'Inter',Arial;cursor:pointer;transition:all 140ms ease;display:inline-flex;align-items:center;justify-content:center;gap:6px;letter-spacing:0.01em}
+              .btn-primary{background:#12385d;color:#fff;border-color:#0f2f4d;box-shadow:0 3px 8px rgba(18,56,93,0.18)}
               .btn-primary:hover:not(:disabled){background:#0f2d4a;transform:translateY(-1px)}
-              .btn-primary.gold{background:#c5a05a;border-color:#b08a4f;color:#111}
+              .btn-primary.gold{background:#c5a05a;border-color:#b08a4f;color:#111;box-shadow:0 4px 12px rgba(197,160,90,0.35)}
               .btn-primary.gold:hover:not(:disabled){background:#b08a4f}
-              .btn-ghost{background:#fff;border-color:#cbd5e1;color:#12385d}
-              .dark .btn-ghost{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2);color:#f8fafc}
+              .btn-ghost{background:#fff;border-color:rgba(148,163,184,0.45);color:#12385d}
+              .dark .btn-ghost{background:rgba(255,255,255,0.08);border-color:rgba(148,163,184,0.4);color:#f8fafc}
               .btn-ghost:hover:not(:disabled){background:#f3f4f6}
-              .dark .btn-ghost:hover:not(:disabled){background:rgba(255,255,255,0.15)}
-              .btn-icon{width:32px;height:32px;background:#fff;border:1px solid #cbd5e1;border-radius:8px;padding:0;font-size:18px}
-              .dark .btn-icon{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2);color:#f8fafc}
-              .btn-icon:hover:not(:disabled){background:#f3f4f6}
-              .dark .btn-icon:hover:not(:disabled){background:rgba(255,255,255,0.15)}
-              .btn:disabled{opacity:0.5;cursor:not-allowed}
-              .timer-bar:focus-within .timer-chip{box-shadow:0 0 0 2px rgba(18,56,93,.12)}
-              .timer-bar.running .timer-chip .time{color:#12385d}
-              .dark .timer-bar.running .timer-chip .time{color:#60a5fa}
-              .timer-bar.paused .timer-chip .time{color:#c5a05a}
-              .timer-bar.expired .timer-chip .time{color:#9a9a9a}
-              @media (max-width:980px){.timer-bar{flex-wrap:wrap;gap:8px;height:auto}}
+              .dark .btn-ghost:hover:not(:disabled){background:rgba(255,255,255,0.18)}
+              .btn-icon{width:36px;height:36px;background:#fff;border:1px solid rgba(148,163,184,0.45);border-radius:10px;padding:0;font-size:18px;color:#12385d;display:inline-flex;align-items:center;justify-content:center}
+              .dark .btn-icon{background:rgba(255,255,255,0.08);border-color:rgba(148,163,184,0.4);color:#f8fafc}
+              .btn-icon:hover:not(:disabled){background:#f1f5f9}
+              .dark .btn-icon:hover:not(:disabled){background:rgba(255,255,255,0.18)}
+              .btn:disabled{opacity:0.55;cursor:not-allowed;box-shadow:none}
+              .timer-bar:focus-within .timer-chip{box-shadow:0 0 0 3px rgba(18,56,93,0.18)}
+              .timer-bar.running .timer-chip .state{background:rgba(34,197,94,0.18);color:#047857}
+              .dark .timer-bar.running .timer-chip .state{background:rgba(34,197,94,0.28);color:#bbf7d0}
+              .timer-bar.paused .timer-chip .state{background:rgba(197,160,90,0.2);color:#92400e}
+              .dark .timer-bar.paused .timer-chip .state{background:rgba(197,160,90,0.32);color:#f3f4f6}
+              .timer-bar.expired .timer-chip .state{background:rgba(239,68,68,0.18);color:#b91c1c}
+              .dark .timer-bar.expired .timer-chip .state{background:rgba(239,68,68,0.28);color:#fecaca}
+              @media (max-width:980px){.timer-bar{flex-direction:column;align-items:stretch}}
             </style>
 
             <!-- Student Status -->
@@ -1534,7 +1608,7 @@
       <!-- Right Sidebar Navigation -->
       <aside class="w-64 bg-veritas-navy flex-col items-center p-4 border-l border-veritas-navy/20 hidden lg:flex">
         <nav class="flex flex-col w-full gap-2">
-          <button id="nav-polls-list" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-brand-white/10 text-brand-white hover:bg-brand-white/20 font-semibold transition-colors text-left">
+          <button id="nav-polls-list" data-section-target="dashboard" class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg font-semibold transition-colors text-left">
             <span class="material-symbols-outlined">monitoring</span>
             <span>Live Dashboard</span>
           </button>
@@ -1542,15 +1616,15 @@
             <span class="material-symbols-outlined">add_circle</span>
             <span>Create New Poll</span>
           </button>
-          <button id="nav-rosters" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-brand-white/70 hover:bg-brand-white/20 hover:text-brand-white transition-colors text-left">
+          <button id="nav-rosters" data-section-target="roster" class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left">
             <span class="material-symbols-outlined">group</span>
             <span>Classes &amp; Rosters</span>
           </button>
-          <button id="nav-archived" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-brand-white/70 hover:bg-brand-white/20 hover:text-brand-white transition-colors text-left">
+          <button id="nav-archived" data-section-target="archived" class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left">
             <span class="material-symbols-outlined">inventory_2</span>
             <span>Archived Polls</span>
           </button>
-          <button id="nav-analytics" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-brand-white/70 hover:bg-brand-white/20 hover:text-brand-white transition-colors text-left">
+          <button id="nav-analytics" data-section-target="analytics" class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left">
             <span class="material-symbols-outlined">analytics</span>
             <span>Analytics Hub</span>
           </button>
@@ -1675,6 +1749,9 @@
   var BASE_CLASSES=[];
   var dashboardSummary=null;
   var analyticsRefreshInterval=null;
+  var googleChartsReady=false;
+  var googleChartsLoading=false;
+  var googleChartsBootstrapTimer=null;
 
   var appsScriptAvailable=!!(window.google&&window.google.script&&window.google.script.run);
   var PREVIEW_MODE=!appsScriptAvailable;
@@ -2261,6 +2338,47 @@
     element.addEventListener('change',handler);
   }
 
+  function bootstrapGoogleCharts(){
+    if(googleChartsReady||googleChartsLoading){
+      return;
+    }
+    if(!(window.google&&google.charts&&typeof google.charts.load==='function')){
+      return;
+    }
+    googleChartsLoading=true;
+    google.charts.load('current',{'packages':['corechart']});
+    google.charts.setOnLoadCallback(function(){
+      googleChartsReady=true;
+      googleChartsLoading=false;
+      if(googleChartsBootstrapTimer){
+        clearInterval(googleChartsBootstrapTimer);
+        googleChartsBootstrapTimer=null;
+      }
+      try{
+        onGoogleChartsReady();
+      }catch(err){
+        console.error('Post-chart bootstrap failed:',err);
+      }
+    });
+  }
+
+  function onGoogleChartsReady(){
+    if(dashboardSummary){
+      try{
+        renderActivityPulse();
+      }catch(err){
+        console.error('Activity pulse refresh failed:',err);
+      }
+    }
+    if(typeof renderAnalyticsByTab==='function'&&typeof analyticsData!=='undefined'&&analyticsData){
+      try{
+        renderAnalyticsByTab();
+      }catch(err){
+        console.error('Analytics redraw failed:',err);
+      }
+    }
+  }
+
   // --- Element Cache ---
   var pollSelect=document.getElementById('poll-select');
   var startPollBtn=document.getElementById('start-poll-btn');
@@ -2301,8 +2419,24 @@
   var refreshArchivedBtn=document.getElementById('refresh-archived-btn');
 
   // --- Initialization ---
-  google.charts.load('current',{'packages':['corechart']});
-  google.charts.setOnLoadCallback(loadInitialData);
+  loadInitialData();
+
+  if(window.google&&google.charts&&typeof google.charts.load==='function'){
+    bootstrapGoogleCharts();
+  }else{
+    console.warn('Google Charts unavailable – continuing initialization without charts.');
+    googleChartsBootstrapTimer=setInterval(function(){
+      if(window.google&&google.charts&&typeof google.charts.load==='function'){
+        bootstrapGoogleCharts();
+      }
+    },400);
+    setTimeout(function(){
+      if(googleChartsBootstrapTimer){
+        clearInterval(googleChartsBootstrapTimer);
+        googleChartsBootstrapTimer=null;
+      }
+    },8000);
+  }
 
   // --- Event Listeners ---
   bindClick('open-creator-btn',function(){openPollCreator();});
@@ -2434,22 +2568,15 @@
     archivedView.style.display=section==='archived'?'grid':'none';
     analyticsView.style.display=section==='analytics'?'flex':'none';
 
-    var navMap={
-      dashboard:'nav-polls-list',
-      roster:'nav-rosters',
-      archived:'nav-archived',
-      analytics:'nav-analytics'
-    };
-    Object.keys(navMap).forEach(function(key){
-      var btn=document.getElementById(navMap[key]);
-      if(!btn)return;
-      if(key===section){
-        btn.style.backgroundColor='rgba(255,255,255,0.18)';
-        btn.style.color='#ffffff';
+    var navButtons=document.querySelectorAll('.sidebar-nav-btn[data-section-target]');
+    navButtons.forEach(function(btn){
+      var target=btn.getAttribute('data-section-target');
+      var isActive=target===section;
+      btn.classList.toggle('is-active',isActive);
+      btn.setAttribute('aria-current',isActive?'page':'false');
+      if(isActive){
         btn.classList.add('font-semibold');
       }else{
-        btn.style.backgroundColor='transparent';
-        btn.style.color='rgba(255,255,255,0.72)';
         btn.classList.remove('font-semibold');
       }
     });
@@ -3720,25 +3847,33 @@
     }
 
     // Render Item Scatter (simplified - using Google Charts)
-    if (analyticsData.items && analyticsData.items.length > 0 && typeof google !== 'undefined') {
-      var scatterData = [['Difficulty (% Correct)', 'Discrimination', 'Question']];
-      analyticsData.items.forEach(function(item) {
-        scatterData.push([item.correctPct, item.rbis, 'Q' + item.qNum]);
+    var scatterHost=document.getElementById('analytics-item-scatter');
+    if(!scatterHost){
+      return;
+    }
+    if(!analyticsData.items||analyticsData.items.length===0){
+      scatterHost.innerHTML='<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No item data available</p>';
+    }else if(googleChartsReady&&window.google&&google.visualization&&typeof google.visualization.ScatterChart==='function'){
+      var scatterData=[['Difficulty (% Correct)','Discrimination','Question']];
+      analyticsData.items.forEach(function(item){
+        scatterData.push([item.correctPct,item.rbis,'Q'+item.qNum]);
       });
 
-      var data = google.visualization.arrayToDataTable(scatterData);
-      var options = {
-        title: 'Item Difficulty vs Discrimination',
-        hAxis: { title: 'Difficulty (% Correct)', minValue: 0, maxValue: 100 },
-        vAxis: { title: 'Discrimination (r_bis)', minValue: -0.5, maxValue: 1.0 },
-        legend: 'none',
-        pointSize: 5,
-        backgroundColor: 'transparent',
-        chartArea: { width: '85%', height: '75%' }
+      var data=google.visualization.arrayToDataTable(scatterData);
+      var options={
+        title:'Item Difficulty vs Discrimination',
+        hAxis:{title:'Difficulty (% Correct)',minValue:0,maxValue:100},
+        vAxis:{title:'Discrimination (r_bis)',minValue:-0.5,maxValue:1.0},
+        legend:'none',
+        pointSize:5,
+        backgroundColor:'transparent',
+        chartArea:{width:'85%',height:'75%'}
       };
 
-      var chart = new google.visualization.ScatterChart(document.getElementById('analytics-item-scatter'));
-      chart.draw(data, options);
+      var chart=new google.visualization.ScatterChart(scatterHost);
+      chart.draw(data,options);
+    }else{
+      scatterHost.innerHTML='<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">Preparing analytics visuals…</p>';
     }
   }
 
@@ -4884,13 +5019,14 @@
     // Update toggle button
     if(toggleBtn){
       toggleBtn.classList.remove('gold');
+      var toggleIcon=timerActive?'pause':'play_arrow';
+      var toggleLabel=timerActive?'Pause':'Start';
+      toggleBtn.innerHTML='<span class="material-symbols-outlined text-base">'+toggleIcon+'</span><span class="label">'+toggleLabel+'</span>';
       if(timerActive){
-        toggleBtn.innerHTML='<span>❚❚ Pause</span>';
         toggleBtn.classList.add('gold');
-      } else {
-        toggleBtn.innerHTML='<span>▶ Start</span>';
       }
-      toggleBtn.disabled = (state === 'expired');
+      toggleBtn.disabled=(state==='expired');
+      toggleBtn.setAttribute('aria-pressed',timerActive?'true':'false');
     }
 
     // Disable preset controls when running

@@ -236,6 +236,101 @@ function isTeacherEmail_(email) {
   return getTeacherEmailSet_().has(email.trim().toLowerCase());
 }
 
+function getCanonicalTeacherEmail_() {
+  const teacherSet = getTeacherEmailSet_();
+  for (const email of teacherSet) {
+    return email;
+  }
+  return TEACHER_EMAIL.toLowerCase();
+}
+
+function escapeHtml_(value) {
+  if (value === null || value === undefined) return '';
+  return String(value).replace(/[&<>"']/g, function(chr) {
+    switch (chr) {
+      case '&': return '&amp;';
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '"': return '&quot;';
+      case "'": return '&#39;';
+      default: return chr;
+    }
+  });
+}
+
+function buildQueryString_(params) {
+  return Object.keys(params)
+    .filter(function(key) {
+      const value = params[key];
+      return value !== undefined && value !== null && value !== '';
+    })
+    .map(function(key) {
+      return encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
+    })
+    .join('&');
+}
+
+function buildTeacherAccountChooserUrl_(e, loginHintEmail) {
+  if (!loginHintEmail) {
+    return null;
+  }
+
+  const baseUrl = ScriptApp.getService().getUrl();
+  const params = Object.assign({}, (e && e.parameter) || {});
+  params.teacherAuthAttempted = '1';
+  const queryString = buildQueryString_(params);
+  const continueUrl = baseUrl + (queryString ? '?' + queryString : '');
+
+  return 'https://accounts.google.com/AccountChooser?continue=' +
+    encodeURIComponent(continueUrl) +
+    '&Email=' + encodeURIComponent(loginHintEmail) +
+    '&prompt=select_account';
+}
+
+function maybeRedirectForTeacherAccount_(e) {
+  const params = (e && e.parameter) || {};
+  if (params.fn === 'image') {
+    return null;
+  }
+
+  const loginHintEmail = getCanonicalTeacherEmail_();
+  if (!loginHintEmail) {
+    return null;
+  }
+
+  const accountChooserUrl = buildTeacherAccountChooserUrl_(e, loginHintEmail);
+  if (!accountChooserUrl) {
+    return null;
+  }
+
+  if (params.teacherAuthAttempted === '1') {
+    return HtmlService.createHtmlOutput(
+      '<div style="font-family:Roboto,Arial,sans-serif;padding:48px;text-align:center;background:#f4f6fb;min-height:100vh;box-sizing:border-box;">' +
+        '<h1 style="color:#12355b;margin-bottom:16px;">Choose your Veritas teacher account</h1>' +
+        '<p style="color:#40526b;font-size:16px;margin-bottom:24px;">We tried to open your Veritas session with <strong>' + escapeHtml_(loginHintEmail) + '</strong>, but Google sent back a different account. Please pick the Veritas teacher account from the Google account chooser.</p>' +
+        '<p style="margin-bottom:32px;">' +
+          '<a style="color:#0b5fff;font-weight:600;text-decoration:none;" href="' + accountChooserUrl + '">Try again with the Veritas teacher account</a>' +
+        '</p>' +
+        '<p style="color:#70819b;font-size:14px;">Tip: you may need to sign out of other Google accounts or open an incognito window.</p>' +
+      '</div>'
+    ).setTitle('Veritas Live Poll - Teacher Sign In');
+  }
+
+  return HtmlService.createHtmlOutput(
+    '<html><head>' +
+      '<meta charset="utf-8" />' +
+      '<meta http-equiv="refresh" content="0; url=' + accountChooserUrl + '" />' +
+      '<style>body{font-family:Roboto,Arial,sans-serif;margin:0;background:#f4f6fb;color:#12355b;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;}h1{font-size:28px;margin-bottom:12px;}p{font-size:16px;color:#40526b;margin:0 24px 12px;}a{color:#0b5fff;text-decoration:none;font-weight:600;}</style>' +
+    '</head><body>' +
+      '<div>' +
+        '<h1>Checking your teacher access…</h1>' +
+        '<p>Redirecting you to Google so you can confirm your Veritas teacher account.</p>' +
+        '<p><a href="' + accountChooserUrl + '">Click here if you are not redirected automatically.</a></p>' +
+      '</div>' +
+    '</body></html>'
+  ).setTitle('Veritas Live Poll - Teacher Sign In');
+}
+
 // --- URL SHORTENER UTILITY ---
 const URLShortener = {
   /**
@@ -605,8 +700,15 @@ function doGet(e) {
           routedAsTeacher: isTeacher
         });
 
-        if (!isTeacher && userEmail) {
-          studentEmail = userEmail;
+        if (!isTeacher) {
+          const teacherRedirect = maybeRedirectForTeacherAccount_(e);
+          if (teacherRedirect) {
+            return teacherRedirect;
+          }
+
+          if (userEmail) {
+            studentEmail = userEmail;
+          }
         }
       } catch (authError) {
         // No token and no Google auth - show error

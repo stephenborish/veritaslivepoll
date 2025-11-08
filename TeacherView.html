@@ -2370,6 +2370,16 @@
     ALL_POLLS=data.polls||[];
     refreshClassOptions(data.classes||[]);
     refreshPollViews();
+
+    // Show dashboard on initial load
+    setMainSection('dashboard');
+
+    // Load dashboard summary after a short delay
+    setTimeout(function() {
+      if (!dashboardSummary) {
+        loadDashboardSummary();
+      }
+    }, 100);
   }
 
   function updatePollDropdown(polls){

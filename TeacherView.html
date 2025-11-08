@@ -940,10 +940,10 @@
         <button class="dashboard-icon-btn" style="background: rgba(255, 255, 255, 0.1); color: white;" title="Settings" onclick="showRosterManager()">
           <span class="material-symbols-outlined text-xl">settings</span>
         </button>
-        <button class="dashboard-icon-btn" style="background: rgba(255, 255, 255, 0.1); color: white;" title="Analytics" onclick="showAnalytics()">
+        <button class="dashboard-icon-btn" style="background: rgba(255, 255, 255, 0.1); color: white;" title="Analytics" onclick="showAnalyticsView()">
           <span class="material-symbols-outlined text-xl">analytics</span>
         </button>
-        <button class="dashboard-icon-btn" style="background: rgba(255, 255, 255, 0.1); color: white;" title="Notifications">
+        <button class="dashboard-icon-btn" style="background: rgba(255, 255, 255, 0.1); color: white;" title="Notifications" onclick="void(0)">
           <span class="material-symbols-outlined text-xl">notifications</span>
         </button>
         <div id="loader" class="loader" style="display: block;">
@@ -1117,7 +1117,7 @@
                 </div>
               </div>
 
-              <button class="mt-4 text-veritas-navy text-sm font-semibold hover:text-veritas-gold transition-colors flex items-center gap-1" onclick="showAnalytics()">
+              <button class="mt-4 text-veritas-navy text-sm font-semibold hover:text-veritas-gold transition-colors flex items-center gap-1" onclick="showAnalyticsView()">
                 <span>View All</span>
                 <span class="material-symbols-outlined text-lg">arrow_forward</span>
               </button>
@@ -1166,7 +1166,7 @@
                   <span class="text-sm font-semibold">Upload Image</span>
                 </button>
 
-                <button class="dashboard-quick-tool" onclick="showAnalytics()">
+                <button class="dashboard-quick-tool" onclick="showAnalyticsView()">
                   <span class="material-symbols-outlined icon">monitoring</span>
                   <span class="text-sm font-semibold">Review Student Trends</span>
                 </button>
@@ -2194,7 +2194,7 @@
   refreshArchivedBtn.onclick=function(){loadArchivedPolls(true);};
 
   function setMainSection(section){
-    dashboard.style.display=section==='dashboard'?'grid':'none';
+    dashboard.style.display=section==='dashboard'?'block':'none';
     liveView.style.display=section==='live'?'grid':'none';
     rosterManager.style.display=section==='roster'?'grid':'none';
     archivedView.style.display=section==='archived'?'grid':'none';

@@ -23,10 +23,12 @@
         extend: {
           colors: {
             primary: "#002d6b",
+            "veritas-navy": "#12385d",
+            "veritas-gold": "#c5a05a",
             "brand-white": "#ffffff",
             "brand-light-gray": "#d9e0e7",
             "brand-dark-gray": "#242424",
-            "background-light": "#f5f7f8",
+            "background-light": "#f7f8fa",
             "background-dark": "#0f1723"
           },
           fontFamily: {
@@ -38,6 +40,25 @@
             lg: "0.5rem",
             xl: "0.75rem",
             full: "9999px"
+          },
+          animation: {
+            'fade-up': 'fadeUp 0.4s ease-out forwards',
+            'pulse-glow': 'pulseGlow 3s ease-in-out infinite',
+            'shimmer': 'shimmer 2s linear infinite'
+          },
+          keyframes: {
+            fadeUp: {
+              '0%': { opacity: '0', transform: 'translateY(20px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' }
+            },
+            pulseGlow: {
+              '0%, 100%': { boxShadow: '0 0 0 0 rgba(197, 160, 90, 0.4)' },
+              '50%': { boxShadow: '0 0 20px 4px rgba(197, 160, 90, 0.4)' }
+            },
+            shimmer: {
+              '0%': { backgroundPosition: '-1000px 0' },
+              '100%': { backgroundPosition: '1000px 0' }
+            }
           }
         }
       }
@@ -618,22 +639,316 @@
         flex: 1;
       }
     }
+
+    /* New Dashboard Styles */
+    .dashboard-card {
+      background: white;
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 2px 8px rgba(18, 56, 93, 0.08);
+      transition: all 200ms ease;
+      animation: fadeUp 0.4s ease-out forwards;
+      opacity: 0;
+    }
+
+    .dashboard-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(18, 56, 93, 0.12);
+    }
+
+    .dashboard-card.primary-cta {
+      background: linear-gradient(135deg, #12385d 0%, #0f2d4a 100%);
+      color: white;
+      border-top: 4px solid #c5a05a;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .dashboard-card.primary-cta::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      background: linear-gradient(45deg, transparent, rgba(197, 160, 90, 0.3), transparent);
+      animation: shimmer 3s linear infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .dashboard-card.primary-cta > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .dashboard-card-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #12385d;
+      margin-bottom: 8px;
+    }
+
+    .dashboard-card.primary-cta .dashboard-card-title {
+      color: white;
+    }
+
+    .dashboard-card-subtitle {
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 20px;
+    }
+
+    .dashboard-card.primary-cta .dashboard-card-subtitle {
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .dashboard-cta-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 24px;
+      border-radius: 9999px;
+      font-weight: 600;
+      font-size: 15px;
+      transition: all 140ms ease;
+      cursor: pointer;
+      border: none;
+    }
+
+    .dashboard-cta-button:hover {
+      transform: translateY(-1px);
+    }
+
+    .dashboard-cta-button.primary {
+      background: #c5a05a;
+      color: white;
+      box-shadow: 0 4px 12px rgba(197, 160, 90, 0.3);
+    }
+
+    .dashboard-cta-button.primary:hover {
+      background: #b8954f;
+      box-shadow: 0 6px 16px rgba(197, 160, 90, 0.4);
+    }
+
+    .dashboard-cta-button.secondary {
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .dashboard-cta-button.secondary:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .dashboard-list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(18, 56, 93, 0.08);
+      transition: all 140ms ease;
+    }
+
+    .dashboard-list-item:last-child {
+      border-bottom: none;
+    }
+
+    .dashboard-list-item:hover {
+      padding-left: 8px;
+    }
+
+    .dashboard-stat-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .dashboard-stat-badge.success {
+      background: rgba(34, 197, 94, 0.15);
+      color: #16a34a;
+    }
+
+    .dashboard-stat-badge.warning {
+      background: rgba(245, 158, 11, 0.15);
+      color: #d97706;
+    }
+
+    .dashboard-stat-badge.neutral {
+      background: rgba(18, 56, 93, 0.1);
+      color: #12385d;
+    }
+
+    .dashboard-quick-tool {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 20px;
+      background: rgba(18, 56, 93, 0.04);
+      border-radius: 12px;
+      transition: all 180ms ease;
+      cursor: pointer;
+      text-decoration: none;
+      color: #12385d;
+    }
+
+    .dashboard-quick-tool:hover {
+      background: rgba(18, 56, 93, 0.08);
+      transform: translateY(-2px);
+    }
+
+    .dashboard-quick-tool .icon {
+      font-size: 32px;
+      transition: transform 180ms ease;
+    }
+
+    .dashboard-quick-tool:hover .icon {
+      transform: rotate(15deg);
+    }
+
+    .dashboard-icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: rgba(18, 56, 93, 0.06);
+      color: #12385d;
+      transition: all 160ms ease;
+      cursor: pointer;
+      border: none;
+    }
+
+    .dashboard-icon-btn:hover {
+      background: rgba(18, 56, 93, 0.12);
+      transform: scale(1.05);
+    }
+
+    .dashboard-status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+      background: rgba(148, 163, 184, 0.15);
+      color: #475569;
+    }
+
+    .dashboard-status-chip.active {
+      background: rgba(34, 197, 94, 0.15);
+      color: #16a34a;
+    }
+
+    .dashboard-status-chip .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .dashboard-status-chip.active .dot {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .activity-chart-placeholder {
+      width: 100%;
+      height: 180px;
+      background: linear-gradient(to top, rgba(197, 160, 90, 0.1), rgba(18, 56, 93, 0.05));
+      border-radius: 8px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-around;
+      padding: 20px;
+      gap: 8px;
+    }
+
+    .activity-bar {
+      flex: 1;
+      background: linear-gradient(to top, #c5a05a, #12385d);
+      border-radius: 4px 4px 0 0;
+      min-height: 20px;
+      transition: all 300ms ease;
+    }
+
+    .activity-bar:hover {
+      filter: brightness(1.2);
+      transform: scaleY(1.05);
+    }
+
+    /* Stagger animation delays */
+    .dashboard-card:nth-child(1) { animation-delay: 0ms; }
+    .dashboard-card:nth-child(2) { animation-delay: 100ms; }
+    .dashboard-card:nth-child(3) { animation-delay: 200ms; }
+    .dashboard-card:nth-child(4) { animation-delay: 300ms; }
+
+    @media (max-width: 768px) {
+      .dashboard-card {
+        padding: 20px;
+      }
+    }
   </style>
   </style>
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-brand-dark-gray dark:text-brand-white">
   <div class="flex h-screen w-full flex-col">
     <!-- Header - Default State -->
-    <header id="header-default" class="flex shrink-0 items-center justify-between whitespace-nowrap border-b border-solid border-primary/80 bg-primary px-6 py-3 shadow-sm">
-      <div class="flex items-center gap-4">
-        <img alt="Malvern Prep Logo" class="h-10 w-auto" src="https://raw.githubusercontent.com/stephenborish/veritasassets/f0a824864d7d66637a13b822bff99fa6830e6123/mplogo.png"/>
-        <div class="flex flex-col">
-          <h1 class="text-brand-white text-lg font-bold leading-tight tracking-[-0.015em]">Veritas Live Poll</h1>
-          <p class="text-brand-white/80 text-sm">Teacher Dashboard</p>
+    <header id="header-default" class="flex shrink-0 items-center justify-between whitespace-nowrap border-b border-solid border-veritas-navy/80 bg-veritas-navy px-6 py-4 shadow-md">
+      <div class="flex items-center gap-6 flex-1">
+        <div class="flex items-center gap-4">
+          <img alt="Malvern Prep Logo" class="h-12 w-auto" src="https://raw.githubusercontent.com/stephenborish/veritasassets/f0a824864d7d66637a13b822bff99fa6830e6123/mplogo.png"/>
+          <div class="flex flex-col">
+            <h1 class="text-brand-white text-xl font-bold tracking-wide uppercase" style="letter-spacing: 0.15em;">Veritas</h1>
+            <p class="text-brand-white/70 text-xs tracking-wide">Teacher Dashboard</p>
+          </div>
+        </div>
+
+        <!-- Subheader Strip -->
+        <div class="hidden md:flex items-center gap-6 ml-8">
+          <div class="flex items-center gap-2 text-brand-white/80 text-sm">
+            <span class="material-symbols-outlined text-lg">school</span>
+            <select id="header-class-select" class="bg-veritas-navy/50 border border-brand-white/20 rounded-lg px-3 py-1.5 text-sm text-brand-white focus:outline-none focus:ring-2 focus:ring-veritas-gold">
+              <option>All Classes</option>
+              <option>AP Biology – Period 5</option>
+              <option>Chemistry – Period 2</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-2 text-brand-white/70 text-sm">
+            <span class="material-symbols-outlined text-lg">schedule</span>
+            <span id="header-datetime"></span>
+          </div>
+          <div id="header-poll-status" class="dashboard-status-chip" style="background: rgba(148, 163, 184, 0.25); color: rgba(255, 255, 255, 0.9);">
+            <span class="dot"></span>
+            <span>No active session</span>
+          </div>
         </div>
       </div>
-      <div id="loader" class="loader" style="display: block;">
-        <div class="h-6 w-6 animate-spin rounded-full border-2 border-brand-white/80 border-t-transparent"></div>
+
+      <div class="flex items-center gap-3">
+        <button class="dashboard-icon-btn" style="background: rgba(255, 255, 255, 0.1); color: white;" title="Settings" onclick="showRosterManager()">
+          <span class="material-symbols-outlined text-xl">settings</span>
+        </button>
+        <button class="dashboard-icon-btn" style="background: rgba(255, 255, 255, 0.1); color: white;" title="Analytics" onclick="showAnalytics()">
+          <span class="material-symbols-outlined text-xl">analytics</span>
+        </button>
+        <button class="dashboard-icon-btn" style="background: rgba(255, 255, 255, 0.1); color: white;" title="Notifications">
+          <span class="material-symbols-outlined text-xl">notifications</span>
+        </button>
+        <div id="loader" class="loader" style="display: block;">
+          <div class="h-6 w-6 animate-spin rounded-full border-2 border-brand-white/80 border-t-transparent"></div>
+        </div>
       </div>
     </header>
 
@@ -687,84 +1002,225 @@
     <div class="flex flex-grow overflow-hidden">
       <!-- Main Content Area -->
       <main class="flex-1 overflow-y-auto">
-        <!-- Dashboard View (Default) -->
-        <div id="dashboard" class="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
-          <!-- Sidebar Controls -->
-          <aside class="lg:col-span-1 flex flex-col gap-6">
-            <!-- Poll Controls -->
-            <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm">
-              <h2 class="text-brand-dark-gray dark:text-brand-white text-xl font-bold leading-normal mb-4">Poll Controls</h2>
-              <div class="form-group mb-4">
-                <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white" for="poll-select">Select Poll</label>
-                <select id="poll-select" class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
-                  <option value="">-- Choose a poll --</option>
+        <!-- Dashboard View (Default) - Redesigned -->
+        <div id="dashboard" class="p-8 max-w-7xl mx-auto">
+          <!-- Dashboard Grid - 2x2 Layout -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+
+            <!-- 1. Start/Manage Session (Primary CTA) -->
+            <div class="dashboard-card primary-cta">
+              <h2 class="dashboard-card-title text-2xl mb-2">Start / Manage Session</h2>
+              <p class="dashboard-card-subtitle">Manage live participation and monitor student focus in real time.</p>
+
+              <div class="form-group mb-5" style="position: relative; z-index: 1;">
+                <label class="block text-sm font-medium mb-2 text-white/90" for="poll-select">Select Poll</label>
+                <select id="poll-select" class="w-full rounded-lg border border-white/20 bg-white/10 text-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-veritas-gold backdrop-blur-sm">
+                  <option value="" style="color: #111;">-- Choose a poll --</option>
                 </select>
               </div>
-              <button id="send-link-btn" class="flex w-full items-center justify-center gap-2 rounded-lg h-10 px-4 mb-2 bg-green-600 text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                <span class="material-symbols-outlined text-xl">mail</span>
-                <span class="truncate">Send Student Links</span>
-              </button>
-              <button id="view-links-btn" class="flex w-full items-center justify-center gap-2 rounded-lg h-10 px-4 mb-4 bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                <span class="material-symbols-outlined text-xl">visibility</span>
-                <span class="truncate">View All Links</span>
-              </button>
-              <button id="start-poll-btn" class="flex w-full items-center justify-center gap-2 rounded-lg h-10 px-4 mb-2 bg-primary text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90 transition-colors">
-                <span class="material-symbols-outlined text-xl">play_arrow</span>
-                <span class="truncate">Start Poll</span>
-              </button>
+
+              <div class="flex flex-wrap gap-3">
+                <button id="start-poll-btn" class="dashboard-cta-button primary">
+                  <span class="material-symbols-outlined text-xl">play_circle</span>
+                  <span>Start New Poll</span>
+                </button>
+                <button class="dashboard-cta-button secondary" onclick="void(0)">
+                  <span class="material-symbols-outlined text-xl">resume</span>
+                  <span>Continue Session</span>
+                </button>
+              </div>
+
+              <div class="mt-5 flex flex-wrap gap-2">
+                <button id="send-link-btn" class="dashboard-cta-button secondary text-sm py-2 px-4" disabled style="opacity: 0.6;">
+                  <span class="material-symbols-outlined text-lg">mail</span>
+                  <span>Send Links</span>
+                </button>
+                <button id="view-links-btn" class="dashboard-cta-button secondary text-sm py-2 px-4" disabled style="opacity: 0.6;">
+                  <span class="material-symbols-outlined text-lg">visibility</span>
+                  <span>View Links</span>
+                </button>
+              </div>
             </div>
 
-            <!-- Create New Poll -->
-            <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm">
-              <h2 class="text-brand-dark-gray dark:text-brand-white text-xl font-bold leading-normal mb-4">Create New Poll</h2>
-              <button id="open-creator-btn" class="flex w-full items-center justify-center gap-2 rounded-lg h-10 px-4 bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors">
-                <span class="material-symbols-outlined text-xl">add_circle</span>
-                <span class="truncate">Create New Poll</span>
-              </button>
-            </div>
-          </aside>
+            <!-- 2. Recent Sessions Summary -->
+            <div class="dashboard-card">
+              <h2 class="dashboard-card-title">Recent Sessions</h2>
+              <p class="dashboard-card-subtitle">Your last 5 live poll sessions</p>
 
-          <div class="lg:col-span-2 flex flex-col gap-6">
-            <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm">
-              <div class="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <h2 class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white mb-1">Poll Library</h2>
-                  <p class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm">Sort, filter, edit, or delete any poll.</p>
+              <div class="space-y-0">
+                <div class="dashboard-list-item">
+                  <div class="flex-1 min-w-0">
+                    <p class="font-semibold text-sm text-veritas-navy">Unit 3 Assessment</p>
+                    <p class="text-xs text-gray-500 mt-0.5">Nov 5, 2025 · AP Biology</p>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <div class="dashboard-stat-badge success">
+                      <span class="material-symbols-outlined text-sm">check_circle</span>
+                      <span>92%</span>
+                    </div>
+                    <span class="text-xs text-gray-500">Avg 78%</span>
+                  </div>
                 </div>
-                <div class="flex flex-wrap items-center gap-3">
-                  <label class="flex items-center gap-2 text-sm text-brand-dark-gray/70 dark:text-brand-white/70">
-                    <span class="hidden sm:inline">Sort by</span>
-                    <select id="poll-sort-select" class="rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
-                      <option value="updated_desc">Latest activity</option>
-                      <option value="updated_asc">Oldest activity</option>
-                      <option value="name_asc">Name A → Z</option>
-                      <option value="class_asc">Class A → Z</option>
-                    </select>
-                  </label>
-                  <label class="flex items-center gap-2 text-sm text-brand-dark-gray/70 dark:text-brand-white/70">
-                    <span class="hidden sm:inline">Class</span>
-                    <select id="poll-filter-select" class="rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
-                      <option value="all">All classes</option>
-                    </select>
-                  </label>
+
+                <div class="dashboard-list-item">
+                  <div class="flex-1 min-w-0">
+                    <p class="font-semibold text-sm text-veritas-navy">Enzyme Kinetics Quiz</p>
+                    <p class="text-xs text-gray-500 mt-0.5">Nov 3, 2025 · Chemistry</p>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <div class="dashboard-stat-badge warning">
+                      <span class="material-symbols-outlined text-sm">warning</span>
+                      <span>2 flags</span>
+                    </div>
+                    <span class="text-xs text-gray-500">Avg 65%</span>
+                  </div>
+                </div>
+
+                <div class="dashboard-list-item">
+                  <div class="flex-1 min-w-0">
+                    <p class="font-semibold text-sm text-veritas-navy">Cell Division Review</p>
+                    <p class="text-xs text-gray-500 mt-0.5">Oct 30, 2025 · AP Biology</p>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <div class="dashboard-stat-badge success">
+                      <span class="material-symbols-outlined text-sm">check_circle</span>
+                      <span>88%</span>
+                    </div>
+                    <span class="text-xs text-gray-500">Avg 81%</span>
+                  </div>
+                </div>
+
+                <div class="dashboard-list-item">
+                  <div class="flex-1 min-w-0">
+                    <p class="font-semibold text-sm text-veritas-navy">Periodic Table Challenge</p>
+                    <p class="text-xs text-gray-500 mt-0.5">Oct 28, 2025 · Chemistry</p>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <div class="dashboard-stat-badge neutral">
+                      <span>85%</span>
+                    </div>
+                    <span class="text-xs text-gray-500">Avg 72%</span>
+                  </div>
+                </div>
+
+                <div class="dashboard-list-item">
+                  <div class="flex-1 min-w-0">
+                    <p class="font-semibold text-sm text-veritas-navy">DNA Replication Pop Quiz</p>
+                    <p class="text-xs text-gray-500 mt-0.5">Oct 25, 2025 · AP Biology</p>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <div class="dashboard-stat-badge success">
+                      <span>94%</span>
+                    </div>
+                    <span class="text-xs text-gray-500">Avg 85%</span>
+                  </div>
                 </div>
               </div>
-              <div class="mt-4 overflow-hidden rounded-lg border border-brand-light-gray/70 dark:border-brand-dark-gray/50">
-                <table class="min-w-full divide-y divide-brand-light-gray/70 dark:divide-brand-dark-gray/50 text-sm">
-                  <thead class="bg-brand-light-gray/40 dark:bg-brand-dark-gray/40 text-brand-dark-gray/70 dark:text-brand-white/60">
-                    <tr>
-                      <th class="px-4 py-2 text-left font-semibold">Poll</th>
-                      <th class="px-4 py-2 text-left font-semibold">Class</th>
-                      <th class="px-4 py-2 text-left font-semibold">Questions</th>
-                      <th class="px-4 py-2 text-left font-semibold">Last Edited</th>
-                      <th class="px-4 py-2 text-right font-semibold">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody id="polls-table-body" class="divide-y divide-brand-light-gray/60 dark:divide-brand-dark-gray/40 bg-brand-white dark:bg-brand-dark-gray/30"></tbody>
-                </table>
-                <div id="polls-empty-state" class="p-6 text-center text-brand-dark-gray/60 dark:text-brand-white/60 hidden">
-                  <p>No polls found. Create your first poll to get started.</p>
-                </div>
+
+              <button class="mt-4 text-veritas-navy text-sm font-semibold hover:text-veritas-gold transition-colors flex items-center gap-1" onclick="showAnalytics()">
+                <span>View All</span>
+                <span class="material-symbols-outlined text-lg">arrow_forward</span>
+              </button>
+            </div>
+
+            <!-- 3. Student Activity Pulse -->
+            <div class="dashboard-card">
+              <h2 class="dashboard-card-title">Student Activity Pulse</h2>
+              <p class="dashboard-card-subtitle">Total interactions over the last 7 days</p>
+
+              <div class="activity-chart-placeholder">
+                <div class="activity-bar" style="height: 45%;" title="Monday: 23 interactions"></div>
+                <div class="activity-bar" style="height: 62%;" title="Tuesday: 31 interactions"></div>
+                <div class="activity-bar" style="height: 38%;" title="Wednesday: 19 interactions"></div>
+                <div class="activity-bar" style="height: 78%;" title="Thursday: 39 interactions"></div>
+                <div class="activity-bar" style="height: 85%;" title="Friday: 42 interactions"></div>
+                <div class="activity-bar" style="height: 28%;" title="Saturday: 14 interactions"></div>
+                <div class="activity-bar" style="height: 52%;" title="Today: 26 interactions"></div>
+              </div>
+
+              <div class="mt-4 flex items-center justify-between">
+                <p class="text-sm text-gray-600">
+                  <span class="font-semibold text-veritas-gold">↑ 12%</span> compared to last week
+                </p>
+                <span class="text-xs text-gray-400 italic">Nicely done.</span>
+              </div>
+
+              <p class="mt-3 text-xs text-gray-400 italic">
+                Correlation ≠ causation, but we'll take it.
+              </p>
+            </div>
+
+            <!-- 4. Quick Access Tools -->
+            <div class="dashboard-card">
+              <h2 class="dashboard-card-title">Quick Access</h2>
+              <p class="dashboard-card-subtitle">Common actions and shortcuts</p>
+
+              <div class="grid grid-cols-2 gap-4 mt-4">
+                <button class="dashboard-quick-tool" id="open-creator-btn">
+                  <span class="material-symbols-outlined icon">add_circle</span>
+                  <span class="text-sm font-semibold">Create Question Bank</span>
+                </button>
+
+                <button class="dashboard-quick-tool">
+                  <span class="material-symbols-outlined icon">image</span>
+                  <span class="text-sm font-semibold">Upload Image</span>
+                </button>
+
+                <button class="dashboard-quick-tool" onclick="showAnalytics()">
+                  <span class="material-symbols-outlined icon">monitoring</span>
+                  <span class="text-sm font-semibold">Review Student Trends</span>
+                </button>
+
+                <button class="dashboard-quick-tool" onclick="showRosterManager()">
+                  <span class="material-symbols-outlined icon">settings</span>
+                  <span class="text-sm font-semibold">Adjust Settings</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Poll Library Section (Expandable) -->
+          <div class="dashboard-card" style="animation-delay: 400ms;">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+              <div>
+                <h2 class="text-2xl font-bold text-veritas-navy mb-1">Poll Library</h2>
+                <p class="text-gray-600 text-sm">Sort, filter, edit, or delete any poll</p>
+              </div>
+              <div class="flex flex-wrap items-center gap-3">
+                <label class="flex items-center gap-2 text-sm text-gray-600">
+                  <span class="hidden sm:inline">Sort by</span>
+                  <select id="poll-sort-select" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-veritas-gold">
+                    <option value="updated_desc">Latest activity</option>
+                    <option value="updated_asc">Oldest activity</option>
+                    <option value="name_asc">Name A → Z</option>
+                    <option value="class_asc">Class A → Z</option>
+                  </select>
+                </label>
+                <label class="flex items-center gap-2 text-sm text-gray-600">
+                  <span class="hidden sm:inline">Class</span>
+                  <select id="poll-filter-select" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-veritas-gold">
+                    <option value="all">All classes</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            <div class="overflow-hidden rounded-lg border border-gray-200">
+              <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50 text-gray-600">
+                  <tr>
+                    <th class="px-4 py-3 text-left font-semibold">Poll</th>
+                    <th class="px-4 py-3 text-left font-semibold">Class</th>
+                    <th class="px-4 py-3 text-left font-semibold">Questions</th>
+                    <th class="px-4 py-3 text-left font-semibold">Last Edited</th>
+                    <th class="px-4 py-3 text-right font-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="polls-table-body" class="divide-y divide-gray-100 bg-white"></tbody>
+              </table>
+              <div id="polls-empty-state" class="p-6 text-center text-gray-500 hidden">
+                <p>No polls found. Create your first poll to get started.</p>
               </div>
             </div>
           </div>
@@ -1268,6 +1724,18 @@
   var archivedClassFilter='all';
   var selectedArchivedPollId='';
   var BASE_CLASSES=[];
+
+  // Update header datetime
+  function updateHeaderDateTime() {
+    var datetimeEl = document.getElementById('header-datetime');
+    if (datetimeEl) {
+      var now = new Date();
+      var options = { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' };
+      datetimeEl.textContent = now.toLocaleDateString('en-US', options);
+    }
+  }
+  updateHeaderDateTime();
+  setInterval(updateHeaderDateTime, 60000); // Update every minute
 
   var VeritasModal=null;
   var veritasModalReady=new Promise(function(resolve){

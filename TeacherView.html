@@ -2177,12 +2177,14 @@
     headerLive.style.display='none';
     setMainSection('dashboard');
 
-    // Load dashboard summary data
-    if (!dashboardSummary) {
-      loadDashboardSummary();
-    } else {
-      renderDashboardSummary();
-    }
+    // Load dashboard summary data (non-blocking)
+    setTimeout(function() {
+      if (!dashboardSummary) {
+        loadDashboardSummary();
+      } else {
+        renderDashboardSummary();
+      }
+    }, 100);
   }
 
   function loadDashboardSummary() {
@@ -2193,70 +2195,93 @@
       })
       .withFailureHandler(function(error) {
         console.error('Error loading dashboard summary:', error);
-        // Show empty states if loading fails
-        renderDashboardSummary();
+        // Show empty states if loading fails - but don't break the page
+        try {
+          renderDashboardSummary();
+        } catch(e) {
+          console.error('Error rendering dashboard summary:', e);
+        }
       })
       .getDashboardSummary();
   }
 
   function renderDashboardSummary() {
-    renderRecentSessions();
-    renderActivityPulse();
+    try {
+      renderRecentSessions();
+    } catch(e) {
+      console.error('Error rendering recent sessions:', e);
+    }
+    try {
+      renderActivityPulse();
+    } catch(e) {
+      console.error('Error rendering activity pulse:', e);
+    }
   }
 
   function renderRecentSessions() {
     var container = document.getElementById('recent-sessions-container');
-    if (!container) return;
+    if (!container) {
+      console.warn('Recent sessions container not found');
+      return;
+    }
 
     if (!dashboardSummary || !dashboardSummary.recentSessions || dashboardSummary.recentSessions.length === 0) {
       container.innerHTML = '<div class="text-center py-6 text-gray-500 text-sm">No recent sessions found. Create your first poll to get started!</div>';
       return;
     }
 
-    container.innerHTML = '';
-    dashboardSummary.recentSessions.forEach(function(session) {
-      var item = document.createElement('div');
-      item.className = 'dashboard-list-item';
+    try {
+      container.innerHTML = '';
+      dashboardSummary.recentSessions.forEach(function(session) {
+        var item = document.createElement('div');
+        item.className = 'dashboard-list-item';
 
-      // Format date
-      var date = new Date(session.date);
-      var formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        // Format date
+        var date = new Date(session.date);
+        var formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-      // Determine badge class and content
-      var badgeClass = 'success';
-      var badgeIcon = 'check_circle';
-      var badgeText = Math.round(session.participationPct) + '%';
+        // Determine badge class and content
+        var badgeClass = 'success';
+        var badgeIcon = 'check_circle';
+        var badgeText = Math.round(session.participationPct || 0) + '%';
 
-      if (session.flags > 0) {
-        badgeClass = 'warning';
-        badgeIcon = 'warning';
-        badgeText = session.flags + ' flags';
-      } else if (session.masteryPct >= 80) {
-        badgeClass = 'success';
-      } else if (session.masteryPct >= 60) {
-        badgeClass = 'neutral';
-      }
+        if (session.flags > 0) {
+          badgeClass = 'warning';
+          badgeIcon = 'warning';
+          badgeText = session.flags + ' flags';
+        } else if ((session.masteryPct || 0) >= 80) {
+          badgeClass = 'success';
+        } else if ((session.masteryPct || 0) >= 60) {
+          badgeClass = 'neutral';
+        }
 
-      item.innerHTML = '<div class="flex-1 min-w-0">' +
-        '<p class="font-semibold text-sm text-veritas-navy">' + escapeHtml(session.sessionName) + '</p>' +
-        '<p class="text-xs text-gray-500 mt-0.5">' + formattedDate + ' · ' + escapeHtml(session.className) + '</p>' +
-        '</div>' +
-        '<div class="flex items-center gap-3">' +
-        '<div class="dashboard-stat-badge ' + badgeClass + '">' +
-        (session.flags > 0 ? '<span class="material-symbols-outlined text-sm">' + badgeIcon + '</span>' : '') +
-        '<span>' + badgeText + '</span>' +
-        '</div>' +
-        '<span class="text-xs text-gray-500">Avg ' + Math.round(session.masteryPct) + '%</span>' +
-        '</div>';
+        item.innerHTML = '<div class="flex-1 min-w-0">' +
+          '<p class="font-semibold text-sm text-veritas-navy">' + escapeHtml(session.sessionName || 'Untitled') + '</p>' +
+          '<p class="text-xs text-gray-500 mt-0.5">' + formattedDate + ' · ' + escapeHtml(session.className || '') + '</p>' +
+          '</div>' +
+          '<div class="flex items-center gap-3">' +
+          '<div class="dashboard-stat-badge ' + badgeClass + '">' +
+          (session.flags > 0 ? '<span class="material-symbols-outlined text-sm">' + badgeIcon + '</span>' : '') +
+          '<span>' + badgeText + '</span>' +
+          '</div>' +
+          '<span class="text-xs text-gray-500">Avg ' + Math.round(session.masteryPct || 0) + '%</span>' +
+          '</div>';
 
-      container.appendChild(item);
-    });
+        container.appendChild(item);
+      });
+    } catch(e) {
+      console.error('Error in renderRecentSessions:', e);
+      container.innerHTML = '<div class="text-center py-6 text-red-500 text-sm">Error loading recent sessions</div>';
+    }
   }
 
   function renderActivityPulse() {
     var chartContainer = document.getElementById('activity-chart-container');
     var summaryContainer = document.getElementById('activity-summary');
-    if (!chartContainer || !summaryContainer) return;
+    if (!chartContainer || !summaryContainer) {
+      console.warn('Activity pulse containers not found');
+      return;
+    }
 
     if (!dashboardSummary || !dashboardSummary.dailyActivity || dashboardSummary.dailyActivity.length === 0) {
       chartContainer.innerHTML = '<div class="text-center py-6 text-gray-500 text-sm">No activity data available</div>';
@@ -2264,33 +2289,39 @@
       return;
     }
 
-    // Find max count for scaling
-    var maxCount = Math.max.apply(Math, dashboardSummary.dailyActivity.map(function(d) { return d.count; }));
-    if (maxCount === 0) maxCount = 1; // Avoid division by zero
+    try {
+      // Find max count for scaling
+      var maxCount = Math.max.apply(Math, dashboardSummary.dailyActivity.map(function(d) { return d.count || 0; }));
+      if (maxCount === 0) maxCount = 1; // Avoid division by zero
 
-    // Render bars
-    chartContainer.innerHTML = '';
-    dashboardSummary.dailyActivity.forEach(function(day) {
-      var bar = document.createElement('div');
-      bar.className = 'activity-bar';
-      var heightPct = maxCount > 0 ? (day.count / maxCount * 100) : 0;
-      bar.style.height = heightPct + '%';
-      bar.title = day.dayName + ': ' + day.count + ' interactions';
-      chartContainer.appendChild(bar);
-    });
+      // Render bars
+      chartContainer.innerHTML = '';
+      dashboardSummary.dailyActivity.forEach(function(day) {
+        var bar = document.createElement('div');
+        bar.className = 'activity-bar';
+        var heightPct = maxCount > 0 ? ((day.count || 0) / maxCount * 100) : 0;
+        bar.style.height = heightPct + '%';
+        bar.title = (day.dayName || 'Day') + ': ' + (day.count || 0) + ' interactions';
+        chartContainer.appendChild(bar);
+      });
 
-    // Render summary
-    var change = dashboardSummary.weekOverWeekChange || 0;
-    var changeSymbol = change >= 0 ? '↑' : '↓';
-    var changeClass = change >= 0 ? 'text-veritas-gold' : 'text-gray-500';
-    var totalActivity = dashboardSummary.totalActivityThisWeek || 0;
+      // Render summary
+      var change = dashboardSummary.weekOverWeekChange || 0;
+      var changeSymbol = change >= 0 ? '↑' : '↓';
+      var changeClass = change >= 0 ? 'text-veritas-gold' : 'text-gray-500';
+      var totalActivity = dashboardSummary.totalActivityThisWeek || 0;
 
-    summaryContainer.innerHTML = '<div class="flex items-center justify-between">' +
-      '<p class="text-sm text-gray-600">' +
-      '<span class="font-semibold ' + changeClass + '">' + changeSymbol + ' ' + Math.abs(change) + '%</span> compared to last week' +
-      '</p>' +
-      '<span class="text-xs text-gray-400 italic">' + totalActivity + ' total interactions</span>' +
-      '</div>';
+      summaryContainer.innerHTML = '<div class="flex items-center justify-between">' +
+        '<p class="text-sm text-gray-600">' +
+        '<span class="font-semibold ' + changeClass + '">' + changeSymbol + ' ' + Math.abs(change) + '%</span> compared to last week' +
+        '</p>' +
+        '<span class="text-xs text-gray-400 italic">' + totalActivity + ' total interactions</span>' +
+        '</div>';
+    } catch(e) {
+      console.error('Error in renderActivityPulse:', e);
+      chartContainer.innerHTML = '<div class="text-center py-6 text-red-500 text-sm">Error loading activity data</div>';
+      summaryContainer.innerHTML = '';
+    }
   }
 
   function showRosterManager(){

@@ -4,6 +4,7 @@
 
 // --- CONFIGURATION ---
 const TEACHER_EMAIL = "sborish@malvernprep.org";
+const ADDITIONAL_TEACHER_PROP_KEY = 'TEACHER_EMAILS';
 const TOKEN_EXPIRY_DAYS = 30; // Tokens valid for 30 days
 
 // --- ENHANCED LOGGING (2025 Standard) ---
@@ -200,6 +201,40 @@ const TokenManager = {
     return null;
   }
 };
+
+// --- TEACHER EMAIL HELPERS ---
+let teacherEmailSetCache = null;
+
+function getTeacherEmailSet_() {
+  if (teacherEmailSetCache) {
+    return teacherEmailSetCache;
+  }
+
+  const normalized = new Set();
+  normalized.add(TEACHER_EMAIL.toLowerCase());
+
+  try {
+    const scriptProps = PropertiesService.getScriptProperties();
+    const extrasRaw = scriptProps.getProperty(ADDITIONAL_TEACHER_PROP_KEY) || '';
+    if (extrasRaw) {
+      extrasRaw
+        .split(',')
+        .map(email => email.trim().toLowerCase())
+        .filter(email => email)
+        .forEach(email => normalized.add(email));
+    }
+  } catch (e) {
+    Logger.error('Failed to load additional teacher emails', e);
+  }
+
+  teacherEmailSetCache = normalized;
+  return teacherEmailSetCache;
+}
+
+function isTeacherEmail_(email) {
+  if (!email) return false;
+  return getTeacherEmailSet_().has(email.trim().toLowerCase());
+}
 
 // --- URL SHORTENER UTILITY ---
 const URLShortener = {
@@ -562,10 +597,15 @@ function doGet(e) {
     } else {
       // Try Google authentication (teacher or fallback)
       try {
-        const userEmail = Session.getActiveUser().getEmail();
-        isTeacher = (userEmail === TEACHER_EMAIL);
-        
-        if (!isTeacher) {
+        const userEmail = (Session.getActiveUser().getEmail() || '').trim();
+        isTeacher = isTeacherEmail_(userEmail);
+
+        Logger.log('Resolved active user identity', {
+          userEmail: userEmail || '(empty)',
+          routedAsTeacher: isTeacher
+        });
+
+        if (!isTeacher && userEmail) {
           studentEmail = userEmail;
         }
       } catch (authError) {
@@ -1312,6 +1352,7 @@ function startPoll(pollId) {
     if (!poll) throw new Error('Poll not found');
 
     const nowIso = new Date().toISOString();
+    const sessionId = pollId + '::' + Utilities.getUuid();
     DataAccess.liveStatus.set(pollId, 0, "OPEN", {
       reason: 'RUNNING',
       sessionPhase: 'LIVE',
@@ -1321,8 +1362,11 @@ function startPoll(pollId) {
       isCollecting: true,
       resultsVisibility: 'HIDDEN',
       responsesClosedAt: null,
-      revealedAt: null
+      revealedAt: null,
+      sessionId: sessionId
     });
+
+    ProctorAccess.resetForNewSession(pollId, sessionId);
 
     Logger.log('Poll started', { pollId: pollId, pollName: poll.pollName });
 
@@ -2731,6 +2775,7 @@ function getLivePollData(pollId, questionIndex) {
     const pollStatus = Array.isArray(liveStatus) ? (liveStatus[2] || 'OPEN') : 'OPEN';
     const statusQuestionIndex = Array.isArray(liveStatus) ? liveStatus[1] : -1;
     const metadata = (liveStatus && liveStatus.metadata) ? liveStatus.metadata : {};
+    const currentSessionId = metadata && metadata.sessionId ? metadata.sessionId : null;
     const endedAt = metadata && Object.prototype.hasOwnProperty.call(metadata, 'endedAt') ? metadata.endedAt : null;
     const ended = (metadata && metadata.sessionPhase === 'ENDED') || (!!endedAt && endedAt !== null && endedAt !== '');
     let derivedStatus = metadata && metadata.sessionPhase ? metadata.sessionPhase : null;
@@ -2781,7 +2826,7 @@ function getLivePollData(pollId, questionIndex) {
       const email = student.email;
 
       // Check proctor state (status-based check, not just old "locked" responses)
-      const proctorState = ProctorAccess.getState(pollId, email);
+      const proctorState = ProctorAccess.getState(pollId, email, currentSessionId);
 
       // Get submission if exists
       const submission = submittedAnswers.has(email) ? submittedAnswers.get(email) : null;
@@ -2919,9 +2964,10 @@ function getStudentPollStatus(token, context) {
   return withErrorHandling(() => {
     const statusValues = DataAccess.liveStatus.get();
     const pollId = statusValues[0];
+    const metadata = (statusValues && statusValues.metadata) ? statusValues.metadata : {};
+    const currentSessionId = metadata && metadata.sessionId ? metadata.sessionId : null;
     const questionIndex = statusValues[1];
     const pollStatus = statusValues[2];
-    const metadata = (statusValues && statusValues.metadata) ? statusValues.metadata : {};
     const sessionPhaseFromMetadata = metadata && metadata.sessionPhase ? metadata.sessionPhase : null;
     const endedAtMetadata = metadata && Object.prototype.hasOwnProperty.call(metadata, 'endedAt') ? metadata.endedAt : null;
     const sessionEnded = sessionPhaseFromMetadata === 'ENDED' || (!!endedAtMetadata && endedAtMetadata !== null && endedAtMetadata !== '');
@@ -3093,7 +3139,7 @@ function getStudentPollStatus(token, context) {
     }
 
     // Check authoritative proctor state (not old Responses sheet)
-    const proctorState = ProctorAccess.getState(pollId, studentEmail);
+    const proctorState = ProctorAccess.getState(pollId, studentEmail, metadata && metadata.sessionId ? metadata.sessionId : null);
     if (proctorState.status === 'LOCKED' || proctorState.status === 'AWAITING_FULLSCREEN') {
       return envelope({
         status: proctorState.status,
@@ -3300,7 +3346,7 @@ const ProctorAccess = {
   /**
    * Get proctoring state for a student
    */
-  getState: function(pollId, studentEmail) {
+  getState: function(pollId, studentEmail, currentSessionId) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     let sheet = ss.getSheetByName('ProctorState');
 
@@ -3327,7 +3373,8 @@ const ProctorAccess = {
           status = 'LOCKED'; // Migration: locked=true → LOCKED
         }
 
-        return {
+        const stateSessionId = data[i][9] || null;
+        const baseState = {
           pollId: data[i][0],
           studentEmail: data[i][1],
           status: status,
@@ -3337,9 +3384,27 @@ const ProctorAccess = {
           unlockApproved: data[i][6] === true || data[i][6] === 'TRUE',
           unlockApprovedBy: data[i][7] || null,
           unlockApprovedAt: data[i][8] || null,
-          sessionId: data[i][9] || null,
+          sessionId: stateSessionId,
           rowIndex: i + 1
         };
+
+        if (currentSessionId && stateSessionId !== currentSessionId) {
+          return {
+            pollId: pollId,
+            studentEmail: studentEmail,
+            status: 'OK',
+            lockVersion: 0,
+            lockReason: '',
+            lockedAt: '',
+            unlockApproved: false,
+            unlockApprovedBy: null,
+            unlockApprovedAt: null,
+            sessionId: currentSessionId,
+            rowIndex: i + 1
+          };
+        }
+
+        return baseState;
       }
     }
 
@@ -3354,7 +3419,7 @@ const ProctorAccess = {
       unlockApproved: false,
       unlockApprovedBy: null,
       unlockApprovedAt: null,
-      sessionId: null,
+      sessionId: currentSessionId || null,
       rowIndex: null
     };
   },
@@ -3412,6 +3477,48 @@ const ProctorAccess = {
       // Append new row
       sheet.appendRow(rowData);
     }
+  },
+
+  resetForNewSession: function(pollId, sessionId) {
+    if (!pollId) {
+      return;
+    }
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('ProctorState');
+    if (!sheet) {
+      return;
+    }
+
+    const data = sheet.getDataRange().getValues();
+    if (!data || data.length <= 1) {
+      return;
+    }
+
+    const updates = [];
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === pollId) {
+        updates.push({
+          rowIndex: i + 1,
+          studentEmail: data[i][1] || ''
+        });
+      }
+    }
+
+    updates.forEach(entry => {
+      sheet.getRange(entry.rowIndex, 1, 1, 10).setValues([[
+        pollId,
+        entry.studentEmail,
+        'OK',
+        0,
+        '',
+        '',
+        false,
+        '',
+        '',
+        sessionId || ''
+      ]]);
+    });
   }
 };
 
@@ -3428,13 +3535,15 @@ function reportStudentViolation(reason, token) {
 
     const statusValues = DataAccess.liveStatus.get();
     const pollId = statusValues[0];
+    const metadata = (statusValues && statusValues.metadata) ? statusValues.metadata : {};
+    const currentSessionId = metadata && metadata.sessionId ? metadata.sessionId : null;
 
     if (!pollId) {
       return { success: false, error: 'No active poll' };
     }
 
     // Get current proctor state
-    const currentState = ProctorAccess.getState(pollId, studentEmail);
+    const currentState = ProctorAccess.getState(pollId, studentEmail, currentSessionId);
 
     // If already in LOCKED state (but not AWAITING), don't increment version - just update reason
     if (currentState.status === 'LOCKED') {
@@ -3447,6 +3556,7 @@ function reportStudentViolation(reason, token) {
 
       // Update reason but keep everything else
       currentState.lockReason = reason || currentState.lockReason;
+      currentState.sessionId = currentSessionId || currentState.sessionId;
       ProctorAccess.setState(currentState);
 
       return {
@@ -3468,7 +3578,7 @@ function reportStudentViolation(reason, token) {
         unlockApproved: false,
         unlockApprovedBy: null,
         unlockApprovedAt: null,
-        sessionId: currentState.sessionId,
+        sessionId: currentSessionId,
         rowIndex: currentState.rowIndex
       };
 
@@ -3513,7 +3623,7 @@ function reportStudentViolation(reason, token) {
       unlockApproved: false,
       unlockApprovedBy: null,
       unlockApprovedAt: null,
-      sessionId: currentState.sessionId,
+      sessionId: currentSessionId,
       rowIndex: currentState.rowIndex
     };
 
@@ -3560,12 +3670,14 @@ function getStudentProctorState(token) {
 
     const statusValues = DataAccess.liveStatus.get();
     const pollId = statusValues[0];
+    const metadata = (statusValues && statusValues.metadata) ? statusValues.metadata : {};
+    const currentSessionId = metadata && metadata.sessionId ? metadata.sessionId : null;
 
     if (!pollId) {
       return { success: false, error: 'No active poll' };
     }
 
-    const state = ProctorAccess.getState(pollId, studentEmail);
+    const state = ProctorAccess.getState(pollId, studentEmail, currentSessionId);
 
     return {
       success: true,
@@ -3595,8 +3707,12 @@ function teacherApproveUnlock(studentEmail, pollId, expectedLockVersion) {
       throw new Error('Invalid parameters');
     }
 
+    const statusValues = DataAccess.liveStatus.get();
+    const metadata = (statusValues && statusValues.metadata) ? statusValues.metadata : {};
+    const currentSessionId = metadata && metadata.sessionId ? metadata.sessionId : null;
+
     // Get current state
-    const currentState = ProctorAccess.getState(pollId, studentEmail);
+    const currentState = ProctorAccess.getState(pollId, studentEmail, currentSessionId);
 
     // Atomic check: only approve if lockVersion matches and status is LOCKED
     if (currentState.status !== 'LOCKED') {
@@ -3620,6 +3736,7 @@ function teacherApproveUnlock(studentEmail, pollId, expectedLockVersion) {
     currentState.unlockApprovedBy = teacherEmail;
     currentState.unlockApprovedAt = new Date().toISOString();
 
+    currentState.sessionId = currentSessionId || currentState.sessionId;
     ProctorAccess.setState(currentState);
 
     // Telemetry logging
@@ -3646,13 +3763,15 @@ function studentConfirmFullscreen(expectedLockVersion, token) {
 
     const statusValues = DataAccess.liveStatus.get();
     const pollId = statusValues[0];
+    const metadata = (statusValues && statusValues.metadata) ? statusValues.metadata : {};
+    const currentSessionId = metadata && metadata.sessionId ? metadata.sessionId : null;
 
     if (!pollId) {
       return { success: false, error: 'No active poll' };
     }
 
     // Get current state
-    const currentState = ProctorAccess.getState(pollId, studentEmail);
+    const currentState = ProctorAccess.getState(pollId, studentEmail, currentSessionId);
 
     // Can only confirm if in AWAITING_FULLSCREEN state and lockVersion matches
     if (currentState.status !== 'AWAITING_FULLSCREEN') {
@@ -3676,6 +3795,7 @@ function studentConfirmFullscreen(expectedLockVersion, token) {
 
     // Transition to OK
     currentState.status = 'OK';
+    currentState.sessionId = currentSessionId || currentState.sessionId;
     ProctorAccess.setState(currentState);
 
     // Telemetry logging

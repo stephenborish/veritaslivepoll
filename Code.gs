@@ -287,7 +287,7 @@ function buildTeacherAccountChooserUrl_(e, loginHintEmail) {
     '&prompt=select_account';
 }
 
-function maybeRedirectForTeacherAccount_(e) {
+function maybeRedirectForTeacherAccount_(e, currentUserEmail) {
   const params = (e && e.parameter) || {};
   if (params.fn === 'image') {
     return null;
@@ -299,36 +299,22 @@ function maybeRedirectForTeacherAccount_(e) {
   }
 
   const accountChooserUrl = buildTeacherAccountChooserUrl_(e, loginHintEmail);
-  if (!accountChooserUrl) {
-    return null;
-  }
+  const sanitizedAccountChooserUrl = accountChooserUrl ? escapeHtml_(accountChooserUrl) : '';
+  const safeUserEmail = currentUserEmail ? escapeHtml_(currentUserEmail) : 'your current Google account';
 
-  if (params.teacherAuthAttempted === '1') {
-    return HtmlService.createHtmlOutput(
-      '<div style="font-family:Roboto,Arial,sans-serif;padding:48px;text-align:center;background:#f4f6fb;min-height:100vh;box-sizing:border-box;">' +
-        '<h1 style="color:#12355b;margin-bottom:16px;">Choose your Veritas teacher account</h1>' +
-        '<p style="color:#40526b;font-size:16px;margin-bottom:24px;">We tried to open your Veritas session with <strong>' + escapeHtml_(loginHintEmail) + '</strong>, but Google sent back a different account. Please pick the Veritas teacher account from the Google account chooser.</p>' +
-        '<p style="margin-bottom:32px;">' +
-          '<a style="color:#0b5fff;font-weight:600;text-decoration:none;" href="' + accountChooserUrl + '">Try again with the Veritas teacher account</a>' +
-        '</p>' +
-        '<p style="color:#70819b;font-size:14px;">Tip: you may need to sign out of other Google accounts or open an incognito window.</p>' +
-      '</div>'
-    ).setTitle('Veritas Live Poll - Teacher Sign In');
-  }
+  const teacherCta = sanitizedAccountChooserUrl
+    ? '<p style="margin-bottom:24px;">If you are the Veritas teacher, please <a style="color:#0b5fff;font-weight:600;text-decoration:none;" rel="noopener" target="_blank" href="' + sanitizedAccountChooserUrl + '">switch to your authorized teacher account</a>.</p>'
+    : '';
 
   return HtmlService.createHtmlOutput(
-    '<html><head>' +
-      '<meta charset="utf-8" />' +
-      '<meta http-equiv="refresh" content="0; url=' + accountChooserUrl + '" />' +
-      '<style>body{font-family:Roboto,Arial,sans-serif;margin:0;background:#f4f6fb;color:#12355b;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;}h1{font-size:28px;margin-bottom:12px;}p{font-size:16px;color:#40526b;margin:0 24px 12px;}a{color:#0b5fff;text-decoration:none;font-weight:600;}</style>' +
-    '</head><body>' +
-      '<div>' +
-        '<h1>Checking your teacher access…</h1>' +
-        '<p>Redirecting you to Google so you can confirm your Veritas teacher account.</p>' +
-        '<p><a href="' + accountChooserUrl + '">Click here if you are not redirected automatically.</a></p>' +
-      '</div>' +
-    '</body></html>'
-  ).setTitle('Veritas Live Poll - Teacher Sign In');
+    '<div style="font-family:Roboto,Arial,sans-serif;padding:48px;text-align:center;background:#f4f6fb;min-height:100vh;box-sizing:border-box;">' +
+      '<h1 style="color:#12355b;margin-bottom:16px;">Teacher access required</h1>' +
+      '<p style="color:#40526b;font-size:16px;margin-bottom:16px;">The account <strong>' + safeUserEmail + '</strong> is not authorized for the teacher dashboard.</p>' +
+      teacherCta +
+      '<p style="color:#40526b;font-size:16px;margin-bottom:24px;">Students should open the personalized poll link that was emailed to them. Those links include a secure token that grants access to the student experience.</p>' +
+      '<p style="color:#70819b;font-size:14px;">If you believe you should have teacher access, contact the Veritas administrator to have your email added to the authorized list.</p>' +
+    '</div>'
+  ).setTitle('Veritas Live Poll - Access Restricted');
 }
 
 // --- URL SHORTENER UTILITY ---
@@ -701,7 +687,7 @@ function doGet(e) {
         });
 
         if (!isTeacher) {
-          const teacherRedirect = maybeRedirectForTeacherAccount_(e);
+          const teacherRedirect = maybeRedirectForTeacherAccount_(e, userEmail || '');
           if (teacherRedirect) {
             return teacherRedirect;
           }

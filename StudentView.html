@@ -22,14 +22,23 @@
       theme: {
         extend: {
           colors: {
-            primary: "#002d6b",
-            "brand-blue": "#002d6b",
-            "brand-accent": "#0066cc",
+            // Veritas Brand Colors (Primary Design System)
+            "veritas-navy": "#12385d",
+            "veritas-gold": "#c5a05a",
+            primary: "#12385d",
+            // Supporting Brand Colors
             "brand-white": "#ffffff",
             "brand-light-gray": "#d9e0e7",
             "brand-dark-gray": "#242424",
-            "background-light": "#f5f7f8",
-            "background-dark": "#0f1723"
+            "background-light": "#f7f8fa",
+            "background-dark": "#0f1723",
+            // Semantic Colors
+            "success-green": "#1b5e20",
+            "success-bg": "#e8f5ec",
+            "error-red": "#c62828",
+            "text-primary": "#111111",
+            "text-secondary": "#4b5563",
+            "text-muted": "#6b7280"
           },
           fontFamily: {
             display: ["Inter", "sans-serif"],
@@ -39,7 +48,13 @@
             DEFAULT: "0.25rem",
             lg: "0.5rem",
             xl: "0.75rem",
+            "2xl": "1rem",
             full: "9999px"
+          },
+          spacing: {
+            '18': '4.5rem',
+            '88': '22rem',
+            '128': '32rem'
           },
           animation: {
             'fade-in': 'fade-in 0.6s ease-out forwards',
@@ -62,33 +77,78 @@
   </script>
   <script>window.SESSION_TOKEN = '<?= sessionToken ?>';</script>
   <style>
+    /* Veritas Design System - CSS Custom Properties */
+    :root {
+      /* Brand Colors */
+      --veritas-navy: #12385d;
+      --veritas-gold: #c5a05a;
+      --brand-white: #ffffff;
+      --brand-light-gray: #d9e0e7;
+      --brand-dark-gray: #242424;
+
+      /* Background Colors */
+      --bg-light: #f7f8fa;
+      --bg-dark: #0f1723;
+      --bg-card: #ffffff;
+
+      /* Text Colors */
+      --text-primary: #111111;
+      --text-secondary: #4b5563;
+      --text-muted: #6b7280;
+      --text-on-navy: #ffffff;
+
+      /* Semantic Colors */
+      --success-green: #1b5e20;
+      --success-bg: #e8f5ec;
+      --error-red: #c62828;
+
+      /* Opacity Modifiers */
+      --navy-10: rgba(18, 56, 93, 0.1);
+      --navy-12: rgba(18, 56, 93, 0.12);
+      --gold-08: rgba(197, 160, 90, 0.08);
+
+      /* Spacing Scale (following 8px baseline) */
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 16px;
+      --space-lg: 24px;
+      --space-xl: 32px;
+      --space-2xl: 48px;
+
+      /* Border Radius */
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 14px;
+      --radius-full: 9999px;
+    }
+
     .student-card {
       width: min(75vw, 900px);
       margin: 32px auto;
-      background: #ffffff;
-      color: #111111;
-      border-radius: 12px;
-      border-top: 4px solid #c5a05a;
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border-radius: var(--radius-md);
+      border-top: 4px solid var(--veritas-gold);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
       overflow: hidden;
     }
 
     .student-card.results-stage,
     .student-card.showing-results {
-      background: #ffffff;
+      background: var(--bg-card);
     }
 
     .student-card-header {
       padding: 16px 28px 12px;
-      border-bottom: 1px solid rgba(18, 56, 93, 0.12);
-      background: linear-gradient(135deg, rgba(18, 56, 93, 0.06), rgba(197, 160, 90, 0.08));
+      border-bottom: 1px solid var(--navy-12);
+      background: linear-gradient(135deg, rgba(18, 56, 93, 0.06), var(--gold-08));
     }
 
     .student-question-number {
       font-size: 0.85rem;
       letter-spacing: 0.16em;
       text-transform: uppercase;
-      color: #12385d;
+      color: var(--veritas-navy);
       font-weight: 600;
     }
 
@@ -120,8 +180,8 @@
       width: 72px;
       height: 72px;
       border-radius: 50%;
-      background: rgba(18, 56, 93, 0.1);
-      color: #12385d;
+      background: var(--navy-10);
+      color: var(--veritas-navy);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -140,7 +200,7 @@
       gap: 12px;
       font-weight: 600;
       letter-spacing: 0.28em;
-      color: #12385d;
+      color: var(--veritas-navy);
       font-size: 0.75rem;
     }
 
@@ -163,7 +223,7 @@
 
     .student-pre-live-reconnect {
       font-size: 0.9rem;
-      color: #c62828;
+      color: var(--error-red);
       margin: 0;
     }
 
@@ -171,7 +231,7 @@
       font-size: 1.2rem;
       line-height: 1.6;
       font-weight: 400;
-      color: #111111;
+      color: var(--text-primary);
       margin: 0;
       text-align: left;
     }
@@ -185,7 +245,7 @@
     .student-no-responses {
       font-size: 0.95rem;
       font-style: italic;
-      color: #12385d;
+      color: var(--veritas-navy);
       text-align: left;
       margin: 0;
     }
@@ -208,8 +268,8 @@
     .student-card img {
       max-width: 100%;
       height: auto;
-      border-radius: 12px;
-      border: 1px solid rgba(18, 56, 93, 0.12);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--navy-12);
       box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
     }
 
@@ -220,9 +280,9 @@
       display: flex;
       align-items: flex-start;
       gap: 18px;
-      background: #ffffff;
-      color: #111111;
-      border-radius: 12px;
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border-radius: var(--radius-md);
       border: 1px solid rgba(18, 56, 93, 0.18);
       padding: 20px 22px;
       box-shadow: 0 2px 8px rgba(18, 56, 93, 0.08);
@@ -232,7 +292,7 @@
     }
 
     .answer-option:hover {
-      border-color: #12385d;
+      border-color: var(--veritas-navy);
       box-shadow: 0 6px 18px rgba(18, 56, 93, 0.16);
       transform: translateY(-1px);
     }
@@ -261,11 +321,11 @@
       justify-content: center;
       width: 28px;
       height: 28px;
-      border-radius: 9999px;
+      border-radius: var(--radius-full);
       font-size: 0.95rem;
       font-weight: 700;
       background-color: rgba(18, 56, 93, 0.08);
-      color: #12385d;
+      color: var(--veritas-navy);
       opacity: 0;
       transform: scale(0.85);
       transition: opacity 220ms ease, transform 220ms ease, background-color 220ms ease, color 220ms ease;
@@ -285,7 +345,7 @@
       border-radius: 10px;
       background-color: rgba(18, 56, 93, 0.08);
       border: 1px solid rgba(18, 56, 93, 0.22);
-      color: #12385d;
+      color: var(--veritas-navy);
       font-weight: 600;
       font-size: 1.05rem;
       transition: background-color 220ms ease, border-color 220ms ease, color 220ms ease, transform 220ms ease;
@@ -317,7 +377,7 @@
     .answer-option .option-image {
       max-width: 100%;
       height: auto;
-      border-radius: 12px;
+      border-radius: var(--radius-md);
       border: 1px solid rgba(18, 56, 93, 0.16);
       box-shadow: 0 3px 10px rgba(18, 56, 93, 0.12);
     }
@@ -327,7 +387,7 @@
       font-weight: 600;
       align-self: flex-end;
       margin-top: auto;
-      color: #12385d;
+      color: var(--veritas-navy);
       opacity: 0;
       visibility: hidden;
       transition: opacity 220ms ease;
@@ -339,11 +399,11 @@
     }
 
     .answer-option.result-correct .result-ribbon {
-      color: #1b5e20;
+      color: var(--success-green);
     }
 
     .answer-option.result-incorrect .result-ribbon {
-      color: #4b5563;
+      color: var(--text-secondary);
     }
 
     #question-container.results-stage .answer-option {
@@ -356,23 +416,23 @@
     }
 
     .answer-option.answer-option-selected {
-      border-color: #12385d;
+      border-color: var(--veritas-navy);
       box-shadow: 0 0 0 3px rgba(18, 56, 93, 0.2);
     }
 
     .answer-option.answer-option-selected .letter-badge {
-      background-color: #12385d;
-      border-color: #12385d;
-      color: #ffffff;
+      background-color: var(--veritas-navy);
+      border-color: var(--veritas-navy);
+      color: var(--brand-white);
       transform: scale(1.02);
     }
 
     .answer-option.answer-option-selected .option-text {
-      color: #12385d;
+      color: var(--veritas-navy);
     }
 
     .answer-option.result-correct {
-      background-color: #e8f5ec !important;
+      background-color: var(--success-bg) !important;
       border-color: #2e7d32 !important;
       box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.2);
     }
@@ -380,16 +440,16 @@
     .answer-option.result-correct .letter-badge {
       background-color: rgba(46, 125, 50, 0.18) !important;
       border-color: rgba(46, 125, 50, 0.4) !important;
-      color: #1b5e20 !important;
+      color: var(--success-green) !important;
     }
 
     .answer-option.result-correct .option-text {
-      color: #1b5e20 !important;
+      color: var(--success-green) !important;
     }
 
     .answer-option.result-correct .result-indicator {
       background-color: rgba(46, 125, 50, 0.2);
-      color: #1b5e20;
+      color: var(--success-green);
     }
 
     .answer-option.result-incorrect {
@@ -402,12 +462,12 @@
     .answer-option.result-incorrect .letter-badge {
       background-color: rgba(18, 56, 93, 0.06) !important;
       border-color: rgba(18, 56, 93, 0.16) !important;
-      color: #12385d !important;
+      color: var(--veritas-navy) !important;
     }
 
     .answer-option.result-incorrect .result-indicator {
       background-color: rgba(244, 67, 54, 0.12);
-      color: #c62828;
+      color: var(--error-red);
     }
 
     .answer-option.result-incorrect.result-your-choice {
@@ -416,7 +476,7 @@
     }
 
     .answer-option.result-your-choice .option-text {
-      color: #c62828 !important;
+      color: var(--error-red) !important;
     }
 
     .prevent-select {
@@ -465,8 +525,8 @@
       z-index: 1;
       width: min(520px, 92vw);
       border-radius: 16px;
-      background: #ffffff;
-      border-top: 4px solid #c5a05a;
+      background: var(--bg-card);
+      border-top: 4px solid var(--veritas-gold);
       box-shadow: 0 24px 48px rgba(9, 17, 34, 0.25);
       padding: 28px;
       display: flex;
@@ -478,7 +538,7 @@
     .veritas-modal-header h2 {
       margin: 0;
       font-size: 1.25rem;
-      color: #12385d;
+      color: var(--veritas-navy);
       font-weight: 700;
     }
 
@@ -486,13 +546,13 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
-      color: #1c1c1c;
+      color: var(--text-primary);
       font-size: 0.98rem;
       line-height: 1.55;
     }
 
     .veritas-modal-subtext {
-      color: #4b5563;
+      color: var(--text-secondary);
       font-size: 0.85rem;
     }
 
@@ -512,7 +572,7 @@
 
     .veritas-modal-input input:focus-visible {
       outline: none;
-      border-color: #12385d;
+      border-color: var(--veritas-navy);
       box-shadow: 0 0 0 3px rgba(18, 56, 93, 0.2);
     }
 
@@ -534,8 +594,8 @@
     }
 
     .veritas-modal-button.primary {
-      background: #12385d;
-      color: #ffffff;
+      background: var(--veritas-navy);
+      color: var(--brand-white);
       box-shadow: 0 8px 20px rgba(18, 56, 93, 0.25);
     }
 
@@ -546,7 +606,7 @@
 
     .veritas-modal-button.secondary {
       background: transparent;
-      color: #12385d;
+      color: var(--veritas-navy);
       border: 1px solid rgba(18, 56, 93, 0.3);
     }
 
@@ -555,8 +615,8 @@
     }
 
     .veritas-modal-button.destructive {
-      background: #c62828;
-      color: #ffffff;
+      background: var(--error-red);
+      color: var(--brand-white);
       box-shadow: 0 8px 18px rgba(198, 40, 40, 0.25);
     }
 

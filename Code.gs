@@ -3970,43 +3970,176 @@ function resetStudentResponse(studentEmail, pollId, questionIndex) {
  */
 function generatePollEmailHtml(pollUrl) {
   return `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>VERITAS Poll Link</title>
-      </head>
-      <body style="margin:0; padding:0; background-color:#f7f8fa; font-family:Arial, Helvetica, sans-serif;">
-        <div style="max-width:640px; margin:48px auto; background-color:#ffffff; padding:40px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08); text-align:center; border-top:5px solid #c5a05a;">
-          <p style="font-size:16px; color:#1c1c1c; margin-bottom:28px; line-height:1.6; font-weight:400;">
-            Hi there — your <strong style="color:#12385d;">VERITAS</strong> link is ready.<br>
-            Use the button below to begin participating.<br>
-            Once you begin, stay in fullscreen and don't navigate to any other browser tabs or apps.
-          </p>
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>VERITAS Live Poll Session</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+  <style type="text/css">
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+    body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; }
+    .ReadMsgBody { width: 100%; }
+    .ExternalClass { width: 100%; }
+    .ExternalClass, .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td, .ExternalClass div { line-height: 100%; }
+    @media only screen and (max-width: 600px) {
+      .email-container { width: 100% !important; }
+      .mobile-padding { padding: 20px !important; }
+      .mobile-text { font-size: 15px !important; }
+      .mobile-button { padding: 16px 28px !important; font-size: 15px !important; }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f7f8fa; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;">
+  <center style="width: 100%; background-color: #f7f8fa;">
+    <div style="max-width: 600px; margin: 0 auto;">
+      <!-- Preheader Text (Hidden but shows in preview) -->
+      <div style="display: none; font-size: 1px; line-height: 1px; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden; mso-hide: all; font-family: sans-serif;">
+        Your personalized VERITAS Live Poll session is ready. Click to begin participating.
+      </div>
 
-          <a href="${pollUrl}" target="_blank" rel="noopener"
-            style="display:inline-block; font-size:16px; font-weight:600; color:#ffffff; background-color:#12385d; text-decoration:none; padding:14px 36px; border-radius:8px; border:1px solid #0f2f4d; letter-spacing:0.3px;">
-            Begin Your VERITAS Session
-          </a>
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0; padding: 0;">
+        <tr>
+          <td style="padding: 40px 10px;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="email-container" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);">
 
-          <p style="font-size:13px; color:#555555; margin-top:36px; line-height:1.7;">
-            If the button doesn't work, copy and paste this link into your browser:<br>
-            <a href="${pollUrl}" target="_blank" style="color:#12385d; text-decoration:underline; word-break:break-word;">
-              ${pollUrl}
-            </a>
-          </p>
+              <!-- Header with Gold Border -->
+              <tr>
+                <td style="padding: 0; background: linear-gradient(to right, #c5a05a, #d4b16e); height: 4px; border-radius: 12px 12px 0 0;"></td>
+              </tr>
 
-          <hr style="border:none; border-top:1px solid #e6e6e6; margin:36px 0;">
+              <!-- Logo/Brand Section -->
+              <tr>
+                <td style="padding: 32px 40px 24px; text-align: center; background: linear-gradient(135deg, rgba(18, 56, 93, 0.03), rgba(197, 160, 90, 0.05)); border-bottom: 1px solid rgba(18, 56, 93, 0.08);" class="mobile-padding">
+                  <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: #12385d; letter-spacing: -0.02em; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;">
+                    VERITAS
+                  </h1>
+                  <p style="margin: 8px 0 0; font-size: 13px; font-weight: 600; color: #c5a05a; letter-spacing: 0.1em; text-transform: uppercase; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;">
+                    Live Poll Session
+                  </p>
+                </td>
+              </tr>
 
-          <p style="font-size:12px; color:#888888; line-height:1.6; margin:0;">
-            This link is unique to you.<br>
-            Do not share it — it connects directly to your personal session in <span style="color:#12385d; font-weight:600;">VERITAS</span>.
-          </p>
-        </div>
-      </body>
-      </html>
-      `;
+              <!-- Main Content -->
+              <tr>
+                <td style="padding: 40px 40px 36px;" class="mobile-padding">
+                  <p style="margin: 0 0 24px; font-size: 17px; line-height: 1.6; color: #111111; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;" class="mobile-text">
+                    Hello,
+                  </p>
+                  <p style="margin: 0 0 24px; font-size: 17px; line-height: 1.6; color: #111111; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;" class="mobile-text">
+                    Your personalized <strong style="color: #12385d; font-weight: 600;">VERITAS</strong> session link is ready. Click the button below to begin participating in today's live poll.
+                  </p>
+
+                  <!-- Call-to-Action Button -->
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 32px 0;">
+                    <tr>
+                      <td align="center">
+                        <!--[if mso]>
+                        <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${pollUrl}" style="height:52px;v-text-anchor:middle;width:280px;" arcsize="19%" strokecolor="#0f2f4d" fillcolor="#12385d">
+                          <w:anchorlock/>
+                          <center style="color:#ffffff;font-family:'Inter',sans-serif;font-size:16px;font-weight:600;">Begin Your Session</center>
+                        </v:roundrect>
+                        <![endif]-->
+                        <!--[if !mso]><!-->
+                        <a href="${pollUrl}" target="_blank" rel="noopener" style="display: inline-block; padding: 16px 40px; font-size: 16px; font-weight: 600; color: #ffffff; background-color: #12385d; text-decoration: none; border-radius: 10px; border: 2px solid #0f2f4d; letter-spacing: 0.02em; box-shadow: 0 4px 12px rgba(18, 56, 93, 0.25); font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; transition: all 0.2s ease;" class="mobile-button">
+                          Begin Your Session
+                        </a>
+                        <!--<![endif]-->
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Important Notice Box -->
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 32px 0 0; background-color: rgba(18, 56, 93, 0.04); border-left: 3px solid #c5a05a; border-radius: 6px;">
+                    <tr>
+                      <td style="padding: 20px 24px;">
+                        <p style="margin: 0 0 12px; font-size: 14px; font-weight: 600; color: #12385d; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;">
+                          ⚠️ Important Instructions
+                        </p>
+                        <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.7; color: #4b5563; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;">
+                          <li style="margin-bottom: 8px;">Once you begin, stay in fullscreen mode</li>
+                          <li style="margin-bottom: 8px;">Do not navigate to other browser tabs or applications</li>
+                          <li style="margin-bottom: 0;">Do not refresh or close the browser window</li>
+                        </ul>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+
+              <!-- Fallback Link Section -->
+              <tr>
+                <td style="padding: 0 40px 36px;" class="mobile-padding">
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f8fafc; border-radius: 8px; border: 1px solid rgba(18, 56, 93, 0.1);">
+                    <tr>
+                      <td style="padding: 20px 24px;">
+                        <p style="margin: 0 0 8px; font-size: 13px; font-weight: 600; color: #6b7280; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;">
+                          Button not working?
+                        </p>
+                        <p style="margin: 0; font-size: 12px; line-height: 1.6; color: #6b7280; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;">
+                          Copy and paste this link into your browser:
+                        </p>
+                        <p style="margin: 8px 0 0; font-size: 12px; word-break: break-all; font-family: 'Courier New', Courier, monospace;">
+                          <a href="${pollUrl}" target="_blank" rel="noopener" style="color: #12385d; text-decoration: underline;">${pollUrl}</a>
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td style="padding: 32px 40px; background-color: rgba(18, 56, 93, 0.02); border-top: 1px solid rgba(18, 56, 93, 0.08); border-radius: 0 0 12px 12px; text-align: center;" class="mobile-padding">
+                  <p style="margin: 0 0 12px; font-size: 13px; line-height: 1.6; color: #6b7280; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;">
+                    🔒 <strong style="color: #12385d; font-weight: 600;">This link is unique to you</strong>
+                  </p>
+                  <p style="margin: 0; font-size: 12px; line-height: 1.6; color: #6b7280; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;">
+                    Do not share this link. It connects directly to your personal VERITAS session.
+                  </p>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+
+        <!-- Email Footer -->
+        <tr>
+          <td style="padding: 0 10px 40px;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="email-container" style="max-width: 600px; margin: 0 auto;">
+              <tr>
+                <td style="padding: 20px 0; text-align: center;">
+                  <p style="margin: 0; font-size: 11px; line-height: 1.6; color: #9ca3af; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;">
+                    Powered by <strong style="color: #12385d;">VERITAS</strong> Live Poll System
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </center>
+</body>
+</html>
+  `;
 }
 
 /**

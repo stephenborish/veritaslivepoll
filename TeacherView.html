@@ -1167,10 +1167,36 @@
         <div id="live-view" class="px-6 pb-6 pt-8 grid grid-cols-1 lg:grid-cols-3 gap-6" style="display: none;">
           <!-- Main Content (2/3) -->
           <div class="lg:col-span-2 flex flex-col gap-6">
+            <!-- VIOLATIONS ALERT PANEL - Top Priority -->
+            <div id="violations-alert-panel" class="hidden bg-gradient-to-r from-red-600 to-orange-600 rounded-xl border-2 border-red-300 dark:border-red-700 p-4 shadow-lg animate-pulse-slow">
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex items-start gap-3 flex-1">
+                  <div class="flex-shrink-0 bg-white/20 rounded-full p-2">
+                    <span class="material-symbols-outlined text-white text-2xl">warning</span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <h3 class="text-white text-lg font-bold mb-1">Students Locked Out</h3>
+                    <p id="violations-summary" class="text-white/90 text-sm mb-3">Students need approval to re-enter the poll</p>
+                    <div id="violations-quick-list" class="flex flex-wrap gap-2">
+                      <!-- Quick violation tiles will be populated here -->
+                    </div>
+                  </div>
+                </div>
+                <button id="dismiss-violations-alert" class="flex-shrink-0 text-white/80 hover:text-white transition-colors">
+                  <span class="material-symbols-outlined">close</span>
+                </button>
+              </div>
+            </div>
+
             <!-- Question Display -->
             <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm">
               <div class="flex flex-col gap-4">
-                <p id="live-question-info" class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm font-medium leading-normal">Question 1 of 10</p>
+                <div class="flex items-center justify-between">
+                  <p id="live-question-info" class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm font-medium leading-normal">Question 1 of 10</p>
+                  <div class="flex items-center gap-2">
+                    <span id="response-count-header" class="text-brand-dark-gray/80 dark:text-brand-white/80 text-sm font-semibold">0 / 0 answered</span>
+                  </div>
+                </div>
                 <h2 id="live-question-text" class="font-serif text-brand-dark-gray dark:text-brand-white tracking-tight text-xl leading-snug">Question text appears here</h2>
                 <div id="question-image-container" class="teacher-question-image" style="display: none;">
                   <img id="live-question-image" alt="Question" class="teacher-question-image-el" src="" referrerpolicy="no-referrer" onerror="this.style.display='none';"/>
@@ -1282,12 +1308,49 @@
                 font-feature-settings: 'tnum';
                 font-variant-numeric: tabular-nums;
               }
+
+              /* Slow pulse animation for violations */
+              @keyframes pulse-slow {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.95; }
+              }
+
+              .animate-pulse-slow {
+                animation: pulse-slow 2s ease-in-out infinite;
+              }
             </style>
 
             <!-- Student Status -->
-            <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm overflow-y-auto max-h-[600px] w-full">
-              <h3 class="text-brand-dark-gray dark:text-brand-white text-xl font-bold leading-normal mb-4">Student Status</h3>
-              <div id="student-status-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3">
+            <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm overflow-hidden w-full flex flex-col max-h-[700px]">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-brand-dark-gray dark:text-brand-white text-xl font-bold leading-normal">Student Status</h3>
+                <div class="flex items-center gap-2">
+                  <button id="filter-locked-only-btn" class="h-8 px-3 rounded-lg bg-red-500/10 text-red-700 dark:bg-red-400/20 dark:text-red-200 text-xs font-semibold hover:bg-red-500/20 transition-colors" title="Show locked students only">
+                    <span class="material-symbols-outlined text-sm">lock</span>
+                  </button>
+                  <button id="filter-all-btn" class="h-8 px-3 rounded-lg bg-primary/10 text-primary dark:bg-brand-white/10 dark:text-brand-white text-xs font-semibold hover:bg-primary/20 transition-colors" title="Show all students">
+                    <span class="material-symbols-outlined text-sm">group</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Status Summary Stats -->
+              <div class="grid grid-cols-3 gap-2 mb-4 text-center">
+                <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-2">
+                  <div id="correct-count" class="text-lg font-bold text-green-700 dark:text-green-300">0</div>
+                  <div class="text-xs text-green-600 dark:text-green-400">Correct</div>
+                </div>
+                <div class="bg-red-50 dark:bg-red-900/20 rounded-lg p-2">
+                  <div id="locked-count" class="text-lg font-bold text-red-700 dark:text-red-300">0</div>
+                  <div class="text-xs text-red-600 dark:text-red-400">Locked</div>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-900/20 rounded-lg p-2">
+                  <div id="waiting-count" class="text-lg font-bold text-gray-700 dark:text-gray-300">0</div>
+                  <div class="text-xs text-gray-600 dark:text-gray-400">Waiting</div>
+                </div>
+              </div>
+
+              <div id="student-status-grid" class="overflow-y-auto flex-1 space-y-2 pr-2">
                 <!-- Student status tiles will be populated dynamically -->
               </div>
             </div>
@@ -4718,6 +4781,7 @@
     updateTimerDisplay();
     updateTimerStatus('Timer ready for next question.','info');
     isPaused=false;
+    violationsAlertDismissed=false; // Reset violations alert for new question
     if(PREVIEW_MODE){
       previewOnlyNotice('advance to the next question');
       return;
@@ -5010,6 +5074,10 @@
 
     // Update response count
     document.getElementById('response-count').textContent=data.totalResponses+' / '+data.totalStudents+' answered';
+    var responseCountHeader = document.getElementById('response-count-header');
+    if (responseCountHeader) {
+      responseCountHeader.textContent=data.totalResponses+' / '+data.totalStudents+' answered';
+    }
 
     // Update results bars
     renderResultsBars(data.results,data.correctAnswer,data.studentStatusList);
@@ -5140,12 +5208,161 @@
     });
   }
 
+  // Global variable for student status filter
+  var studentStatusFilter = 'all'; // 'all' or 'locked'
+  var violationsAlertDismissed = false;
+
+  function updateViolationsAlert(lockedStudents) {
+    var alertPanel = document.getElementById('violations-alert-panel');
+    var quickList = document.getElementById('violations-quick-list');
+    var summary = document.getElementById('violations-summary');
+
+    if (lockedStudents.length === 0 || violationsAlertDismissed) {
+      alertPanel.classList.add('hidden');
+      return;
+    }
+
+    // Show the alert panel
+    alertPanel.classList.remove('hidden');
+
+    // Update summary text
+    var count = lockedStudents.length;
+    summary.textContent = count + ' student' + (count > 1 ? 's' : '') + ' locked out and waiting for approval';
+
+    // Render quick action buttons
+    var html = '';
+    lockedStudents.forEach(function(student) {
+      html += '<button class="quick-approve-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-white text-sm font-semibold transition-colors" data-email="' + student.email + '" data-poll-id="' + CURRENT_POLL_DATA.pollId + '" data-lock-version="' + (student.lockVersion || 0) + '">';
+      html += '<span class="material-symbols-outlined text-base">lock_open</span>';
+      html += '<span>' + escapeHtml(formatStudentName(student.name)) + '</span>';
+      html += '</button>';
+    });
+    quickList.innerHTML = html;
+
+    // Add event listeners to quick approve buttons
+    quickList.querySelectorAll('.quick-approve-btn').forEach(function(btn) {
+      btn.onclick = async function() {
+        var email = this.dataset.email;
+        var pollId = this.dataset.pollId;
+        var lockVersion = parseInt(this.dataset.lockVersion, 10);
+        await approveStudentUnlock(email, pollId, lockVersion, this);
+      };
+    });
+  }
+
+  async function approveStudentUnlock(email, pollId, lockVersion, buttonElement) {
+    if (!email || !pollId) return;
+
+    var approved = await veritasConfirm('Approve unlock for ' + email + '?', {
+      title: 'Approve unlock',
+      confirmText: 'Approve'
+    });
+    if (!approved) {
+      return;
+    }
+
+    if (buttonElement) {
+      buttonElement.disabled = true;
+      buttonElement.querySelector('span:last-child').textContent = 'Unlocking...';
+    }
+
+    if (PREVIEW_MODE) {
+      await previewOnlyNotice('approve unlock requests');
+      if (buttonElement) {
+        buttonElement.disabled = false;
+        buttonElement.querySelector('span:last-child').textContent = formatStudentName(email);
+      }
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(async function(response) {
+        if (response.ok) {
+          currentStudentStatusData = currentStudentStatusData.map(function(s) {
+            if (s.email === email) {
+              return {
+                name: s.name,
+                email: s.email,
+                status: 'AWAITING_FULLSCREEN',
+                lockVersion: response.lockVersion || lockVersion,
+                lockReason: s.lockReason,
+                lockedAt: s.lockedAt,
+                answer: s.answer,
+                isCorrect: s.isCorrect,
+                timestamp: s.timestamp
+              };
+            }
+            return s;
+          });
+          renderStudentStatus();
+          await veritasAlert('Student approved for re-entry. They must re-enter fullscreen to continue.', {
+            title: 'Unlock approved'
+          });
+        } else {
+          await veritasAlert(response.message || 'Failed to unlock student. Please try again.', {
+            title: 'Unlock failed',
+            destructive: true
+          });
+          if (buttonElement) {
+            buttonElement.disabled = false;
+            buttonElement.querySelector('span:last-child').textContent = formatStudentName(email);
+          }
+        }
+      })
+      .withFailureHandler(async function(error) {
+        await veritasAlert('Error: ' + (error.message || error), {
+          title: 'Unlock failed',
+          destructive: true
+        });
+        if (buttonElement) {
+          buttonElement.disabled = false;
+          buttonElement.querySelector('span:last-child').textContent = formatStudentName(email);
+        }
+      })
+      .teacherApproveUnlock(email, pollId, lockVersion);
+  }
+
   function renderStudentStatus(){
     var grid=document.getElementById('student-status-grid');
     if(!grid)return;
 
-    grid.innerHTML='';
+    // Calculate status counts
+    var correctCount = 0;
+    var lockedCount = 0;
+    var waitingCount = 0;
+    var lockedStudents = [];
+
     currentStudentStatusData.forEach(function(student){
+      if(student.status==='Submitted' && student.isCorrect===true){
+        correctCount++;
+      } else if(student.status==='LOCKED'){
+        lockedCount++;
+        lockedStudents.push(student);
+      } else if(student.status==='Waiting...'){
+        waitingCount++;
+      }
+    });
+
+    // Update counts in UI
+    document.getElementById('correct-count').textContent = correctCount;
+    document.getElementById('locked-count').textContent = lockedCount;
+    document.getElementById('waiting-count').textContent = waitingCount;
+
+    // Update violations alert panel
+    updateViolationsAlert(lockedStudents);
+
+    // Filter students based on current filter
+    var filteredStudents = currentStudentStatusData;
+    if(studentStatusFilter === 'locked'){
+      filteredStudents = currentStudentStatusData.filter(function(s){
+        return s.status === 'LOCKED' || s.status === 'AWAITING_FULLSCREEN';
+      });
+    }
+
+    // Use document fragment for better performance
+    var fragment = document.createDocumentFragment();
+
+    filteredStudents.forEach(function(student){
       var tile=document.createElement('div');
 
       if(student.status==='Submitted'){
@@ -5159,7 +5376,7 @@
         var statusLabel=isCorrect?'Correct':(isIncorrect?'Incorrect':'Submitted');
         var answerLabel=student.answer?(' • '+escapeHtml(student.answer)):'';
 
-        tile.className='flex items-center justify-between gap-3 p-3 rounded-lg '+baseColorClass;
+        tile.className='flex items-center justify-between gap-3 p-3 rounded-lg '+baseColorClass+' transition-all duration-200';
         tile.innerHTML='<div class="flex items-center gap-3 min-w-0">'+
           '<span class="material-symbols-outlined text-xl '+iconClass+'">'+icon+'</span>'+
           '<div class="flex flex-col min-w-0">'+
@@ -5174,22 +5391,22 @@
           try {
             var lockedMs=new Date()-new Date(student.lockedAt);
             var lockedSec=Math.floor(lockedMs/1000);
-            lockedDuration=' • '+lockedSec+'s';
+            lockedDuration=' • '+lockedSec+'s ago';
           } catch(e){
             lockedDuration='';
           }
         }
-        tile.className='flex items-center justify-between p-3 rounded-lg bg-red-500/10 dark:bg-red-500/20 gap-3';
+        tile.className='flex items-center justify-between p-3 rounded-lg bg-red-50 dark:bg-red-900/30 border-2 border-red-200 dark:border-red-700 gap-3 transition-all duration-200';
         tile.innerHTML='<div class="flex items-center gap-3 min-w-0">'+
           '<span class="material-symbols-outlined text-xl text-red-600 dark:text-red-300">lock</span>'+
           '<div class="flex flex-col min-w-0">'+
           '<span class="text-sm font-semibold text-red-800 dark:text-red-200 truncate">'+escapeHtml(formatStudentName(student.name))+'</span>'+
           '<span class="text-xs text-red-600 dark:text-red-300">Locked v'+(student.lockVersion||0)+lockedDuration+'</span>'+
           '</div></div>'+
-          '<button class="unlock-btn flex-shrink-0 flex items-center justify-center gap-1 h-7 px-2.5 rounded-md bg-red-500/20 text-red-700 dark:bg-red-400/20 dark:text-red-200 text-xs font-semibold hover:bg-red-500/30 transition-colors" data-email="'+student.email+'" data-poll-id="'+CURRENT_POLL_DATA.pollId+'" data-lock-version="'+(student.lockVersion || 0)+'">'+
+          '<button class="unlock-btn flex-shrink-0 flex items-center justify-center gap-1 h-8 px-3 rounded-md bg-red-600 text-white text-xs font-bold hover:bg-red-700 transition-colors shadow-sm" data-email="'+student.email+'" data-poll-id="'+CURRENT_POLL_DATA.pollId+'" data-lock-version="'+(student.lockVersion || 0)+'">'+
           '<span class="material-symbols-outlined text-sm">lock_open</span><span>Approve</span></button>';
       } else if(student.status==='AWAITING_FULLSCREEN'){
-        tile.className='flex items-center justify-between p-3 rounded-lg bg-blue-500/10 dark:bg-blue-500/20 gap-3';
+        tile.className='flex items-center justify-between p-3 rounded-lg bg-blue-500/10 dark:bg-blue-500/20 gap-3 transition-all duration-200';
         tile.innerHTML='<div class="flex items-center gap-3 min-w-0">'+
           '<span class="material-symbols-outlined text-xl text-blue-600 dark:text-blue-300">hourglass_empty</span>'+
           '<div class="flex flex-col min-w-0">'+
@@ -5197,98 +5414,31 @@
           '<span class="text-xs text-blue-600 dark:text-blue-300">Awaiting fullscreen confirmation</span>'+
           '</div></div>';
       } else if(student.status==='Waiting...'){
-        tile.className='flex items-center justify-between p-3 rounded-lg bg-gray-500/10 dark:bg-gray-500/20';
+        tile.className='flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-900/30 transition-all duration-200';
         tile.innerHTML='<div class="flex items-center gap-3">'+
           '<span class="material-symbols-outlined text-xl text-gray-500 dark:text-gray-300">pending</span>'+
           '<span class="text-sm font-medium text-gray-600 dark:text-gray-300 truncate">'+escapeHtml(formatStudentName(student.name))+'</span></div>';
       } else {
-        tile.className='flex items-center justify-between p-3 rounded-lg bg-orange-500/10 dark:bg-orange-500/20';
+        tile.className='flex items-center justify-between p-3 rounded-lg bg-orange-500/10 dark:bg-orange-500/20 transition-all duration-200';
         tile.innerHTML='<div class="flex items-center gap-3">'+
           '<span class="material-symbols-outlined text-xl text-orange-600 dark:text-orange-300">error</span>'+
           '<span class="text-sm font-medium text-orange-700 dark:text-orange-200 truncate">'+escapeHtml(formatStudentName(student.name))+'</span></div>';
       }
 
-      grid.appendChild(tile);
+      fragment.appendChild(tile);
     });
 
-    // Setup unlock listeners
+    // Clear and append all at once for better performance
+    grid.innerHTML='';
+    grid.appendChild(fragment);
+
+    // Setup unlock listeners using shared function
     grid.querySelectorAll('.unlock-btn').forEach(function(btn){
       btn.onclick=async function(){
         var email=this.dataset.email;
         var pollId=this.dataset.pollId;
         var lockVersion = parseInt(this.dataset.lockVersion, 10);
-
-        if(!email||!pollId)return;
-
-        var approved=await veritasConfirm('Approve unlock for '+email+'?',{
-          title:'Approve unlock',
-          confirmText:'Approve'
-        });
-        if(!approved){
-            return;
-        }
-
-        this.disabled=true;
-        this.querySelector('span:last-child').textContent='Unlocking...';
-
-        if(PREVIEW_MODE){
-          await previewOnlyNotice('approve unlock requests');
-          this.disabled=false;
-          this.querySelector('span:last-child').textContent='Approve';
-          return;
-        }
-
-        google.script.run
-          .withSuccessHandler(async function(response) {
-            if (response.ok) {
-              currentStudentStatusData=currentStudentStatusData.map(function(s){
-                if(s.email===email){
-                  return {
-                    name: s.name,
-                    email: s.email,
-                    status: 'AWAITING_FULLSCREEN',
-                    lockVersion: response.lockVersion || lockVersion,
-                    lockReason: s.lockReason,
-                    lockedAt: s.lockedAt,
-                    answer: s.answer,
-                    isCorrect: s.isCorrect,
-                    timestamp: s.timestamp
-                  };
-                }
-                return s;
-              });
-              renderStudentStatus();
-              pollForResults();
-            } else if (response.reason === 'version_mismatch') {
-              await veritasAlert('Student has a newer violation (v' + response.lockVersion + '). Please refresh and try again.',{
-                title:'Approve unlock',
-                destructive:true
-              });
-              pollForResults();
-            } else if (response.reason === 'not_locked') {
-              await veritasAlert('Student is not locked. Status: ' + (response.status || 'unknown'),{
-                title:'Approve unlock'
-              });
-              pollForResults();
-            } else {
-              await veritasAlert('Unlock failed: ' + (response.reason || 'Unknown error'),{
-                title:'Approve unlock',
-                destructive:true
-              });
-              pollForResults();
-            }
-            btn.disabled=false;
-            btn.querySelector('span:last-child').textContent='Approve';
-          })
-          .withFailureHandler(async function(error) {
-            await veritasAlert('Error: ' + (error && error.message ? error.message : error),{
-              title:'Approve unlock',
-              destructive:true
-            });
-            btn.disabled = false;
-            btn.querySelector('span:last-child').textContent = 'Approve';
-          })
-          .teacherApproveUnlock(email, pollId, lockVersion);
+        await approveStudentUnlock(email, pollId, lockVersion, this);
       };
     });
 
@@ -6975,6 +7125,46 @@
       this.style.display = 'none';
     }
   });
+
+  // Student Status Filter Buttons
+  var filterLockedBtn = document.getElementById('filter-locked-only-btn');
+  if (filterLockedBtn) {
+    filterLockedBtn.addEventListener('click', function() {
+      studentStatusFilter = 'locked';
+      filterLockedBtn.classList.add('bg-red-500/30');
+      filterLockedBtn.classList.remove('bg-red-500/10');
+      var allBtn = document.getElementById('filter-all-btn');
+      if (allBtn) {
+        allBtn.classList.remove('bg-primary/30');
+        allBtn.classList.add('bg-primary/10');
+      }
+      renderStudentStatus();
+    });
+  }
+
+  var filterAllBtn = document.getElementById('filter-all-btn');
+  if (filterAllBtn) {
+    filterAllBtn.addEventListener('click', function() {
+      studentStatusFilter = 'all';
+      filterAllBtn.classList.add('bg-primary/30');
+      filterAllBtn.classList.remove('bg-primary/10');
+      var lockedBtn = document.getElementById('filter-locked-only-btn');
+      if (lockedBtn) {
+        lockedBtn.classList.remove('bg-red-500/30');
+        lockedBtn.classList.add('bg-red-500/10');
+      }
+      renderStudentStatus();
+    });
+  }
+
+  // Violations Alert Dismiss Button
+  var dismissViolationsBtn = document.getElementById('dismiss-violations-alert');
+  if (dismissViolationsBtn) {
+    dismissViolationsBtn.addEventListener('click', function() {
+      violationsAlertDismissed = true;
+      document.getElementById('violations-alert-panel').classList.add('hidden');
+    });
+  }
 
   console.log('✓ Teacher Panel Ready');
 })();

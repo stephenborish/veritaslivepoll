@@ -1179,6 +1179,7 @@
         var hasAnsweredCurrent = false;
         var violationLogged = false;
         var violationDebounceTimer = null;
+        var fullscreenEnteredOnce = false; // Track if fullscreen has been entered to prevent false violations
         var pendingSubmission = false;
         var currentQuestionKey = null;
         var lastStateVersion = null;
@@ -1719,6 +1720,7 @@
                                         console.log('Server confirmed unlock - resuming poll');
                                         isInteractionBlocked = false;
                                         violationLogged = false;
+                                        fullscreenEnteredOnce = false; // Reset for new fullscreen session
                                         if (proctorPollInterval) {
                                             clearInterval(proctorPollInterval);
                                             proctorPollInterval = null;
@@ -1759,6 +1761,7 @@
                 studentContainer.style.display = 'block';
                 isInteractionBlocked = false;
                 violationLogged = false;
+                fullscreenEnteredOnce = false; // Reset for new session
                 if (resumeControls) {
                     resumeControls.style.display = 'none';
                 }
@@ -1816,7 +1819,12 @@
                 });
 
                 document.addEventListener('fullscreenchange', function() {
-                    if (!document.fullscreenElement && !isInteractionBlocked && !violationLogged) {
+                    if (document.fullscreenElement) {
+                        // Student has successfully entered fullscreen
+                        fullscreenEnteredOnce = true;
+                    } else if (fullscreenEnteredOnce && !isInteractionBlocked && !violationLogged) {
+                        // Only report violation if they were previously in fullscreen
+                        // This prevents false violations during initial fullscreen transition
                         reportViolationDebounced('exit-fullscreen');
                     }
                 });

@@ -1086,29 +1086,6 @@
       <main class="flex-1 overflow-y-auto">
         <!-- Dashboard View (Default) - Redesigned -->
         <div id="dashboard" class="p-8 max-w-7xl mx-auto">
-          <!-- Quick Access Tools -->
-          <div class="dashboard-card mb-6">
-            <h2 class="dashboard-card-title">Quick Access</h2>
-            <p class="dashboard-card-subtitle">Common actions and shortcuts</p>
-
-            <div class="grid grid-cols-2 gap-4 mt-4">
-              <button class="dashboard-quick-tool" id="open-creator-btn">
-                <span class="material-symbols-outlined icon">add_circle</span>
-                <span class="text-sm font-semibold">Create Question Bank</span>
-              </button>
-
-              <button class="dashboard-quick-tool" onclick="showAnalyticsView()">
-                <span class="material-symbols-outlined icon">monitoring</span>
-                <span class="text-sm font-semibold">Review Student Trends</span>
-              </button>
-
-              <button class="dashboard-quick-tool" onclick="showRosterManager()">
-                <span class="material-symbols-outlined icon">settings</span>
-                <span class="text-sm font-semibold">Adjust Settings</span>
-              </button>
-            </div>
-          </div>
-
           <!-- Poll Library & Session Management (Combined) -->
           <div class="dashboard-card">
             <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -1684,6 +1661,80 @@
       <div class="sticky bottom-0 bg-brand-white dark:bg-brand-dark-gray px-6 py-4 border-t border-primary/20 flex justify-end gap-3">
         <button id="cancel-bulk-add-btn" class="h-10 px-5 rounded-lg bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white text-sm font-semibold hover:bg-brand-dark-gray/20 dark:hover:bg-brand-white/20 transition-colors">Cancel</button>
         <button id="confirm-bulk-add-btn" class="h-10 px-5 rounded-lg bg-primary text-brand-white text-sm font-bold hover:bg-primary/90 transition-colors">Add Students</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Poll Preview Modal -->
+  <div id="poll-preview-modal" class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+      <!-- Header -->
+      <div class="sticky top-0 bg-primary px-6 py-4 border-b border-primary/70">
+        <div class="flex items-center justify-between">
+          <div class="flex-1">
+            <h2 id="preview-poll-name" class="text-brand-white text-2xl font-bold">Poll Preview</h2>
+            <p id="preview-poll-meta" class="text-brand-white/80 text-sm mt-1">Class Name • 5 Questions</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="preview-send-emails-btn" class="flex items-center justify-center gap-2 h-10 px-5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors">
+              <span class="material-symbols-outlined text-lg">mail</span>
+              <span>Send Emails</span>
+            </button>
+            <button id="close-preview-modal-btn" class="flex items-center justify-center h-10 w-10 rounded-lg bg-brand-white/20 text-brand-white hover:bg-brand-white/30 transition-colors">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div class="flex-1 overflow-hidden flex">
+        <!-- Left Sidebar - Question Navigation -->
+        <div class="w-64 border-r border-brand-light-gray dark:border-brand-dark-gray/40 overflow-y-auto bg-gray-50 dark:bg-brand-dark-gray/20">
+          <div class="p-4">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Questions</h3>
+              <button id="preview-reorder-btn" class="text-xs px-2 py-1 rounded bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white hover:bg-brand-dark-gray/20 dark:hover:bg-brand-white/20 transition-colors">
+                <span class="material-symbols-outlined text-sm align-middle">swap_vert</span>
+              </button>
+            </div>
+            <div id="preview-questions-nav" class="space-y-2">
+              <!-- Question navigation items will be added here -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Content - Question Display -->
+        <div class="flex-1 overflow-y-auto p-6">
+          <div id="preview-question-display">
+            <!-- Question content will be displayed here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer - Navigation Controls -->
+      <div class="sticky bottom-0 bg-brand-white dark:bg-brand-dark-gray px-6 py-4 border-t border-brand-light-gray dark:border-brand-dark-gray/40 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <button id="preview-edit-question-btn" class="h-10 px-4 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
+            <span class="material-symbols-outlined text-sm align-middle mr-1">edit</span>
+            Edit Question
+          </button>
+          <button id="preview-delete-question-btn" class="h-10 px-4 rounded-lg bg-red-600/10 text-red-600 dark:bg-red-500/20 dark:text-red-300 text-sm font-semibold hover:bg-red-600/20 dark:hover:bg-red-500/30 transition-colors">
+            <span class="material-symbols-outlined text-sm align-middle mr-1">delete</span>
+            Delete
+          </button>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="preview-prev-question-btn" class="h-10 px-4 rounded-lg bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white text-sm font-semibold hover:bg-brand-dark-gray/20 dark:hover:bg-brand-white/20 transition-colors">
+            <span class="material-symbols-outlined text-sm align-middle mr-1">arrow_back</span>
+            Previous
+          </button>
+          <span id="preview-question-counter" class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60 px-2">1 / 5</span>
+          <button id="preview-next-question-btn" class="h-10 px-4 rounded-lg bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white text-sm font-semibold hover:bg-brand-dark-gray/20 dark:hover:bg-brand-white/20 transition-colors">
+            Next
+            <span class="material-symbols-outlined text-sm align-middle ml-1">arrow_forward</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -2406,7 +2457,6 @@
   }
 
   // --- Event Listeners ---
-  bindClick('open-creator-btn',function(){openPollCreator();});
   bindClick('nav-create-poll',function(){openPollCreator();});
   bindClick('nav-polls-list',showDashboard);
   bindClick('nav-rosters',showRosterManager);
@@ -2414,6 +2464,13 @@
   bindClick('nav-analytics',showAnalyticsView);
   bindClick('close-modal-btn',closePollCreator);
   bindClick('close-links-modal-btn',closeLinksModal);
+  bindClick('close-preview-modal-btn',closePollPreview);
+  bindClick('preview-prev-question-btn',previewPrevQuestion);
+  bindClick('preview-next-question-btn',previewNextQuestion);
+  bindClick('preview-send-emails-btn',previewSendEmails);
+  bindClick('preview-edit-question-btn',previewEditQuestion);
+  bindClick('preview-delete-question-btn',previewDeleteQuestion);
+  bindClick('preview-reorder-btn',togglePreviewReorder);
   bindClick('add-question-btn',addQuestion);
   bindClick('save-poll-btn',savePoll);
   bindInput('new-poll-name','input',markPollDirty);
@@ -2996,7 +3053,7 @@
       var createdLabel=poll.createdAt?formatDateTime(poll.createdAt):'—';
       var htmlParts=[];
       htmlParts.push('<td class="px-4 py-3 align-top">');
-      htmlParts.push('<div class="font-semibold text-brand-dark-gray dark:text-brand-white">'+escapeHtml(poll.pollName||'Untitled Poll')+'</div>');
+      htmlParts.push('<div class="font-semibold text-brand-dark-gray dark:text-brand-white"><span class="poll-name-link cursor-pointer hover:text-primary dark:hover:text-primary transition-colors" data-poll-id="'+poll.pollId+'">'+escapeHtml(poll.pollName||'Untitled Poll')+'</span></div>');
       htmlParts.push('<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/50">Created '+createdLabel+'</div>');
       htmlParts.push('</td>');
       htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">'+escapeHtml(poll.className||'—')+'</td>');
@@ -3114,6 +3171,14 @@
           })
           .withFailureHandler(handleError)
           .deletePoll(id);
+      };
+    });
+
+    // Add click handler for poll names to open preview
+    pollsTableBody.querySelectorAll('.poll-name-link').forEach(function(link){
+      link.onclick=function(e){
+        e.stopPropagation();
+        openPollPreview(this.dataset.pollId);
       };
     });
   }
@@ -5351,6 +5416,305 @@
 
   function closeLinksModal(){
     linksModal.style.display='none';
+  }
+
+  // --- Poll Preview Modal Functions ---
+  var previewModal=document.getElementById('poll-preview-modal');
+  var previewPollName=document.getElementById('preview-poll-name');
+  var previewPollMeta=document.getElementById('preview-poll-meta');
+  var previewQuestionsNav=document.getElementById('preview-questions-nav');
+  var previewQuestionDisplay=document.getElementById('preview-question-display');
+  var previewQuestionCounter=document.getElementById('preview-question-counter');
+  var currentPreviewPoll=null;
+  var currentPreviewQuestionIndex=0;
+  var isPreviewReorderMode=false;
+  var originalQuestionOrder=null;
+
+  function openPollPreview(pollId){
+    var poll=ALL_POLLS.find(function(p){return p.pollId===pollId;});
+    if(!poll||!poll.questions||poll.questions.length===0){
+      veritasAlert('This poll has no questions.',{title:'Cannot preview',destructive:true});
+      return;
+    }
+
+    currentPreviewPoll=poll;
+    currentPreviewQuestionIndex=0;
+    isPreviewReorderMode=false;
+    originalQuestionOrder=null;
+
+    previewPollName.textContent=poll.pollName||'Untitled Poll';
+    var questionsCount=poll.questions.length;
+    var classText=poll.className||'No class';
+    previewPollMeta.textContent=classText+' • '+questionsCount+' Question'+(questionsCount!==1?'s':'');
+
+    renderPreviewNav();
+    renderPreviewQuestion();
+    previewModal.style.display='flex';
+  }
+
+  function closePollPreview(){
+    previewModal.style.display='none';
+    currentPreviewPoll=null;
+    currentPreviewQuestionIndex=0;
+    isPreviewReorderMode=false;
+    originalQuestionOrder=null;
+  }
+
+  function renderPreviewNav(){
+    if(!currentPreviewPoll||!currentPreviewPoll.questions)return;
+
+    previewQuestionsNav.innerHTML='';
+    currentPreviewPoll.questions.forEach(function(q,index){
+      var div=document.createElement('div');
+      div.className='preview-nav-item cursor-pointer rounded-lg p-3 transition-colors '+(index===currentPreviewQuestionIndex?'bg-primary/20 dark:bg-primary/30 border-l-4 border-primary':'bg-brand-white dark:bg-brand-dark-gray/30 hover:bg-brand-light-gray/40 dark:hover:bg-brand-dark-gray/40');
+      div.dataset.questionIndex=index;
+
+      var html='<div class="flex items-start gap-2">';
+      if(isPreviewReorderMode){
+        html+='<span class="material-symbols-outlined text-sm text-brand-dark-gray/40 dark:text-brand-white/40 cursor-move">drag_indicator</span>';
+      }
+      html+='<div class="flex-1 min-w-0">';
+      html+='<div class="text-xs font-semibold text-brand-dark-gray/80 dark:text-brand-white/80">Q'+(index+1)+'</div>';
+      html+='<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 truncate mt-1">'+escapeHtml(q.questionText||'No text')+'</div>';
+      html+='</div></div>';
+
+      div.innerHTML=html;
+      div.onclick=function(){
+        if(!isPreviewReorderMode){
+          currentPreviewQuestionIndex=index;
+          renderPreviewNav();
+          renderPreviewQuestion();
+        }
+      };
+
+      if(isPreviewReorderMode){
+        div.setAttribute('draggable','true');
+        setupDragHandlers(div,index);
+      }
+
+      previewQuestionsNav.appendChild(div);
+    });
+  }
+
+  function renderPreviewQuestion(){
+    if(!currentPreviewPoll||!currentPreviewPoll.questions||currentPreviewQuestionIndex>=currentPreviewPoll.questions.length){
+      previewQuestionDisplay.innerHTML='<p class="text-brand-dark-gray/60 dark:text-brand-white/60">No question selected</p>';
+      return;
+    }
+
+    var q=currentPreviewPoll.questions[currentPreviewQuestionIndex];
+    var html='';
+
+    // Question header
+    html+='<div class="mb-6">';
+    html+='<div class="flex items-center gap-2 mb-2">';
+    html+='<span class="text-sm font-semibold text-brand-dark-gray/60 dark:text-brand-white/60">Question '+(currentPreviewQuestionIndex+1)+' of '+currentPreviewPoll.questions.length+'</span>';
+    if(q.timerSeconds){
+      html+='<span class="text-sm text-brand-dark-gray/50 dark:text-brand-white/50">• Timer: '+q.timerSeconds+'s</span>';
+    }
+    html+='</div>';
+    html+='<h3 class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">'+escapeHtml(q.questionText||'No question text')+'</h3>';
+    html+='</div>';
+
+    // Question image
+    if(q.questionImageURL){
+      html+='<div class="mb-6">';
+      html+='<img src="'+escapeHtml(q.questionImageURL)+'" alt="Question image" class="max-w-full max-h-96 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40" referrerpolicy="no-referrer" onerror="this.style.display=\'none\';">';
+      html+='</div>';
+    }
+
+    // Answer options
+    if(q.options&&q.options.length>0){
+      html+='<div class="space-y-3">';
+      html+='<h4 class="text-lg font-semibold text-brand-dark-gray dark:text-brand-white mb-3">Answer Options</h4>';
+      q.options.forEach(function(opt,optIndex){
+        var letter=String.fromCharCode(65+optIndex);
+        var isCorrect=q.correctAnswer===letter;
+        var optClass='flex items-start gap-3 p-4 rounded-lg border-2 transition-colors '+(isCorrect?'bg-green-50 dark:bg-green-900/20 border-green-500 dark:border-green-600':'bg-brand-light-gray/30 dark:bg-brand-dark-gray/20 border-brand-light-gray dark:border-brand-dark-gray/40');
+
+        html+='<div class="'+optClass+'">';
+        html+='<div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold '+(isCorrect?'bg-green-500 text-white':'bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white')+'">'+letter+'</div>';
+        html+='<div class="flex-1">';
+        if(opt.text){
+          html+='<p class="text-brand-dark-gray dark:text-brand-white">'+escapeHtml(opt.text)+'</p>';
+        }
+        if(opt.imageURL){
+          html+='<img src="'+escapeHtml(opt.imageURL)+'" alt="Option image" class="mt-2 max-w-[200px] max-h-[150px] rounded border border-brand-light-gray dark:border-brand-dark-gray/40" referrerpolicy="no-referrer" onerror="this.style.display=\'none\';">';
+        }
+        html+='</div>';
+        if(isCorrect){
+          html+='<span class="material-symbols-outlined text-green-600 dark:text-green-400">check_circle</span>';
+        }
+        html+='</div>';
+      });
+      html+='</div>';
+    } else {
+      html+='<p class="text-brand-dark-gray/60 dark:text-brand-white/60">No answer options</p>';
+    }
+
+    previewQuestionDisplay.innerHTML=html;
+    previewQuestionCounter.textContent=(currentPreviewQuestionIndex+1)+' / '+currentPreviewPoll.questions.length;
+
+    // Update navigation button states
+    document.getElementById('preview-prev-question-btn').disabled=currentPreviewQuestionIndex===0;
+    document.getElementById('preview-next-question-btn').disabled=currentPreviewQuestionIndex===currentPreviewPoll.questions.length-1;
+  }
+
+  function previewPrevQuestion(){
+    if(currentPreviewQuestionIndex>0){
+      currentPreviewQuestionIndex--;
+      renderPreviewNav();
+      renderPreviewQuestion();
+    }
+  }
+
+  function previewNextQuestion(){
+    if(currentPreviewPoll&&currentPreviewQuestionIndex<currentPreviewPoll.questions.length-1){
+      currentPreviewQuestionIndex++;
+      renderPreviewNav();
+      renderPreviewQuestion();
+    }
+  }
+
+  function previewSendEmails(){
+    if(!currentPreviewPoll)return;
+    var className=currentPreviewPoll.className;
+    if(!className){
+      veritasAlert('This poll has no class assigned.',{title:'No class',destructive:true});
+      return;
+    }
+    openLinksModal(className);
+  }
+
+  function previewEditQuestion(){
+    if(!currentPreviewPoll)return;
+    closePollPreview();
+    startEditPoll(currentPreviewPoll.pollId);
+  }
+
+  async function previewDeleteQuestion(){
+    if(!currentPreviewPoll||!currentPreviewPoll.questions||currentPreviewPoll.questions.length===0)return;
+
+    var confirmed=await veritasConfirm('Delete this question from the poll?',{
+      title:'Delete question',
+      confirmText:'Delete',
+      destructive:true
+    });
+    if(!confirmed)return;
+
+    currentPreviewPoll.questions.splice(currentPreviewQuestionIndex,1);
+
+    if(currentPreviewPoll.questions.length===0){
+      await veritasAlert('Cannot delete the last question. A poll must have at least one question.',{
+        title:'Cannot delete',
+        destructive:true
+      });
+      currentPreviewPoll.questions.splice(currentPreviewQuestionIndex,0,{questionText:'',options:[],correctAnswer:'A',timerSeconds:90});
+      return;
+    }
+
+    if(currentPreviewQuestionIndex>=currentPreviewPoll.questions.length){
+      currentPreviewQuestionIndex=currentPreviewPoll.questions.length-1;
+    }
+
+    // Save to backend
+    if(PREVIEW_MODE){
+      renderPreviewNav();
+      renderPreviewQuestion();
+      await veritasAlert('Question deleted (preview mode).',{title:'Question deleted'});
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(async function(polls){
+        refreshPollData(polls);
+        renderPreviewNav();
+        renderPreviewQuestion();
+        await veritasAlert('Question deleted successfully.',{title:'Question deleted'});
+      })
+      .withFailureHandler(function(error){
+        handleError(error);
+      })
+      .updatePoll(currentPreviewPoll.pollId,currentPreviewPoll.pollName,currentPreviewPoll.className,currentPreviewPoll.questions);
+  }
+
+  function togglePreviewReorder(){
+    isPreviewReorderMode=!isPreviewReorderMode;
+    var btn=document.getElementById('preview-reorder-btn');
+
+    if(isPreviewReorderMode){
+      originalQuestionOrder=JSON.parse(JSON.stringify(currentPreviewPoll.questions));
+      btn.innerHTML='<span class="material-symbols-outlined text-sm align-middle">check</span>';
+      btn.classList.add('bg-primary','text-white');
+      btn.classList.remove('bg-brand-dark-gray/10','dark:bg-brand-white/10','text-brand-dark-gray','dark:text-brand-white');
+    } else {
+      // Save the reordered questions
+      if(JSON.stringify(originalQuestionOrder)!==JSON.stringify(currentPreviewPoll.questions)){
+        saveReorderedQuestions();
+      }
+      originalQuestionOrder=null;
+      btn.innerHTML='<span class="material-symbols-outlined text-sm align-middle">swap_vert</span>';
+      btn.classList.remove('bg-primary','text-white');
+      btn.classList.add('bg-brand-dark-gray/10','dark:bg-brand-white/10','text-brand-dark-gray','dark:text-brand-white');
+    }
+
+    renderPreviewNav();
+  }
+
+  function saveReorderedQuestions(){
+    if(!currentPreviewPoll)return;
+
+    if(PREVIEW_MODE){
+      veritasAlert('Question order updated (preview mode).',{title:'Questions reordered'});
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(async function(polls){
+        refreshPollData(polls);
+        await veritasAlert('Question order updated successfully.',{title:'Questions reordered'});
+      })
+      .withFailureHandler(function(error){
+        handleError(error);
+      })
+      .updatePoll(currentPreviewPoll.pollId,currentPreviewPoll.pollName,currentPreviewPoll.className,currentPreviewPoll.questions);
+  }
+
+  var draggedItemIndex=null;
+
+  function setupDragHandlers(div,index){
+    div.addEventListener('dragstart',function(e){
+      draggedItemIndex=index;
+      this.style.opacity='0.4';
+      e.dataTransfer.effectAllowed='move';
+    });
+
+    div.addEventListener('dragend',function(e){
+      this.style.opacity='1';
+      draggedItemIndex=null;
+    });
+
+    div.addEventListener('dragover',function(e){
+      e.preventDefault();
+      e.dataTransfer.dropEffect='move';
+
+      if(draggedItemIndex!==null&&draggedItemIndex!==index){
+        var draggedQuestion=currentPreviewPoll.questions[draggedItemIndex];
+        currentPreviewPoll.questions.splice(draggedItemIndex,1);
+        currentPreviewPoll.questions.splice(index,0,draggedQuestion);
+
+        if(currentPreviewQuestionIndex===draggedItemIndex){
+          currentPreviewQuestionIndex=index;
+        } else if(draggedItemIndex<currentPreviewQuestionIndex&&index>=currentPreviewQuestionIndex){
+          currentPreviewQuestionIndex--;
+        } else if(draggedItemIndex>currentPreviewQuestionIndex&&index<=currentPreviewQuestionIndex){
+          currentPreviewQuestionIndex++;
+        }
+
+        draggedItemIndex=index;
+        renderPreviewNav();
+      }
+    });
   }
 
   function setSaveStatus(message){

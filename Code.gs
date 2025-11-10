@@ -3504,20 +3504,25 @@ const ProctorAccess = {
           rowIndex: i + 1
         };
 
-        if (currentSessionId && stateSessionId !== currentSessionId) {
-          return {
-            pollId: pollId,
-            studentEmail: studentEmail,
-            status: 'OK',
-            lockVersion: 0,
-            lockReason: '',
-            lockedAt: '',
-            unlockApproved: false,
-            unlockApprovedBy: null,
-            unlockApprovedAt: null,
-            sessionId: currentSessionId,
-            rowIndex: i + 1
-          };
+        // Check if this is a new session and we should reset the state
+        // Reset if: currentSessionId exists AND (stateSessionId is missing OR different)
+        if (currentSessionId) {
+          const needsReset = !stateSessionId || stateSessionId === '' || stateSessionId !== currentSessionId;
+          if (needsReset) {
+            return {
+              pollId: pollId,
+              studentEmail: studentEmail,
+              status: 'OK',
+              lockVersion: 0,
+              lockReason: '',
+              lockedAt: '',
+              unlockApproved: false,
+              unlockApprovedBy: null,
+              unlockApprovedAt: null,
+              sessionId: currentSessionId,
+              rowIndex: i + 1
+            };
+          }
         }
 
         return baseState;
@@ -3635,6 +3640,12 @@ const ProctorAccess = {
         sessionId || ''
       ]]);
     });
+
+    // Force all updates to complete before returning
+    // This prevents race condition where students poll before their reset completes
+    if (updates.length > 0) {
+      SpreadsheetApp.flush();
+    }
   }
 };
 

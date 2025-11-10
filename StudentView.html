@@ -188,57 +188,6 @@
       box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
     }
 
-    .student-question-image.enlarged {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) !important;
-      width: auto;
-      height: auto;
-      max-width: 90vw;
-      max-height: 90vh;
-      z-index: 10001;
-      cursor: zoom-out;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-    }
-
-    .student-question-image.enlarged:hover {
-      transform: translate(-50%, -50%) !important;
-    }
-
-    /* Option image zoom styles */
-    .option-image.enlarged {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) !important;
-      width: auto;
-      height: auto;
-      max-width: 90vw;
-      max-height: 90vh;
-      z-index: 10001;
-      cursor: zoom-out;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-    }
-
-    .option-image.enlarged:hover {
-      transform: translate(-50%, -50%) !important;
-    }
-
-    .image-backdrop {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.85);
-      z-index: 10000;
-      display: none;
-    }
-
-    .image-backdrop.active {
-      display: block;
-    }
 
     .student-card-options {
       padding: 12px 28px 28px;
@@ -459,7 +408,7 @@
     }
 
     .answer-option .option-image {
-      max-width: 100%;
+      max-width: 300px;
       height: auto;
       border-radius: var(--radius-md);
       border: 1px solid rgba(18, 56, 93, 0.16);
@@ -1093,7 +1042,6 @@
           <ul id="options-list" class="student-choices"></ul>
         </div>
       </section>
-      <div class="image-backdrop" id="image-backdrop"></div>
     </div>
   </main>
 
@@ -1114,45 +1062,28 @@
         var entryScreen = document.getElementById('entry-screen');
         var startSessionBtn = document.getElementById('start-session-btn');
         var studentContainer = document.getElementById('student-container');
-        var imageBackdrop = document.getElementById('image-backdrop');
+        // Simple image zoom function (same approach as teacher panel)
+        window.expandImage = function(imgElement) {
+            var imgSrc = imgElement.src;
+            var modalHtml = '<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="this.remove()">';
+            modalHtml += '<img src="' + imgSrc + '" style="max-width:90%;max-height:90%;"/>';
+            modalHtml += '</div>';
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        };
 
-        // Image click-to-enlarge functionality for question images
-        if (questionImageEl && imageBackdrop) {
-            questionImageEl.addEventListener('click', function(e) {
-                e.stopPropagation();
-                questionImageEl.classList.toggle('enlarged');
-                imageBackdrop.classList.toggle('active');
+        // Add click handler to question image
+        if (questionImageEl) {
+            questionImageEl.addEventListener('click', function() {
+                window.expandImage(this);
             });
         }
 
-        // Event delegation for option images (dynamically created)
-        if (imageBackdrop) {
-            document.addEventListener('click', function(e) {
-                // Handle option image clicks
-                if (e.target.classList.contains('option-image')) {
-                    e.stopPropagation();
-                    // Close any other enlarged images first
-                    var allImages = document.querySelectorAll('.student-question-image.enlarged, .option-image.enlarged');
-                    allImages.forEach(function(img) {
-                        if (img !== e.target) {
-                            img.classList.remove('enlarged');
-                        }
-                    });
-                    // Toggle this image
-                    e.target.classList.toggle('enlarged');
-                    imageBackdrop.classList.toggle('active', document.querySelector('.student-question-image.enlarged, .option-image.enlarged') !== null);
-                }
-            });
-
-            // Close all enlarged images when clicking backdrop
-            imageBackdrop.addEventListener('click', function() {
-                var allImages = document.querySelectorAll('.student-question-image.enlarged, .option-image.enlarged');
-                allImages.forEach(function(img) {
-                    img.classList.remove('enlarged');
-                });
-                imageBackdrop.classList.remove('active');
-            });
-        }
+        // Event delegation for dynamically created option images
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('option-image')) {
+                window.expandImage(e.target);
+            }
+        });
         var preLivePrimary = document.getElementById('pre-live-primary');
         var preLiveSubline = document.getElementById('pre-live-subline');
         var preLiveReconnectLine = document.getElementById('pre-live-reconnect-line');

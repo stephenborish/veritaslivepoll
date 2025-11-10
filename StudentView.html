@@ -317,13 +317,14 @@
       margin: 0;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 12px;
     }
 
     .student-choices li {
       list-style: none;
-      margin: 0;
-      padding: 0;
+      margin: 0 !important;
+      padding: 0 !important;
+      line-height: 1;
     }
 
     .student-card img {
@@ -2048,12 +2049,18 @@
                     }
                 } else if (data.status === 'ENDED') {
                     hasAnsweredCurrent = false;
-                    statusMessage.textContent = data.message || 'That’s a wrap! You just finished the poll — nicely done.';
+                    statusMessage.textContent = data.message || 'That's a wrap! You just finished the poll — nicely done.';
                     statusIcon = 'emoji_events';
                     statusClass = 'text-yellow-300';
                     if (statusSubMessage) {
                         statusSubMessage.style.display = 'none';
                         statusSubMessage.textContent = '';
+                    }
+                    // Exit fullscreen when poll ends
+                    if (document.fullscreenElement) {
+                        document.exitFullscreen().catch(function(err) {
+                            console.log('Error exiting fullscreen:', err);
+                        });
                     }
                 } else if (data.status === 'NOT_ENROLLED') {
                     hasAnsweredCurrent = false;

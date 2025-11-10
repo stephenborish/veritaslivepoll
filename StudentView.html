@@ -123,7 +123,7 @@
     }
 
     .student-card {
-      width: min(75vw, 900px);
+      width: min(85vw, 1200px);
       margin: 32px auto;
       background: var(--bg-card);
       color: var(--text-primary);
@@ -139,9 +139,13 @@
     }
 
     .student-card-header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
       padding: 16px 28px 12px;
       border-bottom: 1px solid var(--navy-12);
       background: linear-gradient(135deg, rgba(18, 56, 93, 0.06), var(--gold-08));
+      backdrop-filter: blur(8px);
     }
 
     .student-question-number {
@@ -155,8 +159,65 @@
     .student-card-body {
       padding: 28px 28px 12px;
       display: flex;
+      flex-direction: row;
+      gap: 24px;
+      align-items: flex-start;
+    }
+
+    .student-card-body-content {
+      flex: 1;
+      display: flex;
       flex-direction: column;
       gap: 20px;
+    }
+
+    .student-question-image {
+      width: 300px;
+      height: 300px;
+      object-fit: contain;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--navy-12);
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+      flex-shrink: 0;
+      cursor: pointer;
+      transition: transform 200ms ease, box-shadow 200ms ease;
+    }
+
+    .student-question-image:hover {
+      transform: scale(1.02);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    }
+
+    .student-question-image.enlarged {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: auto;
+      height: auto;
+      max-width: 90vw;
+      max-height: 90vh;
+      z-index: 1000;
+      cursor: zoom-out;
+    }
+
+    .student-question-image.enlarged:hover {
+      transform: translate(-50%, -50%);
+    }
+
+    .image-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 999;
+      display: none;
+    }
+
+    .image-backdrop.active {
+      display: block;
     }
 
     .student-card-options {
@@ -356,15 +417,16 @@
       flex-direction: column;
       align-items: center;
       gap: 8px;
-      padding-top: 4px;
+      align-self: flex-start;
     }
 
     .answer-option .option-body {
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 0;
       min-width: 0;
+      justify-content: center;
     }
 
     .answer-option .option-text {
@@ -372,6 +434,7 @@
       font-size: 1.05rem;
       line-height: 1.6;
       font-family: "Inter", sans-serif;
+      margin: 0;
     }
 
     .answer-option .option-image {
@@ -380,13 +443,14 @@
       border-radius: var(--radius-md);
       border: 1px solid rgba(18, 56, 93, 0.16);
       box-shadow: 0 3px 10px rgba(18, 56, 93, 0.12);
+      margin-bottom: 12px;
     }
 
     .answer-option .result-ribbon {
       font-size: 0.9rem;
       font-weight: 600;
       align-self: flex-end;
-      margin-top: auto;
+      margin-top: 8px;
       color: var(--veritas-navy);
       opacity: 0;
       visibility: hidden;
@@ -849,7 +913,7 @@
     .waiting-dots .dot:nth-child(3) { animation-delay: 0.4s; }
   </style>
 </head>
-<body class="font-display bg-gradient-to-br from-brand-blue to-brand-accent text-white min-h-screen">
+<body class="font-display bg-gradient-to-br from-veritas-navy via-[#1a4a73] to-[#2a5a83] text-white min-h-screen">
   <!-- Header - Subtle overlay style -->
   <header class="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-6 py-4">
     <div class="flex items-center gap-3">
@@ -992,15 +1056,18 @@
           <p id="question-number" class="student-question-number"></p>
         </div>
         <div id="question-content" class="student-card-body">
+          <div class="student-card-body-content">
+            <h2 id="question-text" class="student-stem"></h2>
+            <p id="question-subline" class="student-subline hidden"></p>
+          </div>
           <img id="question-image" src="" alt="Question" class="student-question-image" referrerpolicy="no-referrer" onerror="this.style.display='none';" style="display: none;" />
-          <h2 id="question-text" class="student-stem"></h2>
-          <p id="question-subline" class="student-subline hidden"></p>
         </div>
         <div class="student-card-options">
           <p id="no-responses-message" class="student-no-responses hidden"></p>
           <ul id="options-list" class="student-choices"></ul>
         </div>
       </section>
+      <div class="image-backdrop" id="image-backdrop"></div>
     </div>
   </main>
 
@@ -1021,6 +1088,20 @@
         var entryScreen = document.getElementById('entry-screen');
         var startSessionBtn = document.getElementById('start-session-btn');
         var studentContainer = document.getElementById('student-container');
+        var imageBackdrop = document.getElementById('image-backdrop');
+
+        // Image click-to-enlarge functionality
+        if (questionImageEl && imageBackdrop) {
+            questionImageEl.addEventListener('click', function() {
+                questionImageEl.classList.toggle('enlarged');
+                imageBackdrop.classList.toggle('active');
+            });
+
+            imageBackdrop.addEventListener('click', function() {
+                questionImageEl.classList.remove('enlarged');
+                imageBackdrop.classList.remove('active');
+            });
+        }
         var preLivePrimary = document.getElementById('pre-live-primary');
         var preLiveSubline = document.getElementById('pre-live-subline');
         var preLiveReconnectLine = document.getElementById('pre-live-reconnect-line');

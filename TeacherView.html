@@ -1340,42 +1340,44 @@
               <h3 class="text-brand-dark-gray dark:text-brand-white text-lg font-bold leading-normal mb-4 text-center">Question Timer</h3>
 
               <!-- Main Timer Container -->
-              <div class="flex flex-col items-center gap-2">
+              <div class="flex items-center gap-3">
+                <!-- Timer Display and Controls Container -->
+                <div class="flex-1 flex flex-col items-center gap-2">
+                  <!-- Time Adjustment Button (Add) -->
+                  <button id="add-10s-btn" class="text-brand-dark-gray/40 dark:text-brand-white/40 hover:text-sky-500 dark:hover:text-sky-400 transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed" aria-label="+10 seconds">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+                  </button>
 
-                <!-- Time Adjustment Button (Add) -->
-                <button id="add-10s-btn" class="text-brand-dark-gray/40 dark:text-brand-white/40 hover:text-sky-500 dark:hover:text-sky-400 transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed" aria-label="+10 seconds">
-                  <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
-                </button>
+                  <!-- Timer Display (as an input) -->
+                  <input
+                    type="text"
+                    id="timer-display"
+                    class="text-5xl font-black text-center text-brand-dark-gray dark:text-brand-white transition-all bg-transparent w-full focus:outline-none focus:ring-2 focus:ring-sky-500 rounded-lg placeholder-brand-dark-gray/40 dark:placeholder-brand-white/40 disabled:opacity-70"
+                    value="01:30"
+                    aria-label="Timer display"
+                  />
 
-                <!-- Timer Display (as an input) -->
-                <input
-                  type="text"
-                  id="timer-display"
-                  class="text-6xl font-black text-center text-brand-dark-gray dark:text-brand-white transition-all bg-transparent w-full focus:outline-none focus:ring-2 focus:ring-sky-500 rounded-lg placeholder-brand-dark-gray/40 dark:placeholder-brand-white/40 disabled:opacity-70"
-                  value="01:30"
-                  aria-label="Timer display"
-                />
+                  <!-- Time Adjustment Button (Subtract) -->
+                  <button id="subtract-10s-btn" class="text-brand-dark-gray/40 dark:text-brand-white/40 hover:text-sky-500 dark:hover:text-sky-400 transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed" aria-label="-10 seconds">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                  </button>
+                </div>
 
-                <!-- Time Adjustment Button (Subtract) -->
-                <button id="subtract-10s-btn" class="text-brand-dark-gray/40 dark:text-brand-white/40 hover:text-sky-500 dark:hover:text-sky-400 transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed" aria-label="-10 seconds">
-                  <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                </button>
-
-                <!-- Main Control Buttons (Start / Pause / Reset) -->
-                <div class="flex gap-3 mt-4 w-full">
+                <!-- Main Control Buttons (Start / Pause / Reset) - Vertical -->
+                <div class="flex flex-col gap-2">
                   <!-- Start Button -->
-                  <button id="start-btn" class="bg-sky-500 hover:bg-sky-600 text-brand-white font-bold py-2.5 flex-1 rounded-full transition-all duration-200 text-base disabled:opacity-50 disabled:cursor-not-allowed">
-                    Start
+                  <button id="start-btn" class="bg-sky-500 hover:bg-sky-600 text-brand-white font-bold p-2.5 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Start timer">
+                    <span class="material-symbols-outlined text-2xl">play_arrow</span>
                   </button>
 
                   <!-- Pause Button (hidden by default) -->
-                  <button id="pause-btn" class="bg-amber-500 hover:bg-amber-600 text-brand-white font-bold py-2.5 flex-1 rounded-full transition-all duration-200 text-base hidden">
-                    Pause
+                  <button id="pause-btn" class="bg-amber-500 hover:bg-amber-600 text-brand-white font-bold p-2.5 rounded-lg transition-all duration-200 hidden" aria-label="Pause timer">
+                    <span class="material-symbols-outlined text-2xl">pause</span>
                   </button>
 
                   <!-- Reset Button -->
-                  <button id="reset-btn" class="bg-brand-light-gray hover:bg-brand-light-gray/80 dark:bg-brand-dark-gray/60 dark:hover:bg-brand-dark-gray/80 text-brand-dark-gray dark:text-brand-white font-bold py-2.5 flex-1 rounded-full transition-all duration-200 text-base">
-                    Reset
+                  <button id="reset-btn" class="bg-brand-light-gray hover:bg-brand-light-gray/80 dark:bg-brand-dark-gray/60 dark:hover:bg-brand-dark-gray/80 text-brand-dark-gray dark:text-brand-white font-bold p-2.5 rounded-lg transition-all duration-200" aria-label="Reset timer">
+                    <span class="material-symbols-outlined text-2xl">refresh</span>
                   </button>
                 </div>
               </div>
@@ -5295,6 +5297,11 @@
   }
 
   function updateTimerDisplay(){
+    // Sync totalSeconds from timerRemainingSeconds for legacy code compatibility
+    // Legacy code may set timerRemainingSeconds and expect the display to update
+    if (timerRemainingSeconds !== totalSeconds) {
+      totalSeconds = timerRemainingSeconds;
+    }
     updateDisplay();
   }
 

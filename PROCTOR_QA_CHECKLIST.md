@@ -1,8 +1,39 @@
-# Proctoring QA Checklist - Pre-Class Test (2 minutes)
+# Proctoring QA Checklist - Pre-Class Test
 
 **Purpose**: Verify proctoring flow works correctly before starting a live poll with students.
 
-**Setup**: Open poll in two browsers - one as teacher, one as test student.
+**Time Required**: ~5 minutes for full test suite
+
+**When to Run**:
+- Before first use with students (mandatory)
+- After any code updates to proctoring system
+- Quarterly as part of maintenance (recommended)
+- When deploying to new browser/device combinations
+
+**Prerequisites**:
+- ✅ Poll created with at least one question
+- ✅ Test student added to roster
+- ✅ Student access link generated
+- ✅ Two browsers or browser profiles available
+
+**Setup Instructions**:
+1. **Browser 1 (Teacher)**: Open web app URL, log in as teacher
+2. **Browser 2 (Student)**: Open student access link (from email or manual generation)
+3. **Position Windows**: Side-by-side for easy observation
+4. **Start Poll**: In teacher browser, start the test poll
+5. **Begin Testing**: Follow test cases below in order
+
+---
+
+## Expected Timing Reference
+
+| Action | Expected Response Time | Acceptable Range |
+|--------|----------------------|------------------|
+| Violation → Lock | Immediate (< 0.5s) | < 1s |
+| Lock → Teacher panel update | ≤ 2.5s | 0.5s - 5s |
+| Teacher approves → Student sees approval | ≤ 2.5s | 0.5s - 5s |
+| Student resumes fullscreen → Unlock complete | Immediate (< 0.5s) | < 1s |
+| Page reload → State recovery | ≤ 3s | 1s - 5s |
 
 ---
 

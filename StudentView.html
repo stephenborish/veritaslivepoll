@@ -192,17 +192,37 @@
       position: fixed;
       top: 50%;
       left: 50%;
-      transform: translate(-50%, -50%);
+      transform: translate(-50%, -50%) !important;
       width: auto;
       height: auto;
       max-width: 90vw;
       max-height: 90vh;
-      z-index: 1000;
+      z-index: 10001;
       cursor: zoom-out;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
     }
 
     .student-question-image.enlarged:hover {
-      transform: translate(-50%, -50%);
+      transform: translate(-50%, -50%) !important;
+    }
+
+    /* Option image zoom styles */
+    .option-image.enlarged {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) !important;
+      width: auto;
+      height: auto;
+      max-width: 90vw;
+      max-height: 90vh;
+      z-index: 10001;
+      cursor: zoom-out;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .option-image.enlarged:hover {
+      transform: translate(-50%, -50%) !important;
     }
 
     .image-backdrop {
@@ -211,8 +231,8 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0, 0, 0, 0.8);
-      z-index: 999;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 10000;
       display: none;
     }
 
@@ -445,6 +465,13 @@
       border: 1px solid rgba(18, 56, 93, 0.16);
       box-shadow: 0 3px 10px rgba(18, 56, 93, 0.12);
       margin-bottom: 12px;
+      cursor: pointer;
+      transition: transform 200ms ease, box-shadow 200ms ease;
+    }
+
+    .answer-option .option-image:hover {
+      transform: scale(1.02);
+      box-shadow: 0 6px 16px rgba(18, 56, 93, 0.16);
     }
 
     .answer-option .result-ribbon {
@@ -916,7 +943,7 @@
 </head>
 <body class="font-display bg-gradient-to-br from-veritas-navy via-[#1a4a73] to-[#2a5a83] text-white min-h-screen">
   <!-- Header - Subtle overlay style -->
-  <header class="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-6 py-4">
+  <header class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 bg-gradient-to-br from-veritas-navy/95 via-[#1a4a73]/95 to-[#2a5a83]/95 backdrop-blur-sm">
     <div class="flex items-center gap-3">
       <img alt="Malvern Prep Logo" class="h-12 w-auto" src="https://raw.githubusercontent.com/stephenborish/veritasassets/main/Malvern%20Logo.png"/>
       <div class="flex flex-col">
@@ -1092,15 +1119,40 @@
         var studentContainer = document.getElementById('student-container');
         var imageBackdrop = document.getElementById('image-backdrop');
 
-        // Image click-to-enlarge functionality
+        // Image click-to-enlarge functionality for question images
         if (questionImageEl && imageBackdrop) {
-            questionImageEl.addEventListener('click', function() {
+            questionImageEl.addEventListener('click', function(e) {
+                e.stopPropagation();
                 questionImageEl.classList.toggle('enlarged');
                 imageBackdrop.classList.toggle('active');
             });
+        }
 
+        // Event delegation for option images (dynamically created)
+        if (imageBackdrop) {
+            document.addEventListener('click', function(e) {
+                // Handle option image clicks
+                if (e.target.classList.contains('option-image')) {
+                    e.stopPropagation();
+                    // Close any other enlarged images first
+                    var allImages = document.querySelectorAll('.student-question-image.enlarged, .option-image.enlarged');
+                    allImages.forEach(function(img) {
+                        if (img !== e.target) {
+                            img.classList.remove('enlarged');
+                        }
+                    });
+                    // Toggle this image
+                    e.target.classList.toggle('enlarged');
+                    imageBackdrop.classList.toggle('active', document.querySelector('.student-question-image.enlarged, .option-image.enlarged') !== null);
+                }
+            });
+
+            // Close all enlarged images when clicking backdrop
             imageBackdrop.addEventListener('click', function() {
-                questionImageEl.classList.remove('enlarged');
+                var allImages = document.querySelectorAll('.student-question-image.enlarged, .option-image.enlarged');
+                allImages.forEach(function(img) {
+                    img.classList.remove('enlarged');
+                });
                 imageBackdrop.classList.remove('active');
             });
         }

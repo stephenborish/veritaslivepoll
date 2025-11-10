@@ -1073,7 +1073,9 @@
 
         // Add click handler to question image
         if (questionImageEl) {
-            questionImageEl.addEventListener('click', function() {
+            questionImageEl.addEventListener('click', function(e) {
+                e.stopPropagation();
+                e.preventDefault();
                 window.expandImage(this);
             });
         }
@@ -1081,6 +1083,8 @@
         // Event delegation for dynamically created option images
         document.addEventListener('click', function(e) {
             if (e.target.classList.contains('option-image')) {
+                e.stopPropagation();
+                e.preventDefault();
                 window.expandImage(e.target);
             }
         });

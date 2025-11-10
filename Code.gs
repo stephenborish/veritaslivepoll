@@ -2919,10 +2919,13 @@ function getLivePollData(pollId, questionIndex) {
       // Get submission if exists
       const submission = submittedAnswers.has(email) ? submittedAnswers.get(email) : null;
 
+      // Format student name
+      const formattedName = formatStudentName_(student.name);
+
       // If student is locked or awaiting fullscreen, show that status but preserve their answer if they submitted
       if (proctorState.status === 'LOCKED' || proctorState.status === 'AWAITING_FULLSCREEN') {
         return {
-          name: student.name,
+          name: formattedName,
           email: email,
           status: proctorState.status === 'AWAITING_FULLSCREEN' ? 'AWAITING_FULLSCREEN' : 'LOCKED',
           lockVersion: proctorState.lockVersion,
@@ -2936,7 +2939,7 @@ function getLivePollData(pollId, questionIndex) {
 
       if (submission) {
         return {
-          name: student.name,
+          name: formattedName,
           email: email,
           status: 'Submitted',
           answer: submission.answer,
@@ -2946,7 +2949,7 @@ function getLivePollData(pollId, questionIndex) {
       }
 
       return {
-        name: student.name,
+        name: formattedName,
         email: email,
         status: 'Waiting...',
         answer: '---',
@@ -2987,6 +2990,31 @@ function getLivePollData(pollId, questionIndex) {
   })();
 }
 
+
+/**
+ * Formats student name as "FirstName L." (first name + last initial)
+ * @param {string} fullName - The student's full name
+ * @returns {string} Formatted name
+ */
+function formatStudentName_(fullName) {
+  if (!fullName || typeof fullName !== 'string') return '';
+
+  const trimmed = fullName.trim();
+  if (!trimmed) return '';
+
+  // Split by whitespace
+  const parts = trimmed.split(/\s+/);
+
+  if (parts.length === 0) return '';
+  if (parts.length === 1) return parts[0]; // Only first name
+
+  // Get first name and last initial
+  const firstName = parts[0];
+  const lastName = parts[parts.length - 1];
+  const lastInitial = lastName.charAt(0).toUpperCase();
+
+  return firstName + ' ' + lastInitial + '.';
+}
 
 function buildSubmittedAnswersMap_(pollId, questionIndex) {
   const responses = DataAccess.responses.getByPollAndQuestion(pollId, questionIndex) || [];

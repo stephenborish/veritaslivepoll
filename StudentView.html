@@ -937,42 +937,43 @@
         <span id="connectivity-submessage" class="text-xs text-amber-700/80 opacity-0"></span>
       </div>
     </div>
-    <!-- Entry Screen - Redesigned Landing Panel -->
+    <!-- Entry Screen - Clean Professional Landing Panel -->
     <div id="entry-screen" class="w-full max-w-4xl mx-auto text-center animate-fade-in px-6">
       <!-- Main Welcome Card -->
-      <div class="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-10 sm:p-16 relative overflow-hidden">
-        <!-- Subtle shimmer background -->
-        <div class="absolute inset-0 bg-gradient-to-br from-white via-gray-50 to-blue-50 opacity-60"></div>
+      <div class="bg-white rounded-3xl shadow-2xl border border-gray-100 p-12 sm:p-16 relative">
+        <!-- Decorative accent bar -->
+        <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-1.5 bg-gradient-to-r from-transparent via-[#c5a05a] to-transparent rounded-full"></div>
 
-        <div class="relative z-10">
-          <!-- Welcome Message with Animated Gold Line -->
-          <div class="mb-12">
-            <h1 class="text-5xl sm:text-6xl font-bold mb-4" style="color: #12385d;">
-              Welcome to <span style="color: #c5a05a; position: relative; display: inline-block;">
-                VERITAS
-                <span class="gold-underline" style="position: absolute; bottom: -8px; left: 0; right: 0; height: 3px; background: #c5a05a; transform-origin: left; animation: drawLine 0.6s ease-out forwards;"></span>
-              </span>
-            </h1>
-            <p class="text-xl text-gray-700 mt-8 leading-relaxed max-w-2xl mx-auto">
-              Get ready to respond in real time — focus up, it's your turn.
-            </p>
+        <!-- Logo/Brand Icon -->
+        <div class="mb-8">
+          <div class="w-20 h-20 mx-auto rounded-2xl flex items-center justify-center mb-6" style="background: linear-gradient(135deg, #12385d 0%, #1a4a75 100%);">
+            <span class="material-symbols-outlined text-5xl text-white">fact_check</span>
           </div>
+        </div>
 
-          <!-- Begin Button -->
-          <button id="start-session-btn" class="inline-flex items-center justify-center gap-3 px-14 py-5 rounded-full text-white text-xl font-bold transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105" style="background: #12385d; border: 2px solid #c5a05a;">
-            <span class="material-symbols-outlined text-2xl">play_circle</span>
-            <span>Begin Session</span>
-          </button>
-
-          <!-- Subtle Hint -->
-          <p class="mt-8 text-sm text-gray-500 italic">
-            Prepare to enter fullscreen mode for your session
+        <!-- Welcome Message -->
+        <div class="mb-10">
+          <h1 class="text-5xl sm:text-6xl font-bold mb-6" style="color: #12385d; letter-spacing: -0.02em;">
+            Welcome to <span style="color: #c5a05a;">VERITAS</span>
+          </h1>
+          <p class="text-lg text-gray-600 leading-relaxed max-w-xl mx-auto">
+            Your live polling session is ready. Click below to begin and participate in real-time.
           </p>
         </div>
 
-        <!-- Decorative element -->
-        <div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-100/30 to-gold-100/20 rounded-full blur-3xl -z-0"></div>
-        <div class="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-gold-100/20 to-transparent rounded-full blur-2xl -z-0"></div>
+        <!-- Begin Button -->
+        <button id="start-session-btn" class="relative inline-flex items-center justify-center gap-3 px-12 py-4 rounded-xl text-white text-lg font-semibold transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-4 focus:ring-[#12385d]/20" style="background: linear-gradient(135deg, #12385d 0%, #1a4a75 100%); z-index: 10;">
+          <span class="material-symbols-outlined text-2xl">play_arrow</span>
+          <span>Begin Poll</span>
+        </button>
+
+        <!-- Session Info -->
+        <div class="mt-10 pt-8 border-t border-gray-100">
+          <div class="flex items-center justify-center gap-2 text-sm text-gray-500">
+            <span class="material-symbols-outlined text-lg">info</span>
+            <span>This session will enter fullscreen mode for your focus</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -2049,7 +2050,7 @@
                     }
                 } else if (data.status === 'ENDED') {
                     hasAnsweredCurrent = false;
-                    statusMessage.textContent = data.message || 'That's a wrap! You just finished the poll — nicely done.';
+                    statusMessage.textContent = data.message || "That's a wrap! You just finished the poll — nicely done.";
                     statusIcon = 'emoji_events';
                     statusClass = 'text-yellow-300';
                     if (statusSubMessage) {

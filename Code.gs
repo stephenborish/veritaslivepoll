@@ -862,7 +862,7 @@ function setupSheet() {
   });
   
   const responsesSheet = ss.getSheetByName("Responses");
-  responsesSheet.getRange("A1:G1").setValues([["ResponseID", "Timestamp", "PollID", "QuestionIndex", "StudentEmail", "Answer", "IsCorrect"]])
+  responsesSheet.getRange("A1:H1").setValues([["ResponseID", "Timestamp", "PollID", "QuestionIndex", "StudentEmail", "Answer", "IsCorrect", "ConfidenceLevel"]])
     .setFontWeight("bold").setBackground("#4285f4").setFontColor("#ffffff");
   
   // Freeze header rows
@@ -2694,6 +2694,437 @@ function computeKPIs_(sessionAggregates, studentAggregates) {
   ];
 }
 
+// =============================================================================
+// ADVANCED PSYCHOMETRIC ANALYTICS (2025)
+// Comprehensive assessment quality metrics for professional pedagogy
+// =============================================================================
+
+/**
+ * Get comprehensive post-poll analytics report with psychometric metrics
+ * This provides standardized assessment quality analysis
+ */
+function getPostPollAnalytics(pollId) {
+  return withErrorHandling(() => {
+    const poll = DataAccess.polls.getById(pollId);
+    if (!poll) {
+      return { success: false, error: 'Poll not found' };
+    }
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const responsesSheet = ss.getSheetByName('Responses');
+    const responseValues = responsesSheet ? getDataRangeValues_(responsesSheet) : [];
+    const roster = DataAccess.roster.getByClass(poll.className);
+
+    // Filter responses for this poll
+    const pollResponses = responseValues.filter(row => row[2] === pollId);
+
+    // Build response data structure
+    const responsesByQuestion = buildResponsesByQuestion_(pollResponses);
+    const studentTotalScores = calculateStudentTotalScores_(poll, responsesByQuestion);
+
+    // Compute comprehensive metrics
+    const classOverview = computeClassOverview_(poll, responsesByQuestion, studentTotalScores, roster);
+    const itemAnalysis = computeItemAnalysis_(poll, responsesByQuestion, studentTotalScores);
+    const metacognitionAnalysis = computeMetacognitionAnalysis_(poll, responsesByQuestion);
+    const distributionAnalysis = computeDistributionAnalysis_(studentTotalScores, poll.questions.length);
+
+    return {
+      success: true,
+      pollId: pollId,
+      pollName: poll.pollName,
+      className: poll.className,
+      questionCount: poll.questions.length,
+      classOverview: classOverview,
+      itemAnalysis: itemAnalysis,
+      metacognition: metacognitionAnalysis,
+      distribution: distributionAnalysis
+    };
+  })();
+}
+
+/**
+ * Build responses organized by question index
+ */
+function buildResponsesByQuestion_(pollResponses) {
+  const byQuestion = new Map();
+
+  pollResponses.forEach(row => {
+    const questionIndex = typeof row[3] === 'number' ? row[3] : parseInt(row[3], 10);
+    if (isNaN(questionIndex) || questionIndex < 0) return;
+
+    const studentEmail = (row[4] || '').toString().trim();
+    const answer = row[5];
+    const isCorrectRaw = row[6];
+    const confidenceLevel = row[7] || null;
+    const timestamp = row[1];
+
+    const isCorrect = (isCorrectRaw === true) || (isCorrectRaw === 'TRUE') ||
+                     (isCorrectRaw === 'true') || (isCorrectRaw === 1);
+
+    if (!byQuestion.has(questionIndex)) {
+      byQuestion.set(questionIndex, []);
+    }
+
+    byQuestion.get(questionIndex).push({
+      email: studentEmail,
+      answer: answer,
+      isCorrect: isCorrect,
+      confidence: confidenceLevel,
+      timestamp: timestamp
+    });
+  });
+
+  return byQuestion;
+}
+
+/**
+ * Calculate total scores for each student (for discrimination analysis)
+ */
+function calculateStudentTotalScores_(poll, responsesByQuestion) {
+  const scores = new Map();
+
+  poll.questions.forEach((question, qIdx) => {
+    const responses = responsesByQuestion.get(qIdx) || [];
+    responses.forEach(r => {
+      if (!scores.has(r.email)) {
+        scores.set(r.email, 0);
+      }
+      if (r.isCorrect) {
+        scores.set(r.email, scores.get(r.email) + 1);
+      }
+    });
+  });
+
+  return scores;
+}
+
+/**
+ * Compute class overview statistics
+ */
+function computeClassOverview_(poll, responsesByQuestion, studentTotalScores, roster) {
+  const scores = Array.from(studentTotalScores.values());
+
+  if (scores.length === 0) {
+    return {
+      responseCount: 0,
+      participantCount: 0,
+      mean: 0,
+      median: 0,
+      stdDev: 0,
+      min: 0,
+      max: 0,
+      scoreDistribution: []
+    };
+  }
+
+  // Calculate basic statistics
+  const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
+  const sortedScores = scores.slice().sort((a, b) => a - b);
+  const median = sortedScores[Math.floor(sortedScores.length / 2)];
+
+  // Standard deviation
+  const variance = scores.reduce((sum, score) => sum + Math.pow(score - mean, 2), 0) / scores.length;
+  const stdDev = Math.sqrt(variance);
+
+  // Score distribution (histogram data)
+  const maxScore = poll.questions.length;
+  const distribution = Array(maxScore + 1).fill(0);
+  scores.forEach(score => {
+    if (score >= 0 && score <= maxScore) {
+      distribution[score]++;
+    }
+  });
+
+  const scoreDistribution = distribution.map((count, score) => ({
+    score: score,
+    count: count,
+    percentage: (count / scores.length) * 100
+  }));
+
+  return {
+    responseCount: scores.reduce((sum, _) => sum + poll.questions.length, 0),
+    participantCount: scores.length,
+    rosterSize: roster.length,
+    mean: Math.round(mean * 100) / 100,
+    median: median,
+    stdDev: Math.round(stdDev * 100) / 100,
+    min: Math.min(...scores),
+    max: Math.max(...scores),
+    scoreDistribution: scoreDistribution
+  };
+}
+
+/**
+ * Compute item-level psychometric analysis with distractor analysis
+ */
+function computeItemAnalysis_(poll, responsesByQuestion, studentTotalScores) {
+  const items = [];
+
+  poll.questions.forEach((question, qIdx) => {
+    const responses = responsesByQuestion.get(qIdx) || [];
+
+    if (responses.length === 0) {
+      items.push({
+        questionIndex: qIdx,
+        questionText: question.questionText || '',
+        difficulty: 0,
+        discrimination: 0,
+        distractorAnalysis: [],
+        flags: ['no-data'],
+        responseCount: 0
+      });
+      return;
+    }
+
+    // Item Difficulty (P-Value)
+    const correctCount = responses.filter(r => r.isCorrect).length;
+    const difficulty = correctCount / responses.length;
+
+    // Item Discrimination (using upper/lower 27% groups)
+    const discrimination = calculateDiscriminationIndex_(responses, studentTotalScores);
+
+    // Distractor Analysis
+    const distractorAnalysis = computeDistractorAnalysis_(question, responses, studentTotalScores);
+
+    // Auto-flag problematic items
+    const flags = [];
+    if (discrimination < 0.15) flags.push('low-discrimination');
+    if (discrimination < 0) flags.push('negative-discrimination');
+    if (difficulty > 0.9) flags.push('too-easy');
+    if (difficulty < 0.3) flags.push('too-hard');
+
+    // Check for problematic distractors (high performers choosing them)
+    const problematicDistractor = distractorAnalysis.find(d =>
+      !d.isCorrect && d.highGroupPct > d.lowGroupPct + 10
+    );
+    if (problematicDistractor) flags.push('problematic-distractor');
+
+    items.push({
+      questionIndex: qIdx,
+      questionText: question.questionText || '',
+      questionImageURL: question.questionImageURL || null,
+      difficulty: Math.round(difficulty * 100) / 100,
+      difficultyPct: Math.round(difficulty * 100),
+      discrimination: Math.round(discrimination * 100) / 100,
+      distractorAnalysis: distractorAnalysis,
+      flags: flags,
+      responseCount: responses.length,
+      correctAnswer: question.correctAnswer
+    });
+  });
+
+  return items;
+}
+
+/**
+ * Calculate discrimination index using upper/lower 27% groups
+ * This is the simplified discrimination index method
+ */
+function calculateDiscriminationIndex_(responses, studentTotalScores) {
+  if (responses.length < 10) return 0; // Need minimum sample size
+
+  // Get total scores for students who answered this question
+  const scoredResponses = responses
+    .map(r => ({
+      email: r.email,
+      isCorrect: r.isCorrect,
+      totalScore: studentTotalScores.get(r.email) || 0
+    }))
+    .sort((a, b) => b.totalScore - a.totalScore);
+
+  // Calculate 27% group sizes
+  const groupSize = Math.max(1, Math.floor(scoredResponses.length * 0.27));
+  const highGroup = scoredResponses.slice(0, groupSize);
+  const lowGroup = scoredResponses.slice(-groupSize);
+
+  // Calculate percentage correct in each group
+  const highCorrect = highGroup.filter(r => r.isCorrect).length / highGroup.length;
+  const lowCorrect = lowGroup.filter(r => r.isCorrect).length / lowGroup.length;
+
+  return highCorrect - lowCorrect;
+}
+
+/**
+ * Compute distractor analysis - showing how each option performed
+ */
+function computeDistractorAnalysis_(question, responses, studentTotalScores) {
+  const analysis = [];
+  const options = question.options || [];
+  const correctAnswer = question.correctAnswer;
+
+  // Get scored responses
+  const scoredResponses = responses.map(r => ({
+    answer: r.answer,
+    totalScore: studentTotalScores.get(r.email) || 0
+  }));
+
+  // Sort by total score
+  scoredResponses.sort((a, b) => b.totalScore - a.totalScore);
+
+  // Calculate 27% group sizes
+  const groupSize = Math.max(1, Math.floor(scoredResponses.length * 0.27));
+  const highGroup = scoredResponses.slice(0, groupSize);
+  const lowGroup = scoredResponses.slice(-groupSize);
+
+  // Analyze each option
+  options.forEach((option, idx) => {
+    const optionText = typeof option === 'string' ? option : option.text;
+    const isCorrect = optionText === correctAnswer;
+
+    // Count selections
+    const totalSelections = responses.filter(r => r.answer === optionText).length;
+    const highGroupSelections = highGroup.filter(r => r.answer === optionText).length;
+    const lowGroupSelections = lowGroup.filter(r => r.answer === optionText).length;
+
+    const totalPct = (totalSelections / responses.length) * 100;
+    const highGroupPct = (highGroupSelections / highGroup.length) * 100;
+    const lowGroupPct = (lowGroupSelections / lowGroup.length) * 100;
+
+    // Distractor discrimination (should be negative for distractors)
+    const discrimination = highGroupPct - lowGroupPct;
+
+    analysis.push({
+      option: optionText,
+      optionLetter: String.fromCharCode(65 + idx), // A, B, C, D
+      isCorrect: isCorrect,
+      totalSelections: totalSelections,
+      totalPct: Math.round(totalPct * 10) / 10,
+      highGroupPct: Math.round(highGroupPct * 10) / 10,
+      lowGroupPct: Math.round(lowGroupPct * 10) / 10,
+      discrimination: Math.round(discrimination * 10) / 10,
+      quality: isCorrect
+        ? (discrimination > 0.3 ? 'excellent' : discrimination > 0.15 ? 'good' : 'poor')
+        : (discrimination < -0.15 ? 'good' : discrimination > 0.15 ? 'problematic' : 'weak')
+    });
+  });
+
+  return analysis;
+}
+
+/**
+ * Compute metacognition analysis (confidence vs correctness matrix)
+ */
+function computeMetacognitionAnalysis_(poll, responsesByQuestion) {
+  const matrix = {
+    confidentCorrect: 0,      // Conscious Competence (Mastery)
+    confidentIncorrect: 0,    // Confidently Wrong (RED ALERT)
+    uncertainCorrect: 0,      // Imposter Syndrome (Lucky guess)
+    uncertainIncorrect: 0     // Conscious Incompetence (Good - they know they don't know)
+  };
+
+  let totalWithConfidence = 0;
+  const byQuestion = [];
+
+  poll.questions.forEach((question, qIdx) => {
+    if (!question.metacognitionEnabled) {
+      byQuestion.push(null);
+      return;
+    }
+
+    const responses = responsesByQuestion.get(qIdx) || [];
+    const questionMatrix = {
+      confidentCorrect: 0,
+      confidentIncorrect: 0,
+      uncertainCorrect: 0,
+      uncertainIncorrect: 0,
+      total: 0
+    };
+
+    responses.forEach(r => {
+      if (!r.confidence) return;
+
+      totalWithConfidence++;
+      questionMatrix.total++;
+
+      const isConfident = (r.confidence === 'very-sure' || r.confidence === 'certain');
+      const isCorrect = r.isCorrect;
+
+      if (isConfident && isCorrect) {
+        matrix.confidentCorrect++;
+        questionMatrix.confidentCorrect++;
+      } else if (isConfident && !isCorrect) {
+        matrix.confidentIncorrect++;
+        questionMatrix.confidentIncorrect++;
+      } else if (!isConfident && isCorrect) {
+        matrix.uncertainCorrect++;
+        questionMatrix.uncertainCorrect++;
+      } else {
+        matrix.uncertainIncorrect++;
+        questionMatrix.uncertainIncorrect++;
+      }
+    });
+
+    byQuestion.push({
+      questionIndex: qIdx,
+      questionText: question.questionText || '',
+      matrix: questionMatrix,
+      confidentlyIncorrectPct: questionMatrix.total > 0
+        ? Math.round((questionMatrix.confidentIncorrect / questionMatrix.total) * 100)
+        : 0
+    });
+  });
+
+  const totalPct = totalWithConfidence > 0 ? {
+    confidentCorrect: Math.round((matrix.confidentCorrect / totalWithConfidence) * 100),
+    confidentIncorrect: Math.round((matrix.confidentIncorrect / totalWithConfidence) * 100),
+    uncertainCorrect: Math.round((matrix.uncertainCorrect / totalWithConfidence) * 100),
+    uncertainIncorrect: Math.round((matrix.uncertainIncorrect / totalWithConfidence) * 100)
+  } : null;
+
+  return {
+    enabled: poll.questions.some(q => q.metacognitionEnabled),
+    overall: totalPct,
+    overallCounts: matrix,
+    byQuestion: byQuestion.filter(q => q !== null),
+    totalResponses: totalWithConfidence
+  };
+}
+
+/**
+ * Compute distribution analysis with Z-scores
+ */
+function computeDistributionAnalysis_(studentTotalScores, maxScore) {
+  const scores = Array.from(studentTotalScores.entries());
+
+  if (scores.length === 0) {
+    return {
+      histogram: [],
+      zScores: []
+    };
+  }
+
+  const values = scores.map(([_, score]) => score);
+  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+  const variance = values.reduce((sum, score) => sum + Math.pow(score - mean, 2), 0) / values.length;
+  const stdDev = Math.sqrt(variance);
+
+  // Calculate Z-scores for each student
+  const zScores = scores.map(([email, score]) => ({
+    email: email,
+    score: score,
+    zScore: stdDev > 0 ? Math.round(((score - mean) / stdDev) * 100) / 100 : 0
+  }));
+
+  // Create histogram
+  const distribution = Array(maxScore + 1).fill(0);
+  values.forEach(score => {
+    if (score >= 0 && score <= maxScore) {
+      distribution[score]++;
+    }
+  });
+
+  const histogram = distribution.map((count, score) => ({
+    score: score,
+    count: count,
+    percentage: (count / values.length) * 100
+  }));
+
+  return {
+    histogram: histogram,
+    zScores: zScores
+  };
+}
+
 /**
  * Get dashboard summary data (recent sessions and activity)
  */
@@ -3335,55 +3766,61 @@ function getStudentPollStatus(token, context) {
 }
 
 
-function submitStudentAnswer(pollId, questionIndex, answerText, token) {
+function submitStudentAnswer(pollId, questionIndex, answerText, token, confidenceLevel = null) {
   return withErrorHandling(() => {
     const studentEmail = token ? TokenManager.getStudentEmail(token) : TokenManager.getCurrentStudentEmail();
-    
+
     if (!studentEmail) {
-      return { 
-        success: false, 
-        error: 'Authentication error. Please use your personalized poll link.' 
+      return {
+        success: false,
+        error: 'Authentication error. Please use your personalized poll link.'
       };
     }
-    
+
     try {
       RateLimiter.check(`submit_${studentEmail}`, 5, 60);
     } catch (e) {
       Logger.log('Rate limit hit: ' + studentEmail);
       return { success: false, error: e.message };
     }
-    
+
     if (typeof answerText !== 'string' || answerText.length > 500) {
       return { success: false, error: 'Invalid answer format' };
     }
-    
+
     const statusValues = DataAccess.liveStatus.get();
     const activePollId = statusValues[0];
     const activeQIndex = statusValues[1];
     const activeStatus = statusValues[2];
-    
+
     if (activePollId !== pollId || activeQIndex !== questionIndex || activeStatus !== "OPEN") {
       Logger.log('Rejected late submission from ' + studentEmail);
-      return { 
-        success: false, 
-        error: "Time's up! The poll for this question is closed." 
+      return {
+        success: false,
+        error: "Time's up! The poll for this question is closed."
       };
     }
-    
+
     if (DataAccess.responses.hasAnswered(pollId, questionIndex, studentEmail)) {
-      return { 
-        success: false, 
-        error: 'You have already answered this question.' 
+      return {
+        success: false,
+        error: 'You have already answered this question.'
       };
     }
-    
+
     const poll = DataAccess.polls.getById(pollId);
     const question = poll.questions[questionIndex];
-    
+
     const isCorrect = (question.correctAnswer === answerText);
     const timestamp = new Date().getTime();
     const responseId = "R-" + Utilities.getUuid();
-    
+
+    // Validate confidence level if provided
+    const validConfidenceLevels = ['guessing', 'somewhat-sure', 'very-sure', 'certain'];
+    const finalConfidence = (confidenceLevel && validConfidenceLevels.includes(confidenceLevel))
+      ? confidenceLevel
+      : null;
+
     DataAccess.responses.add([
       responseId,
       timestamp,
@@ -3391,11 +3828,12 @@ function submitStudentAnswer(pollId, questionIndex, answerText, token) {
       questionIndex,
       studentEmail,
       answerText,
-      isCorrect
+      isCorrect,
+      finalConfidence
     ]);
-    
-    Logger.log('Answer submitted', { studentEmail, pollId, questionIndex, isCorrect });
-    
+
+    Logger.log('Answer submitted', { studentEmail, pollId, questionIndex, isCorrect, confidenceLevel: finalConfidence });
+
     return { success: true };
   })();
 }
@@ -4543,6 +4981,9 @@ function normalizeQuestionObject_(questionData, pollUpdatedAt = null) {
   if (questionData.timerSeconds) {
     normalized.timerSeconds = questionData.timerSeconds;
   }
+
+  // Metacognition field (default to false for backward compatibility)
+  normalized.metacognitionEnabled = questionData.metacognitionEnabled || false;
 
   return normalized;
 }

@@ -58,8 +58,7 @@
           },
           animation: {
             'fade-up': 'fadeUp 0.4s ease-out forwards',
-            'pulse-glow': 'pulseGlow 3s ease-in-out infinite',
-            'shimmer': 'shimmer 2s linear infinite'
+            'pulse-glow': 'pulseGlow 3s ease-in-out infinite'
           },
           keyframes: {
             fadeUp: {
@@ -69,10 +68,6 @@
             pulseGlow: {
               '0%, 100%': { boxShadow: '0 0 0 0 rgba(197, 160, 90, 0.4)' },
               '50%': { boxShadow: '0 0 20px 4px rgba(197, 160, 90, 0.4)' }
-            },
-            shimmer: {
-              '0%': { backgroundPosition: '-1000px 0' },
-              '100%': { backgroundPosition: '1000px 0' }
             }
           }
         }
@@ -758,26 +753,6 @@
       background: linear-gradient(135deg, #12385d 0%, #0f2d4a 100%);
       color: white;
       border-top: 4px solid #c5a05a;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .dashboard-card.primary-cta::before {
-      content: '';
-      position: absolute;
-      top: -2px;
-      left: -2px;
-      right: -2px;
-      bottom: -2px;
-      background: linear-gradient(45deg, transparent, rgba(197, 160, 90, 0.3), transparent);
-      animation: shimmer 3s linear infinite;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    .dashboard-card.primary-cta > * {
-      position: relative;
-      z-index: 1;
     }
 
     .dashboard-card-title {
@@ -1007,14 +982,6 @@
       }
     }
 
-    @keyframes shimmer {
-      from {
-        background-position: -1000px 0;
-      }
-      to {
-        background-position: 1000px 0;
-      }
-    }
 
     /* Stagger animation delays */
     .dashboard-card:nth-child(1) { animation-delay: 0ms; }
@@ -1045,14 +1012,6 @@
 
         <!-- Subheader Strip -->
         <div class="hidden md:flex items-center gap-6 ml-8">
-          <div class="flex items-center gap-2 text-brand-white/80 text-sm">
-            <span class="material-symbols-outlined text-lg">school</span>
-            <select id="header-class-select" class="bg-veritas-navy/50 border border-brand-white/20 rounded-lg px-3 py-1.5 text-sm text-brand-white focus:outline-none focus:ring-2 focus:ring-veritas-gold">
-              <option>All Classes</option>
-              <option>AP Biology – Period 5</option>
-              <option>Chemistry – Period 2</option>
-            </select>
-          </div>
           <div class="flex items-center gap-2 text-brand-white/70 text-sm">
             <span class="material-symbols-outlined text-lg">schedule</span>
             <span id="header-datetime"></span>
@@ -1065,15 +1024,6 @@
       </div>
 
       <div class="flex items-center gap-3">
-        <button class="dashboard-icon-btn" style="background: rgba(255, 255, 255, 0.1); color: white;" title="Settings" onclick="showRosterManager()">
-          <span class="material-symbols-outlined text-xl">settings</span>
-        </button>
-        <button class="dashboard-icon-btn" style="background: rgba(255, 255, 255, 0.1); color: white;" title="Analytics" onclick="showAnalyticsView()">
-          <span class="material-symbols-outlined text-xl">analytics</span>
-        </button>
-        <button class="dashboard-icon-btn" style="background: rgba(255, 255, 255, 0.1); color: white;" title="Notifications" onclick="void(0)">
-          <span class="material-symbols-outlined text-xl">notifications</span>
-        </button>
         <div id="loader" class="loader" style="display: block;">
           <div class="h-6 w-6 animate-spin rounded-full border-2 border-brand-white/80 border-t-transparent"></div>
         </div>
@@ -1136,113 +1086,67 @@
       <main class="flex-1 overflow-y-auto">
         <!-- Dashboard View (Default) - Redesigned -->
         <div id="dashboard" class="p-8 max-w-7xl mx-auto">
-          <!-- Dashboard Grid - 2x2 Layout -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <!-- Quick Access Tools -->
+          <div class="dashboard-card mb-6">
+            <h2 class="dashboard-card-title">Quick Access</h2>
+            <p class="dashboard-card-subtitle">Common actions and shortcuts</p>
 
-            <!-- 1. Start/Manage Session (Primary CTA) -->
-            <div class="dashboard-card primary-cta">
-              <h2 class="dashboard-card-title text-2xl mb-2">Start / Manage Session</h2>
-              <p class="dashboard-card-subtitle">Manage live participation and monitor student focus in real time.</p>
+            <div class="grid grid-cols-2 gap-4 mt-4">
+              <button class="dashboard-quick-tool" id="open-creator-btn">
+                <span class="material-symbols-outlined icon">add_circle</span>
+                <span class="text-sm font-semibold">Create Question Bank</span>
+              </button>
 
-              <div class="form-group mb-5" style="position: relative; z-index: 1;">
-                <label class="block text-sm font-medium mb-2 text-white/90" for="poll-select">Select Poll</label>
-                <select id="poll-select" class="w-full rounded-lg border border-white/20 bg-white/10 text-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-veritas-gold backdrop-blur-sm">
-                  <option value="" style="color: #111;">-- Choose a poll --</option>
-                </select>
-              </div>
+              <button class="dashboard-quick-tool" onclick="showAnalyticsView()">
+                <span class="material-symbols-outlined icon">monitoring</span>
+                <span class="text-sm font-semibold">Review Student Trends</span>
+              </button>
 
-              <div class="flex flex-wrap gap-3">
-                <button id="start-poll-btn" class="dashboard-cta-button primary">
-                  <span class="material-symbols-outlined text-xl">play_circle</span>
-                  <span>Start New Poll</span>
-                </button>
-                <button class="dashboard-cta-button secondary" onclick="void(0)">
-                  <span class="material-symbols-outlined text-xl">resume</span>
-                  <span>Continue Session</span>
-                </button>
-              </div>
-
-              <div class="mt-5 flex flex-wrap gap-2">
-                <button id="send-link-btn" class="dashboard-cta-button secondary text-sm py-2 px-4" disabled style="opacity: 0.6;">
-                  <span class="material-symbols-outlined text-lg">mail</span>
-                  <span>Send Links</span>
-                </button>
-                <button id="view-links-btn" class="dashboard-cta-button secondary text-sm py-2 px-4" disabled style="opacity: 0.6;">
-                  <span class="material-symbols-outlined text-lg">visibility</span>
-                  <span>View Links</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- 2. Recent Sessions Summary -->
-            <div class="dashboard-card">
-              <h2 class="dashboard-card-title">Recent Sessions</h2>
-              <p class="dashboard-card-subtitle">Your last 5 live poll sessions</p>
-
-              <div id="recent-sessions-container" class="space-y-0">
-                <!-- Populated dynamically -->
-                <div class="text-center py-6 text-gray-500 text-sm">
-                  Loading recent sessions...
-                </div>
-              </div>
-
-              <button class="mt-4 text-veritas-navy text-sm font-semibold hover:text-veritas-gold transition-colors flex items-center gap-1" onclick="showAnalyticsView()">
-                <span>View All</span>
-                <span class="material-symbols-outlined text-lg">arrow_forward</span>
+              <button class="dashboard-quick-tool" onclick="showRosterManager()">
+                <span class="material-symbols-outlined icon">settings</span>
+                <span class="text-sm font-semibold">Adjust Settings</span>
               </button>
             </div>
-
-            <!-- 3. Student Activity Pulse -->
-            <div class="dashboard-card">
-              <h2 class="dashboard-card-title">Student Activity Pulse</h2>
-              <p class="dashboard-card-subtitle">Total interactions over the last 7 days</p>
-
-              <div id="activity-chart-container" class="activity-chart-placeholder">
-                <!-- Populated dynamically -->
-              </div>
-
-              <div id="activity-summary" class="mt-4">
-                <!-- Populated dynamically -->
-              </div>
-            </div>
-
-            <!-- 4. Quick Access Tools -->
-            <div class="dashboard-card">
-              <h2 class="dashboard-card-title">Quick Access</h2>
-              <p class="dashboard-card-subtitle">Common actions and shortcuts</p>
-
-              <div class="grid grid-cols-2 gap-4 mt-4">
-                <button class="dashboard-quick-tool" id="open-creator-btn">
-                  <span class="material-symbols-outlined icon">add_circle</span>
-                  <span class="text-sm font-semibold">Create Question Bank</span>
-                </button>
-
-                <button class="dashboard-quick-tool">
-                  <span class="material-symbols-outlined icon">image</span>
-                  <span class="text-sm font-semibold">Upload Image</span>
-                </button>
-
-                <button class="dashboard-quick-tool" onclick="showAnalyticsView()">
-                  <span class="material-symbols-outlined icon">monitoring</span>
-                  <span class="text-sm font-semibold">Review Student Trends</span>
-                </button>
-
-                <button class="dashboard-quick-tool" onclick="showRosterManager()">
-                  <span class="material-symbols-outlined icon">settings</span>
-                  <span class="text-sm font-semibold">Adjust Settings</span>
-                </button>
-              </div>
-            </div>
-
           </div>
 
-          <!-- Poll Library Section (Expandable) -->
-          <div class="dashboard-card" style="animation-delay: 400ms;">
-            <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+          <!-- Poll Library & Session Management (Combined) -->
+          <div class="dashboard-card">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
               <div>
-                <h2 class="text-2xl font-bold text-veritas-navy mb-1">Poll Library</h2>
-                <p class="text-gray-600 text-sm">Sort, filter, edit, or delete any poll</p>
+                <h2 class="text-2xl font-bold text-veritas-navy mb-1">Poll Library & Session Management</h2>
+                <p class="text-gray-600 text-sm">Select a poll to start a live session, or create, edit, and manage your polls</p>
               </div>
+            </div>
+
+            <!-- Session Controls -->
+            <div class="bg-veritas-navy/5 rounded-lg p-4 mb-6 border border-veritas-navy/10">
+              <div class="flex flex-wrap items-end gap-4">
+                <div class="flex-1 min-w-[240px]">
+                  <label class="block text-sm font-medium mb-2 text-veritas-navy" for="poll-select">Select Poll to Start Session</label>
+                  <select id="poll-select" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-veritas-gold">
+                    <option value="">-- Choose a poll --</option>
+                  </select>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <button id="start-poll-btn" class="dashboard-cta-button primary">
+                    <span class="material-symbols-outlined text-xl">play_circle</span>
+                    <span>Start Session</span>
+                  </button>
+                  <button id="send-link-btn" class="dashboard-cta-button secondary text-sm py-2 px-4" disabled style="opacity: 0.6;">
+                    <span class="material-symbols-outlined text-lg">mail</span>
+                    <span>Send Links</span>
+                  </button>
+                  <button id="view-links-btn" class="dashboard-cta-button secondary text-sm py-2 px-4" disabled style="opacity: 0.6;">
+                    <span class="material-symbols-outlined text-lg">visibility</span>
+                    <span>View Links</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Poll Library Controls -->
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+              <h3 class="text-lg font-semibold text-veritas-navy">Your Polls</h3>
               <div class="flex flex-wrap items-center gap-3">
                 <label class="flex items-center gap-2 text-sm text-gray-600">
                   <span class="hidden sm:inline">Sort by</span>

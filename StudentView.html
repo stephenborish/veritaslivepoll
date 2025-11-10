@@ -1117,6 +1117,8 @@
         var fullscreenEnteredOnce = false; // Track if fullscreen has been entered to prevent false violations
         var pendingSubmission = false;
         var currentQuestionKey = null;
+        var pendingAnswerText = null; // Store answer while waiting for confidence
+        var currentMetacognitionEnabled = false; // Track if current question has metacognition
         var lastStateVersion = null;
         var lastSuccessfulPollAt = 0;
         var pollInFlight = false;
@@ -1907,6 +1909,8 @@
                     currentQuestionKey = questionKey;
                     hasAnsweredCurrent = !!data.hasSubmitted;
                     pendingSubmission = false;
+                    pendingAnswerText = null;
+                    currentMetacognitionEnabled = !!data.metacognitionEnabled;
                     currentPollState = data;
                     statusContainer.style.display = hasAnsweredCurrent ? 'block' : 'none';
                     questionContainer.style.display = hasAnsweredCurrent ? 'none' : 'block';
@@ -2162,17 +2166,76 @@
                     buttons[i].className = optionDisabledClass;
                 }
             }
-            hasAnsweredCurrent = true;
-            pendingSubmission = true;
+
+            // Check if metacognition is enabled for this question
+            if (currentMetacognitionEnabled) {
+                pendingAnswerText = answerText;
+                questionContainer.style.display = 'none';
+                showConfidenceQuestion(pollId, questionIndex);
+            } else {
+                hasAnsweredCurrent = true;
+                pendingSubmission = true;
+                statusContainer.style.display = 'block';
+                questionContainer.style.display = 'none';
+                submitAnswerToServer(pollId, questionIndex, answerText, null);
+            }
+        }
+
+        function showConfidenceQuestion(pollId, questionIndex) {
             statusContainer.style.display = 'block';
             questionContainer.style.display = 'none';
-            statusMessage.textContent = 'Transmitting your genius response...';
+
+            statusMessage.textContent = 'How confident are you in your answer?';
+            statusMessage.className = 'text-white text-xl font-semibold mb-4';
+
+            if (statusSubMessage) {
+                statusSubMessage.innerHTML = '<div class="confidence-selector mt-6 flex flex-col gap-3">' +
+                    '<button class="confidence-btn h-14 px-6 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-white border-2 border-red-500/40 hover:border-red-500/60 transition-all font-semibold text-lg" data-confidence="guessing">' +
+                    '<span class="mr-2">🤔</span> Guessing' +
+                    '</button>' +
+                    '<button class="confidence-btn h-14 px-6 rounded-xl bg-yellow-500/20 hover:bg-yellow-500/30 text-white border-2 border-yellow-500/40 hover:border-yellow-500/60 transition-all font-semibold text-lg" data-confidence="somewhat-sure">' +
+                    '<span class="mr-2">🤷</span> Somewhat Sure' +
+                    '</button>' +
+                    '<button class="confidence-btn h-14 px-6 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-white border-2 border-blue-500/40 hover:border-blue-500/60 transition-all font-semibold text-lg" data-confidence="very-sure">' +
+                    '<span class="mr-2">👍</span> Very Sure' +
+                    '</button>' +
+                    '<button class="confidence-btn h-14 px-6 rounded-xl bg-green-500/20 hover:bg-green-500/30 text-white border-2 border-green-500/40 hover:border-green-500/60 transition-all font-semibold text-lg" data-confidence="certain">' +
+                    '<span class="mr-2">💯</span> Absolutely Certain' +
+                    '</button>' +
+                    '</div>';
+                statusSubMessage.style.display = 'block';
+                statusSubMessage.className = 'text-white/90 text-base mt-4';
+
+                // Add click handlers to confidence buttons
+                var confidenceBtns = statusSubMessage.querySelectorAll('.confidence-btn');
+                for (var i = 0; i < confidenceBtns.length; i++) {
+                    confidenceBtns[i].onclick = function() {
+                        var confidence = this.dataset.confidence;
+                        submitAnswerWithConfidence(pollId, questionIndex, pendingAnswerText, confidence);
+                    };
+                }
+            }
+        }
+
+        function submitAnswerWithConfidence(pollId, questionIndex, answerText, confidence) {
+            hasAnsweredCurrent = true;
+            pendingSubmission = true;
+            statusMessage.textContent = 'Transmitting your response...';
             statusMessage.className = 'text-white text-2xl font-semibold';
+            if (statusSubMessage) {
+                statusSubMessage.innerHTML = '';
+                statusSubMessage.style.display = 'none';
+            }
+            submitAnswerToServer(pollId, questionIndex, answerText, confidence);
+        }
+
+        function submitAnswerToServer(pollId, questionIndex, answerText, confidence) {
             google.script.run
                 .withSuccessHandler(function(response) {
                     if (!response.success) {
                         hasAnsweredCurrent = false;
                         pendingSubmission = false;
+                        pendingAnswerText = null;
                         statusMessage.textContent = response.error || 'We hit a hiccup. Try again?';
                         statusMessage.className = 'text-red-300 text-2xl font-semibold';
                         if (statusSubMessage) {
@@ -2191,6 +2254,7 @@
                             }
                         }, 2000);
                     } else {
+                        pendingAnswerText = null;
                         statusMessage.textContent = 'Answer received - nice work.';
                         statusMessage.className = 'text-green-300 text-2xl font-semibold';
                         if (statusSubMessage) {
@@ -2203,9 +2267,10 @@
                 .withFailureHandler(function(error) {
                     hasAnsweredCurrent = false;
                     pendingSubmission = false;
+                    pendingAnswerText = null;
                     handleError(error);
                 })
-                .submitStudentAnswer(pollId, questionIndex, answerText, SESSION_TOKEN);
+                .submitStudentAnswer(pollId, questionIndex, answerText, SESSION_TOKEN, confidence);
         }
 
         function shuffle(array) {

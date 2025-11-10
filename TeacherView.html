@@ -3762,7 +3762,8 @@
         nonResponderHtml='<div class="mt-3"><h4 class="text-xs font-semibold uppercase text-brand-dark-gray/60 dark:text-brand-white/60">No Response</h4><div class="flex flex-wrap gap-2 mt-1">';
         nonResponders.forEach(function(student){
           var chipClass=student.violation?'bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-200':'bg-brand-light-gray text-brand-dark-gray dark:bg-brand-dark-gray/50 dark:text-brand-white/80';
-          nonResponderHtml+='<span class="px-2 py-1 rounded-full text-xs '+chipClass+'">'+escapeHtml(student.name||student.email)+'</span>';
+          var displayName = student.name ? formatStudentName(student.name) : student.email;
+          nonResponderHtml+='<span class="px-2 py-1 rounded-full text-xs '+chipClass+'">'+escapeHtml(displayName)+'</span>';
         });
         nonResponderHtml+='</div></div>';
       }
@@ -4103,7 +4104,7 @@
         matches.forEach(function(student) {
           var div = document.createElement('div');
           div.className = 'px-4 py-2 hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/50 cursor-pointer';
-          div.textContent = student.name;
+          div.textContent = formatStudentName(student.name);
           div.onclick = function() {
             selectStudent(student);
             suggestions.classList.add('hidden');
@@ -4126,7 +4127,7 @@
     // Render student summary
     var summary = document.getElementById('analytics-student-summary');
     summary.innerHTML = '<div class="flex flex-wrap items-center justify-between gap-4">' +
-      '<div><h3 class="text-xl font-bold text-brand-dark-gray dark:text-brand-white">' + escapeHtml(student.name) + '</h3>' +
+      '<div><h3 class="text-xl font-bold text-brand-dark-gray dark:text-brand-white">' + escapeHtml(formatStudentName(student.name)) + '</h3>' +
       '<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">' + escapeHtml(student.email) + '</p></div>' +
       '<div class="grid grid-cols-3 gap-4 text-center">' +
       '<div><div class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">' + student.successLast10.toFixed(1) + '%</div>' +
@@ -4628,11 +4629,19 @@
       }
     }
 
-    // Show/hide end-show/start buttons
-    if(isPaused){
-      document.getElementById('header-start-btn').style.display='flex';
+    // Show/hide end-show/start buttons based on state
+    var isResultsRevealed = resultsVisibility === 'REVEALED';
+
+    if(isResultsRevealed){
+      // Results already revealed - hide both action buttons
+      document.getElementById('header-start-btn').style.display='none';
       document.getElementById('header-end-show-btn').style.display='none';
+    } else if(isPaused){
+      // Paused (responses closed) but not revealed - show resume and reveal buttons
+      document.getElementById('header-start-btn').style.display='flex';
+      document.getElementById('header-end-show-btn').style.display='flex';
     } else {
+      // Active (collecting responses) - show only reveal button (teacher can end early)
       document.getElementById('header-start-btn').style.display='none';
       document.getElementById('header-end-show-btn').style.display='flex';
     }
@@ -4839,7 +4848,7 @@
       if(studentsWithAnswer.length>0){
         barHtml+='<div class="teacher-result-students">';
         studentsWithAnswer.forEach(function(student){
-          barHtml+='<span class="teacher-result-student">'+escapeHtml(student.name)+'</span>';
+          barHtml+='<span class="teacher-result-student">'+escapeHtml(formatStudentName(student.name))+'</span>';
         });
         barHtml+='</div>';
       }
@@ -4872,7 +4881,7 @@
         tile.innerHTML='<div class="flex items-center gap-3 min-w-0">'+
           '<span class="material-symbols-outlined text-xl '+iconClass+'">'+icon+'</span>'+
           '<div class="flex flex-col min-w-0">'+
-          '<span class="text-sm font-semibold '+textClass+' truncate">'+escapeHtml(student.name)+'</span>'+
+          '<span class="text-sm font-semibold '+textClass+' truncate">'+escapeHtml(formatStudentName(student.name))+'</span>'+
           '<span class="text-xs '+subTextClass+' truncate">'+statusLabel+answerLabel+'</span>'+
           '</div></div>'+
           '<button class="reset-btn flex-shrink-0 flex items-center justify-center gap-1 h-7 px-2.5 rounded-md bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-xs font-semibold hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors" data-email="'+student.email+'">'+
@@ -4892,7 +4901,7 @@
         tile.innerHTML='<div class="flex items-center gap-3 min-w-0">'+
           '<span class="material-symbols-outlined text-xl text-red-600 dark:text-red-300">lock</span>'+
           '<div class="flex flex-col min-w-0">'+
-          '<span class="text-sm font-semibold text-red-800 dark:text-red-200 truncate">'+escapeHtml(student.name)+'</span>'+
+          '<span class="text-sm font-semibold text-red-800 dark:text-red-200 truncate">'+escapeHtml(formatStudentName(student.name))+'</span>'+
           '<span class="text-xs text-red-600 dark:text-red-300">Locked v'+(student.lockVersion||0)+lockedDuration+'</span>'+
           '</div></div>'+
           '<button class="unlock-btn flex-shrink-0 flex items-center justify-center gap-1 h-7 px-2.5 rounded-md bg-red-500/20 text-red-700 dark:bg-red-400/20 dark:text-red-200 text-xs font-semibold hover:bg-red-500/30 transition-colors" data-email="'+student.email+'" data-poll-id="'+CURRENT_POLL_DATA.pollId+'" data-lock-version="'+(student.lockVersion || 0)+'">'+
@@ -4902,19 +4911,19 @@
         tile.innerHTML='<div class="flex items-center gap-3 min-w-0">'+
           '<span class="material-symbols-outlined text-xl text-blue-600 dark:text-blue-300">hourglass_empty</span>'+
           '<div class="flex flex-col min-w-0">'+
-          '<span class="text-sm font-semibold text-blue-800 dark:text-blue-200 truncate">'+escapeHtml(student.name)+'</span>'+
+          '<span class="text-sm font-semibold text-blue-800 dark:text-blue-200 truncate">'+escapeHtml(formatStudentName(student.name))+'</span>'+
           '<span class="text-xs text-blue-600 dark:text-blue-300">Awaiting fullscreen confirmation</span>'+
           '</div></div>';
       } else if(student.status==='Waiting...'){
         tile.className='flex items-center justify-between p-3 rounded-lg bg-gray-500/10 dark:bg-gray-500/20';
         tile.innerHTML='<div class="flex items-center gap-3">'+
           '<span class="material-symbols-outlined text-xl text-gray-500 dark:text-gray-300">pending</span>'+
-          '<span class="text-sm font-medium text-gray-600 dark:text-gray-300 truncate">'+escapeHtml(student.name)+'</span></div>';
+          '<span class="text-sm font-medium text-gray-600 dark:text-gray-300 truncate">'+escapeHtml(formatStudentName(student.name))+'</span></div>';
       } else {
         tile.className='flex items-center justify-between p-3 rounded-lg bg-orange-500/10 dark:bg-orange-500/20';
         tile.innerHTML='<div class="flex items-center gap-3">'+
           '<span class="material-symbols-outlined text-xl text-orange-600 dark:text-orange-300">error</span>'+
-          '<span class="text-sm font-medium text-orange-700 dark:text-orange-200 truncate">'+escapeHtml(student.name)+'</span></div>';
+          '<span class="text-sm font-medium text-orange-700 dark:text-orange-200 truncate">'+escapeHtml(formatStudentName(student.name))+'</span></div>';
       }
 
       grid.appendChild(tile);
@@ -6292,6 +6301,31 @@
     var div=document.createElement('div');
     div.textContent=text;
     return div.innerHTML;
+  }
+
+  /**
+   * Formats student name as "FirstName L." (first name + last initial)
+   * @param {string} fullName - The student's full name
+   * @returns {string} Formatted name
+   */
+  function formatStudentName(fullName){
+    if(!fullName || typeof fullName !== 'string') return '';
+
+    var trimmed = fullName.trim();
+    if(!trimmed) return '';
+
+    // Split by whitespace
+    var parts = trimmed.split(/\s+/);
+
+    if(parts.length === 0) return '';
+    if(parts.length === 1) return parts[0]; // Only first name
+
+    // Get first name and last initial
+    var firstName = parts[0];
+    var lastName = parts[parts.length - 1];
+    var lastInitial = lastName.charAt(0).toUpperCase();
+
+    return firstName + ' ' + lastInitial + '.';
   }
 
   async function handleError(error){

@@ -2032,6 +2032,8 @@
   var ALL_CLASSES=[];
   var CURRENT_POLL_DATA={};
   var currentStudentStatusData=[];
+  var studentSearchQuery='';
+  var studentTableSort={column:'status',direction:'asc'};
   var pollInterval=null;
   var visualTimerInterval=null;
   var isPaused=false;
@@ -5911,178 +5913,278 @@
       .teacherApproveUnlock(email, pollId, lockVersion);
   }
 
+  function createResetButton(student){
+    var button=document.createElement('button');
+    button.className='reset-btn flex-shrink-0 flex items-center justify-center gap-1 h-7 px-2.5 rounded-md bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-xs font-semibold hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors';
+    button.dataset.email=student.email||'';
+    var icon=document.createElement('span');
+    icon.className='material-symbols-outlined text-sm';
+    icon.textContent='refresh';
+    var label=document.createElement('span');
+    label.textContent='Reset';
+    button.appendChild(icon);
+    button.appendChild(label);
+    return button;
+  }
+
+  function createUnlockButton(student){
+    var button=document.createElement('button');
+    button.className='unlock-btn flex-shrink-0 flex items-center justify-center gap-1 h-8 px-3 rounded-md bg-red-600 text-white text-xs font-bold hover:bg-red-700 transition-colors shadow-sm';
+    button.dataset.email=student.email||'';
+    if(CURRENT_POLL_DATA&&CURRENT_POLL_DATA.pollId!==undefined){
+      button.dataset.pollId=CURRENT_POLL_DATA.pollId;
+    }
+    button.dataset.lockVersion=student.lockVersion!=null?student.lockVersion:0;
+    var icon=document.createElement('span');
+    icon.className='material-symbols-outlined text-sm';
+    icon.textContent='lock_open';
+    var label=document.createElement('span');
+    label.textContent='Approve';
+    button.appendChild(icon);
+    button.appendChild(label);
+    return button;
+  }
+
+  function buildStudentStatusTile(student){
+    var tile=document.createElement('div');
+    var wrapper=document.createElement('div');
+    wrapper.className='flex items-center gap-3 min-w-0';
+    tile.appendChild(wrapper);
+
+    var icon=document.createElement('span');
+    icon.className='material-symbols-outlined text-xl';
+    wrapper.appendChild(icon);
+
+    var textWrapper=document.createElement('div');
+    textWrapper.className='flex flex-col min-w-0';
+    wrapper.appendChild(textWrapper);
+
+    var nameSpan=document.createElement('span');
+    nameSpan.className='text-sm font-semibold truncate';
+    nameSpan.textContent=formatStudentName(student.name);
+    textWrapper.appendChild(nameSpan);
+
+    var detailSpan=document.createElement('span');
+    detailSpan.className='text-xs truncate';
+    textWrapper.appendChild(detailSpan);
+
+    var status=student.status||'Unknown';
+    if(status==='Submitted'){
+      var isCorrect=student.isCorrect===true;
+      var isIncorrect=student.isCorrect===false;
+      var iconName=isCorrect?'check_circle':(isIncorrect?'cancel':'task_alt');
+      var baseColorClass=isCorrect?'bg-green-500/10 dark:bg-green-500/20':(isIncorrect?'bg-red-500/10 dark:bg-red-500/20':'bg-blue-500/10 dark:bg-blue-500/20');
+      var iconClass=isCorrect?'text-green-600 dark:text-green-300':(isIncorrect?'text-red-600 dark:text-red-300':'text-blue-600 dark:text-blue-300');
+      var textClass=isCorrect?'text-green-800 dark:text-green-200':(isIncorrect?'text-red-800 dark:text-red-200':'text-blue-800 dark:text-blue-200');
+      var subTextClass=isCorrect?'text-green-700/80 dark:text-green-200/80':(isIncorrect?'text-red-700/80 dark:text-red-200/80':'text-blue-700/80 dark:text-blue-200/80');
+      var statusLabel=isCorrect?'Correct':(isIncorrect?'Incorrect':'Submitted');
+      var answerLabel=student.answer?(' • '+student.answer):'';
+
+      tile.className='flex items-center justify-between gap-3 p-3 rounded-lg '+baseColorClass+' transition-all duration-200';
+      icon.className+=' '+iconClass;
+      icon.textContent=iconName;
+      nameSpan.className+=' '+textClass;
+      detailSpan.className+=' '+subTextClass;
+      detailSpan.textContent=statusLabel+answerLabel;
+
+      tile.appendChild(createResetButton(student));
+    }else if(status==='LOCKED'){
+      tile.className='flex items-center justify-between p-3 rounded-lg bg-red-50 dark:bg-red-900/30 border-2 border-red-200 dark:border-red-700 gap-3 transition-all duration-200';
+      icon.className+=' text-red-600 dark:text-red-300';
+      icon.textContent='lock';
+      nameSpan.className+=' text-red-800 dark:text-red-200';
+      var lockedDuration='';
+      if(student.lockedAt){
+        try{
+          var lockedMs=Date.now()-new Date(student.lockedAt).getTime();
+          var lockedSec=Math.max(0,Math.floor(lockedMs/1000));
+          lockedDuration=' • '+lockedSec+'s ago';
+        }catch(e){
+          lockedDuration='';
+        }
+      }
+      detailSpan.className+=' text-red-600 dark:text-red-300';
+      detailSpan.textContent='Locked v'+(student.lockVersion||0)+lockedDuration;
+      tile.appendChild(createUnlockButton(student));
+    }else if(status==='AWAITING_FULLSCREEN'){
+      tile.className='flex items-center justify-between p-3 rounded-lg bg-blue-500/10 dark:bg-blue-500/20 gap-3 transition-all duration-200';
+      icon.className+=' text-blue-600 dark:text-blue-300';
+      icon.textContent='hourglass_empty';
+      nameSpan.className+=' text-blue-800 dark:text-blue-200';
+      detailSpan.className+=' text-blue-600 dark:text-blue-300';
+      detailSpan.textContent='Awaiting fullscreen confirmation';
+    }else if(status==='Waiting...'){
+      tile.className='flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-900/30 transition-all duration-200';
+      icon.className+=' text-gray-500 dark:text-gray-300';
+      icon.textContent='pending';
+      nameSpan.className+=' text-gray-600 dark:text-gray-300';
+      detailSpan.remove();
+    }else{
+      tile.className='flex items-center justify-between p-3 rounded-lg bg-orange-500/10 dark:bg-orange-500/20 transition-all duration-200';
+      icon.className+=' text-orange-600 dark:text-orange-300';
+      icon.textContent='error';
+      nameSpan.className+=' text-orange-700 dark:text-orange-200';
+      detailSpan.remove();
+    }
+
+    return tile;
+  }
+
+  function buildStudentStatusRow(student){
+    var row=document.createElement('tr');
+    row.className='border-b border-brand-light-gray/30 dark:border-brand-dark-gray/20 hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/20';
+
+    var nameCell=document.createElement('td');
+    nameCell.className='px-3 py-2 text-sm font-semibold text-brand-dark-gray dark:text-brand-white truncate';
+    nameCell.textContent=formatStudentName(student.name);
+    row.appendChild(nameCell);
+
+    var statusCell=document.createElement('td');
+    statusCell.className='px-3 py-2 text-sm text-brand-dark-gray/80 dark:text-brand-white/80';
+    statusCell.textContent=student.status||'Unknown';
+    row.appendChild(statusCell);
+
+    var answerCell=document.createElement('td');
+    answerCell.className='px-3 py-2 text-sm text-brand-dark-gray/70 dark:text-brand-white/70 truncate';
+    answerCell.textContent=student.answer||'';
+    row.appendChild(answerCell);
+
+    var correctCell=document.createElement('td');
+    correctCell.className='px-3 py-2 text-sm text-brand-dark-gray/70 dark:text-brand-white/70 text-center';
+    if(student.isCorrect===true){
+      correctCell.textContent='✔';
+    }else if(student.isCorrect===false){
+      correctCell.textContent='✖';
+    }else{
+      correctCell.textContent='—';
+    }
+    row.appendChild(correctCell);
+
+    var violations=(student.sessionViolations||0)+(student.sessionExits||0);
+    var violationsCell=document.createElement('td');
+    violationsCell.className='px-3 py-2 text-sm text-brand-dark-gray/70 dark:text-brand-white/70 text-center';
+    violationsCell.textContent=violations>0?violations:'—';
+    row.appendChild(violationsCell);
+
+    var actionsCell=document.createElement('td');
+    actionsCell.className='px-3 py-2 text-sm text-right space-x-2';
+    if(student.status==='Submitted'){
+      actionsCell.appendChild(createResetButton(student));
+    }else if(student.status==='LOCKED'){
+      actionsCell.appendChild(createUnlockButton(student));
+    }
+    row.appendChild(actionsCell);
+
+    return row;
+  }
+
   function renderStudentStatus(){
+    var grid=document.getElementById('student-status-grid');
     var tbody=document.getElementById('student-status-tbody');
-    if(!tbody)return;
+    var container=grid||tbody;
+    if(!container)return;
 
-    // Filter students by search query
-    var filteredStudents = currentStudentStatusData.filter(function(student){
-      if(!studentSearchQuery) return true;
-      var query = studentSearchQuery.toLowerCase();
-      var name = (student.name || '').toLowerCase();
-      var status = (student.status || '').toLowerCase();
-      var answer = (student.answer || '').toLowerCase();
-      return name.includes(query) || status.includes(query) || answer.includes(query);
-    });
+    var students=currentStudentStatusData.slice();
 
-    // Sort students
-    filteredStudents.sort(function(a, b){
-      var aVal, bVal;
+    if(studentSearchQuery){
+      var query=studentSearchQuery.toLowerCase();
+      students=students.filter(function(student){
+        var name=(student.name||'').toLowerCase();
+        var status=(student.status||'').toLowerCase();
+        var answer=(student.answer||'').toLowerCase();
+        return name.includes(query)||status.includes(query)||answer.includes(query);
+      });
+    }
+
+    if(!studentTableSort||!studentTableSort.column){
+      studentTableSort={column:'status',direction:'asc'};
+    }
+
+    students.sort(function(a,b){
+      var aVal;
+      var bVal;
       switch(studentTableSort.column){
         case 'name':
-          aVal = (a.name || '').toLowerCase();
-          bVal = (b.name || '').toLowerCase();
+          aVal=(a.name||'').toLowerCase();
+          bVal=(b.name||'').toLowerCase();
           break;
         case 'status':
-          aVal = (a.status || '').toLowerCase();
-          bVal = (b.status || '').toLowerCase();
+          aVal=(a.status||'').toLowerCase();
+          bVal=(b.status||'').toLowerCase();
           break;
         case 'correct':
-          aVal = a.isCorrect === true ? 1 : (a.isCorrect === false ? -1 : 0);
-          bVal = b.isCorrect === true ? 1 : (b.isCorrect === false ? -1 : 0);
+          aVal=a.isCorrect===true?1:(a.isCorrect===false?-1:0);
+          bVal=b.isCorrect===true?1:(b.isCorrect===false?-1:0);
           break;
         case 'violations':
-          aVal = (a.sessionViolations || 0) + (a.sessionExits || 0);
-          bVal = (b.sessionViolations || 0) + (b.sessionExits || 0);
+          aVal=(a.sessionViolations||0)+(a.sessionExits||0);
+          bVal=(b.sessionViolations||0)+(b.sessionExits||0);
           break;
         default:
-          return 0;
+          aVal=(a.name||'').toLowerCase();
+          bVal=(b.name||'').toLowerCase();
       }
-      if(aVal < bVal) return studentTableSort.direction === 'asc' ? -1 : 1;
-      if(aVal > bVal) return studentTableSort.direction === 'asc' ? 1 : -1;
+      if(aVal<bVal)return studentTableSort.direction==='asc'?-1:1;
+      if(aVal>bVal)return studentTableSort.direction==='asc'?1:-1;
       return 0;
     });
 
-    tbody.innerHTML='';
-    filteredStudents.forEach(function(student){
-      var row=document.createElement('tr');
-      row.className='border-b border-brand-light-gray/30 dark:border-brand-dark-gray/20 hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/20';
+    if(studentStatusFilter==='locked'){
+      students=students.filter(function(s){
+        return s.status==='LOCKED'||s.status==='AWAITING_FULLSCREEN';
+      });
+    }
 
-    // Calculate status counts
-    var correctCount = 0;
-    var lockedCount = 0;
-    var waitingCount = 0;
-    var lockedStudents = [];
+    var correctCount=0;
+    var lockedCount=0;
+    var waitingCount=0;
+    var lockedStudents=[];
 
     currentStudentStatusData.forEach(function(student){
-      if(student.status==='Submitted' && student.isCorrect===true){
+      if(student.status==='Submitted'&&student.isCorrect===true){
         correctCount++;
-      } else if(student.status==='LOCKED'){
+      }else if(student.status==='LOCKED'){
         lockedCount++;
         lockedStudents.push(student);
-      } else if(student.status==='Waiting...'){
+      }else if(student.status==='Waiting...'){
         waitingCount++;
       }
     });
 
-    // Update counts in UI
-    document.getElementById('correct-count').textContent = correctCount;
-    document.getElementById('locked-count').textContent = lockedCount;
-    document.getElementById('waiting-count').textContent = waitingCount;
+    var correctCountEl=document.getElementById('correct-count');
+    if(correctCountEl)correctCountEl.textContent=correctCount;
+    var lockedCountEl=document.getElementById('locked-count');
+    if(lockedCountEl)lockedCountEl.textContent=lockedCount;
+    var waitingCountEl=document.getElementById('waiting-count');
+    if(waitingCountEl)waitingCountEl.textContent=waitingCount;
 
-    // Update violations alert panel
     updateViolationsAlert(lockedStudents);
-
-    // Update enhanced exited students panel (2025)
     updateExitedStudentsPanel(lockedStudents);
 
-    // Filter students based on current filter
-    var filteredStudents = currentStudentStatusData;
-    if(studentStatusFilter === 'locked'){
-      filteredStudents = currentStudentStatusData.filter(function(s){
-        return s.status === 'LOCKED' || s.status === 'AWAITING_FULLSCREEN';
-      });
-    }
+    if(tbody)tbody.innerHTML='';
+    if(grid)grid.innerHTML='';
 
-    // Use document fragment for better performance
-    var fragment = document.createDocumentFragment();
-
-    filteredStudents.forEach(function(student){
-      var tile=document.createElement('div');
-
-      // Status column with icon and color
-      var statusCell=document.createElement('td');
-      statusCell.className='py-2 pr-2';
-      var statusHtml='';
-      if(student.status==='Submitted'){
-        var isCorrect=student.isCorrect===true;
-        var isIncorrect=student.isCorrect===false;
-        var icon=isCorrect?'check_circle':(isIncorrect?'cancel':'task_alt');
-        var baseColorClass=isCorrect?'bg-green-500/10 dark:bg-green-500/20':(isIncorrect?'bg-red-500/10 dark:bg-red-500/20':'bg-blue-500/10 dark:bg-blue-500/20');
-        var iconClass=isCorrect?'text-green-600 dark:text-green-300':(isIncorrect?'text-red-600 dark:text-red-300':'text-blue-600 dark:text-blue-300');
-        var textClass=isCorrect?'text-green-800 dark:text-green-200':(isIncorrect?'text-red-800 dark:text-red-200':'text-blue-800 dark:text-blue-200');
-        var subTextClass=isCorrect?'text-green-700/80 dark:text-green-200/80':(isIncorrect?'text-red-700/80 dark:text-red-200/80':'text-blue-700/80 dark:text-blue-200/80');
-        var statusLabel=isCorrect?'Correct':(isIncorrect?'Incorrect':'Submitted');
-        var answerLabel=student.answer?(' • '+escapeHtml(student.answer)):'';
-
-        tile.className='flex items-center justify-between gap-3 p-3 rounded-lg '+baseColorClass+' transition-all duration-200';
-        tile.innerHTML='<div class="flex items-center gap-3 min-w-0">'+
-          '<span class="material-symbols-outlined text-xl '+iconClass+'">'+icon+'</span>'+
-          '<div class="flex flex-col min-w-0">'+
-          '<span class="text-sm font-semibold '+textClass+' truncate">'+escapeHtml(formatStudentName(student.name))+'</span>'+
-          '<span class="text-xs '+subTextClass+' truncate">'+statusLabel+answerLabel+'</span>'+
-          '</div></div>'+
-          '<button class="reset-btn flex-shrink-0 flex items-center justify-center gap-1 h-7 px-2.5 rounded-md bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-xs font-semibold hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors" data-email="'+student.email+'">'+
-          '<span class="material-symbols-outlined text-sm">refresh</span><span>Reset</span></button>';
-      } else if(student.status==='LOCKED'){
-        var lockedDuration='';
-        if(student.lockedAt){
-          try {
-            var lockedMs=new Date()-new Date(student.lockedAt);
-            var lockedSec=Math.floor(lockedMs/1000);
-            lockedDuration=' • '+lockedSec+'s ago';
-          } catch(e){
-            lockedDuration='';
-          }
-        }
-        tile.className='flex items-center justify-between p-3 rounded-lg bg-red-50 dark:bg-red-900/30 border-2 border-red-200 dark:border-red-700 gap-3 transition-all duration-200';
-        tile.innerHTML='<div class="flex items-center gap-3 min-w-0">'+
-          '<span class="material-symbols-outlined text-xl text-red-600 dark:text-red-300">lock</span>'+
-          '<div class="flex flex-col min-w-0">'+
-          '<span class="text-sm font-semibold text-red-800 dark:text-red-200 truncate">'+escapeHtml(formatStudentName(student.name))+'</span>'+
-          '<span class="text-xs text-red-600 dark:text-red-300">Locked v'+(student.lockVersion||0)+lockedDuration+'</span>'+
-          '</div></div>'+
-          '<button class="unlock-btn flex-shrink-0 flex items-center justify-center gap-1 h-8 px-3 rounded-md bg-red-600 text-white text-xs font-bold hover:bg-red-700 transition-colors shadow-sm" data-email="'+student.email+'" data-poll-id="'+CURRENT_POLL_DATA.pollId+'" data-lock-version="'+(student.lockVersion || 0)+'">'+
-          '<span class="material-symbols-outlined text-sm">lock_open</span><span>Approve</span></button>';
-      } else if(student.status==='AWAITING_FULLSCREEN'){
-        tile.className='flex items-center justify-between p-3 rounded-lg bg-blue-500/10 dark:bg-blue-500/20 gap-3 transition-all duration-200';
-        tile.innerHTML='<div class="flex items-center gap-3 min-w-0">'+
-          '<span class="material-symbols-outlined text-xl text-blue-600 dark:text-blue-300">hourglass_empty</span>'+
-          '<div class="flex flex-col min-w-0">'+
-          '<span class="text-sm font-semibold text-blue-800 dark:text-blue-200 truncate">'+escapeHtml(formatStudentName(student.name))+'</span>'+
-          '<span class="text-xs text-blue-600 dark:text-blue-300">Awaiting fullscreen confirmation</span>'+
-          '</div></div>';
-      } else if(student.status==='Waiting...'){
-        tile.className='flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-900/30 transition-all duration-200';
-        tile.innerHTML='<div class="flex items-center gap-3">'+
-          '<span class="material-symbols-outlined text-xl text-gray-500 dark:text-gray-300">pending</span>'+
-          '<span class="text-sm font-medium text-gray-600 dark:text-gray-300 truncate">'+escapeHtml(formatStudentName(student.name))+'</span></div>';
-      } else {
-        tile.className='flex items-center justify-between p-3 rounded-lg bg-orange-500/10 dark:bg-orange-500/20 transition-all duration-200';
-        tile.innerHTML='<div class="flex items-center gap-3">'+
-          '<span class="material-symbols-outlined text-xl text-orange-600 dark:text-orange-300">error</span>'+
-          '<span class="text-sm font-medium text-orange-700 dark:text-orange-200 truncate">'+escapeHtml(formatStudentName(student.name))+'</span></div>';
+    var fragment=document.createDocumentFragment();
+    students.forEach(function(student){
+      if(grid){
+        fragment.appendChild(buildStudentStatusTile(student));
+      }else if(tbody){
+        fragment.appendChild(buildStudentStatusRow(student));
       }
-      actionsCell.innerHTML=actionsHtml;
-
-      fragment.appendChild(tile);
     });
 
-    // Clear and append all at once for better performance
-    grid.innerHTML='';
-    grid.appendChild(fragment);
+    container.appendChild(fragment);
 
-    // Setup unlock listeners using shared function
-    grid.querySelectorAll('.unlock-btn').forEach(function(btn){
+    container.querySelectorAll('.unlock-btn').forEach(function(btn){
       btn.onclick=async function(){
         var email=this.dataset.email;
         var pollId=this.dataset.pollId;
-        var lockVersion = parseInt(this.dataset.lockVersion, 10);
-        await approveStudentUnlock(email, pollId, lockVersion, this);
+        var lockVersion=parseInt(this.dataset.lockVersion,10);
+        await approveStudentUnlock(email,pollId,lockVersion,this);
       };
     });
 
-    tbody.querySelectorAll('.reset-btn').forEach(function(btn){
+    container.querySelectorAll('.reset-btn').forEach(function(btn){
       btn.onclick=function(){
         var email=this.dataset.email;
         var pollId=CURRENT_POLL_DATA.pollId;
@@ -6090,86 +6192,82 @@
         if(!email||pollId===undefined||questionIndex===undefined)return;
         var button=this;
         button.disabled=true;
-        button.querySelector('span:last-child').textContent='Resetting...';
+        var label=button.querySelector('span:last-child');
+        if(label)label.textContent='Resetting...';
         google.script.run
           .withSuccessHandler(pollForResults)
           .withFailureHandler(function(error){
             handleError(error);
             button.disabled=false;
-            button.querySelector('span:last-child').textContent='Reset';
+            if(label)label.textContent='Reset';
           })
           .resetStudentResponse(email,pollId,questionIndex);
       };
     });
 
-    tbody.querySelectorAll('.block-btn').forEach(function(btn){
+    container.querySelectorAll('.block-btn').forEach(function(btn){
       btn.onclick=async function(){
         var email=this.dataset.email;
-        var student = currentStudentStatusData.find(function(s){ return s.email === email; });
-        if(!student) return;
+        var student=currentStudentStatusData.find(function(s){return s.email===email;});
+        if(!student)return;
 
         var confirmed=await veritasConfirm('Temporarily block '+student.name+' from responding? This will be recorded in the archive.',{
           title:'Block Student',
           confirmText:'Block',
           destructive:true
         });
-        if(!confirmed) return;
+        if(!confirmed)return;
 
         this.disabled=true;
         this.textContent='Blocking...';
 
-        // Update local state
         currentStudentStatusData=currentStudentStatusData.map(function(s){
           if(s.email===email){
             return {
-              name: s.name,
-              email: s.email,
-              status: 'BLOCKED',
-              answer: s.answer,
-              isCorrect: s.isCorrect,
-              timestamp: s.timestamp,
-              sessionViolations: s.sessionViolations || 0,
-              sessionExits: s.sessionExits || 0,
-              blockedAt: new Date().toISOString()
+              name:s.name,
+              email:s.email,
+              status:'BLOCKED',
+              answer:s.answer,
+              isCorrect:s.isCorrect,
+              timestamp:s.timestamp,
+              sessionViolations:s.sessionViolations||0,
+              sessionExits:s.sessionExits||0,
+              blockedAt:new Date().toISOString()
             };
           }
           return s;
         });
 
         renderStudentStatus();
-
-        // TODO: Call backend to record blocking in archive
-        // For now, just update the UI
       };
     });
 
-    tbody.querySelectorAll('.unblock-btn').forEach(function(btn){
+    container.querySelectorAll('.unblock-btn').forEach(function(btn){
       btn.onclick=async function(){
         var email=this.dataset.email;
-        var student = currentStudentStatusData.find(function(s){ return s.email === email; });
-        if(!student) return;
+        var student=currentStudentStatusData.find(function(s){return s.email===email;});
+        if(!student)return;
 
         var confirmed=await veritasConfirm('Unblock '+student.name+'?',{
           title:'Unblock Student',
           confirmText:'Unblock'
         });
-        if(!confirmed) return;
+        if(!confirmed)return;
 
         this.disabled=true;
         this.textContent='Unblocking...';
 
-        // Update local state
         currentStudentStatusData=currentStudentStatusData.map(function(s){
           if(s.email===email){
             return {
-              name: s.name,
-              email: s.email,
-              status: 'Waiting...',
-              answer: null,
-              isCorrect: null,
-              timestamp: null,
-              sessionViolations: s.sessionViolations || 0,
-              sessionExits: s.sessionExits || 0
+              name:s.name,
+              email:s.email,
+              status:'Waiting...',
+              answer:null,
+              isCorrect:null,
+              timestamp:null,
+              sessionViolations:s.sessionViolations||0,
+              sessionExits:s.sessionExits||0
             };
           }
           return s;

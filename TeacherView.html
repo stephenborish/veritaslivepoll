@@ -1831,6 +1831,47 @@
   var isLiveSession=false;
   var questionCounter=0;
   var questions=[];
+
+  // OPTIMIZATION: Adaptive polling with backoff (like student view)
+  var pollFailureCount=0;
+  var basePollInterval=2500;
+  var currentPollInterval=2500;
+  var maxPollInterval=10000;
+
+  // OPTIMIZATION: Client-side caching with localStorage
+  var LocalCache={
+    get:function(key){
+      try{
+        var cached=localStorage.getItem('vlp_'+key);
+        if(!cached)return null;
+        var data=JSON.parse(cached);
+        if(data.expires&&Date.now()>data.expires)return null;
+        return data.value;
+      }catch(e){
+        console.warn('LocalCache get error:',e);
+        return null;
+      }
+    },
+    set:function(key,value,ttlMs){
+      try{
+        var data={
+          value:value,
+          expires:ttlMs?Date.now()+ttlMs:null
+        };
+        localStorage.setItem('vlp_'+key,JSON.stringify(data));
+      }catch(e){
+        console.warn('LocalCache set error:',e);
+      }
+    },
+    invalidate:function(key){
+      try{
+        localStorage.removeItem('vlp_'+key);
+      }catch(e){
+        console.warn('LocalCache invalidate error:',e);
+      }
+    }
+  };
+
   var selectedQuestionIndex=0;
   var editingPollId=null;
   var isPollDirty=false;
@@ -2929,10 +2970,28 @@
       return;
     }
 
-    google.script.run
-      .withSuccessHandler(onDashboardDataLoaded)
-      .withFailureHandler(handleError)
-      .getTeacherDashboardData();
+    // OPTIMIZATION: Try localStorage cache first
+    var cachedData=LocalCache.get('dashboardData');
+    if(cachedData){
+      console.log('Using cached dashboard data');
+      onDashboardDataLoaded(cachedData);
+      // Refresh in background to update cache
+      google.script.run
+        .withSuccessHandler(function(data){
+          LocalCache.set('dashboardData',data,300000); // Cache for 5 minutes
+          onDashboardDataLoaded(data);
+        })
+        .withFailureHandler(handleError)
+        .getTeacherDashboardData();
+    }else{
+      google.script.run
+        .withSuccessHandler(function(data){
+          LocalCache.set('dashboardData',data,300000); // Cache for 5 minutes
+          onDashboardDataLoaded(data);
+        })
+        .withFailureHandler(handleError)
+        .getTeacherDashboardData();
+    }
   }
 
   function onDashboardDataLoaded(data){
@@ -5044,7 +5103,8 @@
 
     if(pollInterval)clearInterval(pollInterval);
     if(!isPaused){
-      pollInterval=setInterval(pollForResults,2500);
+      // OPTIMIZATION: Use adaptive interval instead of hardcoded 2500ms
+      pollInterval=setInterval(pollForResults,currentPollInterval);
     }
   }
 
@@ -5320,9 +5380,38 @@
     if(pollId===undefined||questionIndex===undefined)return;
 
     google.script.run
-      .withSuccessHandler(updateLiveView)
-      .withFailureHandler(function(e){console.warn('Poll refresh error:',e);})
+      .withSuccessHandler(function(data){
+        // OPTIMIZATION: Reset failure count and interval on success
+        pollFailureCount=0;
+        if(currentPollInterval!==basePollInterval){
+          currentPollInterval=basePollInterval;
+          restartPollingWithNewInterval();
+        }
+        updateLiveView(data);
+      })
+      .withFailureHandler(function(e){
+        console.warn('Poll refresh error:',e);
+        // OPTIMIZATION: Implement backoff on failures
+        pollFailureCount++;
+        var newInterval=basePollInterval+Math.min(2000,pollFailureCount*500);
+        newInterval=Math.min(maxPollInterval,Math.max(basePollInterval,newInterval));
+        if(newInterval!==currentPollInterval){
+          currentPollInterval=newInterval;
+          console.log('Adjusting poll interval to '+currentPollInterval+'ms due to failures');
+          restartPollingWithNewInterval();
+        }
+      })
       .getLivePollData(pollId,questionIndex);
+  }
+
+  function restartPollingWithNewInterval(){
+    if(pollInterval){
+      clearInterval(pollInterval);
+      pollInterval=null;
+    }
+    if(!isPaused&&isLiveSession){
+      pollInterval=setInterval(pollForResults,currentPollInterval);
+    }
   }
 
   // --- Timer Controls ---
@@ -6767,6 +6856,8 @@
 
       var request=google.script.run
         .withSuccessHandler(async function(updatedPolls){
+          // OPTIMIZATION: Invalidate cache when data changes
+          LocalCache.invalidate('dashboardData');
           // Use the captured questionCount variable (not from server response)
           refreshPollData(updatedPolls);
           resetPollDirty('All changes saved');

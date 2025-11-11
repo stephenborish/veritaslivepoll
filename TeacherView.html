@@ -1059,10 +1059,6 @@
                 <span class="material-symbols-outlined text-lg">replay</span>
                 <span class="truncate">Reset Question</span>
               </button>
-              <button id="header-skip-btn" class="flex min-w-[96px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-brand-white/15 text-brand-white text-sm font-semibold leading-normal tracking-[0.01em] gap-2 hover:bg-brand-white/25 transition-colors">
-                <span class="material-symbols-outlined text-lg">fast_forward</span>
-                <span class="truncate">Skip</span>
-              </button>
             </div>
           </div>
           <button id="header-stop-btn" class="flex min-w-[120px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-5 bg-rose-600 text-brand-white text-sm font-semibold leading-normal tracking-[0.01em] gap-2 hover:bg-rose-700 transition-colors" title="End the entire session and finish the poll">
@@ -1097,7 +1093,7 @@
                   </select>
                 </div>
                 <div class="flex flex-wrap gap-2 items-center">
-                  <button id="start-poll-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-veritas-gold text-white text-sm font-semibold hover:bg-veritas-gold/90 transition-colors shadow-sm">
+                  <button id="start-poll-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-veritas-gold text-white text-sm font-semibold hover:bg-veritas-gold/90 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed" disabled>
                     <span class="material-symbols-outlined text-lg">play_circle</span>
                     <span>Start Session</span>
                   </button>
@@ -1889,9 +1885,9 @@
             <p id="preview-poll-meta" class="text-brand-white/80 text-sm mt-1">Class Name • 5 Questions</p>
           </div>
           <div class="flex items-center gap-2">
-            <button id="preview-send-emails-btn" class="flex items-center justify-center gap-2 h-10 px-5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors">
-              <span class="material-symbols-outlined text-lg">mail</span>
-              <span>Send Emails</span>
+            <button id="preview-open-links-btn" class="flex items-center justify-center gap-2 h-10 px-5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors">
+              <span class="material-symbols-outlined text-lg">link</span>
+              <span>View Student Links</span>
             </button>
             <button id="close-preview-modal-btn" class="flex items-center justify-center h-10 w-10 rounded-lg bg-brand-white/20 text-brand-white hover:bg-brand-white/30 transition-colors">
               <span class="material-symbols-outlined">close</span>
@@ -2684,6 +2680,36 @@
     element.addEventListener('change',handler);
   }
 
+  function storeButtonDefaultHtml(button){
+    if(button && !button.dataset.defaultHtml){
+      button.dataset.defaultHtml=button.innerHTML;
+    }
+  }
+
+  function buttonSpinnerMarkup(text){
+    return '<span class="flex w-full items-center justify-center gap-2"><span class="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span><span>'+escapeHtml(text||'Loading...')+'</span></span>';
+  }
+
+  function setButtonLoading(button,isLoading,label){
+    if(!button){
+      return;
+    }
+    if(isLoading){
+      storeButtonDefaultHtml(button);
+      button.disabled=true;
+      button.setAttribute('aria-busy','true');
+      button.setAttribute('aria-disabled','true');
+      button.innerHTML=buttonSpinnerMarkup(label);
+    }else{
+      if(button.dataset.defaultHtml){
+        button.innerHTML=button.dataset.defaultHtml;
+      }
+      button.disabled=false;
+      button.removeAttribute('aria-busy');
+      button.removeAttribute('aria-disabled');
+    }
+  }
+
   function bootstrapGoogleCharts(){
     if(googleChartsReady||googleChartsLoading){
       return;
@@ -2728,6 +2754,8 @@
   // --- Element Cache ---
   var pollSelect=document.getElementById('poll-select');
   var startPollBtn=document.getElementById('start-poll-btn');
+  var sendLinkBtn=document.getElementById('send-link-btn');
+  var viewLinksBtn=document.getElementById('view-links-btn');
   var dashboard=document.getElementById('dashboard');
   var liveView=document.getElementById('live-view');
   var rosterManager=document.getElementById('roster-manager');
@@ -2764,6 +2792,10 @@
   var saveRosterBtn=document.getElementById('save-roster-btn');
   var refreshArchivedBtn=document.getElementById('refresh-archived-btn');
 
+  storeButtonDefaultHtml(startPollBtn);
+  storeButtonDefaultHtml(sendLinkBtn);
+  storeButtonDefaultHtml(viewLinksBtn);
+
   // --- Initialization ---
   loadInitialData();
 
@@ -2795,7 +2827,7 @@
   bindClick('close-preview-modal-btn',closePollPreview);
   bindClick('preview-prev-question-btn',previewPrevQuestion);
   bindClick('preview-next-question-btn',previewNextQuestion);
-  bindClick('preview-send-emails-btn',previewSendEmails);
+  bindClick('preview-open-links-btn',previewOpenLinks);
   bindClick('preview-edit-question-btn',previewEditQuestion);
   bindClick('preview-delete-question-btn',previewDeleteQuestion);
   bindClick('preview-reorder-btn',togglePreviewReorder);
@@ -2814,7 +2846,6 @@
   bindClick('header-back-btn',onPreviousQuestion);
   bindClick('header-next-btn',onNextQuestion);
   bindClick('header-reset-question-btn',onResetQuestion);
-  bindClick('header-skip-btn',onNextQuestion);
   bindClick('hide-results-btn',onHideResults);
   bindClick('strip-next-btn',onNextQuestion);
   // New timer button event listeners
@@ -3571,19 +3602,44 @@
 
   function onPollSelectChange(){
     var pollId=pollSelect.value;
-    var sendBtn=document.getElementById('send-link-btn');
-    var viewBtn=document.getElementById('view-links-btn');
-    if(pollId){
-      var selectedPoll=ALL_POLLS.find(function(p){return p.pollId===pollId;});
-      if(selectedPoll){
-        sendBtn.disabled=false;
-        viewBtn.disabled=false;
-        sendBtn.dataset.className=selectedPoll.className;
-        viewBtn.dataset.className=selectedPoll.className;
+    var selectedPoll=pollId?ALL_POLLS.find(function(p){return p.pollId===pollId;}):null;
+    var className=selectedPoll&&selectedPoll.className?selectedPoll.className:'';
+    var hasSelection=!!selectedPoll;
+
+    if(sendLinkBtn){
+      if(hasSelection && className){
+        sendLinkBtn.disabled=false;
+        sendLinkBtn.removeAttribute('aria-disabled');
+        sendLinkBtn.dataset.className=className;
+      } else {
+        setButtonLoading(sendLinkBtn,false);
+        sendLinkBtn.disabled=true;
+        sendLinkBtn.setAttribute('aria-disabled','true');
+        delete sendLinkBtn.dataset.className;
       }
-    } else {
-      sendBtn.disabled=true;
-      viewBtn.disabled=true;
+    }
+
+    if(viewLinksBtn){
+      if(hasSelection && className){
+        viewLinksBtn.disabled=false;
+        viewLinksBtn.removeAttribute('aria-disabled');
+        viewLinksBtn.dataset.className=className;
+      } else {
+        setButtonLoading(viewLinksBtn,false);
+        viewLinksBtn.disabled=true;
+        viewLinksBtn.setAttribute('aria-disabled','true');
+        delete viewLinksBtn.dataset.className;
+      }
+    }
+
+    if(startPollBtn){
+      setButtonLoading(startPollBtn,false);
+      startPollBtn.disabled=!hasSelection;
+      if(startPollBtn.disabled){
+        startPollBtn.setAttribute('aria-disabled','true');
+      }else{
+        startPollBtn.removeAttribute('aria-disabled');
+      }
     }
   }
 
@@ -5089,18 +5145,24 @@
       await veritasAlert('Please select a poll first.',{title:'Live poll'});
       return;
     }
-    startPollBtn.disabled=true;
+    setButtonLoading(startPollBtn,true,'Starting...');
     clearLiveIntervals();
     isPaused=false;
     isLiveSession=true;
     if(PREVIEW_MODE){
-      startPollBtn.disabled=false;
+      setButtonLoading(startPollBtn,false);
       await previewOnlyNotice('start a live poll');
       return;
     }
     google.script.run
-      .withSuccessHandler(updateLiveView)
-      .withFailureHandler(handleError)
+      .withSuccessHandler(function(data){
+        setButtonLoading(startPollBtn,false);
+        updateLiveView(data);
+      })
+      .withFailureHandler(function(error){
+        setButtonLoading(startPollBtn,false);
+        handleError(error);
+      })
       .startPoll(pollId);
   }
 
@@ -5325,7 +5387,7 @@
   // --- Live View & Data Polling ---
   function updateLiveView(data){
     mainLoader.style.display='none';
-    startPollBtn.disabled=false;
+    setButtonLoading(startPollBtn,false);
 
     if(!data){return;}
 
@@ -6585,8 +6647,12 @@
 
   // --- Student Link Controls ---
   async function onSendLink(){
-    var btn=document.getElementById('send-link-btn');
-    var className=btn.dataset.className;
+    var btn=sendLinkBtn;
+    if(!btn){
+      console.warn('Missing send link button');
+      return;
+    }
+    var className=btn&&btn.dataset.className;
     if(!className){
       await veritasAlert('Please select a poll first.',{title:'Send poll links'});
       return;
@@ -6597,38 +6663,63 @@
     });
     if(!confirmed)return;
 
-    btn.disabled=true;
-    btn.innerHTML='<div class="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>';
+    var restoreViewLinks=viewLinksBtn && !viewLinksBtn.disabled;
+    if(viewLinksBtn){
+      setButtonLoading(viewLinksBtn,false);
+      viewLinksBtn.disabled=true;
+      viewLinksBtn.setAttribute('aria-disabled','true');
+    }
+
+    setButtonLoading(btn,true,'Sending...');
 
     if(PREVIEW_MODE){
       await previewOnlyNotice('email poll links');
-      btn.disabled=false;
-      btn.innerHTML='<span class="material-symbols-outlined text-xl">mail</span><span class="truncate">Send Student Links</span>';
+      setButtonLoading(btn,false);
+      if(viewLinksBtn){
+        if(restoreViewLinks){
+          viewLinksBtn.disabled=false;
+          viewLinksBtn.removeAttribute('aria-disabled');
+        }
+      }
       return;
     }
 
     google.script.run
       .withSuccessHandler(async function(response){
         await veritasAlert('✅ Successfully sent '+response.count+' poll links.',{title:'Send poll links'});
-        btn.disabled=false;
-        btn.innerHTML='<span class="material-symbols-outlined text-xl">mail</span><span class="truncate">Send Student Links</span>';
+        setButtonLoading(btn,false);
+        if(viewLinksBtn){
+          if(restoreViewLinks){
+            viewLinksBtn.disabled=false;
+            viewLinksBtn.removeAttribute('aria-disabled');
+          }
+        }
       })
       .withFailureHandler(function(err){
         handleError(err);
-        btn.disabled=false;
-        btn.innerHTML='<span class="material-symbols-outlined text-xl">mail</span><span class="truncate">Send Student Links</span>';
+        setButtonLoading(btn,false);
+        if(viewLinksBtn){
+          if(restoreViewLinks){
+            viewLinksBtn.disabled=false;
+            viewLinksBtn.removeAttribute('aria-disabled');
+          }
+        }
       })
       .sendPollLinkToClass(className);
   }
 
   async function onViewLinks(){
-    var btn=document.getElementById('view-links-btn');
-    var className=btn.dataset.className;
+    var btn=viewLinksBtn;
+    if(!btn){
+      console.warn('Missing view links button');
+      return;
+    }
+    var className=btn&&btn.dataset.className;
     if(!className){
       await veritasAlert('Please select a poll first.',{title:'View links'});
       return;
     }
-    btn.disabled=true;
+    setButtonLoading(btn,true,'Loading...');
 
     if(PREVIEW_MODE){
       var container=document.getElementById('links-container');
@@ -6654,7 +6745,7 @@
       html+='</tbody></table></div>';
       container.innerHTML=html;
       linksModal.style.display='flex';
-      btn.disabled=false;
+      setButtonLoading(btn,false);
       return;
     }
 
@@ -6672,13 +6763,15 @@
         html+='</tr></thead><tbody>';
 
         response.links.forEach(function(link){
+          var displayUrl=link.hasActiveLink?(link.url||link.fullUrl):null;
+          var copyUrl=link.fullUrl||link.url||'';
           html+='<tr class="border-b border-brand-light-gray/50 dark:border-brand-dark-gray/20 hover:bg-brand-light-gray/30 dark:hover:bg-brand-dark-gray/10">';
           html+='<td class="px-4 py-3 text-sm text-brand-dark-gray dark:text-brand-white">'+escapeHtml(link.name)+'</td>';
           html+='<td class="px-4 py-3 text-sm text-brand-dark-gray dark:text-brand-white">'+escapeHtml(link.email)+'</td>';
-          html+='<td class="px-4 py-3 text-xs font-mono text-brand-dark-gray/70 dark:text-brand-white/70 max-w-[200px] truncate" title="'+escapeHtml(link.url)+'">'+(link.hasActiveLink?escapeHtml(link.url):'<i class="text-gray-400">No active link</i>')+'</td>';
+          html+='<td class="px-4 py-3 text-xs font-mono text-brand-dark-gray/70 dark:text-brand-white/70 max-w-[200px] truncate" title="'+(displayUrl?escapeHtml(displayUrl):'No active link')+'">'+(displayUrl?escapeHtml(displayUrl):'<i class="text-gray-400">No active link</i>')+'</td>';
           html+='<td class="px-4 py-3 text-center">';
           if(link.hasActiveLink){
-            html+='<button class="copy-link-btn px-3 py-1.5 text-xs font-semibold rounded-md bg-primary text-brand-white hover:bg-primary/90 transition-colors" data-url="'+escapeHtml(link.url)+'">Copy</button>';
+            html+='<button class="copy-link-btn px-3 py-1.5 text-xs font-semibold rounded-md bg-primary text-brand-white hover:bg-primary/90 transition-colors" data-url="'+escapeHtml(copyUrl)+'">Copy</button>';
           }
           html+='</td></tr>';
         });
@@ -6690,12 +6783,12 @@
           btn.onclick=async function(){
             var url=this.dataset.url;
             try{
-              var tempInput=document.createElement('input');
-              document.body.appendChild(tempInput);
-              tempInput.value=url;
-              tempInput.select();
-              document.execCommand('copy');
-              document.body.removeChild(tempInput);
+              if(navigator.clipboard&&typeof navigator.clipboard.writeText==='function'){
+                await navigator.clipboard.writeText(url);
+              }else{
+                await veritasAlert('Automatic copy is not supported in this browser. Please copy the link manually.',{title:'Copy link'});
+                return;
+              }
 
               btn.textContent='✓ Copied!';
               btn.className='copy-link-btn px-3 py-1.5 text-xs font-semibold rounded-md bg-green-600 text-brand-white';
@@ -6703,18 +6796,18 @@
                 btn.textContent='Copy';
                 btn.className='copy-link-btn px-3 py-1.5 text-xs font-semibold rounded-md bg-primary text-brand-white hover:bg-primary/90 transition-colors';
               }, 2000);
-            } catch(err) {
+            }catch(err){
               await veritasAlert('Could not copy link. Please copy it manually.',{title:'Copy link',destructive:true});
             }
           };
         });
 
         linksModal.style.display='flex';
-        btn.disabled=false;
+        setButtonLoading(btn,false);
       })
       .withFailureHandler(function(err){
         handleError(err);
-        btn.disabled=false;
+        setButtonLoading(btn,false);
       })
       .getStudentLinksForClass(className);
   }
@@ -6881,7 +6974,7 @@
     }
   }
 
-  function previewSendEmails(){
+  function previewOpenLinks(){
     if(!currentPreviewPoll)return;
     var className=currentPreviewPoll.className;
     if(!className){

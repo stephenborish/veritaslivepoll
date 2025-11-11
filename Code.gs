@@ -6,6 +6,9 @@
 const TEACHER_EMAIL = "sborish@malvernprep.org";
 const ADDITIONAL_TEACHER_PROP_KEY = 'TEACHER_EMAILS';
 const TOKEN_EXPIRY_DAYS = 30; // Tokens valid for 30 days
+const STUDENT_TOKEN_MAP_KEY = 'STUDENT_TOKENS';
+const STUDENT_TOKEN_INDEX_KEY = 'STUDENT_TOKEN_INDEX';
+const CLASS_LINKS_CACHE_PREFIX = 'CLASS_LINKS_';
 
 // --- ENHANCED LOGGING (2025 Standard) ---
 const Logger = {
@@ -98,55 +101,110 @@ const RateLimiter = {
 
 // --- TOKEN MANAGER (2025 Anonymous Authentication) ---
 const TokenManager = {
+  _loadStructures: function() {
+    const props = PropertiesService.getScriptProperties();
+    return {
+      props: props,
+      tokenMap: JSON.parse(props.getProperty(STUDENT_TOKEN_MAP_KEY) || '{}'),
+      indexMap: JSON.parse(props.getProperty(STUDENT_TOKEN_INDEX_KEY) || '{}')
+    };
+  },
+
+  _saveStructures: function(struct) {
+    struct.props.setProperty(STUDENT_TOKEN_MAP_KEY, JSON.stringify(struct.tokenMap));
+    struct.props.setProperty(STUDENT_TOKEN_INDEX_KEY, JSON.stringify(struct.indexMap));
+  },
+
+  _studentKey: function(email, className) {
+    return `${(email || '').toLowerCase()}::${className || ''}`;
+  },
+
+  _removeToken: function(struct, token) {
+    if (!token) return;
+    const entry = struct.tokenMap[token];
+    if (entry && entry.studentKey && struct.indexMap[entry.studentKey] === token) {
+      delete struct.indexMap[entry.studentKey];
+    } else {
+      Object.keys(struct.indexMap).forEach(function(key) {
+        if (struct.indexMap[key] === token) {
+          delete struct.indexMap[key];
+        }
+      });
+    }
+    delete struct.tokenMap[token];
+  },
+
+  _purgeExpired: function(struct) {
+    const now = Date.now();
+    let mutated = false;
+    Object.keys(struct.tokenMap).forEach(token => {
+      const entry = struct.tokenMap[token];
+      if (!entry || now > entry.expires) {
+        this._removeToken(struct, token);
+        mutated = true;
+      }
+    });
+    return mutated;
+  },
+
   /**
    * Generate a unique token for a student
    */
   generateToken: function(studentEmail, className) {
+    const struct = this._loadStructures();
+    this._purgeExpired(struct);
+
+    const studentKey = this._studentKey(studentEmail, className);
+    const existingToken = struct.indexMap[studentKey];
+    if (existingToken) {
+      this._removeToken(struct, existingToken);
+    }
+
     const token = Utilities.getUuid();
-    const props = PropertiesService.getScriptProperties();
-    const tokenMapStr = props.getProperty('STUDENT_TOKENS') || '{}';
-    const tokenMap = JSON.parse(tokenMapStr);
-    
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + TOKEN_EXPIRY_DAYS);
-    
-    tokenMap[token] = {
+
+    struct.indexMap[studentKey] = token;
+    struct.tokenMap[token] = {
       email: studentEmail,
       className: className,
-      created: new Date().getTime(),
-      expires: expiryDate.getTime()
+      created: Date.now(),
+      expires: expiryDate.getTime(),
+      studentKey: studentKey
     };
-    
-    props.setProperty('STUDENT_TOKENS', JSON.stringify(tokenMap));
+
+    this._saveStructures(struct);
     Logger.log('Token generated', { email: studentEmail, token: token });
-    
+
     return token;
   },
-  
+
   /**
    * Validate and retrieve student info from token
    */
   validateToken: function(token) {
     if (!token) return null;
-    
-    const props = PropertiesService.getScriptProperties();
-    const tokenMapStr = props.getProperty('STUDENT_TOKENS') || '{}';
-    const tokenMap = JSON.parse(tokenMapStr);
-    
-    const tokenData = tokenMap[token];
-    if (!tokenData) return null;
-    
-    // Check if token has expired
-    if (new Date().getTime() > tokenData.expires) {
-      Logger.log('Token expired', { token: token });
-      delete tokenMap[token];
-      props.setProperty('STUDENT_TOKENS', JSON.stringify(tokenMap));
-      return null;
+
+    const struct = this._loadStructures();
+    let mutated = this._purgeExpired(struct);
+
+    let tokenData = struct.tokenMap[token] || null;
+    if (tokenData && !tokenData.studentKey) {
+      tokenData.studentKey = this._studentKey(tokenData.email, tokenData.className);
+      struct.tokenMap[token] = tokenData;
+      if (!struct.indexMap[tokenData.studentKey]) {
+        struct.indexMap[tokenData.studentKey] = token;
+      }
+      mutated = true;
     }
-    
+
+    if (mutated) {
+      this._saveStructures(struct);
+    }
+
     return tokenData;
   },
-  
+
   /**
    * Get student email from token
    */
@@ -154,7 +212,7 @@ const TokenManager = {
     const tokenData = this.validateToken(token);
     return tokenData ? tokenData.email : null;
   },
-  
+
   /**
    * Store token in user properties (for current session)
    */
@@ -162,7 +220,7 @@ const TokenManager = {
     const userProps = PropertiesService.getUserProperties();
     userProps.setProperty('CURRENT_TOKEN', token);
   },
-  
+
   /**
    * Get token from current session
    */
@@ -170,7 +228,7 @@ const TokenManager = {
     const userProps = PropertiesService.getUserProperties();
     return userProps.getProperty('CURRENT_TOKEN');
   },
-  
+
   /**
    * Clear session token
    */
@@ -178,27 +236,72 @@ const TokenManager = {
     const userProps = PropertiesService.getUserProperties();
     userProps.deleteProperty('CURRENT_TOKEN');
   },
-  
+
   /**
    * Get student email from current session (either token or Google auth)
    */
   getCurrentStudentEmail: function() {
-    // First try token-based authentication
     const token = this.getSessionToken();
     if (token) {
       const email = this.getStudentEmail(token);
       if (email) return email;
     }
-    
-    // Fall back to Google authentication for backward compatibility
+
     try {
       const email = Session.getActiveUser().getEmail();
       if (email && email !== '') return email;
     } catch (e) {
       Logger.log('No active user session');
     }
-    
+
     return null;
+  },
+
+  /**
+   * Snapshot tokens for quick lookup by student
+   */
+  getActiveSnapshot: function() {
+    const struct = this._loadStructures();
+    let mutated = this._purgeExpired(struct);
+    Object.keys(struct.tokenMap).forEach(token => {
+      const entry = struct.tokenMap[token];
+      if (!entry) return;
+      if (!entry.studentKey) {
+        entry.studentKey = this._studentKey(entry.email, entry.className);
+        struct.tokenMap[token] = entry;
+        mutated = true;
+      }
+      if (entry.studentKey && struct.indexMap[entry.studentKey] !== token) {
+        struct.indexMap[entry.studentKey] = token;
+        mutated = true;
+      }
+    });
+    if (mutated) {
+      this._saveStructures(struct);
+    }
+    return {
+      tokenMap: struct.tokenMap,
+      indexMap: struct.indexMap
+    };
+  },
+
+  getTokenFromSnapshot: function(snapshot, email, className) {
+    if (!snapshot) return null;
+    const key = this._studentKey(email, className);
+    const token = snapshot.indexMap[key];
+    if (!token) return null;
+    const data = snapshot.tokenMap[token];
+    if (!data) return null;
+    return { token: token, data: data };
+  },
+
+  recordShortUrl: function(token, shortUrl) {
+    if (!token || !shortUrl) return;
+    const struct = this._loadStructures();
+    if (struct.tokenMap[token]) {
+      struct.tokenMap[token].shortUrl = shortUrl;
+      this._saveStructures(struct);
+    }
   }
 };
 
@@ -5302,6 +5405,7 @@ function sendPollLinkToClass(className) {
       const personalizedUrl = `${baseUrl}?token=${token}`;
       // Shorten the URL for better user experience
       const shortUrl = URLShortener.shorten(personalizedUrl);
+      TokenManager.recordShortUrl(token, shortUrl);
       links.push({
         email: student.email,
         name: student.name,
@@ -5326,9 +5430,11 @@ function sendPollLinkToClass(className) {
       });
     });
     
-    Logger.log('Personalized poll links sent', { 
-      className: className, 
-      studentCount: links.length 
+    CacheManager.invalidate(CLASS_LINKS_CACHE_PREFIX + encodeURIComponent(className));
+
+    Logger.log('Personalized poll links sent', {
+      className: className,
+      studentCount: links.length
     });
     
     return { 
@@ -5347,35 +5453,38 @@ function getStudentLinksForClass(className) {
     if (Session.getActiveUser().getEmail() !== TEACHER_EMAIL) {
       throw new Error('Unauthorized action.');
     }
-    
-    const roster = DataAccess.roster.getByClass(className);
-    const props = PropertiesService.getScriptProperties();
-    const tokenMapStr = props.getProperty('STUDENT_TOKENS') || '{}';
-    const tokenMap = JSON.parse(tokenMapStr);
-    const baseUrl = ScriptApp.getService().getUrl();
-    
-    const links = roster.map(student => {
-      // Find existing token for this student in this class
-      let existingToken = null;
-      for (const [token, data] of Object.entries(tokenMap)) {
-        if (data.email === student.email && data.className === className) {
-          // Check if not expired
-          if (new Date().getTime() < data.expires) {
-            existingToken = token;
-            break;
-          }
+
+    const cacheKey = CLASS_LINKS_CACHE_PREFIX + encodeURIComponent(className);
+
+    return CacheManager.get(cacheKey, () => {
+      const roster = DataAccess.roster.getByClass(className) || [];
+      const baseUrl = ScriptApp.getService().getUrl();
+      const snapshot = TokenManager.getActiveSnapshot();
+
+      const links = roster.map(student => {
+        const tokenInfo = TokenManager.getTokenFromSnapshot(snapshot, student.email, className);
+        if (tokenInfo) {
+          const fullUrl = `${baseUrl}?token=${tokenInfo.token}`;
+          return {
+            name: student.name,
+            email: student.email,
+            url: tokenInfo.data.shortUrl || fullUrl,
+            fullUrl: fullUrl,
+            hasActiveLink: true
+          };
         }
-      }
-      
-      return {
-        name: student.name,
-        email: student.email,
-        url: existingToken ? `${baseUrl}?token=${existingToken}` : 'No active link',
-        hasActiveLink: !!existingToken
-      };
-    });
-    
-    return { success: true, links: links };
+
+        return {
+          name: student.name,
+          email: student.email,
+          url: 'No active link',
+          fullUrl: '',
+          hasActiveLink: false
+        };
+      });
+
+      return { success: true, links: links };
+    }, CacheManager.CACHE_TIMES.SHORT);
   })();
 }
 

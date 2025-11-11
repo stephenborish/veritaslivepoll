@@ -7660,7 +7660,8 @@
           questionImageFileId:question.questionImageFileId||null,
           answers:answers,
           correctAnswerIndex:correctIndex,
-          timerSeconds:question.timerSeconds||null
+          timerSeconds:question.timerSeconds||null,
+          metacognitionEnabled:!!question.metacognitionEnabled
         };
       });
       if(questions.length===0){
@@ -8224,7 +8225,8 @@
         questionImageURL:question.questionImageURL||null,  // Keep for backward compatibility
         answers:answers,
         correctAnswerIndex:correctIndex,
-        timerSeconds:timerValue&&timerValue>0?timerValue:null
+        timerSeconds:timerValue&&timerValue>0?timerValue:null,
+        metacognitionEnabled:!!question.metacognitionEnabled
       };
     });
 
@@ -8254,7 +8256,8 @@
           questionImageFileId:imageFileId,
           options:options,
           correctAnswer:correctAnswerText,
-          timerSeconds:question.timerSeconds||null
+          timerSeconds:question.timerSeconds||null,
+          metacognitionEnabled:!!question.metacognitionEnabled
         };
       });
 
@@ -8280,7 +8283,8 @@
               questionText:q.questionText,
               options:q.options,
               correctAnswer:q.correctAnswer,
-              timerSeconds:q.timerSeconds||null
+              timerSeconds:q.timerSeconds||null,
+              metacognitionEnabled:!!q.metacognitionEnabled
             };
           }),
           updatedAt:new Date().toISOString(),

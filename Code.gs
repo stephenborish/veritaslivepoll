@@ -1199,7 +1199,8 @@ function getPollForEditing(pollId) {
         imageFileId: opt.imageFileId || null
       })),
       correctAnswer: question.correctAnswer || null,
-      timerSeconds: question.timerSeconds || null
+      timerSeconds: question.timerSeconds || null,
+      metacognitionEnabled: !!question.metacognitionEnabled
     }));
 
     return {
@@ -6056,7 +6057,9 @@ function normalizeQuestionObject_(questionData, pollUpdatedAt = null) {
   }
 
   // Metacognition field (default to false for backward compatibility)
-  normalized.metacognitionEnabled = questionData.metacognitionEnabled || false;
+  normalized.metacognitionEnabled = questionData.metacognitionEnabled === true ||
+    questionData.metacognitionEnabled === 'true' ||
+    questionData.metacognitionEnabled === 1;
 
   return normalized;
 }

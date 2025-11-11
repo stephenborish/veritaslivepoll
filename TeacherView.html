@@ -1012,14 +1012,6 @@
 
         <!-- Subheader Strip -->
         <div class="hidden md:flex items-center gap-6 ml-8">
-          <div class="flex items-center gap-2 text-brand-white/70 text-sm">
-            <span class="material-symbols-outlined text-lg">schedule</span>
-            <span id="header-datetime"></span>
-          </div>
-          <div id="header-poll-status" class="dashboard-status-chip" style="background: rgba(148, 163, 184, 0.25); color: rgba(255, 255, 255, 0.9);">
-            <span class="dot"></span>
-            <span>No active session</span>
-          </div>
         </div>
       </div>
 
@@ -1109,11 +1101,11 @@
                     <span class="material-symbols-outlined text-lg">play_circle</span>
                     <span>Start Session</span>
                   </button>
-                  <button id="send-link-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm" disabled style="opacity: 0.5;">
+                  <button id="send-link-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm disabled:opacity-50" disabled>
                     <span class="material-symbols-outlined text-lg">mail</span>
                     <span>Send Links</span>
                   </button>
-                  <button id="view-links-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm" disabled style="opacity: 0.5;">
+                  <button id="view-links-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50" disabled>
                     <span class="material-symbols-outlined text-lg">visibility</span>
                     <span>View Links</span>
                   </button>
@@ -1217,53 +1209,53 @@
           <!-- Sidebar (1/3) -->
           <aside class="lg:col-span-1 flex flex-col gap-6 items-center">
             <!-- Timer -->
-            <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-4 shadow-sm w-full max-w-xs">
-              <h3 class="text-brand-dark-gray dark:text-brand-white text-lg font-bold leading-normal mb-4 text-center">Question Timer</h3>
+            <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-3 shadow-sm w-full max-w-xs">
+              <h3 class="text-brand-dark-gray dark:text-brand-white text-sm font-bold leading-normal mb-2 text-center">Timer</h3>
 
               <!-- Main Timer Container -->
-              <div class="flex items-center gap-3">
+              <div class="flex items-center gap-2">
                 <!-- Timer Display and Controls Container -->
-                <div class="flex-1 flex flex-col items-center gap-2">
+                <div class="flex-1 flex flex-col items-center gap-1">
                   <!-- Time Adjustment Button (Add) -->
                   <button id="add-10s-btn" class="text-brand-dark-gray/40 dark:text-brand-white/40 hover:text-sky-500 dark:hover:text-sky-400 transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed" aria-label="+10 seconds">
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
                   </button>
 
                   <!-- Timer Display (as an input) -->
                   <input
                     type="text"
                     id="timer-display"
-                    class="text-5xl font-black text-center text-brand-dark-gray dark:text-brand-white transition-all bg-transparent w-full focus:outline-none focus:ring-2 focus:ring-sky-500 rounded-lg placeholder-brand-dark-gray/40 dark:placeholder-brand-white/40 disabled:opacity-70"
+                    class="text-3xl font-black text-center text-brand-dark-gray dark:text-brand-white transition-all bg-transparent w-full focus:outline-none focus:ring-2 focus:ring-sky-500 rounded-lg placeholder-brand-dark-gray/40 dark:placeholder-brand-white/40 disabled:opacity-70"
                     value="01:30"
                     aria-label="Timer display"
                   />
 
                   <!-- Time Adjustment Button (Subtract) -->
                   <button id="subtract-10s-btn" class="text-brand-dark-gray/40 dark:text-brand-white/40 hover:text-sky-500 dark:hover:text-sky-400 transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed" aria-label="-10 seconds">
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                   </button>
                 </div>
 
                 <!-- Main Control Buttons (Start / Pause / Reset) - Vertical -->
-                <div class="flex flex-col gap-2">
+                <div class="flex flex-col gap-1">
                   <!-- Start Button -->
-                  <button id="start-btn" class="bg-sky-500 hover:bg-sky-600 text-brand-white font-bold p-2.5 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Start timer">
-                    <span class="material-symbols-outlined text-2xl">play_arrow</span>
+                  <button id="start-btn" class="bg-sky-500 hover:bg-sky-600 text-brand-white font-bold p-2 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Start timer">
+                    <span class="material-symbols-outlined text-lg">play_arrow</span>
                   </button>
 
                   <!-- Pause Button (hidden by default) -->
-                  <button id="pause-btn" class="bg-amber-500 hover:bg-amber-600 text-brand-white font-bold p-2.5 rounded-lg transition-all duration-200 hidden" aria-label="Pause timer">
-                    <span class="material-symbols-outlined text-2xl">pause</span>
+                  <button id="pause-btn" class="bg-amber-500 hover:bg-amber-600 text-brand-white font-bold p-2 rounded-lg transition-all duration-200 hidden" aria-label="Pause timer">
+                    <span class="material-symbols-outlined text-lg">pause</span>
                   </button>
 
                   <!-- Reset Button -->
-                  <button id="reset-btn" class="bg-brand-light-gray hover:bg-brand-light-gray/80 dark:bg-brand-dark-gray/60 dark:hover:bg-brand-dark-gray/80 text-brand-dark-gray dark:text-brand-white font-bold p-2.5 rounded-lg transition-all duration-200" aria-label="Reset timer">
-                    <span class="material-symbols-outlined text-2xl">refresh</span>
+                  <button id="reset-btn" class="bg-brand-light-gray hover:bg-brand-light-gray/80 dark:bg-brand-dark-gray/60 dark:hover:bg-brand-dark-gray/80 text-brand-dark-gray dark:text-brand-white font-bold p-2 rounded-lg transition-all duration-200" aria-label="Reset timer">
+                    <span class="material-symbols-outlined text-lg">refresh</span>
                   </button>
                 </div>
               </div>
 
-              <p id="timer-status-message" class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 text-center mt-3">Timer idle.</p>
+              <p id="timer-status-message" class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 text-center mt-2">Timer idle.</p>
             </div>
 
             <style>
@@ -1285,10 +1277,53 @@
             </style>
 
             <!-- Student Status -->
-            <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm overflow-y-auto max-h-[600px] w-full">
-              <h3 class="text-brand-dark-gray dark:text-brand-white text-xl font-bold leading-normal mb-4">Student Status</h3>
-              <div id="student-status-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3">
-                <!-- Student status tiles will be populated dynamically -->
+            <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm overflow-y-auto max-h-[700px] w-full">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-brand-dark-gray dark:text-brand-white text-xl font-bold leading-normal">Student Status</h3>
+              </div>
+              <div class="mb-3">
+                <input
+                  type="text"
+                  id="student-search-input"
+                  placeholder="Search students..."
+                  class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead class="border-b border-brand-light-gray dark:border-brand-dark-gray/40 sticky top-0 bg-brand-white dark:bg-brand-dark-gray/30">
+                    <tr>
+                      <th class="text-left pb-2 pr-2 cursor-pointer hover:text-primary font-semibold" data-sort="name">
+                        <div class="flex items-center gap-1">
+                          <span>Name</span>
+                          <span class="material-symbols-outlined text-sm sort-icon">unfold_more</span>
+                        </div>
+                      </th>
+                      <th class="text-left pb-2 pr-2 cursor-pointer hover:text-primary font-semibold" data-sort="status">
+                        <div class="flex items-center gap-1">
+                          <span>Status</span>
+                          <span class="material-symbols-outlined text-sm sort-icon">unfold_more</span>
+                        </div>
+                      </th>
+                      <th class="text-center pb-2 pr-2 cursor-pointer hover:text-primary font-semibold" data-sort="correct">
+                        <div class="flex items-center justify-center gap-1">
+                          <span>✓</span>
+                          <span class="material-symbols-outlined text-sm sort-icon">unfold_more</span>
+                        </div>
+                      </th>
+                      <th class="text-center pb-2 pr-2 cursor-pointer hover:text-primary font-semibold" data-sort="violations">
+                        <div class="flex items-center justify-center gap-1">
+                          <span>⚠</span>
+                          <span class="material-symbols-outlined text-sm sort-icon">unfold_more</span>
+                        </div>
+                      </th>
+                      <th class="text-right pb-2 font-semibold">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="student-status-tbody">
+                    <!-- Student status rows will be populated dynamically -->
+                  </tbody>
+                </table>
               </div>
             </div>
           </aside>
@@ -2671,6 +2706,40 @@
   updateTimerStatus('Timer idle.','info');
   bindClick('send-link-btn',onSendLink);
   bindClick('view-links-btn',onViewLinks);
+
+  // Student status search
+  var studentSearchInput = document.getElementById('student-search-input');
+  if(studentSearchInput){
+    studentSearchInput.addEventListener('input', function(){
+      studentSearchQuery = this.value;
+      renderStudentStatus();
+    });
+  }
+
+  // Student status table sorting
+  document.querySelectorAll('th[data-sort]').forEach(function(th){
+    th.addEventListener('click', function(){
+      var column = this.dataset.sort;
+      if(studentTableSort.column === column){
+        studentTableSort.direction = studentTableSort.direction === 'asc' ? 'desc' : 'asc';
+      } else {
+        studentTableSort.column = column;
+        studentTableSort.direction = 'asc';
+      }
+
+      // Update sort icons
+      document.querySelectorAll('th[data-sort] .sort-icon').forEach(function(icon){
+        icon.textContent = 'unfold_more';
+      });
+      var icon = this.querySelector('.sort-icon');
+      if(icon){
+        icon.textContent = studentTableSort.direction === 'asc' ? 'arrow_upward' : 'arrow_downward';
+      }
+
+      renderStudentStatus();
+    });
+  });
+
   if(pollSelect){
     pollSelect.addEventListener('change',onPollSelectChange);
   }else{
@@ -5200,93 +5269,151 @@
     });
   }
 
+  // Student status table state
+  var studentTableSort = { column: 'name', direction: 'asc' };
+  var studentSearchQuery = '';
+
   function renderStudentStatus(){
-    var grid=document.getElementById('student-status-grid');
-    if(!grid)return;
+    var tbody=document.getElementById('student-status-tbody');
+    if(!tbody)return;
 
-    grid.innerHTML='';
-    currentStudentStatusData.forEach(function(student){
-      var tile=document.createElement('div');
+    // Filter students by search query
+    var filteredStudents = currentStudentStatusData.filter(function(student){
+      if(!studentSearchQuery) return true;
+      var query = studentSearchQuery.toLowerCase();
+      var name = (student.name || '').toLowerCase();
+      var status = (student.status || '').toLowerCase();
+      var answer = (student.answer || '').toLowerCase();
+      return name.includes(query) || status.includes(query) || answer.includes(query);
+    });
 
+    // Sort students
+    filteredStudents.sort(function(a, b){
+      var aVal, bVal;
+      switch(studentTableSort.column){
+        case 'name':
+          aVal = (a.name || '').toLowerCase();
+          bVal = (b.name || '').toLowerCase();
+          break;
+        case 'status':
+          aVal = (a.status || '').toLowerCase();
+          bVal = (b.status || '').toLowerCase();
+          break;
+        case 'correct':
+          aVal = a.isCorrect === true ? 1 : (a.isCorrect === false ? -1 : 0);
+          bVal = b.isCorrect === true ? 1 : (b.isCorrect === false ? -1 : 0);
+          break;
+        case 'violations':
+          aVal = (a.sessionViolations || 0) + (a.sessionExits || 0);
+          bVal = (b.sessionViolations || 0) + (b.sessionExits || 0);
+          break;
+        default:
+          return 0;
+      }
+      if(aVal < bVal) return studentTableSort.direction === 'asc' ? -1 : 1;
+      if(aVal > bVal) return studentTableSort.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    tbody.innerHTML='';
+    filteredStudents.forEach(function(student){
+      var row=document.createElement('tr');
+      row.className='border-b border-brand-light-gray/30 dark:border-brand-dark-gray/20 hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/20';
+
+      // Name column
+      var nameCell=document.createElement('td');
+      nameCell.className='py-2 pr-2 font-medium';
+      nameCell.textContent=student.name || 'Unknown';
+
+      // Status column with icon and color
+      var statusCell=document.createElement('td');
+      statusCell.className='py-2 pr-2';
+      var statusHtml='';
       if(student.status==='Submitted'){
         var isCorrect=student.isCorrect===true;
         var isIncorrect=student.isCorrect===false;
-        var icon=isCorrect?'check_circle':(isIncorrect?'cancel':'task_alt');
-        var baseColorClass=isCorrect?'bg-green-500/10 dark:bg-green-500/20':(isIncorrect?'bg-red-500/10 dark:bg-red-500/20':'bg-blue-500/10 dark:bg-blue-500/20');
-        var iconClass=isCorrect?'text-green-600 dark:text-green-300':(isIncorrect?'text-red-600 dark:text-red-300':'text-blue-600 dark:text-blue-300');
-        var textClass=isCorrect?'text-green-800 dark:text-green-200':(isIncorrect?'text-red-800 dark:text-red-200':'text-blue-800 dark:text-blue-200');
-        var subTextClass=isCorrect?'text-green-700/80 dark:text-green-200/80':(isIncorrect?'text-red-700/80 dark:text-red-200/80':'text-blue-700/80 dark:text-blue-200/80');
-        var statusLabel=isCorrect?'Correct':(isIncorrect?'Incorrect':'Submitted');
-        var answerLabel=student.answer?(' • '+escapeHtml(student.answer)):'';
-
-        tile.className='flex items-center justify-between gap-3 p-3 rounded-lg '+baseColorClass;
-        tile.innerHTML='<div class="flex items-center gap-3 min-w-0">'+
-          '<span class="material-symbols-outlined text-xl '+iconClass+'">'+icon+'</span>'+
-          '<div class="flex flex-col min-w-0">'+
-          '<span class="text-sm font-semibold '+textClass+' truncate">'+escapeHtml(formatStudentName(student.name))+'</span>'+
-          '<span class="text-xs '+subTextClass+' truncate">'+statusLabel+answerLabel+'</span>'+
-          '</div></div>'+
-          '<button class="reset-btn flex-shrink-0 flex items-center justify-center gap-1 h-7 px-2.5 rounded-md bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-xs font-semibold hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors" data-email="'+student.email+'">'+
-          '<span class="material-symbols-outlined text-sm">refresh</span><span>Reset</span></button>';
-      } else if(student.status==='LOCKED'){
-        var lockedDuration='';
-        if(student.lockedAt){
-          try {
-            var lockedMs=new Date()-new Date(student.lockedAt);
-            var lockedSec=Math.floor(lockedMs/1000);
-            lockedDuration=' • '+lockedSec+'s';
-          } catch(e){
-            lockedDuration='';
-          }
+        var statusLabel=isCorrect?'✓ Correct':(isIncorrect?'✗ Incorrect':'Submitted');
+        var colorClass=isCorrect?'text-green-600 dark:text-green-300':(isIncorrect?'text-red-600 dark:text-red-300':'text-blue-600 dark:text-blue-300');
+        statusHtml='<span class="'+colorClass+' font-medium">'+statusLabel+'</span>';
+        if(student.answer){
+          statusHtml+='<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">'+escapeHtml(student.answer)+'</div>';
         }
-        tile.className='flex items-center justify-between p-3 rounded-lg bg-red-500/10 dark:bg-red-500/20 gap-3';
-        tile.innerHTML='<div class="flex items-center gap-3 min-w-0">'+
-          '<span class="material-symbols-outlined text-xl text-red-600 dark:text-red-300">lock</span>'+
-          '<div class="flex flex-col min-w-0">'+
-          '<span class="text-sm font-semibold text-red-800 dark:text-red-200 truncate">'+escapeHtml(formatStudentName(student.name))+'</span>'+
-          '<span class="text-xs text-red-600 dark:text-red-300">Locked v'+(student.lockVersion||0)+lockedDuration+'</span>'+
-          '</div></div>'+
-          '<button class="unlock-btn flex-shrink-0 flex items-center justify-center gap-1 h-7 px-2.5 rounded-md bg-red-500/20 text-red-700 dark:bg-red-400/20 dark:text-red-200 text-xs font-semibold hover:bg-red-500/30 transition-colors" data-email="'+student.email+'" data-poll-id="'+CURRENT_POLL_DATA.pollId+'" data-lock-version="'+(student.lockVersion || 0)+'">'+
-          '<span class="material-symbols-outlined text-sm">lock_open</span><span>Approve</span></button>';
+      } else if(student.status==='LOCKED'){
+        statusHtml='<span class="text-red-600 dark:text-red-300 font-medium">🔒 Locked</span>';
       } else if(student.status==='AWAITING_FULLSCREEN'){
-        tile.className='flex items-center justify-between p-3 rounded-lg bg-blue-500/10 dark:bg-blue-500/20 gap-3';
-        tile.innerHTML='<div class="flex items-center gap-3 min-w-0">'+
-          '<span class="material-symbols-outlined text-xl text-blue-600 dark:text-blue-300">hourglass_empty</span>'+
-          '<div class="flex flex-col min-w-0">'+
-          '<span class="text-sm font-semibold text-blue-800 dark:text-blue-200 truncate">'+escapeHtml(formatStudentName(student.name))+'</span>'+
-          '<span class="text-xs text-blue-600 dark:text-blue-300">Awaiting fullscreen confirmation</span>'+
-          '</div></div>';
+        statusHtml='<span class="text-blue-600 dark:text-blue-300">⏳ Awaiting</span>';
+      } else if(student.status==='BLOCKED'){
+        statusHtml='<span class="text-orange-600 dark:text-orange-300 font-medium">🚫 Blocked</span>';
       } else if(student.status==='Waiting...'){
-        tile.className='flex items-center justify-between p-3 rounded-lg bg-gray-500/10 dark:bg-gray-500/20';
-        tile.innerHTML='<div class="flex items-center gap-3">'+
-          '<span class="material-symbols-outlined text-xl text-gray-500 dark:text-gray-300">pending</span>'+
-          '<span class="text-sm font-medium text-gray-600 dark:text-gray-300 truncate">'+escapeHtml(formatStudentName(student.name))+'</span></div>';
+        statusHtml='<span class="text-gray-500 dark:text-gray-400">Waiting...</span>';
       } else {
-        tile.className='flex items-center justify-between p-3 rounded-lg bg-orange-500/10 dark:bg-orange-500/20';
-        tile.innerHTML='<div class="flex items-center gap-3">'+
-          '<span class="material-symbols-outlined text-xl text-orange-600 dark:text-orange-300">error</span>'+
-          '<span class="text-sm font-medium text-orange-700 dark:text-orange-200 truncate">'+escapeHtml(formatStudentName(student.name))+'</span></div>';
+        statusHtml='<span class="text-orange-600 dark:text-orange-300">'+escapeHtml(student.status)+'</span>';
+      }
+      statusCell.innerHTML=statusHtml;
+
+      // Correct column (checkmark or X)
+      var correctCell=document.createElement('td');
+      correctCell.className='py-2 pr-2 text-center';
+      if(student.isCorrect===true){
+        correctCell.innerHTML='<span class="text-green-600 dark:text-green-300 text-lg">✓</span>';
+      } else if(student.isCorrect===false){
+        correctCell.innerHTML='<span class="text-red-600 dark:text-red-300 text-lg">✗</span>';
+      } else {
+        correctCell.innerHTML='<span class="text-gray-400">-</span>';
       }
 
-      grid.appendChild(tile);
+      // Violations column
+      var violationsCell=document.createElement('td');
+      violationsCell.className='py-2 pr-2 text-center';
+      var violationCount = (student.sessionViolations || 0) + (student.sessionExits || 0);
+      if(violationCount > 0){
+        violationsCell.innerHTML='<span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-500/20 text-red-600 dark:text-red-300 text-xs font-bold">'+violationCount+'</span>';
+      } else {
+        violationsCell.innerHTML='<span class="text-gray-400">-</span>';
+      }
+
+      // Actions column
+      var actionsCell=document.createElement('td');
+      actionsCell.className='py-2 text-right';
+      var actionsHtml='';
+
+      if(student.status==='LOCKED'){
+        actionsHtml='<button class="unlock-btn inline-flex items-center gap-1 px-2 py-1 rounded bg-red-500/20 text-red-700 dark:text-red-200 text-xs font-semibold hover:bg-red-500/30 transition-colors" data-email="'+student.email+'" data-poll-id="'+CURRENT_POLL_DATA.pollId+'" data-lock-version="'+(student.lockVersion || 0)+'">'+
+          '<span class="material-symbols-outlined text-sm">lock_open</span><span>Approve</span></button>';
+      } else if(student.status==='BLOCKED'){
+        actionsHtml='<button class="unblock-btn inline-flex items-center gap-1 px-2 py-1 rounded bg-orange-500/20 text-orange-700 dark:text-orange-200 text-xs font-semibold hover:bg-orange-500/30 transition-colors" data-email="'+student.email+'">'+
+          '<span class="material-symbols-outlined text-sm">check_circle</span><span>Unblock</span></button>';
+      } else {
+        if(student.status==='Submitted'){
+          actionsHtml='<button class="reset-btn inline-flex items-center gap-1 px-2 py-1 rounded bg-primary/10 text-primary dark:text-brand-white text-xs font-semibold hover:bg-primary/20 transition-colors mr-1" data-email="'+student.email+'">'+
+            '<span class="material-symbols-outlined text-sm">refresh</span><span>Reset</span></button>';
+        }
+        actionsHtml+='<button class="block-btn inline-flex items-center gap-1 px-2 py-1 rounded bg-orange-500/10 text-orange-700 dark:text-orange-200 text-xs font-semibold hover:bg-orange-500/20 transition-colors" data-email="'+student.email+'">'+
+          '<span class="material-symbols-outlined text-sm">block</span><span>Block</span></button>';
+      }
+      actionsCell.innerHTML=actionsHtml;
+
+      row.appendChild(nameCell);
+      row.appendChild(statusCell);
+      row.appendChild(correctCell);
+      row.appendChild(violationsCell);
+      row.appendChild(actionsCell);
+      tbody.appendChild(row);
     });
 
-    // Setup unlock listeners
-    grid.querySelectorAll('.unlock-btn').forEach(function(btn){
+    // Setup event listeners
+    tbody.querySelectorAll('.unlock-btn').forEach(function(btn){
       btn.onclick=async function(){
         var email=this.dataset.email;
         var pollId=this.dataset.pollId;
         var lockVersion = parseInt(this.dataset.lockVersion, 10);
-
         if(!email||!pollId)return;
 
         var approved=await veritasConfirm('Approve unlock for '+email+'?',{
           title:'Approve unlock',
           confirmText:'Approve'
         });
-        if(!approved){
-            return;
-        }
+        if(!approved) return;
 
         this.disabled=true;
         this.querySelector('span:last-child').textContent='Unlocking...';
@@ -5312,7 +5439,9 @@
                     lockedAt: s.lockedAt,
                     answer: s.answer,
                     isCorrect: s.isCorrect,
-                    timestamp: s.timestamp
+                    timestamp: s.timestamp,
+                    sessionViolations: s.sessionViolations || 0,
+                    sessionExits: s.sessionExits || 0
                   };
                 }
                 return s;
@@ -5352,7 +5481,7 @@
       };
     });
 
-    grid.querySelectorAll('.reset-btn').forEach(function(btn){
+    tbody.querySelectorAll('.reset-btn').forEach(function(btn){
       btn.onclick=function(){
         var email=this.dataset.email;
         var pollId=CURRENT_POLL_DATA.pollId;
@@ -5369,6 +5498,83 @@
             button.querySelector('span:last-child').textContent='Reset';
           })
           .resetStudentResponse(email,pollId,questionIndex);
+      };
+    });
+
+    tbody.querySelectorAll('.block-btn').forEach(function(btn){
+      btn.onclick=async function(){
+        var email=this.dataset.email;
+        var student = currentStudentStatusData.find(function(s){ return s.email === email; });
+        if(!student) return;
+
+        var confirmed=await veritasConfirm('Temporarily block '+student.name+' from responding? This will be recorded in the archive.',{
+          title:'Block Student',
+          confirmText:'Block',
+          destructive:true
+        });
+        if(!confirmed) return;
+
+        this.disabled=true;
+        this.textContent='Blocking...';
+
+        // Update local state
+        currentStudentStatusData=currentStudentStatusData.map(function(s){
+          if(s.email===email){
+            return {
+              name: s.name,
+              email: s.email,
+              status: 'BLOCKED',
+              answer: s.answer,
+              isCorrect: s.isCorrect,
+              timestamp: s.timestamp,
+              sessionViolations: s.sessionViolations || 0,
+              sessionExits: s.sessionExits || 0,
+              blockedAt: new Date().toISOString()
+            };
+          }
+          return s;
+        });
+
+        renderStudentStatus();
+
+        // TODO: Call backend to record blocking in archive
+        // For now, just update the UI
+      };
+    });
+
+    tbody.querySelectorAll('.unblock-btn').forEach(function(btn){
+      btn.onclick=async function(){
+        var email=this.dataset.email;
+        var student = currentStudentStatusData.find(function(s){ return s.email === email; });
+        if(!student) return;
+
+        var confirmed=await veritasConfirm('Unblock '+student.name+'?',{
+          title:'Unblock Student',
+          confirmText:'Unblock'
+        });
+        if(!confirmed) return;
+
+        this.disabled=true;
+        this.textContent='Unblocking...';
+
+        // Update local state
+        currentStudentStatusData=currentStudentStatusData.map(function(s){
+          if(s.email===email){
+            return {
+              name: s.name,
+              email: s.email,
+              status: 'Waiting...',
+              answer: null,
+              isCorrect: null,
+              timestamp: null,
+              sessionViolations: s.sessionViolations || 0,
+              sessionExits: s.sessionExits || 0
+            };
+          }
+          return s;
+        });
+
+        renderStudentStatus();
       };
     });
   }
@@ -6361,32 +6567,19 @@
       html+='</div>';
     }
 
-    html+='<div class="mt-4">';
-    html+='<label class="text-brand-dark-gray dark:text-brand-white text-sm font-medium leading-normal block pb-2" for="question-timer-input">Suggested Timer (seconds)</label>';
-    html+='<input id="question-timer-input" type="number" min="0" max="600" class="w-40 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" value="'+(question.timerSeconds||'')+'">';
-    html+='<p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-1">Leave blank to control the timer manually during the live poll.</p>';
-    html+='</div>';
-
     html+='<div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">';
     html+='<div>';
     html+='<label class="text-brand-dark-gray dark:text-brand-white text-sm font-medium leading-normal block pb-2" for="question-topic-input">Topic/Standard Tag</label>';
     html+='<input id="question-topic-input" type="text" class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="e.g., Cell Division, Algebra, etc." value="'+escapeHtml(question.topicTag||question.topic||'')+'">';
     html+='<p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-1">Used for topic-level analytics and reporting.</p>';
     html+='</div>';
-    html+='<div>';
-    html+='<label class="text-brand-dark-gray dark:text-brand-white text-sm font-medium leading-normal block pb-2" for="question-standard-input">Standard (optional)</label>';
-    html+='<input id="question-standard-input" type="text" class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="e.g., NGSS MS-LS1-2" value="'+escapeHtml(question.standardTag||question.standard||'')+'">';
-    html+='<p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-1">Learning standard or curriculum code.</p>';
-    html+='</div>';
-    html+='</div>';
-
-    // Metacognition Toggle
-    html+='<div class="mt-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/30 rounded-lg p-4">';
-    html+='<div class="flex items-start gap-3">';
-    html+='<input type="checkbox" id="question-metacognition-input" class="mt-0.5 h-5 w-5 rounded border-blue-300 dark:border-blue-600 text-blue-600 focus:ring-blue-500 cursor-pointer" '+(question.metacognitionEnabled?'checked':'')+' />';
+    html+='<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/30 rounded-lg p-3">';
+    html+='<div class="flex items-start gap-2">';
+    html+='<input type="checkbox" id="question-metacognition-input" class="mt-0.5 h-4 w-4 rounded border-blue-300 dark:border-blue-600 text-blue-600 focus:ring-blue-500 cursor-pointer" '+(question.metacognitionEnabled?'checked':'')+' />';
     html+='<div class="flex-1">';
-    html+='<label for="question-metacognition-input" class="text-brand-dark-gray dark:text-brand-white text-sm font-semibold leading-normal cursor-pointer">Enable Metacognition Assessment</label>';
+    html+='<label for="question-metacognition-input" class="text-brand-dark-gray dark:text-brand-white text-xs font-semibold leading-normal cursor-pointer block">Enable Metacognition Assessment</label>';
     html+='<p class="text-xs text-brand-dark-gray/70 dark:text-brand-white/70 mt-1">Ask students how confident they are in their answer (Guessing, Somewhat Sure, Very Sure, Certain). This enables powerful confidence/correctness analytics to identify misconceptions.</p>';
+    html+='</div>';
     html+='</div>';
     html+='</div>';
     html+='</div>';
@@ -6456,29 +6649,11 @@
       };
     }
 
-    var timerInput=document.getElementById('question-timer-input');
-    if(timerInput){
-      timerInput.oninput=function(){
-        var value=parseInt(this.value,10);
-        questions[selectedQuestionIndex].timerSeconds=isNaN(value)||value<=0?null:value;
-        markPollDirty();
-      };
-    }
-
     var topicInput=document.getElementById('question-topic-input');
     if(topicInput){
       topicInput.oninput=function(){
         questions[selectedQuestionIndex].topicTag=this.value.trim();
         questions[selectedQuestionIndex].topic=this.value.trim(); // Backward compatibility
-        markPollDirty();
-      };
-    }
-
-    var standardInput=document.getElementById('question-standard-input');
-    if(standardInput){
-      standardInput.oninput=function(){
-        questions[selectedQuestionIndex].standardTag=this.value.trim();
-        questions[selectedQuestionIndex].standard=this.value.trim(); // Backward compatibility
         markPollDirty();
       };
     }

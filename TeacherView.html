@@ -5854,14 +5854,23 @@
   }
 
   function renderLiveMetacognition(metacognition){
+    console.log('=== RENDER LIVE METACOGNITION CALLED ===');
+    console.log('metacognition:', metacognition);
+
     var card=document.getElementById('live-metacognition-card');
-    if(!card)return;
+    if(!card){
+      console.log('live-metacognition-card element not found');
+      return;
+    }
 
     if(!metacognition||!metacognition.enabled){
+      console.log('Metacognition not enabled or data missing - hiding card');
       card.classList.add('hidden');
       card.innerHTML='';
       return;
     }
+
+    console.log('Metacognition is enabled - rendering card');
 
     var html='<div class="flex flex-wrap items-center justify-between gap-3 mb-4">';
     html+='<div class="flex items-center gap-2">';

@@ -1971,6 +1971,8 @@
                     // DEBUG: Log what we received
                     console.log('=== STUDENT RECEIVED DATA ===');
                     console.log('questionImageURL:', data.questionImageURL);
+                    console.log('metacognitionEnabled:', data.metacognitionEnabled);
+                    console.log('currentMetacognitionEnabled will be set to:', !!data.metacognitionEnabled);
                     console.log('options:', data.options);
                     if (data.options && data.options.length > 0) {
                         data.options.forEach(function(opt, idx) {
@@ -2170,6 +2172,10 @@
         }
 
         function submitAnswer(pollId, questionIndex, answerText) {
+            console.log('=== SUBMIT ANSWER CALLED ===');
+            console.log('currentMetacognitionEnabled:', currentMetacognitionEnabled);
+            console.log('answerText:', answerText);
+
             if (isInteractionBlocked) {
                 return;
             }
@@ -2189,10 +2195,12 @@
 
             // Check if metacognition is enabled for this question
             if (currentMetacognitionEnabled) {
+                console.log('Metacognition is enabled - showing confidence question');
                 pendingAnswerText = answerText;
                 questionContainer.style.display = 'none';
                 showConfidenceQuestion(pollId, questionIndex);
             } else {
+                console.log('Metacognition is NOT enabled - submitting answer directly');
                 hasAnsweredCurrent = true;
                 pendingSubmission = true;
                 statusContainer.style.display = 'block';

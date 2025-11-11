@@ -4075,6 +4075,9 @@ function getLivePollData(pollId, questionIndex) {
     });
 
     const metacognitionSummary = (() => {
+      Logger.log('=== COMPUTING METACOGNITION SUMMARY ===');
+      Logger.log('question.metacognitionEnabled: ' + question.metacognitionEnabled);
+
       const summary = {
         enabled: !!question.metacognitionEnabled,
         totalResponses: 0,
@@ -4090,9 +4093,14 @@ function getLivePollData(pollId, questionIndex) {
         flaggedStudents: []
       };
 
+      Logger.log('summary.enabled: ' + summary.enabled);
+
       if (!summary.enabled) {
+        Logger.log('Metacognition not enabled - returning empty summary');
         return summary;
       }
+
+      Logger.log('Metacognition enabled - computing statistics');
 
       const levelKeys = ['guessing', 'somewhat-sure', 'very-sure', 'certain'];
       const levelStats = levelKeys.reduce((acc, key) => {
@@ -4521,6 +4529,11 @@ function getStudentPollStatus(token, context) {
     const question = poll.questions[questionIndex];
     const normalizedQuestion = normalizeQuestionObject_(question, poll.updatedAt);
 
+    // DEBUG: Log metacognition status
+    Logger.log('=== GET STUDENT POLL STATUS ===');
+    Logger.log('Question metacognitionEnabled (before normalization): ' + question.metacognitionEnabled);
+    Logger.log('Normalized question metacognitionEnabled: ' + normalizedQuestion.metacognitionEnabled);
+
     const isCollecting = (metadata && typeof metadata.isCollecting === 'boolean')
       ? metadata.isCollecting
       : (pollStatus === 'OPEN');
@@ -4533,6 +4546,8 @@ function getStudentPollStatus(token, context) {
           "Got it! Your response is locked in."
         ], "Answer received — nice work."), true);
       }
+
+      Logger.log('Sending to student - metacognitionEnabled: ' + normalizedQuestion.metacognitionEnabled);
 
       return envelope({
         status: 'LIVE',
@@ -5846,7 +5861,7 @@ function writePollRows_(pollId, pollName, className, questions, createdAt, updat
   Logger.log('=== SAVING POLL DATA ===');
   Logger.log('Poll ID: ' + pollId);
   questions.forEach((q, idx) => {
-    Logger.log(`Question ${idx}: questionImageFileId=${q.questionImageFileId}, options count=${q.options ? q.options.length : 0}`);
+    Logger.log(`Question ${idx}: questionImageFileId=${q.questionImageFileId}, metacognitionEnabled=${q.metacognitionEnabled}, options count=${q.options ? q.options.length : 0}`);
     if (q.options && q.options.length > 0) {
       q.options.forEach((opt, optIdx) => {
         Logger.log(`  Option ${optIdx}: text="${opt.text}", imageFileId=${opt.imageFileId}`);

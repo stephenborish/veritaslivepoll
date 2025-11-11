@@ -3990,10 +3990,13 @@ function getLivePollData(pollId, questionIndex) {
       .filter(r => r[3] === questionIndex)
       .forEach(r => {
         const email = r[4];
+        const rawCorrect = r[6];
+        const isCorrect = (rawCorrect === true) || (rawCorrect === 'TRUE') || (rawCorrect === 'true') || (rawCorrect === 1);
         submittedAnswers.set(email, {
           timestamp: r[1],
           answer: r[5],
-          isCorrect: r[6]
+          isCorrect: isCorrect,
+          confidence: r[7] || null
         });
       });
     
@@ -4038,7 +4041,8 @@ function getLivePollData(pollId, questionIndex) {
         isCorrect: submission ? submission.isCorrect : null,
         timestamp: submission ? submission.timestamp : 0,
         sessionViolations: proctorState.sessionViolations || 0,
-        sessionExits: proctorState.sessionExits || 0
+        sessionExits: proctorState.sessionExits || 0,
+        confidence: submission ? (submission.confidence || null) : null
       };
 
       const statusPayload = (state, overrides = {}) => ({
@@ -4068,10 +4072,114 @@ function getLivePollData(pollId, questionIndex) {
         timestamp: 9999999999999
       });
     });
-    
+
+    const metacognitionSummary = (() => {
+      const summary = {
+        enabled: !!question.metacognitionEnabled,
+        totalResponses: 0,
+        responseRate: 0,
+        matrixCounts: {
+          confidentCorrect: 0,
+          confidentIncorrect: 0,
+          uncertainCorrect: 0,
+          uncertainIncorrect: 0
+        },
+        matrixPercentages: null,
+        levels: {},
+        flaggedStudents: []
+      };
+
+      if (!summary.enabled) {
+        return summary;
+      }
+
+      const levelKeys = ['guessing', 'somewhat-sure', 'very-sure', 'certain'];
+      const levelStats = levelKeys.reduce((acc, key) => {
+        acc[key] = { total: 0, correct: 0, incorrect: 0 };
+        return acc;
+      }, {});
+
+      let totalConfidenceResponses = 0;
+
+      submittedAnswers.forEach(submission => {
+        const confidence = submission.confidence;
+        if (!confidence) {
+          return;
+        }
+
+        if (!Object.prototype.hasOwnProperty.call(levelStats, confidence)) {
+          levelStats[confidence] = { total: 0, correct: 0, incorrect: 0 };
+        }
+
+        levelStats[confidence].total++;
+        if (submission.isCorrect) {
+          levelStats[confidence].correct++;
+        } else {
+          levelStats[confidence].incorrect++;
+        }
+
+        totalConfidenceResponses++;
+
+        const isConfident = (confidence === 'very-sure' || confidence === 'certain');
+
+        if (isConfident && submission.isCorrect) {
+          summary.matrixCounts.confidentCorrect++;
+        } else if (isConfident && !submission.isCorrect) {
+          summary.matrixCounts.confidentIncorrect++;
+        } else if (!isConfident && submission.isCorrect) {
+          summary.matrixCounts.uncertainCorrect++;
+        } else {
+          summary.matrixCounts.uncertainIncorrect++;
+        }
+      });
+
+      summary.totalResponses = totalConfidenceResponses;
+      summary.responseRate = roster.length > 0
+        ? Math.round((totalConfidenceResponses / roster.length) * 100)
+        : 0;
+
+      if (totalConfidenceResponses > 0) {
+        summary.matrixPercentages = {
+          confidentCorrect: Math.round((summary.matrixCounts.confidentCorrect / totalConfidenceResponses) * 100),
+          confidentIncorrect: Math.round((summary.matrixCounts.confidentIncorrect / totalConfidenceResponses) * 100),
+          uncertainCorrect: Math.round((summary.matrixCounts.uncertainCorrect / totalConfidenceResponses) * 100),
+          uncertainIncorrect: Math.round((summary.matrixCounts.uncertainIncorrect / totalConfidenceResponses) * 100)
+        };
+      }
+
+      summary.levels = Object.keys(levelStats).reduce((acc, level) => {
+        const stats = levelStats[level];
+        const total = stats.total;
+        acc[level] = {
+          total: total,
+          correct: stats.correct,
+          incorrect: stats.incorrect,
+          totalPct: totalConfidenceResponses > 0 ? Math.round((total / totalConfidenceResponses) * 100) : 0,
+          correctPct: total > 0 ? Math.round((stats.correct / total) * 100) : 0,
+          incorrectPct: total > 0 ? Math.round((stats.incorrect / total) * 100) : 0
+        };
+        return acc;
+      }, {});
+
+      summary.flaggedStudents = studentStatusList
+        .filter(student => {
+          if (!student || !student.confidence) return false;
+          const isConfident = (student.confidence === 'very-sure' || student.confidence === 'certain');
+          return isConfident && student.isCorrect === false;
+        })
+        .map(student => ({
+          name: student.displayName || student.name || '',
+          email: student.email,
+          answer: student.answer || '',
+          confidence: student.confidence
+        }));
+
+      return summary;
+    })();
+
     const answerCounts = {};
-    question.options.forEach(opt => { 
-      if (opt.text) answerCounts[opt.text] = 0; 
+    question.options.forEach(opt => {
+      if (opt.text) answerCounts[opt.text] = 0;
     });
     
     for (const submission of submittedAnswers.values()) {
@@ -4096,7 +4204,8 @@ function getLivePollData(pollId, questionIndex) {
       totalResponses: submittedAnswers.size,
       timerSeconds: question.timerSeconds || null,
       metadata: metadata,
-      authoritativeStatus: derivedStatus
+      authoritativeStatus: derivedStatus,
+      metacognition: metacognitionSummary
     };
   })();
 }

@@ -6,6 +6,15 @@
 const TEACHER_EMAIL = "sborish@malvernprep.org";
 const ADDITIONAL_TEACHER_PROP_KEY = 'TEACHER_EMAILS';
 const TOKEN_EXPIRY_DAYS = 30; // Tokens valid for 30 days
+const STUDENT_TOKEN_MAP_KEY = 'STUDENT_TOKENS';
+const STUDENT_TOKEN_INDEX_KEY = 'STUDENT_TOKEN_INDEX';
+const CLASS_LINKS_CACHE_PREFIX = 'CLASS_LINKS_';
+const PROCTOR_VIOLATION_CODES = {
+  LOCKED: 'VIOLATION_LOCKED',
+  TEACHER_BLOCK: 'VIOLATION_TEACHER_BLOCK'
+};
+const PROCTOR_VIOLATION_VALUES = Object.values(PROCTOR_VIOLATION_CODES);
+const PROCTOR_STATUS_VALUES = ['OK', 'LOCKED', 'AWAITING_FULLSCREEN', 'BLOCKED'];
 
 // --- ENHANCED LOGGING (2025 Standard) ---
 const Logger = {
@@ -98,55 +107,110 @@ const RateLimiter = {
 
 // --- TOKEN MANAGER (2025 Anonymous Authentication) ---
 const TokenManager = {
+  _loadStructures: function() {
+    const props = PropertiesService.getScriptProperties();
+    return {
+      props: props,
+      tokenMap: JSON.parse(props.getProperty(STUDENT_TOKEN_MAP_KEY) || '{}'),
+      indexMap: JSON.parse(props.getProperty(STUDENT_TOKEN_INDEX_KEY) || '{}')
+    };
+  },
+
+  _saveStructures: function(struct) {
+    struct.props.setProperty(STUDENT_TOKEN_MAP_KEY, JSON.stringify(struct.tokenMap));
+    struct.props.setProperty(STUDENT_TOKEN_INDEX_KEY, JSON.stringify(struct.indexMap));
+  },
+
+  _studentKey: function(email, className) {
+    return `${(email || '').toLowerCase()}::${className || ''}`;
+  },
+
+  _removeToken: function(struct, token) {
+    if (!token) return;
+    const entry = struct.tokenMap[token];
+    if (entry && entry.studentKey && struct.indexMap[entry.studentKey] === token) {
+      delete struct.indexMap[entry.studentKey];
+    } else {
+      Object.keys(struct.indexMap).forEach(function(key) {
+        if (struct.indexMap[key] === token) {
+          delete struct.indexMap[key];
+        }
+      });
+    }
+    delete struct.tokenMap[token];
+  },
+
+  _purgeExpired: function(struct) {
+    const now = Date.now();
+    let mutated = false;
+    Object.keys(struct.tokenMap).forEach(token => {
+      const entry = struct.tokenMap[token];
+      if (!entry || now > entry.expires) {
+        this._removeToken(struct, token);
+        mutated = true;
+      }
+    });
+    return mutated;
+  },
+
   /**
    * Generate a unique token for a student
    */
   generateToken: function(studentEmail, className) {
+    const struct = this._loadStructures();
+    this._purgeExpired(struct);
+
+    const studentKey = this._studentKey(studentEmail, className);
+    const existingToken = struct.indexMap[studentKey];
+    if (existingToken) {
+      this._removeToken(struct, existingToken);
+    }
+
     const token = Utilities.getUuid();
-    const props = PropertiesService.getScriptProperties();
-    const tokenMapStr = props.getProperty('STUDENT_TOKENS') || '{}';
-    const tokenMap = JSON.parse(tokenMapStr);
-    
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + TOKEN_EXPIRY_DAYS);
-    
-    tokenMap[token] = {
+
+    struct.indexMap[studentKey] = token;
+    struct.tokenMap[token] = {
       email: studentEmail,
       className: className,
-      created: new Date().getTime(),
-      expires: expiryDate.getTime()
+      created: Date.now(),
+      expires: expiryDate.getTime(),
+      studentKey: studentKey
     };
-    
-    props.setProperty('STUDENT_TOKENS', JSON.stringify(tokenMap));
+
+    this._saveStructures(struct);
     Logger.log('Token generated', { email: studentEmail, token: token });
-    
+
     return token;
   },
-  
+
   /**
    * Validate and retrieve student info from token
    */
   validateToken: function(token) {
     if (!token) return null;
-    
-    const props = PropertiesService.getScriptProperties();
-    const tokenMapStr = props.getProperty('STUDENT_TOKENS') || '{}';
-    const tokenMap = JSON.parse(tokenMapStr);
-    
-    const tokenData = tokenMap[token];
-    if (!tokenData) return null;
-    
-    // Check if token has expired
-    if (new Date().getTime() > tokenData.expires) {
-      Logger.log('Token expired', { token: token });
-      delete tokenMap[token];
-      props.setProperty('STUDENT_TOKENS', JSON.stringify(tokenMap));
-      return null;
+
+    const struct = this._loadStructures();
+    let mutated = this._purgeExpired(struct);
+
+    let tokenData = struct.tokenMap[token] || null;
+    if (tokenData && !tokenData.studentKey) {
+      tokenData.studentKey = this._studentKey(tokenData.email, tokenData.className);
+      struct.tokenMap[token] = tokenData;
+      if (!struct.indexMap[tokenData.studentKey]) {
+        struct.indexMap[tokenData.studentKey] = token;
+      }
+      mutated = true;
     }
-    
+
+    if (mutated) {
+      this._saveStructures(struct);
+    }
+
     return tokenData;
   },
-  
+
   /**
    * Get student email from token
    */
@@ -154,7 +218,7 @@ const TokenManager = {
     const tokenData = this.validateToken(token);
     return tokenData ? tokenData.email : null;
   },
-  
+
   /**
    * Store token in user properties (for current session)
    */
@@ -162,7 +226,7 @@ const TokenManager = {
     const userProps = PropertiesService.getUserProperties();
     userProps.setProperty('CURRENT_TOKEN', token);
   },
-  
+
   /**
    * Get token from current session
    */
@@ -170,7 +234,7 @@ const TokenManager = {
     const userProps = PropertiesService.getUserProperties();
     return userProps.getProperty('CURRENT_TOKEN');
   },
-  
+
   /**
    * Clear session token
    */
@@ -178,27 +242,72 @@ const TokenManager = {
     const userProps = PropertiesService.getUserProperties();
     userProps.deleteProperty('CURRENT_TOKEN');
   },
-  
+
   /**
    * Get student email from current session (either token or Google auth)
    */
   getCurrentStudentEmail: function() {
-    // First try token-based authentication
     const token = this.getSessionToken();
     if (token) {
       const email = this.getStudentEmail(token);
       if (email) return email;
     }
-    
-    // Fall back to Google authentication for backward compatibility
+
     try {
       const email = Session.getActiveUser().getEmail();
       if (email && email !== '') return email;
     } catch (e) {
       Logger.log('No active user session');
     }
-    
+
     return null;
+  },
+
+  /**
+   * Snapshot tokens for quick lookup by student
+   */
+  getActiveSnapshot: function() {
+    const struct = this._loadStructures();
+    let mutated = this._purgeExpired(struct);
+    Object.keys(struct.tokenMap).forEach(token => {
+      const entry = struct.tokenMap[token];
+      if (!entry) return;
+      if (!entry.studentKey) {
+        entry.studentKey = this._studentKey(entry.email, entry.className);
+        struct.tokenMap[token] = entry;
+        mutated = true;
+      }
+      if (entry.studentKey && struct.indexMap[entry.studentKey] !== token) {
+        struct.indexMap[entry.studentKey] = token;
+        mutated = true;
+      }
+    });
+    if (mutated) {
+      this._saveStructures(struct);
+    }
+    return {
+      tokenMap: struct.tokenMap,
+      indexMap: struct.indexMap
+    };
+  },
+
+  getTokenFromSnapshot: function(snapshot, email, className) {
+    if (!snapshot) return null;
+    const key = this._studentKey(email, className);
+    const token = snapshot.indexMap[key];
+    if (!token) return null;
+    const data = snapshot.tokenMap[token];
+    if (!data) return null;
+    return { token: token, data: data };
+  },
+
+  recordShortUrl: function(token, shortUrl) {
+    if (!token || !shortUrl) return;
+    const struct = this._loadStructures();
+    if (struct.tokenMap[token]) {
+      struct.tokenMap[token].shortUrl = shortUrl;
+      this._saveStructures(struct);
+    }
   }
 };
 
@@ -368,7 +477,7 @@ const DataAccess = {
     
     isLocked: function(pollId, studentEmail) {
       return this.getStudentStatus(pollId, studentEmail)
-        .some(r => r[5] === 'VIOLATION_LOCKED');
+        .some(r => PROCTOR_VIOLATION_VALUES.indexOf(r[5]) !== -1);
     },
     
     hasAnswered: function(pollId, questionIndex, studentEmail) {
@@ -2038,7 +2147,7 @@ function getArchivedPolls() {
         pollEntry.latestTimestamp = Math.max(pollEntry.latestTimestamp, timestamp);
       }
 
-      if (questionIndex === -1 && answer === 'VIOLATION_LOCKED') {
+      if (questionIndex === -1 && PROCTOR_VIOLATION_VALUES.indexOf(answer) !== -1) {
         pollEntry.violations.set(studentEmail, true);
         return;
       }
@@ -2225,7 +2334,7 @@ function buildResponseMaps_(responseValues) {
     const pollEntry = responsesByPoll.get(pollId);
 
     // Track violations
-    if (questionIndex === -1 && answer === 'VIOLATION_LOCKED') {
+    if (questionIndex === -1 && PROCTOR_VIOLATION_VALUES.indexOf(answer) !== -1) {
       pollEntry.violations.set(studentEmail, true);
       return;
     }
@@ -3889,7 +3998,7 @@ function getLivePollData(pollId, questionIndex) {
     
     const lockedStudents = new Set();
     pollResponses
-      .filter(r => r[3] === -1 && r[5] === 'VIOLATION_LOCKED')
+      .filter(r => r[3] === -1 && PROCTOR_VIOLATION_VALUES.indexOf(r[5]) !== -1)
       .forEach(r => lockedStudents.add(r[4]));
 
     // OPTIMIZATION: Batch load all proctor states in a single operation
@@ -3906,43 +4015,57 @@ function getLivePollData(pollId, questionIndex) {
       // Get submission if exists
       const submission = submittedAnswers.has(email) ? submittedAnswers.get(email) : null;
 
-      // Format student name
-      const formattedName = formatStudentName_(student.name);
+      const nameParts = extractStudentNameParts_(student.name);
+      const fullName = nameParts.trimmed || student.name || '';
+      const displayName = nameParts.displayName || fullName;
+      const shortName = formatStudentName_(student.name);
 
-      // If student is locked or awaiting fullscreen, show that status but preserve their answer if they submitted
+      const baseStudent = {
+        name: fullName || displayName,
+        displayName: displayName,
+        shortName: shortName,
+        firstName: nameParts.firstName || displayName,
+        lastName: nameParts.lastName || '',
+        email: email,
+        lockVersion: proctorState.lockVersion,
+        lockReason: proctorState.lockReason,
+        lockedAt: proctorState.lockedAt,
+        blockedBy: proctorState.blockedBy || '',
+        blockedAt: proctorState.blockedAt || '',
+        blockedNote: proctorState.blockedNote || '',
+        answer: submission ? submission.answer : '---',
+        isCorrect: submission ? submission.isCorrect : null,
+        timestamp: submission ? submission.timestamp : 0,
+        sessionViolations: proctorState.sessionViolations || 0,
+        sessionExits: proctorState.sessionExits || 0
+      };
+
+      const statusPayload = (state, overrides = {}) => ({
+        ...baseStudent,
+        status: state,
+        ...overrides
+      });
+
+      if (proctorState.status === 'BLOCKED') {
+        return statusPayload('BLOCKED', {
+          statusNote: proctorState.blockedNote || 'teacher-block'
+        });
+      }
+
       if (proctorState.status === 'LOCKED' || proctorState.status === 'AWAITING_FULLSCREEN') {
-        return {
-          name: formattedName,
-          email: email,
-          status: proctorState.status === 'AWAITING_FULLSCREEN' ? 'AWAITING_FULLSCREEN' : 'LOCKED',
-          lockVersion: proctorState.lockVersion,
-          lockReason: proctorState.lockReason,
-          lockedAt: proctorState.lockedAt,
-          answer: submission ? submission.answer : '---',
-          isCorrect: submission ? submission.isCorrect : null,
-          timestamp: submission ? submission.timestamp : 0
-        };
+        return statusPayload(proctorState.status === 'AWAITING_FULLSCREEN' ? 'AWAITING_FULLSCREEN' : 'LOCKED');
       }
 
       if (submission) {
-        return {
-          name: formattedName,
-          email: email,
-          status: 'Submitted',
-          answer: submission.answer,
-          isCorrect: submission.isCorrect,
-          timestamp: submission.timestamp
-        };
+        return statusPayload('Submitted', {
+          statusNote: submission.isCorrect === true ? 'correct' : (submission.isCorrect === false ? 'incorrect' : 'submitted')
+        });
       }
 
-      return {
-        name: formattedName,
-        email: email,
-        status: 'Waiting...',
-        answer: '---',
-        isCorrect: null,
+      return statusPayload('Waiting...', {
+        statusNote: 'waiting',
         timestamp: 9999999999999
-      };
+      });
     });
     
     const answerCounts = {};
@@ -3979,28 +4102,39 @@ function getLivePollData(pollId, questionIndex) {
 
 
 /**
+ * Extracts normalized name parts for sorting and display
+ * @param {string} fullName
+ * @returns {{raw: string, trimmed: string, firstName: string, lastName: string, displayName: string}}
+ */
+function extractStudentNameParts_(fullName) {
+  if (!fullName || typeof fullName !== 'string') {
+    return { raw: '', trimmed: '', firstName: '', lastName: '', displayName: '' };
+  }
+
+  const trimmed = fullName.trim();
+  if (!trimmed) {
+    return { raw: fullName, trimmed: '', firstName: '', lastName: '', displayName: '' };
+  }
+
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  const firstName = parts.length > 0 ? parts[0] : '';
+  const lastName = parts.length > 1 ? parts[parts.length - 1] : '';
+  const displayName = [firstName, lastName].filter(Boolean).join(' ').trim() || trimmed;
+
+  return { raw: fullName, trimmed: trimmed, firstName: firstName, lastName: lastName, displayName: displayName };
+}
+
+/**
  * Formats student name as "FirstName L." (first name + last initial)
  * @param {string} fullName - The student's full name
  * @returns {string} Formatted name
  */
 function formatStudentName_(fullName) {
-  if (!fullName || typeof fullName !== 'string') return '';
-
-  const trimmed = fullName.trim();
-  if (!trimmed) return '';
-
-  // Split by whitespace
-  const parts = trimmed.split(/\s+/);
-
-  if (parts.length === 0) return '';
-  if (parts.length === 1) return parts[0]; // Only first name
-
-  // Get first name and last initial
-  const firstName = parts[0];
-  const lastName = parts[parts.length - 1];
-  const lastInitial = lastName.charAt(0).toUpperCase();
-
-  return firstName + ' ' + lastInitial + '.';
+  const parts = extractStudentNameParts_(fullName);
+  if (!parts.trimmed) return '';
+  if (!parts.lastName) return parts.displayName || parts.trimmed;
+  const lastInitial = parts.lastName.charAt(0).toUpperCase();
+  return parts.firstName + ' ' + lastInitial + '.';
 }
 
 function buildSubmittedAnswersMap_(pollId, questionIndex) {
@@ -4243,6 +4377,19 @@ function getStudentPollStatus(token, context) {
 
     // Check authoritative proctor state (not old Responses sheet)
     const proctorState = ProctorAccess.getState(pollId, studentEmail, metadata && metadata.sessionId ? metadata.sessionId : null);
+    const hasSubmitted = DataAccess.responses.hasAnswered(pollId, questionIndex, studentEmail);
+
+    if (proctorState.status === 'BLOCKED') {
+      return envelope({
+        status: 'BLOCKED',
+        message: "Your teacher has temporarily paused your ability to respond to this question.",
+        hasSubmitted: hasSubmitted,
+        pollId: pollId,
+        blockedBy: proctorState.blockedBy || '',
+        blockedAt: proctorState.blockedAt || ''
+      });
+    }
+
     if (proctorState.status === 'LOCKED' || proctorState.status === 'AWAITING_FULLSCREEN') {
       return envelope({
         status: proctorState.status,
@@ -4255,12 +4402,11 @@ function getStudentPollStatus(token, context) {
               "You’re cleared for re-entry. Go fullscreen to get back in the game.",
               "All systems go. Click below to resume fullscreen and rejoin the action."
             ], "You’re cleared for re-entry. Go fullscreen to get back in the game."),
-        hasSubmitted: false,
+        hasSubmitted: hasSubmitted,
         pollId: pollId
       });
     }
 
-    const hasSubmitted = DataAccess.responses.hasAnswered(pollId, questionIndex, studentEmail);
     const question = poll.questions[questionIndex];
     const normalizedQuestion = normalizeQuestionObject_(question, poll.updatedAt);
 
@@ -4448,6 +4594,28 @@ const ProctorTelemetry = {
   }
 };
 
+function hydrateProctorBlockFields_(state) {
+  if (!state) return state;
+  const reason = state.lockReason || '';
+  let blockedBy = '';
+  let blockedNote = '';
+  if (reason && reason.indexOf('teacher-block::') === 0) {
+    const remainder = reason.substring('teacher-block::'.length) || '';
+    const parts = remainder.split('::');
+    blockedBy = parts[0] || '';
+    if (parts.length > 1) {
+      blockedNote = parts.slice(1).join('::');
+    }
+  }
+
+  return {
+    ...state,
+    blockedBy: blockedBy,
+    blockedAt: state.status === 'BLOCKED' ? (state.lockedAt || '') : '',
+    blockedNote: blockedNote
+  };
+}
+
 /**
  * Proctoring data access layer
  * Stores per-student lock state with versioning for atomic teacher approvals
@@ -4477,7 +4645,7 @@ const ProctorAccess = {
       if (data[i][0] === pollId && data[i][1] === studentEmail) {
         // Migrate old data: if column 2 is boolean (old "locked" field), convert to status
         let status = 'OK';
-        if (typeof data[i][2] === 'string' && ['OK', 'LOCKED', 'AWAITING_FULLSCREEN'].includes(data[i][2])) {
+        if (typeof data[i][2] === 'string' && PROCTOR_STATUS_VALUES.includes(data[i][2])) {
           status = data[i][2];
         } else if (data[i][2] === true || data[i][2] === 'TRUE') {
           status = 'LOCKED'; // Migration: locked=true → LOCKED
@@ -4503,7 +4671,7 @@ const ProctorAccess = {
         if (currentSessionId) {
           const needsReset = !stateSessionId || stateSessionId === '' || stateSessionId !== currentSessionId;
           if (needsReset) {
-            return {
+            return hydrateProctorBlockFields_({
               pollId: pollId,
               studentEmail: studentEmail,
               status: 'OK',
@@ -4515,16 +4683,16 @@ const ProctorAccess = {
               unlockApprovedAt: null,
               sessionId: currentSessionId,
               rowIndex: i + 1
-            };
+            });
           }
         }
 
-        return baseState;
+        return hydrateProctorBlockFields_(baseState);
       }
     }
 
     // Return default state if not found
-    return {
+    return hydrateProctorBlockFields_({
       pollId: pollId,
       studentEmail: studentEmail,
       status: 'OK',
@@ -4536,7 +4704,7 @@ const ProctorAccess = {
       unlockApprovedAt: null,
       sessionId: currentSessionId || null,
       rowIndex: null
-    };
+    });
   },
 
   /**
@@ -4571,7 +4739,7 @@ const ProctorAccess = {
 
         // Migrate old data: if column 2 is boolean (old "locked" field), convert to status
         let status = 'OK';
-        if (typeof data[i][2] === 'string' && ['OK', 'LOCKED', 'AWAITING_FULLSCREEN'].includes(data[i][2])) {
+        if (typeof data[i][2] === 'string' && PROCTOR_STATUS_VALUES.includes(data[i][2])) {
           status = data[i][2];
         } else if (data[i][2] === true || data[i][2] === 'TRUE') {
           status = 'LOCKED'; // Migration: locked=true → LOCKED
@@ -4596,7 +4764,7 @@ const ProctorAccess = {
         if (currentSessionId) {
           const needsReset = !stateSessionId || stateSessionId === '' || stateSessionId !== currentSessionId;
           if (needsReset) {
-            existingStates.set(email, {
+            existingStates.set(email, hydrateProctorBlockFields_({
               pollId: pollId,
               studentEmail: email,
               status: 'OK',
@@ -4608,12 +4776,12 @@ const ProctorAccess = {
               unlockApprovedAt: null,
               sessionId: currentSessionId,
               rowIndex: i + 1
-            });
+            }));
           } else {
-            existingStates.set(email, baseState);
+            existingStates.set(email, hydrateProctorBlockFields_(baseState));
           }
         } else {
-          existingStates.set(email, baseState);
+          existingStates.set(email, hydrateProctorBlockFields_(baseState));
         }
       }
     }
@@ -4624,7 +4792,7 @@ const ProctorAccess = {
         stateMap.set(email, existingStates.get(email));
       } else {
         // Return default state if not found
-        stateMap.set(email, {
+        stateMap.set(email, hydrateProctorBlockFields_({
           pollId: pollId,
           studentEmail: email,
           status: 'OK',
@@ -4636,7 +4804,7 @@ const ProctorAccess = {
           unlockApprovedAt: null,
           sessionId: currentSessionId || null,
           rowIndex: null
-        });
+        }));
       }
     });
 
@@ -4648,7 +4816,7 @@ const ProctorAccess = {
    */
   setState: function(state) {
     // INVARIANT CHECKS (enforce state machine rules)
-    const validStatuses = ['OK', 'LOCKED', 'AWAITING_FULLSCREEN'];
+    const validStatuses = PROCTOR_STATUS_VALUES;
     if (!validStatuses.includes(state.status)) {
       throw new Error(`Invalid proctor status: ${state.status}. Must be one of: ${validStatuses.join(', ')}`);
     }
@@ -4665,6 +4833,10 @@ const ProctorAccess = {
     // LOCKED requires unlockApproved=false
     if (state.status === 'LOCKED' && state.unlockApproved) {
       throw new Error('State LOCKED requires unlockApproved=false (approval must be cleared on new violation)');
+    }
+
+    if (state.status === 'BLOCKED') {
+      state.unlockApproved = false;
     }
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -4816,7 +4988,7 @@ function reportStudentViolation(reason, token) {
         pollId,
         -1,
         studentEmail,
-        'VIOLATION_LOCKED',
+        PROCTOR_VIOLATION_CODES.LOCKED,
         false
       ]);
 
@@ -4861,7 +5033,7 @@ function reportStudentViolation(reason, token) {
       pollId,
       -1,
       studentEmail,
-      'VIOLATION_LOCKED',
+      PROCTOR_VIOLATION_CODES.LOCKED,
       false
     ]);
 
@@ -4970,6 +5142,125 @@ function teacherApproveUnlock(studentEmail, pollId, expectedLockVersion) {
     });
 
     return { ok: true, status: 'AWAITING_FULLSCREEN', lockVersion: expectedLockVersion };
+  })();
+}
+
+function teacherBlockStudent(studentEmail, pollId, reason) {
+  return withErrorHandling(() => {
+    const teacherEmail = Session.getActiveUser().getEmail();
+
+    if (teacherEmail !== TEACHER_EMAIL) {
+      throw new Error('Unauthorized');
+    }
+
+    if (!studentEmail || !pollId) {
+      throw new Error('Invalid parameters');
+    }
+
+    const statusValues = DataAccess.liveStatus.get();
+    const activePollId = statusValues[0];
+    const metadata = (statusValues && statusValues.metadata) ? statusValues.metadata : {};
+    const currentSessionId = metadata && metadata.sessionId ? metadata.sessionId : null;
+
+    if (!activePollId || activePollId !== pollId) {
+      throw new Error('Poll is not currently live');
+    }
+
+    const currentState = ProctorAccess.getState(pollId, studentEmail, currentSessionId);
+
+    const newState = {
+      pollId: pollId,
+      studentEmail: studentEmail,
+      status: 'BLOCKED',
+      lockVersion: (currentState.lockVersion || 0) + 1,
+      lockReason: `teacher-block::${teacherEmail}${reason ? '::' + reason : ''}`,
+      lockedAt: new Date().toISOString(),
+      unlockApproved: false,
+      unlockApprovedBy: null,
+      unlockApprovedAt: null,
+      sessionId: currentSessionId,
+      rowIndex: currentState.rowIndex
+    };
+
+    ProctorAccess.setState(newState);
+
+    const responseId = 'TB-' + Utilities.getUuid();
+    DataAccess.responses.add([
+      responseId,
+      new Date().getTime(),
+      pollId,
+      -1,
+      studentEmail,
+      PROCTOR_VIOLATION_CODES.TEACHER_BLOCK,
+      false
+    ]);
+
+    ProctorTelemetry.log('teacher_block', studentEmail, pollId, {
+      lockVersion: newState.lockVersion,
+      status: 'BLOCKED',
+      blockedBy: teacherEmail
+    });
+
+    return {
+      ok: true,
+      status: 'BLOCKED',
+      lockVersion: newState.lockVersion,
+      blockedAt: newState.lockedAt,
+      blockedBy: teacherEmail
+    };
+  })();
+}
+
+function teacherUnblockStudent(studentEmail, pollId) {
+  return withErrorHandling(() => {
+    const teacherEmail = Session.getActiveUser().getEmail();
+
+    if (teacherEmail !== TEACHER_EMAIL) {
+      throw new Error('Unauthorized');
+    }
+
+    if (!studentEmail || !pollId) {
+      throw new Error('Invalid parameters');
+    }
+
+    const statusValues = DataAccess.liveStatus.get();
+    const activePollId = statusValues[0];
+    const metadata = (statusValues && statusValues.metadata) ? statusValues.metadata : {};
+    const currentSessionId = metadata && metadata.sessionId ? metadata.sessionId : null;
+
+    if (!activePollId || activePollId !== pollId) {
+      throw new Error('Poll is not currently live');
+    }
+
+    const currentState = ProctorAccess.getState(pollId, studentEmail, currentSessionId);
+
+    if (currentState.status !== 'BLOCKED') {
+      return { ok: false, reason: 'not_blocked', status: currentState.status };
+    }
+
+    const newState = {
+      pollId: pollId,
+      studentEmail: studentEmail,
+      status: 'OK',
+      lockVersion: (currentState.lockVersion || 0) + 1,
+      lockReason: '',
+      lockedAt: '',
+      unlockApproved: false,
+      unlockApprovedBy: null,
+      unlockApprovedAt: null,
+      sessionId: currentSessionId,
+      rowIndex: currentState.rowIndex
+    };
+
+    ProctorAccess.setState(newState);
+
+    ProctorTelemetry.log('teacher_unblock', studentEmail, pollId, {
+      lockVersion: newState.lockVersion,
+      status: 'OK',
+      unblockedBy: teacherEmail
+    });
+
+    return { ok: true, status: 'OK', lockVersion: newState.lockVersion };
   })();
 }
 
@@ -5302,6 +5593,7 @@ function sendPollLinkToClass(className) {
       const personalizedUrl = `${baseUrl}?token=${token}`;
       // Shorten the URL for better user experience
       const shortUrl = URLShortener.shorten(personalizedUrl);
+      TokenManager.recordShortUrl(token, shortUrl);
       links.push({
         email: student.email,
         name: student.name,
@@ -5326,9 +5618,11 @@ function sendPollLinkToClass(className) {
       });
     });
     
-    Logger.log('Personalized poll links sent', { 
-      className: className, 
-      studentCount: links.length 
+    CacheManager.invalidate(CLASS_LINKS_CACHE_PREFIX + encodeURIComponent(className));
+
+    Logger.log('Personalized poll links sent', {
+      className: className,
+      studentCount: links.length
     });
     
     return { 
@@ -5347,35 +5641,38 @@ function getStudentLinksForClass(className) {
     if (Session.getActiveUser().getEmail() !== TEACHER_EMAIL) {
       throw new Error('Unauthorized action.');
     }
-    
-    const roster = DataAccess.roster.getByClass(className);
-    const props = PropertiesService.getScriptProperties();
-    const tokenMapStr = props.getProperty('STUDENT_TOKENS') || '{}';
-    const tokenMap = JSON.parse(tokenMapStr);
-    const baseUrl = ScriptApp.getService().getUrl();
-    
-    const links = roster.map(student => {
-      // Find existing token for this student in this class
-      let existingToken = null;
-      for (const [token, data] of Object.entries(tokenMap)) {
-        if (data.email === student.email && data.className === className) {
-          // Check if not expired
-          if (new Date().getTime() < data.expires) {
-            existingToken = token;
-            break;
-          }
+
+    const cacheKey = CLASS_LINKS_CACHE_PREFIX + encodeURIComponent(className);
+
+    return CacheManager.get(cacheKey, () => {
+      const roster = DataAccess.roster.getByClass(className) || [];
+      const baseUrl = ScriptApp.getService().getUrl();
+      const snapshot = TokenManager.getActiveSnapshot();
+
+      const links = roster.map(student => {
+        const tokenInfo = TokenManager.getTokenFromSnapshot(snapshot, student.email, className);
+        if (tokenInfo) {
+          const fullUrl = `${baseUrl}?token=${tokenInfo.token}`;
+          return {
+            name: student.name,
+            email: student.email,
+            url: tokenInfo.data.shortUrl || fullUrl,
+            fullUrl: fullUrl,
+            hasActiveLink: true
+          };
         }
-      }
-      
-      return {
-        name: student.name,
-        email: student.email,
-        url: existingToken ? `${baseUrl}?token=${existingToken}` : 'No active link',
-        hasActiveLink: !!existingToken
-      };
-    });
-    
-    return { success: true, links: links };
+
+        return {
+          name: student.name,
+          email: student.email,
+          url: 'No active link',
+          fullUrl: '',
+          hasActiveLink: false
+        };
+      });
+
+      return { success: true, links: links };
+    }, CacheManager.CACHE_TIMES.SHORT);
   })();
 }
 

@@ -1110,6 +1110,7 @@
         var pollFailureCount = 0;
         var proctorPollInterval = null;
         var isInteractionBlocked = false;
+        var isTeacherBlocked = false;
         var currentLockVersion = 0;
         var hasAnsweredCurrent = false;
         var violationLogged = false;
@@ -1697,6 +1698,7 @@
                 entryScreen.style.display = 'none';
                 studentContainer.style.display = 'block';
                 isInteractionBlocked = false;
+                isTeacherBlocked = false;
                 violationLogged = false;
                 fullscreenEnteredOnce = false; // Reset for new session
                 if (resumeControls) {
@@ -1722,7 +1724,7 @@
                     // Set a new timer for 300ms
                     violationDebounceTimer = setTimeout(function() {
                         // Check if already reported to prevent duplicates
-                        if (violationLogged || isInteractionBlocked) {
+                        if (violationLogged || (isInteractionBlocked && !isTeacherBlocked)) {
                             console.log('Violation already reported, skipping');
                             return;
                         }
@@ -1801,6 +1803,12 @@
                         // New violation or version mismatch - update lockVersion
                         currentLockVersion = response.lockVersion;
                         showLockedMessage();
+                    } else if (response.status === 'BLOCKED') {
+                        isTeacherBlocked = true;
+                        if (response.lockVersion && response.lockVersion !== currentLockVersion) {
+                            currentLockVersion = response.lockVersion;
+                        }
+                        showTeacherBlockedMessage();
                     } else if (response.status === 'OK') {
                         // Unlocked - resume normal polling
                         if (proctorPollInterval) {
@@ -1808,6 +1816,7 @@
                             proctorPollInterval = null;
                         }
                         isInteractionBlocked = false;
+                        isTeacherBlocked = false;
                         violationLogged = false;
                         hideConnectivityBanner();
                         startPolling(true);
@@ -1835,9 +1844,13 @@
 
             currentPollState = data || {};
 
-            if (data.status === 'LOCKED' || data.status === 'AWAITING_FULLSCREEN') {
+            if (data.status === 'LOCKED' || data.status === 'AWAITING_FULLSCREEN' || data.status === 'BLOCKED') {
                 console.log('Server confirmed lock status on page load:', data.status);
                 isInteractionBlocked = true;
+                if (data.status === 'BLOCKED') {
+                    isTeacherBlocked = true;
+                    showTeacherBlockedMessage();
+                }
                 google.script.run
                     .withSuccessHandler(function(proctorResponse) {
                         if (proctorResponse.success) {
@@ -1845,7 +1858,12 @@
                             if (proctorResponse.status === 'AWAITING_FULLSCREEN') {
                                 showResumePrompt();
                             } else if (proctorResponse.status === 'LOCKED') {
+                                isTeacherBlocked = false;
                                 showLockedMessage();
+                                startProctorPolling();
+                            } else if (proctorResponse.status === 'BLOCKED') {
+                                isTeacherBlocked = true;
+                                showTeacherBlockedMessage();
                                 startProctorPolling();
                             }
                         }
@@ -1855,11 +1873,13 @@
                 return;
             }
 
+            isTeacherBlocked = false;
+
             if (preLiveCard) {
                 preLiveCard.style.display = 'none';
             }
 
-            if (data.status !== 'LOCKED' && data.status !== 'AWAITING_FULLSCREEN') {
+            if (data.status !== 'LOCKED' && data.status !== 'AWAITING_FULLSCREEN' && data.status !== 'BLOCKED') {
                 lastUnlockedState = data;
             }
 
@@ -2553,6 +2573,40 @@
                 iconEl.textContent = 'lock';
                 iconEl.className = 'material-symbols-outlined text-6xl text-red-300 mb-4 inline-block';
             }
+            if (resumeControls) {
+                resumeControls.style.display = 'none';
+            }
+            isTeacherBlocked = false;
+        }
+
+        function showTeacherBlockedMessage() {
+            console.log('Showing teacher block message');
+            stopPolling();
+            hideConnectivityBanner();
+            studentContainer.style.display = 'block';
+            entryScreen.style.display = 'none';
+            questionContainer.style.display = 'none';
+            statusContainer.style.display = 'block';
+            if (studentLoader) studentLoader.style.display = 'none';
+
+            isInteractionBlocked = true;
+            isTeacherBlocked = true;
+
+            statusMessage.textContent = 'Your teacher has paused responses for this question.';
+            statusMessage.className = 'text-amber-200 text-xl font-semibold';
+
+            if (statusSubMessage) {
+                statusSubMessage.style.display = 'block';
+                statusSubMessage.className = 'text-amber-200/80 text-base mt-4';
+                statusSubMessage.textContent = 'Stay in fullscreen and wait for your teacher to unblock you.';
+            }
+
+            var iconEl = statusContainer.querySelector('.material-symbols-outlined');
+            if (iconEl) {
+                iconEl.textContent = 'block';
+                iconEl.className = 'material-symbols-outlined text-6xl text-amber-200 mb-4 inline-block';
+            }
+
             if (resumeControls) {
                 resumeControls.style.display = 'none';
             }

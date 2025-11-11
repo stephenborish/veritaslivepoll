@@ -1059,10 +1059,6 @@
                 <span class="material-symbols-outlined text-lg">replay</span>
                 <span class="truncate">Reset Question</span>
               </button>
-              <button id="header-skip-btn" class="flex min-w-[96px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-brand-white/15 text-brand-white text-sm font-semibold leading-normal tracking-[0.01em] gap-2 hover:bg-brand-white/25 transition-colors">
-                <span class="material-symbols-outlined text-lg">fast_forward</span>
-                <span class="truncate">Skip</span>
-              </button>
             </div>
           </div>
           <button id="header-stop-btn" class="flex min-w-[120px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-5 bg-rose-600 text-brand-white text-sm font-semibold leading-normal tracking-[0.01em] gap-2 hover:bg-rose-700 transition-colors" title="End the entire session and finish the poll">
@@ -1097,7 +1093,7 @@
                   </select>
                 </div>
                 <div class="flex flex-wrap gap-2 items-center">
-                  <button id="start-poll-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-veritas-gold text-white text-sm font-semibold hover:bg-veritas-gold/90 transition-colors shadow-sm">
+                  <button id="start-poll-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-veritas-gold text-white text-sm font-semibold hover:bg-veritas-gold/90 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed" disabled>
                     <span class="material-symbols-outlined text-lg">play_circle</span>
                     <span>Start Session</span>
                   </button>
@@ -1392,7 +1388,7 @@
               </div>
 
               <!-- Status Summary Stats -->
-              <div class="grid grid-cols-3 gap-2 mb-4 text-center">
+              <div class="grid grid-cols-4 gap-2 mb-4 text-center">
                 <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-2">
                   <div id="correct-count" class="text-lg font-bold text-green-700 dark:text-green-300">0</div>
                   <div class="text-xs text-green-600 dark:text-green-400">Correct</div>
@@ -1401,9 +1397,46 @@
                   <div id="locked-count" class="text-lg font-bold text-red-700 dark:text-red-300">0</div>
                   <div class="text-xs text-red-600 dark:text-red-400">Locked</div>
                 </div>
+                <div class="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-2">
+                  <div id="blocked-count" class="text-lg font-bold text-amber-700 dark:text-amber-300">0</div>
+                  <div class="text-xs text-amber-600 dark:text-amber-300">Blocked</div>
+                </div>
                 <div class="bg-gray-50 dark:bg-gray-900/20 rounded-lg p-2">
                   <div id="waiting-count" class="text-lg font-bold text-gray-700 dark:text-gray-300">0</div>
                   <div class="text-xs text-gray-600 dark:text-gray-400">Waiting</div>
+                </div>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-3 mb-4">
+                <div class="relative flex-1 min-w-[180px]">
+                  <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-sm text-brand-dark-gray/40 dark:text-brand-white/50">search</span>
+                  <input type="search" id="student-search-input" placeholder="Search by name, email, or answer" class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                </div>
+                <select id="student-status-filter-select" class="rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
+                  <option value="all">All statuses</option>
+                  <option value="waiting">Waiting</option>
+                  <option value="submitted">Submitted</option>
+                  <option value="locked">Locked / Awaiting</option>
+                  <option value="blocked">Blocked</option>
+                </select>
+                <select id="student-correctness-filter-select" class="rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
+                  <option value="all">All results</option>
+                  <option value="correct">Correct only</option>
+                  <option value="incorrect">Incorrect only</option>
+                  <option value="unanswered">No response</option>
+                </select>
+                <div class="flex items-center gap-2">
+                  <select id="student-sort-select" class="rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
+                    <option value="lastName">Sort: Last Name</option>
+                    <option value="firstName">Sort: First Name</option>
+                    <option value="status">Sort: Status</option>
+                    <option value="correct">Sort: Correctness</option>
+                    <option value="recent">Sort: Most Recent</option>
+                    <option value="email">Sort: Email</option>
+                  </select>
+                  <button id="student-sort-direction-btn" class="h-9 w-9 flex items-center justify-center rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray/40 dark:hover:bg-brand-dark-gray/40 transition-colors" title="Toggle sort direction">
+                    <span class="material-symbols-outlined text-base">south</span>
+                  </button>
                 </div>
               </div>
 
@@ -1889,9 +1922,9 @@
             <p id="preview-poll-meta" class="text-brand-white/80 text-sm mt-1">Class Name • 5 Questions</p>
           </div>
           <div class="flex items-center gap-2">
-            <button id="preview-send-emails-btn" class="flex items-center justify-center gap-2 h-10 px-5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors">
-              <span class="material-symbols-outlined text-lg">mail</span>
-              <span>Send Emails</span>
+            <button id="preview-open-links-btn" class="flex items-center justify-center gap-2 h-10 px-5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors">
+              <span class="material-symbols-outlined text-lg">link</span>
+              <span>View Student Links</span>
             </button>
             <button id="close-preview-modal-btn" class="flex items-center justify-center h-10 w-10 rounded-lg bg-brand-white/20 text-brand-white hover:bg-brand-white/30 transition-colors">
               <span class="material-symbols-outlined">close</span>
@@ -2033,7 +2066,7 @@
   var CURRENT_POLL_DATA={};
   var currentStudentStatusData=[];
   var studentSearchQuery='';
-  var studentTableSort={column:'status',direction:'asc'};
+  var studentTableSort={column:'lastName',direction:'asc'};
   var pollInterval=null;
   var visualTimerInterval=null;
   var isPaused=false;
@@ -2684,6 +2717,36 @@
     element.addEventListener('change',handler);
   }
 
+  function storeButtonDefaultHtml(button){
+    if(button && !button.dataset.defaultHtml){
+      button.dataset.defaultHtml=button.innerHTML;
+    }
+  }
+
+  function buttonSpinnerMarkup(text){
+    return '<span class="flex w-full items-center justify-center gap-2"><span class="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span><span>'+escapeHtml(text||'Loading...')+'</span></span>';
+  }
+
+  function setButtonLoading(button,isLoading,label){
+    if(!button){
+      return;
+    }
+    if(isLoading){
+      storeButtonDefaultHtml(button);
+      button.disabled=true;
+      button.setAttribute('aria-busy','true');
+      button.setAttribute('aria-disabled','true');
+      button.innerHTML=buttonSpinnerMarkup(label);
+    }else{
+      if(button.dataset.defaultHtml){
+        button.innerHTML=button.dataset.defaultHtml;
+      }
+      button.disabled=false;
+      button.removeAttribute('aria-busy');
+      button.removeAttribute('aria-disabled');
+    }
+  }
+
   function bootstrapGoogleCharts(){
     if(googleChartsReady||googleChartsLoading){
       return;
@@ -2728,6 +2791,8 @@
   // --- Element Cache ---
   var pollSelect=document.getElementById('poll-select');
   var startPollBtn=document.getElementById('start-poll-btn');
+  var sendLinkBtn=document.getElementById('send-link-btn');
+  var viewLinksBtn=document.getElementById('view-links-btn');
   var dashboard=document.getElementById('dashboard');
   var liveView=document.getElementById('live-view');
   var rosterManager=document.getElementById('roster-manager');
@@ -2764,6 +2829,10 @@
   var saveRosterBtn=document.getElementById('save-roster-btn');
   var refreshArchivedBtn=document.getElementById('refresh-archived-btn');
 
+  storeButtonDefaultHtml(startPollBtn);
+  storeButtonDefaultHtml(sendLinkBtn);
+  storeButtonDefaultHtml(viewLinksBtn);
+
   // --- Initialization ---
   loadInitialData();
 
@@ -2795,7 +2864,7 @@
   bindClick('close-preview-modal-btn',closePollPreview);
   bindClick('preview-prev-question-btn',previewPrevQuestion);
   bindClick('preview-next-question-btn',previewNextQuestion);
-  bindClick('preview-send-emails-btn',previewSendEmails);
+  bindClick('preview-open-links-btn',previewOpenLinks);
   bindClick('preview-edit-question-btn',previewEditQuestion);
   bindClick('preview-delete-question-btn',previewDeleteQuestion);
   bindClick('preview-reorder-btn',togglePreviewReorder);
@@ -2814,7 +2883,6 @@
   bindClick('header-back-btn',onPreviousQuestion);
   bindClick('header-next-btn',onNextQuestion);
   bindClick('header-reset-question-btn',onResetQuestion);
-  bindClick('header-skip-btn',onNextQuestion);
   bindClick('hide-results-btn',onHideResults);
   bindClick('strip-next-btn',onNextQuestion);
   // New timer button event listeners
@@ -2886,6 +2954,78 @@
   if(studentSearchInput){
     studentSearchInput.addEventListener('input', function(){
       studentSearchQuery = this.value;
+      renderStudentStatus();
+    });
+  }
+
+  function syncStatusFilterButtons(){
+    var lockedBtn=document.getElementById('filter-locked-only-btn');
+    var allBtn=document.getElementById('filter-all-btn');
+    if(lockedBtn){
+      if(studentStatusFilter==='locked'){
+        lockedBtn.classList.add('bg-red-500/30');
+        lockedBtn.classList.remove('bg-red-500/10');
+      }else{
+        lockedBtn.classList.remove('bg-red-500/30');
+        lockedBtn.classList.add('bg-red-500/10');
+      }
+    }
+    if(allBtn){
+      if(studentStatusFilter==='all'){
+        allBtn.classList.add('bg-primary/30');
+        allBtn.classList.remove('bg-primary/10');
+      }else{
+        allBtn.classList.remove('bg-primary/30');
+        allBtn.classList.add('bg-primary/10');
+      }
+    }
+  }
+
+  var statusFilterSelect=document.getElementById('student-status-filter-select');
+  if(statusFilterSelect){
+    statusFilterSelect.addEventListener('change',function(){
+      studentStatusFilter=this.value;
+      syncStatusFilterButtons();
+      renderStudentStatus();
+    });
+  }
+
+  var correctnessFilterSelect=document.getElementById('student-correctness-filter-select');
+  if(correctnessFilterSelect){
+    correctnessFilterSelect.addEventListener('change',function(){
+      studentCorrectnessFilter=this.value;
+      renderStudentStatus();
+    });
+  }
+
+  var studentSortSelectEl=document.getElementById('student-sort-select');
+  if(studentSortSelectEl){
+    studentSortSelectEl.addEventListener('change',function(){
+      studentTableSort.column=this.value;
+      if(this.value==='recent'&&studentTableSort.direction==='asc'){
+        studentTableSort.direction='desc';
+        var dirIcon=document.querySelector('#student-sort-direction-btn span');
+        if(dirIcon){
+          dirIcon.textContent='north';
+        }
+      } else {
+        var icon=document.querySelector('#student-sort-direction-btn span');
+        if(icon){
+          icon.textContent=studentTableSort.direction==='asc'?'south':'north';
+        }
+      }
+      renderStudentStatus();
+    });
+  }
+
+  var sortDirectionBtn=document.getElementById('student-sort-direction-btn');
+  if(sortDirectionBtn){
+    sortDirectionBtn.addEventListener('click',function(){
+      studentTableSort.direction=studentTableSort.direction==='asc'?'desc':'asc';
+      var icon=this.querySelector('span');
+      if(icon){
+        icon.textContent=studentTableSort.direction==='asc'?'south':'north';
+      }
       renderStudentStatus();
     });
   }
@@ -3571,19 +3711,44 @@
 
   function onPollSelectChange(){
     var pollId=pollSelect.value;
-    var sendBtn=document.getElementById('send-link-btn');
-    var viewBtn=document.getElementById('view-links-btn');
-    if(pollId){
-      var selectedPoll=ALL_POLLS.find(function(p){return p.pollId===pollId;});
-      if(selectedPoll){
-        sendBtn.disabled=false;
-        viewBtn.disabled=false;
-        sendBtn.dataset.className=selectedPoll.className;
-        viewBtn.dataset.className=selectedPoll.className;
+    var selectedPoll=pollId?ALL_POLLS.find(function(p){return p.pollId===pollId;}):null;
+    var className=selectedPoll&&selectedPoll.className?selectedPoll.className:'';
+    var hasSelection=!!selectedPoll;
+
+    if(sendLinkBtn){
+      if(hasSelection && className){
+        sendLinkBtn.disabled=false;
+        sendLinkBtn.removeAttribute('aria-disabled');
+        sendLinkBtn.dataset.className=className;
+      } else {
+        setButtonLoading(sendLinkBtn,false);
+        sendLinkBtn.disabled=true;
+        sendLinkBtn.setAttribute('aria-disabled','true');
+        delete sendLinkBtn.dataset.className;
       }
-    } else {
-      sendBtn.disabled=true;
-      viewBtn.disabled=true;
+    }
+
+    if(viewLinksBtn){
+      if(hasSelection && className){
+        viewLinksBtn.disabled=false;
+        viewLinksBtn.removeAttribute('aria-disabled');
+        viewLinksBtn.dataset.className=className;
+      } else {
+        setButtonLoading(viewLinksBtn,false);
+        viewLinksBtn.disabled=true;
+        viewLinksBtn.setAttribute('aria-disabled','true');
+        delete viewLinksBtn.dataset.className;
+      }
+    }
+
+    if(startPollBtn){
+      setButtonLoading(startPollBtn,false);
+      startPollBtn.disabled=!hasSelection;
+      if(startPollBtn.disabled){
+        startPollBtn.setAttribute('aria-disabled','true');
+      }else{
+        startPollBtn.removeAttribute('aria-disabled');
+      }
     }
   }
 
@@ -4113,7 +4278,7 @@
         nonResponderHtml='<div class="mt-3"><h4 class="text-xs font-semibold uppercase text-brand-dark-gray/60 dark:text-brand-white/60">No Response</h4><div class="flex flex-wrap gap-2 mt-1">';
         nonResponders.forEach(function(student){
           var chipClass=student.violation?'bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-200':'bg-brand-light-gray text-brand-dark-gray dark:bg-brand-dark-gray/50 dark:text-brand-white/80';
-          var displayName = student.name ? formatStudentName(student.name) : student.email;
+          var displayName = student.name ? formatStudentName(student) : student.email;
           nonResponderHtml+='<span class="px-2 py-1 rounded-full text-xs '+chipClass+'">'+escapeHtml(displayName)+'</span>';
         });
         nonResponderHtml+='</div></div>';
@@ -4785,7 +4950,7 @@
       });
 
       html += '<tr class="border-t border-brand-light-gray dark:border-brand-dark-gray/40 hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/30 transition-colors">';
-      html += '<td class="px-4 py-3 text-sm font-medium text-brand-dark-gray dark:text-brand-white">' + escapeHtml(formatStudentName(student.name)) + '</td>';
+      html += '<td class="px-4 py-3 text-sm font-medium text-brand-dark-gray dark:text-brand-white">' + escapeHtml(formatStudentName(student)) + '</td>';
       html += '<td class="px-4 py-3 text-center"><span class="text-sm font-semibold ' + accuracyColor + '">' + Math.round(student.accuracy) + '%</span><br><span class="text-xs text-brand-dark-gray/50 dark:text-brand-white/50">' + student.correctAnswers + '/' + (student.correctAnswers + student.incorrectAnswers) + '</span></td>';
       html += '<td class="px-4 py-3 text-center"><span class="text-sm font-semibold ' + participationColor + '">' + Math.round(student.participationRate) + '%</span><br><span class="text-xs text-brand-dark-gray/50 dark:text-brand-white/50">' + student.questionsAnswered + '/' + student.totalQuestions + '</span></td>';
       html += '<td class="px-4 py-3 text-center text-sm font-semibold ' + violationsColor + '">' + student.violations.length + '</td>';
@@ -4870,7 +5035,7 @@
         matches.forEach(function(student) {
           var div = document.createElement('div');
           div.className = 'px-4 py-2 hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/50 cursor-pointer';
-          div.textContent = formatStudentName(student.name);
+          div.textContent = formatStudentName(student);
           div.onclick = function() {
             selectStudent(student);
             suggestions.classList.add('hidden');
@@ -4893,7 +5058,7 @@
     // Render student summary
     var summary = document.getElementById('analytics-student-summary');
     summary.innerHTML = '<div class="flex flex-wrap items-center justify-between gap-4">' +
-      '<div><h3 class="text-xl font-bold text-brand-dark-gray dark:text-brand-white">' + escapeHtml(formatStudentName(student.name)) + '</h3>' +
+      '<div><h3 class="text-xl font-bold text-brand-dark-gray dark:text-brand-white">' + escapeHtml(formatStudentName(student)) + '</h3>' +
       '<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">' + escapeHtml(student.email) + '</p></div>' +
       '<div class="grid grid-cols-3 gap-4 text-center">' +
       '<div><div class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">' + student.successLast10.toFixed(1) + '%</div>' +
@@ -5089,18 +5254,24 @@
       await veritasAlert('Please select a poll first.',{title:'Live poll'});
       return;
     }
-    startPollBtn.disabled=true;
+    setButtonLoading(startPollBtn,true,'Starting...');
     clearLiveIntervals();
     isPaused=false;
     isLiveSession=true;
     if(PREVIEW_MODE){
-      startPollBtn.disabled=false;
+      setButtonLoading(startPollBtn,false);
       await previewOnlyNotice('start a live poll');
       return;
     }
     google.script.run
-      .withSuccessHandler(updateLiveView)
-      .withFailureHandler(handleError)
+      .withSuccessHandler(function(data){
+        setButtonLoading(startPollBtn,false);
+        updateLiveView(data);
+      })
+      .withFailureHandler(function(error){
+        setButtonLoading(startPollBtn,false);
+        handleError(error);
+      })
       .startPoll(pollId);
   }
 
@@ -5325,7 +5496,7 @@
   // --- Live View & Data Polling ---
   function updateLiveView(data){
     mainLoader.style.display='none';
-    startPollBtn.disabled=false;
+    setButtonLoading(startPollBtn,false);
 
     if(!data){return;}
 
@@ -5620,7 +5791,7 @@
       if(studentsWithAnswer.length>0){
         barHtml+='<div class="teacher-result-students">';
         studentsWithAnswer.forEach(function(student){
-          barHtml+='<span class="teacher-result-student">'+escapeHtml(formatStudentName(student.name))+'</span>';
+          barHtml+='<span class="teacher-result-student">'+escapeHtml(formatStudentName(student))+'</span>';
         });
         barHtml+='</div>';
       }
@@ -5630,44 +5801,75 @@
     });
   }
 
-  // Global variable for student status filter
-  var studentStatusFilter = 'all'; // 'all' or 'locked'
+  // Global filters for student status panel
+  var studentStatusFilter = 'all';
+  var studentCorrectnessFilter = 'all';
   var violationsAlertDismissed = false;
 
-  function updateViolationsAlert(lockedStudents) {
+  function updateViolationsAlert(flaggedStudents) {
     var alertPanel = document.getElementById('violations-alert-panel');
     var quickList = document.getElementById('violations-quick-list');
     var summary = document.getElementById('violations-summary');
 
-    if (lockedStudents.length === 0 || violationsAlertDismissed) {
+    if (!flaggedStudents || flaggedStudents.length === 0 || violationsAlertDismissed) {
       alertPanel.classList.add('hidden');
       return;
     }
 
-    // Show the alert panel
     alertPanel.classList.remove('hidden');
 
-    // Update summary text
-    var count = lockedStudents.length;
-    summary.textContent = count + ' student' + (count > 1 ? 's' : '') + ' locked out and waiting for approval';
+    var lockedCount = flaggedStudents.filter(function(student) {
+      return student.status === 'LOCKED' || student.status === 'AWAITING_FULLSCREEN';
+    }).length;
+    var blockedCount = flaggedStudents.filter(function(student) {
+      return student.status === 'BLOCKED';
+    }).length;
+    var total = flaggedStudents.length;
 
-    // Render quick action buttons
+    var summaryParts = [];
+    if (lockedCount) {
+      summaryParts.push(lockedCount + ' locked');
+    }
+    if (blockedCount) {
+      summaryParts.push(blockedCount + ' blocked');
+    }
+
+    var summaryLabel = summaryParts.join(' • ');
+    if (summaryLabel) {
+      summary.textContent = summaryLabel + (total > 1 ? ' students need attention' : ' student needs attention');
+    } else {
+      summary.textContent = total + (total > 1 ? ' students need attention' : ' student needs attention');
+    }
+
     var html = '';
-    lockedStudents.forEach(function(student) {
-      html += '<button class="quick-approve-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-white text-sm font-semibold transition-colors" data-email="' + student.email + '" data-poll-id="' + CURRENT_POLL_DATA.pollId + '" data-lock-version="' + (student.lockVersion || 0) + '">';
-      html += '<span class="material-symbols-outlined text-base">lock_open</span>';
-      html += '<span>' + escapeHtml(formatStudentName(student.name)) + '</span>';
-      html += '</button>';
+    flaggedStudents.forEach(function(student) {
+      if (student.status === 'BLOCKED') {
+        html += '<button class="quick-unblock-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-semibold transition-colors" data-email="' + student.email + '">';
+        html += '<span class="material-symbols-outlined text-base">lock_open</span>';
+        html += '<span>Unblock ' + escapeHtml(formatStudentName(student)) + '</span>';
+        html += '</button>';
+      } else {
+        html += '<button class="quick-approve-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-white text-sm font-semibold transition-colors" data-email="' + student.email + '" data-poll-id="' + CURRENT_POLL_DATA.pollId + '" data-lock-version="' + (student.lockVersion || 0) + '">';
+        html += '<span class="material-symbols-outlined text-base">lock_open</span>';
+        html += '<span>Approve ' + escapeHtml(formatStudentName(student)) + '</span>';
+        html += '</button>';
+      }
     });
     quickList.innerHTML = html;
 
-    // Add event listeners to quick approve buttons
     quickList.querySelectorAll('.quick-approve-btn').forEach(function(btn) {
       btn.onclick = async function() {
         var email = this.dataset.email;
         var pollId = this.dataset.pollId;
         var lockVersion = parseInt(this.dataset.lockVersion, 10);
         await approveStudentUnlock(email, pollId, lockVersion, this);
+      };
+    });
+
+    quickList.querySelectorAll('.quick-unblock-btn').forEach(function(btn) {
+      btn.onclick = async function() {
+        var email = this.dataset.email;
+        await requestTeacherUnblock(email, this);
       };
     });
   }
@@ -5705,7 +5907,7 @@
       html += '      <span class="material-symbols-outlined text-orange-700 dark:text-orange-300 text-xl">person_off</span>';
       html += '    </div>';
       html += '    <div class="flex-1 min-w-0">';
-      html += '      <p class="font-semibold text-brand-dark-gray dark:text-brand-white text-sm truncate">' + escapeHtml(formatStudentName(student.name)) + '</p>';
+      html += '      <p class="font-semibold text-brand-dark-gray dark:text-brand-white text-sm truncate">' + escapeHtml(formatStudentName(student)) + '</p>';
       html += '      <p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">Exited ' + lockTimeAgo + '</p>';
       if (student.lockReason) {
         html += '      <p class="text-xs text-orange-600 dark:text-orange-400 mt-1">' + escapeHtml(student.lockReason) + '</p>';
@@ -5945,6 +6147,117 @@
     return button;
   }
 
+  function createBlockButton(student){
+    var button=document.createElement('button');
+    button.className='block-btn flex-shrink-0 flex items-center justify-center gap-1 h-8 px-3 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 dark:bg-amber-500/20 text-xs font-semibold hover:bg-amber-500/20 dark:hover:bg-amber-500/30 transition-colors';
+    button.dataset.email=student.email||'';
+    var icon=document.createElement('span');
+    icon.className='material-symbols-outlined text-sm';
+    icon.textContent='block';
+    var label=document.createElement('span');
+    label.textContent='Block';
+    button.appendChild(icon);
+    button.appendChild(label);
+    return button;
+  }
+
+  function createUnblockButton(student){
+    var button=document.createElement('button');
+    button.className='unblock-btn flex-shrink-0 flex items-center justify-center gap-1 h-8 px-3 rounded-md bg-green-500/10 text-green-700 dark:text-green-300 dark:bg-green-500/20 text-xs font-semibold hover:bg-green-500/20 dark:hover:bg-green-500/30 transition-colors';
+    button.dataset.email=student.email||'';
+    var icon=document.createElement('span');
+    icon.className='material-symbols-outlined text-sm';
+    icon.textContent='lock_open';
+    var label=document.createElement('span');
+    label.textContent='Unblock';
+    button.appendChild(icon);
+    button.appendChild(label);
+    return button;
+  }
+
+  function setButtonLoadingState(button,label){
+    if(!button){
+      return function(){};
+    }
+    var originalHtml=button.innerHTML;
+    button.disabled=true;
+    button.innerHTML='<span class="material-symbols-outlined text-sm animate-spin">progress_activity</span><span>'+label+'</span>';
+    return function(){
+      button.disabled=false;
+      button.innerHTML=originalHtml;
+    };
+  }
+
+  function runTeacherBlock(email,pollId,reason){
+    return new Promise(function(resolve,reject){
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .teacherBlockStudent(email,pollId,reason||'');
+    });
+  }
+
+  function runTeacherUnblock(email,pollId){
+    return new Promise(function(resolve,reject){
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .teacherUnblockStudent(email,pollId);
+    });
+  }
+
+  async function requestTeacherBlock(student,buttonElement){
+    if(!student||!student.email)return;
+    var pollId=CURRENT_POLL_DATA&&CURRENT_POLL_DATA.pollId;
+    if(pollId===undefined){
+      await veritasAlert('Start a poll before blocking students.',{title:'No active poll'});
+      return;
+    }
+
+    var displayName=formatStudentName(student);
+    var confirmed=await veritasConfirm('Temporarily block '+displayName+' from responding? This will be recorded for proctoring.',{
+      title:'Block Student',
+      confirmText:'Block',
+      destructive:true
+    });
+    if(!confirmed)return;
+
+    var restore=setButtonLoadingState(buttonElement,'Blocking...');
+    try{
+      await runTeacherBlock(student.email,pollId,'');
+      pollForResults();
+    }catch(error){
+      restore();
+      handleError(error);
+    }
+  }
+
+  async function requestTeacherUnblock(email,buttonElement){
+    if(!email)return;
+    var pollId=CURRENT_POLL_DATA&&CURRENT_POLL_DATA.pollId;
+    if(pollId===undefined){
+      await veritasAlert('Start a poll before unblocking students.',{title:'No active poll'});
+      return;
+    }
+
+    var student=currentStudentStatusData.find(function(s){return s.email===email;});
+    var displayName=formatStudentName(student||email);
+    var confirmed=await veritasConfirm('Unblock '+displayName+'?',{
+      title:'Unblock Student',
+      confirmText:'Unblock'
+    });
+    if(!confirmed)return;
+
+    var restore=setButtonLoadingState(buttonElement,'Unblocking...');
+    try{
+      await runTeacherUnblock(email,pollId);
+      pollForResults();
+    }catch(error){
+      restore();
+      handleError(error);
+    }
+  }
+
   function buildStudentStatusTile(student){
     var tile=document.createElement('div');
     var wrapper=document.createElement('div');
@@ -5961,7 +6274,7 @@
 
     var nameSpan=document.createElement('span');
     nameSpan.className='text-sm font-semibold truncate';
-    nameSpan.textContent=formatStudentName(student.name);
+    nameSpan.textContent=formatStudentName(student);
     textWrapper.appendChild(nameSpan);
 
     var detailSpan=document.createElement('span');
@@ -5969,6 +6282,7 @@
     textWrapper.appendChild(detailSpan);
 
     var status=student.status||'Unknown';
+    var actions=[];
     if(status==='Submitted'){
       var isCorrect=student.isCorrect===true;
       var isIncorrect=student.isCorrect===false;
@@ -5986,8 +6300,8 @@
       nameSpan.className+=' '+textClass;
       detailSpan.className+=' '+subTextClass;
       detailSpan.textContent=statusLabel+answerLabel;
-
-      tile.appendChild(createResetButton(student));
+      actions.push(createResetButton(student));
+      actions.push(createBlockButton(student));
     }else if(status==='LOCKED'){
       tile.className='flex items-center justify-between p-3 rounded-lg bg-red-50 dark:bg-red-900/30 border-2 border-red-200 dark:border-red-700 gap-3 transition-all duration-200';
       icon.className+=' text-red-600 dark:text-red-300';
@@ -6005,7 +6319,7 @@
       }
       detailSpan.className+=' text-red-600 dark:text-red-300';
       detailSpan.textContent='Locked v'+(student.lockVersion||0)+lockedDuration;
-      tile.appendChild(createUnlockButton(student));
+      actions.push(createUnlockButton(student));
     }else if(status==='AWAITING_FULLSCREEN'){
       tile.className='flex items-center justify-between p-3 rounded-lg bg-blue-500/10 dark:bg-blue-500/20 gap-3 transition-all duration-200';
       icon.className+=' text-blue-600 dark:text-blue-300';
@@ -6013,18 +6327,48 @@
       nameSpan.className+=' text-blue-800 dark:text-blue-200';
       detailSpan.className+=' text-blue-600 dark:text-blue-300';
       detailSpan.textContent='Awaiting fullscreen confirmation';
+      actions.push(createBlockButton(student));
     }else if(status==='Waiting...'){
       tile.className='flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-900/30 transition-all duration-200';
       icon.className+=' text-gray-500 dark:text-gray-300';
       icon.textContent='pending';
       nameSpan.className+=' text-gray-600 dark:text-gray-300';
-      detailSpan.remove();
+      detailSpan.className+=' text-gray-500 dark:text-gray-300';
+      detailSpan.textContent='Waiting for response';
+      actions.push(createBlockButton(student));
+    }else if(status==='BLOCKED'){
+      tile.className='flex items-center justify-between p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/60 gap-3 transition-all duration-200';
+      icon.className+=' text-amber-600 dark:text-amber-300';
+      icon.textContent='block';
+      nameSpan.className+=' text-amber-700 dark:text-amber-200';
+      var blockedText='Blocked by teacher';
+      if(student.blockedAt){
+        try{
+          var blockedAgo=getTimeAgo(new Date(student.blockedAt));
+          blockedText+=' • '+blockedAgo;
+        }catch(e){}
+      }
+      if(student.blockedNote){
+        blockedText+=' • '+student.blockedNote;
+      }
+      detailSpan.className+=' text-amber-600 dark:text-amber-300';
+      detailSpan.textContent=blockedText;
+      actions.push(createUnblockButton(student));
     }else{
       tile.className='flex items-center justify-between p-3 rounded-lg bg-orange-500/10 dark:bg-orange-500/20 transition-all duration-200';
       icon.className+=' text-orange-600 dark:text-orange-300';
       icon.textContent='error';
       nameSpan.className+=' text-orange-700 dark:text-orange-200';
-      detailSpan.remove();
+      detailSpan.className+=' text-orange-600 dark:text-orange-300';
+    }
+
+    if(actions.length>0){
+      var actionsWrapper=document.createElement('div');
+      actionsWrapper.className='flex items-center gap-2 flex-shrink-0';
+      actions.forEach(function(actionEl){
+        actionsWrapper.appendChild(actionEl);
+      });
+      tile.appendChild(actionsWrapper);
     }
 
     return tile;
@@ -6036,7 +6380,7 @@
 
     var nameCell=document.createElement('td');
     nameCell.className='px-3 py-2 text-sm font-semibold text-brand-dark-gray dark:text-brand-white truncate';
-    nameCell.textContent=formatStudentName(student.name);
+    nameCell.textContent=formatStudentName(student);
     row.appendChild(nameCell);
 
     var statusCell=document.createElement('td');
@@ -6068,11 +6412,20 @@
 
     var actionsCell=document.createElement('td');
     actionsCell.className='px-3 py-2 text-sm text-right space-x-2';
+    var actionElements=[];
     if(student.status==='Submitted'){
-      actionsCell.appendChild(createResetButton(student));
+      actionElements.push(createResetButton(student));
+      actionElements.push(createBlockButton(student));
+    }else if(student.status==='Waiting...'){
+      actionElements.push(createBlockButton(student));
     }else if(student.status==='LOCKED'){
-      actionsCell.appendChild(createUnlockButton(student));
+      actionElements.push(createUnlockButton(student));
+    }else if(student.status==='AWAITING_FULLSCREEN'){
+      actionElements.push(createBlockButton(student));
+    }else if(student.status==='BLOCKED'){
+      actionElements.push(createUnblockButton(student));
     }
+    actionElements.forEach(function(el){actionsCell.appendChild(el);});
     row.appendChild(actionsCell);
 
     return row;
@@ -6084,69 +6437,137 @@
     var container=grid||tbody;
     if(!container)return;
 
-    var students=currentStudentStatusData.slice();
+    syncStatusFilterButtons();
+
+    var students=Array.isArray(currentStudentStatusData)?currentStudentStatusData.slice():[];
 
     if(studentSearchQuery){
       var query=studentSearchQuery.toLowerCase();
       students=students.filter(function(student){
-        var name=(student.name||'').toLowerCase();
-        var status=(student.status||'').toLowerCase();
-        var answer=(student.answer||'').toLowerCase();
-        return name.includes(query)||status.includes(query)||answer.includes(query);
+        var fields=[
+          (student.displayName||student.name||'').toLowerCase(),
+          (student.firstName||'').toLowerCase(),
+          (student.lastName||'').toLowerCase(),
+          (student.email||'').toLowerCase(),
+          (student.status||'').toLowerCase(),
+          (student.answer||'').toLowerCase()
+        ];
+        return fields.some(function(value){return value&&value.indexOf(query)!==-1;});
       });
+    }
+
+    if(studentStatusFilter==='waiting'){
+      students=students.filter(function(s){return (s.status||'').toLowerCase()==='waiting...';});
+    }else if(studentStatusFilter==='submitted'){
+      students=students.filter(function(s){return s.status==='Submitted';});
+    }else if(studentStatusFilter==='locked'){
+      students=students.filter(function(s){return s.status==='LOCKED'||s.status==='AWAITING_FULLSCREEN';});
+    }else if(studentStatusFilter==='blocked'){
+      students=students.filter(function(s){return s.status==='BLOCKED';});
+    }
+
+    if(studentCorrectnessFilter==='correct'){
+      students=students.filter(function(s){return s.isCorrect===true;});
+    }else if(studentCorrectnessFilter==='incorrect'){
+      students=students.filter(function(s){return s.isCorrect===false;});
+    }else if(studentCorrectnessFilter==='unanswered'){
+      students=students.filter(function(s){return s.status!=='Submitted';});
     }
 
     if(!studentTableSort||!studentTableSort.column){
-      studentTableSort={column:'status',direction:'asc'};
+      studentTableSort={column:'lastName',direction:'asc'};
+    }
+
+    var dirMultiplier=studentTableSort.direction==='desc'?-1:1;
+
+    function compareStrings(a,b){
+      var aVal=(a||'').toString().toLowerCase();
+      var bVal=(b||'').toString().toLowerCase();
+      if(aVal<bVal)return -1;
+      if(aVal>bVal)return 1;
+      return 0;
+    }
+
+    function compareNumbers(a,b){
+      return (a||0)-(b||0);
+    }
+
+    var statusOrder={
+      'BLOCKED':0,
+      'LOCKED':1,
+      'AWAITING_FULLSCREEN':2,
+      'Submitted':3,
+      'Waiting...':4
+    };
+
+    function statusRank(status){
+      return statusOrder[status]!==undefined?statusOrder[status]:5;
+    }
+
+    function correctnessRank(student){
+      if(student.isCorrect===true)return 2;
+      if(student.isCorrect===false)return 1;
+      return 0;
     }
 
     students.sort(function(a,b){
-      var aVal;
-      var bVal;
+      var result=0;
       switch(studentTableSort.column){
-        case 'name':
-          aVal=(a.name||'').toLowerCase();
-          bVal=(b.name||'').toLowerCase();
+        case 'firstName':
+          result=compareStrings(a.firstName||a.displayName||a.name, b.firstName||b.displayName||b.name);
+          break;
+        case 'lastName':
+          result=compareStrings(a.lastName||'', b.lastName||'');
+          if(result===0){
+            result=compareStrings(a.firstName||'', b.firstName||'');
+          }
           break;
         case 'status':
-          aVal=(a.status||'').toLowerCase();
-          bVal=(b.status||'').toLowerCase();
+          result=compareNumbers(statusRank(a.status), statusRank(b.status));
           break;
         case 'correct':
-          aVal=a.isCorrect===true?1:(a.isCorrect===false?-1:0);
-          bVal=b.isCorrect===true?1:(b.isCorrect===false?-1:0);
+          result=compareNumbers(correctnessRank(a), correctnessRank(b));
           break;
         case 'violations':
-          aVal=(a.sessionViolations||0)+(a.sessionExits||0);
-          bVal=(b.sessionViolations||0)+(b.sessionExits||0);
+          result=compareNumbers((a.sessionViolations||0)+(a.sessionExits||0),(b.sessionViolations||0)+(b.sessionExits||0));
+          break;
+        case 'recent':
+          result=compareNumbers(a.timestamp||0,b.timestamp||0);
+          break;
+        case 'email':
+          result=compareStrings(a.email||'',b.email||'');
           break;
         default:
-          aVal=(a.name||'').toLowerCase();
-          bVal=(b.name||'').toLowerCase();
+          result=compareStrings(a.displayName||a.name||'',b.displayName||b.name||'');
       }
-      if(aVal<bVal)return studentTableSort.direction==='asc'?-1:1;
-      if(aVal>bVal)return studentTableSort.direction==='asc'?1:-1;
-      return 0;
+      if(result===0){
+        result=compareStrings(a.email||'',b.email||'');
+      }
+      return result*dirMultiplier;
     });
-
-    if(studentStatusFilter==='locked'){
-      students=students.filter(function(s){
-        return s.status==='LOCKED'||s.status==='AWAITING_FULLSCREEN';
-      });
-    }
 
     var correctCount=0;
     var lockedCount=0;
     var waitingCount=0;
+    var blockedCount=0;
+    var flaggedStudents=[];
     var lockedStudents=[];
 
     currentStudentStatusData.forEach(function(student){
       if(student.status==='Submitted'&&student.isCorrect===true){
         correctCount++;
-      }else if(student.status==='LOCKED'){
+      }
+      if(student.status==='LOCKED'||student.status==='AWAITING_FULLSCREEN'){
         lockedCount++;
-        lockedStudents.push(student);
-      }else if(student.status==='Waiting...'){
+        flaggedStudents.push(student);
+        if(student.status==='LOCKED'){
+          lockedStudents.push(student);
+        }
+      }else if(student.status==='BLOCKED'){
+        blockedCount++;
+        flaggedStudents.push(student);
+      }
+      if((student.status||'').toLowerCase()==='waiting...'){
         waitingCount++;
       }
     });
@@ -6155,10 +6576,12 @@
     if(correctCountEl)correctCountEl.textContent=correctCount;
     var lockedCountEl=document.getElementById('locked-count');
     if(lockedCountEl)lockedCountEl.textContent=lockedCount;
+    var blockedCountEl=document.getElementById('blocked-count');
+    if(blockedCountEl)blockedCountEl.textContent=blockedCount;
     var waitingCountEl=document.getElementById('waiting-count');
     if(waitingCountEl)waitingCountEl.textContent=waitingCount;
 
-    updateViolationsAlert(lockedStudents);
+    updateViolationsAlert(flaggedStudents);
     updateExitedStudentsPanel(lockedStudents);
 
     if(tbody)tbody.innerHTML='';
@@ -6191,6 +6614,7 @@
         var questionIndex=CURRENT_POLL_DATA.questionIndex;
         if(!email||pollId===undefined||questionIndex===undefined)return;
         var button=this;
+        var originalHtml=button.innerHTML;
         button.disabled=true;
         var label=button.querySelector('span:last-child');
         if(label)label.textContent='Resetting...';
@@ -6199,7 +6623,7 @@
           .withFailureHandler(function(error){
             handleError(error);
             button.disabled=false;
-            if(label)label.textContent='Reset';
+            button.innerHTML=originalHtml;
           })
           .resetStudentResponse(email,pollId,questionIndex);
       };
@@ -6209,71 +6633,14 @@
       btn.onclick=async function(){
         var email=this.dataset.email;
         var student=currentStudentStatusData.find(function(s){return s.email===email;});
-        if(!student)return;
-
-        var confirmed=await veritasConfirm('Temporarily block '+student.name+' from responding? This will be recorded in the archive.',{
-          title:'Block Student',
-          confirmText:'Block',
-          destructive:true
-        });
-        if(!confirmed)return;
-
-        this.disabled=true;
-        this.textContent='Blocking...';
-
-        currentStudentStatusData=currentStudentStatusData.map(function(s){
-          if(s.email===email){
-            return {
-              name:s.name,
-              email:s.email,
-              status:'BLOCKED',
-              answer:s.answer,
-              isCorrect:s.isCorrect,
-              timestamp:s.timestamp,
-              sessionViolations:s.sessionViolations||0,
-              sessionExits:s.sessionExits||0,
-              blockedAt:new Date().toISOString()
-            };
-          }
-          return s;
-        });
-
-        renderStudentStatus();
+        await requestTeacherBlock(student,this);
       };
     });
 
     container.querySelectorAll('.unblock-btn').forEach(function(btn){
       btn.onclick=async function(){
         var email=this.dataset.email;
-        var student=currentStudentStatusData.find(function(s){return s.email===email;});
-        if(!student)return;
-
-        var confirmed=await veritasConfirm('Unblock '+student.name+'?',{
-          title:'Unblock Student',
-          confirmText:'Unblock'
-        });
-        if(!confirmed)return;
-
-        this.disabled=true;
-        this.textContent='Unblocking...';
-
-        currentStudentStatusData=currentStudentStatusData.map(function(s){
-          if(s.email===email){
-            return {
-              name:s.name,
-              email:s.email,
-              status:'Waiting...',
-              answer:null,
-              isCorrect:null,
-              timestamp:null,
-              sessionViolations:s.sessionViolations||0,
-              sessionExits:s.sessionExits||0
-            };
-          }
-          return s;
-        });
-
-        renderStudentStatus();
+        await requestTeacherUnblock(email,this);
       };
     });
   }
@@ -6585,8 +6952,12 @@
 
   // --- Student Link Controls ---
   async function onSendLink(){
-    var btn=document.getElementById('send-link-btn');
-    var className=btn.dataset.className;
+    var btn=sendLinkBtn;
+    if(!btn){
+      console.warn('Missing send link button');
+      return;
+    }
+    var className=btn&&btn.dataset.className;
     if(!className){
       await veritasAlert('Please select a poll first.',{title:'Send poll links'});
       return;
@@ -6597,38 +6968,63 @@
     });
     if(!confirmed)return;
 
-    btn.disabled=true;
-    btn.innerHTML='<div class="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>';
+    var restoreViewLinks=viewLinksBtn && !viewLinksBtn.disabled;
+    if(viewLinksBtn){
+      setButtonLoading(viewLinksBtn,false);
+      viewLinksBtn.disabled=true;
+      viewLinksBtn.setAttribute('aria-disabled','true');
+    }
+
+    setButtonLoading(btn,true,'Sending...');
 
     if(PREVIEW_MODE){
       await previewOnlyNotice('email poll links');
-      btn.disabled=false;
-      btn.innerHTML='<span class="material-symbols-outlined text-xl">mail</span><span class="truncate">Send Student Links</span>';
+      setButtonLoading(btn,false);
+      if(viewLinksBtn){
+        if(restoreViewLinks){
+          viewLinksBtn.disabled=false;
+          viewLinksBtn.removeAttribute('aria-disabled');
+        }
+      }
       return;
     }
 
     google.script.run
       .withSuccessHandler(async function(response){
         await veritasAlert('✅ Successfully sent '+response.count+' poll links.',{title:'Send poll links'});
-        btn.disabled=false;
-        btn.innerHTML='<span class="material-symbols-outlined text-xl">mail</span><span class="truncate">Send Student Links</span>';
+        setButtonLoading(btn,false);
+        if(viewLinksBtn){
+          if(restoreViewLinks){
+            viewLinksBtn.disabled=false;
+            viewLinksBtn.removeAttribute('aria-disabled');
+          }
+        }
       })
       .withFailureHandler(function(err){
         handleError(err);
-        btn.disabled=false;
-        btn.innerHTML='<span class="material-symbols-outlined text-xl">mail</span><span class="truncate">Send Student Links</span>';
+        setButtonLoading(btn,false);
+        if(viewLinksBtn){
+          if(restoreViewLinks){
+            viewLinksBtn.disabled=false;
+            viewLinksBtn.removeAttribute('aria-disabled');
+          }
+        }
       })
       .sendPollLinkToClass(className);
   }
 
   async function onViewLinks(){
-    var btn=document.getElementById('view-links-btn');
-    var className=btn.dataset.className;
+    var btn=viewLinksBtn;
+    if(!btn){
+      console.warn('Missing view links button');
+      return;
+    }
+    var className=btn&&btn.dataset.className;
     if(!className){
       await veritasAlert('Please select a poll first.',{title:'View links'});
       return;
     }
-    btn.disabled=true;
+    setButtonLoading(btn,true,'Loading...');
 
     if(PREVIEW_MODE){
       var container=document.getElementById('links-container');
@@ -6654,7 +7050,7 @@
       html+='</tbody></table></div>';
       container.innerHTML=html;
       linksModal.style.display='flex';
-      btn.disabled=false;
+      setButtonLoading(btn,false);
       return;
     }
 
@@ -6672,13 +7068,15 @@
         html+='</tr></thead><tbody>';
 
         response.links.forEach(function(link){
+          var displayUrl=link.hasActiveLink?(link.url||link.fullUrl):null;
+          var copyUrl=link.fullUrl||link.url||'';
           html+='<tr class="border-b border-brand-light-gray/50 dark:border-brand-dark-gray/20 hover:bg-brand-light-gray/30 dark:hover:bg-brand-dark-gray/10">';
           html+='<td class="px-4 py-3 text-sm text-brand-dark-gray dark:text-brand-white">'+escapeHtml(link.name)+'</td>';
           html+='<td class="px-4 py-3 text-sm text-brand-dark-gray dark:text-brand-white">'+escapeHtml(link.email)+'</td>';
-          html+='<td class="px-4 py-3 text-xs font-mono text-brand-dark-gray/70 dark:text-brand-white/70 max-w-[200px] truncate" title="'+escapeHtml(link.url)+'">'+(link.hasActiveLink?escapeHtml(link.url):'<i class="text-gray-400">No active link</i>')+'</td>';
+          html+='<td class="px-4 py-3 text-xs font-mono text-brand-dark-gray/70 dark:text-brand-white/70 max-w-[200px] truncate" title="'+(displayUrl?escapeHtml(displayUrl):'No active link')+'">'+(displayUrl?escapeHtml(displayUrl):'<i class="text-gray-400">No active link</i>')+'</td>';
           html+='<td class="px-4 py-3 text-center">';
           if(link.hasActiveLink){
-            html+='<button class="copy-link-btn px-3 py-1.5 text-xs font-semibold rounded-md bg-primary text-brand-white hover:bg-primary/90 transition-colors" data-url="'+escapeHtml(link.url)+'">Copy</button>';
+            html+='<button class="copy-link-btn px-3 py-1.5 text-xs font-semibold rounded-md bg-primary text-brand-white hover:bg-primary/90 transition-colors" data-url="'+escapeHtml(copyUrl)+'">Copy</button>';
           }
           html+='</td></tr>';
         });
@@ -6690,12 +7088,12 @@
           btn.onclick=async function(){
             var url=this.dataset.url;
             try{
-              var tempInput=document.createElement('input');
-              document.body.appendChild(tempInput);
-              tempInput.value=url;
-              tempInput.select();
-              document.execCommand('copy');
-              document.body.removeChild(tempInput);
+              if(navigator.clipboard&&typeof navigator.clipboard.writeText==='function'){
+                await navigator.clipboard.writeText(url);
+              }else{
+                await veritasAlert('Automatic copy is not supported in this browser. Please copy the link manually.',{title:'Copy link'});
+                return;
+              }
 
               btn.textContent='✓ Copied!';
               btn.className='copy-link-btn px-3 py-1.5 text-xs font-semibold rounded-md bg-green-600 text-brand-white';
@@ -6703,18 +7101,18 @@
                 btn.textContent='Copy';
                 btn.className='copy-link-btn px-3 py-1.5 text-xs font-semibold rounded-md bg-primary text-brand-white hover:bg-primary/90 transition-colors';
               }, 2000);
-            } catch(err) {
+            }catch(err){
               await veritasAlert('Could not copy link. Please copy it manually.',{title:'Copy link',destructive:true});
             }
           };
         });
 
         linksModal.style.display='flex';
-        btn.disabled=false;
+        setButtonLoading(btn,false);
       })
       .withFailureHandler(function(err){
         handleError(err);
-        btn.disabled=false;
+        setButtonLoading(btn,false);
       })
       .getStudentLinksForClass(className);
   }
@@ -6881,7 +7279,7 @@
     }
   }
 
-  function previewSendEmails(){
+  function previewOpenLinks(){
     if(!currentPreviewPoll)return;
     var className=currentPreviewPoll.className;
     if(!className){
@@ -7875,28 +8273,45 @@
   }
 
   /**
-   * Formats student name as "FirstName L." (first name + last initial)
-   * @param {string} fullName - The student's full name
+   * Formats student names for roster/status displays.
+   * Accepts either a student object (with first/last/display fields) or a raw string.
+   * Prefers "First Last" when both are available, otherwise falls back to the most
+   * descriptive identifier (display name, original string, or email).
+   * @param {Object|string} student - Student object or name string
    * @returns {string} Formatted name
    */
-  function formatStudentName(fullName){
-    if(!fullName || typeof fullName !== 'string') return '';
+  function formatStudentName(student){
+    if(!student)return '';
 
-    var trimmed = fullName.trim();
-    if(!trimmed) return '';
+    if(typeof student === 'string'){
+      var raw=student.trim();
+      if(!raw)return '';
+      var pieces=raw.split(/\s+/).filter(Boolean);
+      if(pieces.length>=2){
+        return pieces[0]+' '+pieces[pieces.length-1];
+      }
+      return pieces[0]||'';
+    }
 
-    // Split by whitespace
-    var parts = trimmed.split(/\s+/);
+    var first=(student.firstName||'').trim();
+    var last=(student.lastName||'').trim();
+    if(first||last){
+      return (first+' '+last).trim();
+    }
 
-    if(parts.length === 0) return '';
-    if(parts.length === 1) return parts[0]; // Only first name
+    if(student.displayName){
+      return formatStudentName(student.displayName);
+    }
 
-    // Get first name and last initial
-    var firstName = parts[0];
-    var lastName = parts[parts.length - 1];
-    var lastInitial = lastName.charAt(0).toUpperCase();
+    if(student.name){
+      return formatStudentName(student.name);
+    }
 
-    return firstName + ' ' + lastInitial + '.';
+    if(student.email){
+      return student.email;
+    }
+
+    return '';
   }
 
   async function handleError(error){
@@ -7946,13 +8361,11 @@
   if (filterLockedBtn) {
     filterLockedBtn.addEventListener('click', function() {
       studentStatusFilter = 'locked';
-      filterLockedBtn.classList.add('bg-red-500/30');
-      filterLockedBtn.classList.remove('bg-red-500/10');
-      var allBtn = document.getElementById('filter-all-btn');
-      if (allBtn) {
-        allBtn.classList.remove('bg-primary/30');
-        allBtn.classList.add('bg-primary/10');
+      var statusSelect=document.getElementById('student-status-filter-select');
+      if(statusSelect){
+        statusSelect.value='locked';
       }
+      syncStatusFilterButtons();
       renderStudentStatus();
     });
   }
@@ -7961,16 +8374,16 @@
   if (filterAllBtn) {
     filterAllBtn.addEventListener('click', function() {
       studentStatusFilter = 'all';
-      filterAllBtn.classList.add('bg-primary/30');
-      filterAllBtn.classList.remove('bg-primary/10');
-      var lockedBtn = document.getElementById('filter-locked-only-btn');
-      if (lockedBtn) {
-        lockedBtn.classList.remove('bg-red-500/30');
-        lockedBtn.classList.add('bg-red-500/10');
+      var statusSelect=document.getElementById('student-status-filter-select');
+      if(statusSelect){
+        statusSelect.value='all';
       }
+      syncStatusFilterButtons();
       renderStudentStatus();
     });
   }
+
+  syncStatusFilterButtons();
 
   // Violations Alert Dismiss Button
   var dismissViolationsBtn = document.getElementById('dismiss-violations-alert');

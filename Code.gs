@@ -3148,6 +3148,535 @@ function computeDistributionAnalysis_(studentTotalScores, maxScore) {
 }
 
 /**
+ * ENHANCED STUDENT-LEVEL ANALYTICS (2025)
+ * Comprehensive tracking of student performance, behavior, and trends
+ */
+
+/**
+ * Get comprehensive student insights for a class
+ * Identifies struggling students, consistent performers, rule violators, and non-responders
+ */
+function getStudentInsights(className, options = {}) {
+  return withErrorHandling(() => {
+    const dateFrom = options.dateFrom ? new Date(options.dateFrom) : null;
+    const dateTo = options.dateTo ? new Date(options.dateTo) : null;
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const responsesSheet = ss.getSheetByName('Responses');
+    const proctorSheet = ss.getSheetByName('ProctorState');
+    const responseValues = responsesSheet ? getDataRangeValues_(responsesSheet) : [];
+    const proctorValues = proctorSheet ? getDataRangeValues_(proctorSheet) : [];
+
+    const roster = DataAccess.roster.getByClass(className);
+    const polls = DataAccess.polls.getByClass(className);
+
+    // Filter polls by date if specified
+    const filteredPolls = polls.filter(poll => {
+      const pollDate = poll.createdAt ? new Date(poll.createdAt) : null;
+      if (dateFrom && pollDate && pollDate < dateFrom) return false;
+      if (dateTo && pollDate && pollDate > dateTo) return false;
+      return true;
+    });
+
+    const pollIds = new Set(filteredPolls.map(p => p.pollId));
+
+    // Build student profiles
+    const studentProfiles = new Map();
+
+    roster.forEach(student => {
+      studentProfiles.set(student.email, {
+        email: student.email,
+        name: student.name,
+        totalQuestions: 0,
+        questionsAnswered: 0,
+        correctAnswers: 0,
+        incorrectAnswers: 0,
+        accuracy: 0,
+        participationRate: 0,
+        violations: [],
+        pollsParticipated: new Set(),
+        averageZScore: 0,
+        trend: 'stable', // 'improving', 'declining', 'stable'
+        flags: [] // 'struggling', 'non-responder', 'rule-violator', 'high-performer', 'consistent'
+      });
+    });
+
+    // Analyze responses
+    responseValues.forEach(row => {
+      const pollId = row[2];
+      if (!pollIds.has(pollId)) return;
+
+      const timestamp = row[1];
+      if (dateFrom && timestamp && new Date(timestamp) < dateFrom) return;
+      if (dateTo && timestamp && new Date(timestamp) > dateTo) return;
+
+      const studentEmail = (row[4] || '').toString().trim();
+      const answer = row[5];
+      const isCorrectRaw = row[6];
+      const isCorrect = (isCorrectRaw === true) || (isCorrectRaw === 'TRUE') || (isCorrectRaw === 'true') || (isCorrectRaw === 1);
+
+      if (studentProfiles.has(studentEmail)) {
+        const profile = studentProfiles.get(studentEmail);
+        profile.questionsAnswered++;
+        if (isCorrect) {
+          profile.correctAnswers++;
+        } else {
+          profile.incorrectAnswers++;
+        }
+        profile.pollsParticipated.add(pollId);
+      }
+    });
+
+    // Calculate total questions for each student
+    filteredPolls.forEach(poll => {
+      roster.forEach(student => {
+        if (studentProfiles.has(student.email)) {
+          const profile = studentProfiles.get(student.email);
+          profile.totalQuestions += poll.questionCount || poll.questions.length;
+        }
+      });
+    });
+
+    // Analyze violations
+    proctorValues.forEach(row => {
+      if (row[0] && row[0] !== 'PollID') { // Skip header
+        const pollId = row[0];
+        if (!pollIds.has(pollId)) return;
+
+        const studentEmail = (row[1] || '').toString().trim();
+        const status = row[2];
+        const lockReason = row[4] || '';
+        const lockedAt = row[5] || '';
+
+        if (status === 'LOCKED' && studentProfiles.has(studentEmail)) {
+          const profile = studentProfiles.get(studentEmail);
+          profile.violations.push({
+            pollId: pollId,
+            reason: lockReason,
+            timestamp: lockedAt
+          });
+        }
+      }
+    });
+
+    // Calculate metrics and assign flags
+    const studentInsights = [];
+    studentProfiles.forEach((profile, email) => {
+      // Calculate accuracy
+      const totalAnswered = profile.correctAnswers + profile.incorrectAnswers;
+      profile.accuracy = totalAnswered > 0 ? (profile.correctAnswers / totalAnswered) * 100 : 0;
+
+      // Calculate participation rate
+      profile.participationRate = profile.totalQuestions > 0
+        ? (profile.questionsAnswered / profile.totalQuestions) * 100
+        : 0;
+
+      // Assign flags
+      if (profile.accuracy < 50 && totalAnswered >= 5) {
+        profile.flags.push('struggling');
+      }
+      if (profile.accuracy >= 85 && totalAnswered >= 5) {
+        profile.flags.push('high-performer');
+      }
+      if (profile.participationRate < 50 && profile.totalQuestions >= 5) {
+        profile.flags.push('non-responder');
+      }
+      if (profile.violations.length >= 2) {
+        profile.flags.push('rule-violator');
+      }
+      if (profile.accuracy >= 75 && profile.participationRate >= 90) {
+        profile.flags.push('consistent');
+      }
+
+      // Convert Set to array for JSON serialization
+      profile.pollsParticipated = Array.from(profile.pollsParticipated);
+
+      studentInsights.push(profile);
+    });
+
+    // Sort by flags (struggling and rule violators first)
+    studentInsights.sort((a, b) => {
+      const aPriority = a.flags.includes('struggling') || a.flags.includes('rule-violator') ? 0 : 1;
+      const bPriority = b.flags.includes('struggling') || b.flags.includes('rule-violator') ? 0 : 1;
+      if (aPriority !== bPriority) return aPriority - bPriority;
+      return b.accuracy - a.accuracy;
+    });
+
+    // Calculate class-wide statistics
+    const classStats = {
+      totalStudents: studentInsights.length,
+      strugglingCount: studentInsights.filter(s => s.flags.includes('struggling')).length,
+      nonResponderCount: studentInsights.filter(s => s.flags.includes('non-responder')).length,
+      ruleViolatorCount: studentInsights.filter(s => s.flags.includes('rule-violator')).length,
+      highPerformerCount: studentInsights.filter(s => s.flags.includes('high-performer')).length,
+      averageAccuracy: studentInsights.reduce((sum, s) => sum + s.accuracy, 0) / studentInsights.length || 0,
+      averageParticipation: studentInsights.reduce((sum, s) => sum + s.participationRate, 0) / studentInsights.length || 0
+    };
+
+    return {
+      success: true,
+      className: className,
+      dateRange: { from: dateFrom, to: dateTo },
+      classStats: classStats,
+      students: studentInsights,
+      pollsAnalyzed: filteredPolls.length
+    };
+  })();
+}
+
+/**
+ * Get detailed historical analytics for a specific student
+ * Includes performance trends, violation history, and per-poll breakdown
+ */
+function getStudentHistoricalAnalytics(studentEmail, className, options = {}) {
+  return withErrorHandling(() => {
+    const dateFrom = options.dateFrom ? new Date(options.dateFrom) : null;
+    const dateTo = options.dateTo ? new Date(options.dateTo) : null;
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const responsesSheet = ss.getSheetByName('Responses');
+    const proctorSheet = ss.getSheetByName('ProctorState');
+    const responseValues = responsesSheet ? getDataRangeValues_(responsesSheet) : [];
+    const proctorValues = proctorSheet ? getDataRangeValues_(proctorSheet) : [];
+
+    const polls = DataAccess.polls.getByClass(className);
+
+    // Filter polls by date
+    const filteredPolls = polls.filter(poll => {
+      const pollDate = poll.createdAt ? new Date(poll.createdAt) : null;
+      if (dateFrom && pollDate && pollDate < dateFrom) return false;
+      if (dateTo && pollDate && pollDate > dateTo) return false;
+      return true;
+    }).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+    // Build per-poll performance
+    const pollPerformance = [];
+    const overallStats = {
+      totalPolls: filteredPolls.length,
+      pollsParticipated: 0,
+      totalQuestions: 0,
+      questionsAnswered: 0,
+      correctAnswers: 0,
+      accuracy: 0,
+      violations: [],
+      confidenceData: {
+        confidentCorrect: 0,
+        confidentIncorrect: 0,
+        uncertainCorrect: 0,
+        uncertainIncorrect: 0
+      }
+    };
+
+    filteredPolls.forEach(poll => {
+      const pollResponses = responseValues.filter(row =>
+        row[2] === poll.pollId &&
+        (row[4] || '').toString().trim() === studentEmail
+      );
+
+      const correctCount = pollResponses.filter(r => {
+        const isCorrectRaw = r[6];
+        return (isCorrectRaw === true) || (isCorrectRaw === 'TRUE') || (isCorrectRaw === 'true') || (isCorrectRaw === 1);
+      }).length;
+
+      const totalQuestions = poll.questionCount || poll.questions.length;
+      const answered = pollResponses.length;
+      const accuracy = answered > 0 ? (correctCount / answered) * 100 : 0;
+
+      // Check for violations in this poll
+      const pollViolations = proctorValues.filter(row =>
+        row[0] === poll.pollId &&
+        (row[1] || '').toString().trim() === studentEmail &&
+        row[2] === 'LOCKED'
+      );
+
+      // Analyze confidence data
+      const confidenceData = {
+        confidentCorrect: 0,
+        confidentIncorrect: 0,
+        uncertainCorrect: 0,
+        uncertainIncorrect: 0
+      };
+
+      pollResponses.forEach(r => {
+        const confidence = r[7];
+        const isCorrectRaw = r[6];
+        const isCorrect = (isCorrectRaw === true) || (isCorrectRaw === 'TRUE') || (isCorrectRaw === 'true') || (isCorrectRaw === 1);
+        const isConfident = (confidence === 'very-sure' || confidence === 'certain');
+
+        if (confidence) {
+          if (isConfident && isCorrect) {
+            confidenceData.confidentCorrect++;
+            overallStats.confidenceData.confidentCorrect++;
+          } else if (isConfident && !isCorrect) {
+            confidenceData.confidentIncorrect++;
+            overallStats.confidenceData.confidentIncorrect++;
+          } else if (!isConfident && isCorrect) {
+            confidenceData.uncertainCorrect++;
+            overallStats.confidenceData.uncertainCorrect++;
+          } else {
+            confidenceData.uncertainIncorrect++;
+            overallStats.confidenceData.uncertainIncorrect++;
+          }
+        }
+      });
+
+      pollPerformance.push({
+        pollId: poll.pollId,
+        pollName: poll.pollName,
+        date: poll.createdAt,
+        totalQuestions: totalQuestions,
+        questionsAnswered: answered,
+        correctAnswers: correctCount,
+        accuracy: Math.round(accuracy * 10) / 10,
+        participated: answered > 0,
+        violations: pollViolations.length,
+        confidenceData: confidenceData
+      });
+
+      // Update overall stats
+      overallStats.totalQuestions += totalQuestions;
+      overallStats.questionsAnswered += answered;
+      overallStats.correctAnswers += correctCount;
+      if (answered > 0) overallStats.pollsParticipated++;
+      pollViolations.forEach(v => {
+        overallStats.violations.push({
+          pollId: poll.pollId,
+          pollName: poll.pollName,
+          reason: v[4] || '',
+          timestamp: v[5] || ''
+        });
+      });
+    });
+
+    overallStats.accuracy = overallStats.questionsAnswered > 0
+      ? Math.round((overallStats.correctAnswers / overallStats.questionsAnswered) * 100 * 10) / 10
+      : 0;
+
+    // Calculate trend (last 5 polls vs previous 5 polls)
+    let trend = 'stable';
+    if (pollPerformance.length >= 10) {
+      const recent5 = pollPerformance.slice(-5);
+      const previous5 = pollPerformance.slice(-10, -5);
+      const recentAvg = recent5.reduce((sum, p) => sum + p.accuracy, 0) / 5;
+      const previousAvg = previous5.reduce((sum, p) => sum + p.accuracy, 0) / 5;
+
+      if (recentAvg > previousAvg + 10) trend = 'improving';
+      else if (recentAvg < previousAvg - 10) trend = 'declining';
+    }
+
+    return {
+      success: true,
+      studentEmail: studentEmail,
+      className: className,
+      dateRange: { from: dateFrom, to: dateTo },
+      overallStats: overallStats,
+      pollPerformance: pollPerformance,
+      trend: trend
+    };
+  })();
+}
+
+/**
+ * Get enhanced post-poll analytics with contextual interpretations
+ * Builds on existing getPostPollAnalytics with better guidance
+ */
+function getEnhancedPostPollAnalytics(pollId) {
+  return withErrorHandling(() => {
+    // Get base analytics
+    const baseAnalytics = getPostPollAnalytics(pollId);
+    if (!baseAnalytics.success) return baseAnalytics;
+
+    // Add contextual interpretations
+    const enhanced = { ...baseAnalytics };
+
+    // Interpret class performance
+    const classOverview = enhanced.classOverview;
+    classOverview.interpretation = {
+      participation: interpretParticipation(classOverview.participantCount, classOverview.rosterSize),
+      meanScore: interpretMeanScore(classOverview.mean, enhanced.questionCount),
+      stdDev: interpretStdDev(classOverview.stdDev, enhanced.questionCount),
+      distribution: interpretDistribution(classOverview.scoreDistribution)
+    };
+
+    // Interpret each item
+    enhanced.itemAnalysis.forEach(item => {
+      item.interpretation = {
+        difficulty: interpretDifficulty(item.difficulty),
+        discrimination: interpretDiscrimination(item.discrimination),
+        overall: interpretItemQuality(item.difficulty, item.discrimination),
+        actionable: getItemActionableInsights(item)
+      };
+    });
+
+    // Add priority flags for teacher action
+    enhanced.teacherActionItems = generateTeacherActionItems(enhanced);
+
+    return enhanced;
+  })();
+}
+
+/**
+ * Helper functions for contextual interpretation
+ */
+
+function interpretParticipation(participated, total) {
+  if (total === 0) return { level: 'unknown', message: 'No roster data available', color: 'gray' };
+  const rate = (participated / total) * 100;
+  if (rate >= 90) return { level: 'excellent', message: `${Math.round(rate)}% participation - Excellent engagement`, color: 'green' };
+  if (rate >= 75) return { level: 'good', message: `${Math.round(rate)}% participation - Good engagement`, color: 'green' };
+  if (rate >= 50) return { level: 'moderate', message: `${Math.round(rate)}% participation - Consider checking in with absent students`, color: 'yellow' };
+  return { level: 'low', message: `${Math.round(rate)}% participation - LOW - Check for technical issues or student barriers`, color: 'red' };
+}
+
+function interpretMeanScore(mean, maxScore) {
+  if (maxScore === 0) return { level: 'unknown', message: 'No questions', color: 'gray' };
+  const pct = (mean / maxScore) * 100;
+  if (pct >= 85) return { level: 'high', message: `${Math.round(pct)}% average - Strong class mastery`, color: 'green' };
+  if (pct >= 70) return { level: 'good', message: `${Math.round(pct)}% average - Good understanding, some review needed`, color: 'green' };
+  if (pct >= 50) return { level: 'moderate', message: `${Math.round(pct)}% average - MODERATE - Significant concepts need reteaching`, color: 'yellow' };
+  return { level: 'low', message: `${Math.round(pct)}% average - LOW - Major instructional intervention needed`, color: 'red' };
+}
+
+function interpretStdDev(stdDev, maxScore) {
+  if (maxScore === 0) return { level: 'unknown', message: '', color: 'gray' };
+  const pct = (stdDev / maxScore) * 100;
+  if (pct >= 30) return { level: 'high', message: 'High spread - Students have very different mastery levels', color: 'blue' };
+  if (pct >= 15) return { level: 'moderate', message: 'Moderate spread - Some differentiation in performance', color: 'blue' };
+  return { level: 'low', message: 'Low spread - Class performed similarly (good if scores are high, concerning if low)', color: 'blue' };
+}
+
+function interpretDistribution(scoreDistribution) {
+  if (!scoreDistribution || scoreDistribution.length === 0) {
+    return { pattern: 'unknown', message: '' };
+  }
+
+  const maxScore = scoreDistribution.length - 1;
+  const midpoint = maxScore / 2;
+
+  // Find peak
+  let peakScore = 0;
+  let peakCount = 0;
+  scoreDistribution.forEach(item => {
+    if (item.count > peakCount) {
+      peakCount = item.count;
+      peakScore = item.score;
+    }
+  });
+
+  if (peakScore >= maxScore * 0.8) {
+    return { pattern: 'high-peak', message: 'Most students scored very well - poll may have been too easy or material well-taught' };
+  } else if (peakScore <= maxScore * 0.3) {
+    return { pattern: 'low-peak', message: 'Most students struggled - consider reteaching or reviewing question clarity' };
+  } else {
+    return { pattern: 'normal', message: 'Scores spread across range - good discriminating assessment' };
+  }
+}
+
+function interpretDifficulty(pValue) {
+  if (pValue >= 0.9) return { level: 'very-easy', message: 'Very Easy (>90% correct) - May not differentiate student understanding', color: 'blue' };
+  if (pValue >= 0.75) return { level: 'easy', message: 'Easy (75-90% correct) - Good confidence builder', color: 'green' };
+  if (pValue >= 0.5) return { level: 'moderate', message: 'Moderate (50-75% correct) - Ideal difficulty range', color: 'green' };
+  if (pValue >= 0.3) return { level: 'hard', message: 'Hard (30-50% correct) - Challenging but fair', color: 'yellow' };
+  return { level: 'very-hard', message: 'Very Hard (<30% correct) - Most students missed this - Review question or reteach concept', color: 'red' };
+}
+
+function interpretDiscrimination(discrimination) {
+  if (discrimination >= 0.4) return { level: 'excellent', message: 'Excellent (>0.4) - Powerfully separates high/low performers', color: 'green' };
+  if (discrimination >= 0.3) return { level: 'good', message: 'Good (0.3-0.4) - Effectively distinguishes understanding', color: 'green' };
+  if (discrimination >= 0.15) return { level: 'fair', message: 'Fair (0.15-0.3) - Some discrimination but could be improved', color: 'yellow' };
+  if (discrimination >= 0) return { level: 'poor', message: 'Poor (0-0.15) - Barely distinguishes students - Review question quality', color: 'orange' };
+  return { level: 'negative', message: 'NEGATIVE (<0) - FLAWED - High performers got it wrong! Check answer key or question wording', color: 'red' };
+}
+
+function interpretItemQuality(difficulty, discrimination) {
+  // Ideal zone: 0.3 < difficulty < 0.8, discrimination > 0.3
+  if (difficulty >= 0.3 && difficulty <= 0.8 && discrimination >= 0.3) {
+    return { quality: 'excellent', message: '⭐ Excellent Question - Keep for future assessments' };
+  } else if (difficulty >= 0.3 && difficulty <= 0.8 && discrimination >= 0.15) {
+    return { quality: 'good', message: '✓ Good Question - Minor tweaks could improve' };
+  } else if (discrimination < 0) {
+    return { quality: 'flawed', message: '⚠ Flawed Question - Immediate review needed' };
+  } else if (difficulty < 0.3 || difficulty > 0.9) {
+    return { quality: 'needs-adjustment', message: '⚡ Adjust Difficulty - Question too easy or too hard' };
+  } else {
+    return { quality: 'fair', message: '◐ Fair Question - Consider revision' };
+  }
+}
+
+function getItemActionableInsights(item) {
+  const insights = [];
+
+  if (item.flags.includes('negative-discrimination')) {
+    insights.push('URGENT: Check answer key - high performers chose wrong answer');
+  }
+  if (item.flags.includes('problematic-distractor')) {
+    insights.push('Review distractors - one is confusing high performers');
+  }
+  if (item.flags.includes('too-hard') && item.discrimination < 0.15) {
+    insights.push('Question is both hard AND non-discriminating - likely needs major revision');
+  }
+  if (item.flags.includes('too-easy')) {
+    insights.push('Consider making this question more challenging or use as warm-up');
+  }
+  if (item.difficulty >= 0.3 && item.difficulty <= 0.8 && item.discrimination >= 0.3) {
+    insights.push('Excellent question - save for future use');
+  }
+
+  return insights;
+}
+
+function generateTeacherActionItems(analytics) {
+  const actionItems = [];
+
+  // Check participation
+  if (analytics.classOverview.participantCount < analytics.classOverview.rosterSize * 0.75) {
+    actionItems.push({
+      priority: 'high',
+      category: 'participation',
+      message: `Only ${analytics.classOverview.participantCount}/${analytics.classOverview.rosterSize} students participated - Follow up with absent students`,
+      count: analytics.classOverview.rosterSize - analytics.classOverview.participantCount
+    });
+  }
+
+  // Check for flawed questions
+  const flawedItems = analytics.itemAnalysis.filter(item => item.flags.includes('negative-discrimination'));
+  if (flawedItems.length > 0) {
+    actionItems.push({
+      priority: 'urgent',
+      category: 'question-quality',
+      message: `${flawedItems.length} question(s) have negative discrimination - REVIEW ANSWER KEYS IMMEDIATELY`,
+      items: flawedItems.map(item => ({ index: item.questionIndex, text: item.questionText }))
+    });
+  }
+
+  // Check for concepts needing reteaching
+  const veryHardItems = analytics.itemAnalysis.filter(item => item.difficulty < 0.3 && item.responseCount >= 5);
+  if (veryHardItems.length >= analytics.questionCount * 0.3) {
+    actionItems.push({
+      priority: 'high',
+      category: 'instruction',
+      message: `${veryHardItems.length}/${analytics.questionCount} questions were very hard (<30% correct) - Consider reteaching these concepts`,
+      items: veryHardItems.map(item => ({ index: item.questionIndex, text: item.questionText, pct: item.difficultyPct }))
+    });
+  }
+
+  // Check metacognition red flags
+  if (analytics.metacognition && analytics.metacognition.enabled) {
+    const confidentIncorrectPct = analytics.metacognition.overall ? analytics.metacognition.overall.confidentIncorrect : 0;
+    if (confidentIncorrectPct >= 20) {
+      actionItems.push({
+        priority: 'high',
+        category: 'metacognition',
+        message: `${confidentIncorrectPct}% of responses were confidently incorrect - Students have misconceptions they're unaware of`,
+        data: analytics.metacognition.overall
+      });
+    }
+  }
+
+  return actionItems;
+}
+
+/**
  * Get dashboard summary data (recent sessions and activity)
  */
 function getDashboardSummary() {

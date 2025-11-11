@@ -1156,17 +1156,18 @@ function saveRoster(className, rosterEntries) {
       throw new Error('Rosters sheet not found');
     }
 
-    // Remove existing entries for the class
+    // OPTIMIZATION: Filter and rewrite instead of row-by-row deletion
     const values = getDataRangeValues_(rosterSheet);
-    for (let i = values.length - 1; i >= 0; i--) {
-      if (values[i][0] === className) {
-        rosterSheet.deleteRow(i + 2);
-      }
-    }
+    const keepRows = values.filter(row => row[0] !== className);
+    const newRows = cleanedEntries.map(entry => [className, entry.name, entry.email]);
+    const allRows = [...keepRows, ...newRows];
 
-    if (cleanedEntries.length > 0) {
-      const rows = cleanedEntries.map(entry => [className, entry.name, entry.email]);
-      rosterSheet.getRange(rosterSheet.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+    // Clear and rewrite all data
+    if (values.length > 0) {
+      rosterSheet.getRange(2, 1, values.length, rosterSheet.getLastColumn()).clearContent();
+    }
+    if (allRows.length > 0) {
+      rosterSheet.getRange(2, 1, allRows.length, allRows[0].length).setValues(allRows);
     }
 
     ensureClassExists_(className);
@@ -1265,30 +1266,42 @@ function renameClass(oldName, newName) {
     }
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // OPTIMIZATION: Batch updates instead of setValue() in loops
+    // Update Classes sheet
     const classesSheet = ss.getSheetByName('Classes');
     if (classesSheet && classesSheet.getLastRow() >= 2) {
       const values = classesSheet.getRange(2, 1, classesSheet.getLastRow() - 1, 2).getValues();
-      for (let i = 0; i < values.length; i++) {
-        if (values[i][0] === oldName) {
-          classesSheet.getRange(i + 2, 1, 1, 1).setValue(normalizedNewName);
-        }
-      }
+      const updatedValues = values.map(row => [row[0] === oldName ? normalizedNewName : row[0], row[1]]);
+      classesSheet.getRange(2, 1, updatedValues.length, 2).setValues(updatedValues);
     }
 
+    // Update Rosters sheet
     const rosterSheet = ss.getSheetByName('Rosters');
     const rosterValues = getDataRangeValues_(rosterSheet);
-    for (let i = 0; i < rosterValues.length; i++) {
-      if (rosterValues[i][0] === oldName) {
-        rosterSheet.getRange(i + 2, 1).setValue(normalizedNewName);
-      }
+    if (rosterValues.length > 0) {
+      const updatedRosterValues = rosterValues.map(row => {
+        const updatedRow = [...row];
+        if (updatedRow[0] === oldName) {
+          updatedRow[0] = normalizedNewName;
+        }
+        return updatedRow;
+      });
+      rosterSheet.getRange(2, 1, updatedRosterValues.length, updatedRosterValues[0].length).setValues(updatedRosterValues);
     }
 
+    // Update Polls sheet
     const pollSheet = ss.getSheetByName('Polls');
     const pollValues = getDataRangeValues_(pollSheet);
-    for (let i = 0; i < pollValues.length; i++) {
-      if (pollValues[i][2] === oldName) {
-        pollSheet.getRange(i + 2, 3).setValue(normalizedNewName);
-      }
+    if (pollValues.length > 0) {
+      const updatedPollValues = pollValues.map(row => {
+        const updatedRow = [...row];
+        if (updatedRow[2] === oldName) {
+          updatedRow[2] = normalizedNewName;
+        }
+        return updatedRow;
+      });
+      pollSheet.getRange(2, 1, updatedPollValues.length, updatedPollValues[0].length).setValues(updatedPollValues);
     }
 
     const props = PropertiesService.getScriptProperties();
@@ -1946,10 +1959,19 @@ function resetLiveQuestion(pollId, questionIndex, clearResponses) {
       const ss = SpreadsheetApp.getActiveSpreadsheet();
       const responsesSheet = ss.getSheetByName('Responses');
       if (responsesSheet) {
+        // OPTIMIZATION: Filter and rewrite instead of row-by-row deletion
+        // For 50 responses: 50 deleteRow() calls → 1 setValues() call
         const values = getDataRangeValues_(responsesSheet);
-        for (let i = values.length - 1; i >= 0; i--) {
-          if (values[i][2] === pollId && values[i][3] === questionIndex) {
-            responsesSheet.deleteRow(i + 2);
+        const keepRows = values.filter(row => !(row[2] === pollId && row[3] === questionIndex));
+
+        if (keepRows.length < values.length) {
+          // Clear all data rows (keep header)
+          if (values.length > 0) {
+            responsesSheet.getRange(2, 1, values.length, responsesSheet.getLastColumn()).clearContent();
+          }
+          // Rewrite filtered data
+          if (keepRows.length > 0) {
+            responsesSheet.getRange(2, 1, keepRows.length, keepRows[0].length).setValues(keepRows);
           }
         }
       }
@@ -3340,12 +3362,17 @@ function getLivePollData(pollId, questionIndex) {
     pollResponses
       .filter(r => r[3] === -1 && r[5] === 'VIOLATION_LOCKED')
       .forEach(r => lockedStudents.add(r[4]));
-    
+
+    // OPTIMIZATION: Batch load all proctor states in a single operation
+    // instead of calling getState() N times (100 students = 1 call instead of 100)
+    const studentEmails = roster.map(s => s.email);
+    const proctorStates = ProctorAccess.getStatesBatch(pollId, studentEmails, currentSessionId);
+
     const studentStatusList = roster.map(student => {
       const email = student.email;
 
-      // Check proctor state (status-based check, not just old "locked" responses)
-      const proctorState = ProctorAccess.getState(pollId, email, currentSessionId);
+      // Get proctor state from batch-loaded map
+      const proctorState = proctorStates.get(email);
 
       // Get submission if exists
       const submission = submittedAnswers.has(email) ? submittedAnswers.get(email) : null;
@@ -3984,6 +4011,110 @@ const ProctorAccess = {
   },
 
   /**
+   * OPTIMIZATION: Batch get proctoring states for multiple students
+   * Returns a Map of studentEmail -> state object
+   * This is ~100x faster than calling getState() in a loop
+   */
+  getStatesBatch: function(pollId, studentEmails, currentSessionId) {
+    const stateMap = new Map();
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName('ProctorState');
+
+    // Create sheet if doesn't exist
+    if (!sheet) {
+      sheet = ss.insertSheet('ProctorState');
+      sheet.getRange('A1:J1').setValues([[
+        'PollID', 'StudentEmail', 'Status', 'LockVersion', 'LockReason',
+        'LockedAt', 'UnlockApproved', 'UnlockApprovedBy', 'UnlockApprovedAt', 'SessionId'
+      ]]).setFontWeight('bold').setBackground('#4285f4').setFontColor('#ffffff');
+      sheet.setFrozenRows(1);
+    }
+
+    // Single sheet read for ALL students
+    const data = sheet.getDataRange().getValues();
+
+    // Build map of existing states for this poll
+    const existingStates = new Map();
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === pollId) {
+        const email = data[i][1];
+
+        // Migrate old data: if column 2 is boolean (old "locked" field), convert to status
+        let status = 'OK';
+        if (typeof data[i][2] === 'string' && ['OK', 'LOCKED', 'AWAITING_FULLSCREEN'].includes(data[i][2])) {
+          status = data[i][2];
+        } else if (data[i][2] === true || data[i][2] === 'TRUE') {
+          status = 'LOCKED'; // Migration: locked=true → LOCKED
+        }
+
+        const stateSessionId = data[i][9] || null;
+        const baseState = {
+          pollId: data[i][0],
+          studentEmail: email,
+          status: status,
+          lockVersion: typeof data[i][3] === 'number' ? data[i][3] : 0,
+          lockReason: data[i][4] || '',
+          lockedAt: data[i][5] || '',
+          unlockApproved: data[i][6] === true || data[i][6] === 'TRUE',
+          unlockApprovedBy: data[i][7] || null,
+          unlockApprovedAt: data[i][8] || null,
+          sessionId: stateSessionId,
+          rowIndex: i + 1
+        };
+
+        // Check if this is a new session and we should reset the state
+        if (currentSessionId) {
+          const needsReset = !stateSessionId || stateSessionId === '' || stateSessionId !== currentSessionId;
+          if (needsReset) {
+            existingStates.set(email, {
+              pollId: pollId,
+              studentEmail: email,
+              status: 'OK',
+              lockVersion: 0,
+              lockReason: '',
+              lockedAt: '',
+              unlockApproved: false,
+              unlockApprovedBy: null,
+              unlockApprovedAt: null,
+              sessionId: currentSessionId,
+              rowIndex: i + 1
+            });
+          } else {
+            existingStates.set(email, baseState);
+          }
+        } else {
+          existingStates.set(email, baseState);
+        }
+      }
+    }
+
+    // For each requested student, return their state or default
+    studentEmails.forEach(email => {
+      if (existingStates.has(email)) {
+        stateMap.set(email, existingStates.get(email));
+      } else {
+        // Return default state if not found
+        stateMap.set(email, {
+          pollId: pollId,
+          studentEmail: email,
+          status: 'OK',
+          lockVersion: 0,
+          lockReason: '',
+          lockedAt: '',
+          unlockApproved: false,
+          unlockApprovedBy: null,
+          unlockApprovedAt: null,
+          sessionId: currentSessionId || null,
+          rowIndex: null
+        });
+      }
+    });
+
+    return stateMap;
+  },
+
+  /**
    * Set proctoring state for a student
    */
   setState: function(state) {
@@ -4054,34 +4185,32 @@ const ProctorAccess = {
       return;
     }
 
-    const updates = [];
-    for (let i = 1; i < data.length; i++) {
-      if (data[i][0] === pollId) {
-        updates.push({
-          rowIndex: i + 1,
-          studentEmail: data[i][1] || ''
-        });
+    // OPTIMIZATION: Update all data in memory, then write once
+    // Instead of N setValues() calls, do 1 batch write
+    let hasUpdates = false;
+    const updatedData = data.map((row, index) => {
+      if (index === 0) return row; // Skip header
+      if (row[0] === pollId) {
+        hasUpdates = true;
+        return [
+          pollId,
+          row[1] || '',
+          'OK',
+          0,
+          '',
+          '',
+          false,
+          '',
+          '',
+          sessionId || ''
+        ];
       }
-    }
-
-    updates.forEach(entry => {
-      sheet.getRange(entry.rowIndex, 1, 1, 10).setValues([[
-        pollId,
-        entry.studentEmail,
-        'OK',
-        0,
-        '',
-        '',
-        false,
-        '',
-        '',
-        sessionId || ''
-      ]]);
+      return row;
     });
 
-    // Force all updates to complete before returning
-    // This prevents race condition where students poll before their reset completes
-    if (updates.length > 0) {
+    if (hasUpdates) {
+      // Write all data at once (excluding header)
+      sheet.getRange(2, 1, updatedData.length - 1, 10).setValues(updatedData.slice(1));
       SpreadsheetApp.flush();
     }
   }
@@ -4813,10 +4942,18 @@ function removePollRows_(pollId) {
     return;
   }
 
+  // OPTIMIZATION: Filter and rewrite instead of row-by-row deletion
   const values = getDataRangeValues_(pollSheet);
-  for (let i = values.length - 1; i >= 0; i--) {
-    if (values[i][0] === pollId) {
-      pollSheet.deleteRow(i + 2);
+  const keepRows = values.filter(row => row[0] !== pollId);
+
+  if (keepRows.length < values.length) {
+    // Clear all data rows (keep header)
+    if (values.length > 0) {
+      pollSheet.getRange(2, 1, values.length, pollSheet.getLastColumn()).clearContent();
+    }
+    // Rewrite filtered data
+    if (keepRows.length > 0) {
+      pollSheet.getRange(2, 1, keepRows.length, keepRows[0].length).setValues(keepRows);
     }
   }
 }

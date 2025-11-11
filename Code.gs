@@ -1919,6 +1919,26 @@ function submitIndividualTimedAnswer(pollId, sessionId, studentEmail, actualQues
       throw new Error('Session is locked - time expired or already completed');
     }
 
+    // CRITICAL: Check elapsed time to prevent submissions after time limit
+    // This protects against client-side timer bypass or delayed lock sweeps
+    const metadata = DataAccess.liveStatus.getMetadata();
+    const timeLimitMinutes = metadata.timeLimitMinutes || poll.timeLimitMinutes;
+    const startTime = new Date(studentState.startTime).getTime();
+    const currentTime = Date.now();
+    const elapsedMinutes = (currentTime - startTime) / (1000 * 60);
+
+    if (elapsedMinutes >= timeLimitMinutes) {
+      // Time limit exceeded - lock the student and reject submission
+      DataAccess.individualSessionState.lockStudent(pollId, sessionId, studentEmail);
+      Logger.log('Submission rejected: time limit exceeded', {
+        pollId: pollId,
+        studentEmail: studentEmail,
+        elapsedMinutes: elapsedMinutes.toFixed(2),
+        timeLimitMinutes: timeLimitMinutes
+      });
+      throw new Error('Time limit exceeded. Your session has been locked and this response cannot be recorded.');
+    }
+
     // Verify this is the current question (prevent backwards navigation)
     const expectedQuestionIndex = studentState.questionOrder[studentState.currentQuestionIndex];
     if (actualQuestionIndex !== expectedQuestionIndex) {

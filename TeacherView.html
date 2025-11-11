@@ -1865,6 +1865,20 @@
             </select>
           </div>
 
+          <div class="form-group mb-6">
+            <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white" for="session-type-select">Session Type</label>
+            <select id="session-type-select" class="w-full max-w-md rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+              <option value="LIVE_POLL">Live Poll (Teacher-paced, class reviews each question together)</option>
+              <option value="INDIVIDUAL_TIMED">Individual Timed Session (Students work independently with time limit)</option>
+            </select>
+          </div>
+
+          <div id="time-limit-group" class="form-group mb-6" style="display: none;">
+            <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white" for="time-limit-input">Time Limit (minutes)</label>
+            <input type="number" id="time-limit-input" min="1" max="180" placeholder="30" class="w-full max-w-md rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"/>
+            <p class="text-xs text-brand-dark-gray/70 dark:text-brand-white/60 mt-1">Students will be automatically locked when time expires</p>
+          </div>
+
           <div id="question-builder-workspace">
             <!-- Question editing workspace will be populated dynamically -->
           </div>
@@ -2914,6 +2928,21 @@
   bindClick('save-poll-btn',savePoll);
   bindInput('new-poll-name','input',markPollDirty);
   bindChange(classSelect,markPollDirty,'class-select');
+
+  // Session type change handler
+  var sessionTypeSelect=document.getElementById('session-type-select');
+  var timeLimitGroup=document.getElementById('time-limit-group');
+  if(sessionTypeSelect&&timeLimitGroup){
+    sessionTypeSelect.addEventListener('change',function(){
+      if(sessionTypeSelect.value==='INDIVIDUAL_TIMED'){
+        timeLimitGroup.style.display='block';
+      }else{
+        timeLimitGroup.style.display='none';
+      }
+      markPollDirty();
+    });
+  }
+
   if(startPollBtn){
     startPollBtn.addEventListener('click',onStartPoll);
   }else{
@@ -7642,6 +7671,23 @@
         refreshClassOptions(BASE_CLASSES.concat([existingPoll.className]));
       }
       classSelect.value=existingPoll.className||'';
+
+      // Set session type and time limit
+      var sessionTypeSelect=document.getElementById('session-type-select');
+      var timeLimitInput=document.getElementById('time-limit-input');
+      var timeLimitGroup=document.getElementById('time-limit-group');
+      if(sessionTypeSelect){
+        sessionTypeSelect.value=existingPoll.sessionType||'LIVE_POLL';
+        if(existingPoll.sessionType==='INDIVIDUAL_TIMED'){
+          if(timeLimitGroup)timeLimitGroup.style.display='block';
+          if(timeLimitInput&&existingPoll.timeLimitMinutes){
+            timeLimitInput.value=existingPoll.timeLimitMinutes;
+          }
+        }else{
+          if(timeLimitGroup)timeLimitGroup.style.display='none';
+        }
+      }
+
       questions=existingPoll.questions.map(function(question){
         var answers=(question.options||[]).map(function(opt){
           return {
@@ -7684,6 +7730,15 @@
       editingPollId=null;
       document.getElementById('new-poll-name').value='';
       classSelect.value='';
+
+      // Reset session type and time limit
+      var sessionTypeSelect=document.getElementById('session-type-select');
+      var timeLimitInput=document.getElementById('time-limit-input');
+      var timeLimitGroup=document.getElementById('time-limit-group');
+      if(sessionTypeSelect)sessionTypeSelect.value='LIVE_POLL';
+      if(timeLimitInput)timeLimitInput.value='';
+      if(timeLimitGroup)timeLimitGroup.style.display='none';
+
       addQuestion(true);
       saveButton.innerHTML='<span class="truncate">Publish Poll</span>';
       resetPollDirty('All changes saved');
@@ -8127,6 +8182,19 @@
 
     var pollName=document.getElementById('new-poll-name').value.trim();
     var className=(classSelect.value||'').trim();
+    var sessionType=document.getElementById('session-type-select').value||'LIVE_POLL';
+    var timeLimitMinutes=null;
+
+    if(sessionType==='INDIVIDUAL_TIMED'){
+      var timeLimitValue=document.getElementById('time-limit-input').value;
+      if(!timeLimitValue||parseInt(timeLimitValue)<=0){
+        await veritasAlert('Please enter a valid time limit for individual timed sessions.',{title:'Save poll'});
+        savePollBtn.disabled=false;
+        savePollBtn.innerHTML=defaultLabel;
+        return;
+      }
+      timeLimitMinutes=parseInt(timeLimitValue);
+    }
 
     if(!pollName||!className){
       await veritasAlert('Please enter a poll name and select a class.',{title:'Save poll'});
@@ -8351,9 +8419,9 @@
         });
 
       if(editingPollId){
-        request.updatePoll(editingPollId,pollName,className,payloadQuestions);
+        request.updatePoll(editingPollId,pollName,className,payloadQuestions,sessionType,timeLimitMinutes);
       } else {
-        request.createNewPoll(pollName,className,payloadQuestions);
+        request.createNewPoll(pollName,className,payloadQuestions,sessionType,timeLimitMinutes);
       }
     } catch(err){
       console.error('Upload/save error:',err);

@@ -1631,7 +1631,7 @@ function deleteClassRecord(className) {
   })();
 }
 
-function createNewPoll(pollName, className, questions) {
+function createNewPoll(pollName, className, questions, sessionType, timeLimitMinutes) {
   return withErrorHandling(() => {
     if (!pollName || !className || !Array.isArray(questions) || questions.length === 0) {
       throw new Error('Invalid poll data: name, class, and questions are required');
@@ -1641,14 +1641,21 @@ function createNewPoll(pollName, className, questions) {
       throw new Error('Maximum 50 questions per poll');
     }
 
+    // Validate session type specific requirements
+    if (sessionType === 'INDIVIDUAL_TIMED') {
+      if (!timeLimitMinutes || timeLimitMinutes <= 0) {
+        throw new Error('Time limit is required for individual timed sessions');
+      }
+    }
+
     const pollId = "P-" + Utilities.getUuid();
     const timestamp = new Date().toISOString();
 
-    writePollRows_(pollId, pollName, className, questions, timestamp, timestamp);
+    writePollRows_(pollId, pollName, className, questions, timestamp, timestamp, sessionType, timeLimitMinutes);
 
     CacheManager.invalidate('ALL_POLLS_DATA');
 
-    Logger.log('Poll created', { pollId: pollId, pollName: pollName, questionCount: questions.length });
+    Logger.log('Poll created', { pollId: pollId, pollName: pollName, questionCount: questions.length, sessionType: sessionType || 'LIVE_POLL' });
 
     return DataAccess.polls.getAll();
   })();

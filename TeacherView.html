@@ -1272,6 +1272,7 @@
               <div id="results-bars" class="flex flex-col gap-3">
                 <!-- Results bars will be populated dynamically -->
               </div>
+              <div id="live-metacognition-card" class="mt-6 hidden rounded-xl border border-brand-light-gray/60 dark:border-brand-dark-gray/40 bg-brand-light-gray/10 dark:bg-brand-dark-gray/30 p-5"></div>
               <div id="results-reveal-strip" class="mt-6 hidden">
                 <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-green-600/20 bg-green-600/5 px-4 py-3 dark:border-green-500/20 dark:bg-green-500/5">
                   <div class="min-w-[200px]">
@@ -2113,6 +2114,47 @@
       }
     }
   };
+
+  var CONFIDENCE_LEVEL_STYLES={
+    'guessing':{
+      label:'Guessing',
+      emoji:'🤔',
+      textClass:'text-red-700 dark:text-red-200',
+      badgeClass:'bg-red-500/10 text-red-700 dark:text-red-200 border border-red-500/30',
+      barClass:'bg-red-500',
+      accentClass:'text-red-700/80 dark:text-red-200/80'
+    },
+    'somewhat-sure':{
+      label:'Somewhat sure',
+      emoji:'🤷',
+      textClass:'text-amber-700 dark:text-amber-200',
+      badgeClass:'bg-amber-500/10 text-amber-700 dark:text-amber-200 border border-amber-500/30',
+      barClass:'bg-amber-500',
+      accentClass:'text-amber-700/80 dark:text-amber-200/80'
+    },
+    'very-sure':{
+      label:'Very sure',
+      emoji:'👍',
+      textClass:'text-blue-700 dark:text-blue-200',
+      badgeClass:'bg-blue-500/10 text-blue-700 dark:text-blue-200 border border-blue-500/30',
+      barClass:'bg-blue-500',
+      accentClass:'text-blue-700/80 dark:text-blue-200/80'
+    },
+    'certain':{
+      label:'Absolutely certain',
+      emoji:'💯',
+      textClass:'text-green-700 dark:text-green-200',
+      badgeClass:'bg-green-500/10 text-green-700 dark:text-green-200 border border-green-500/30',
+      barClass:'bg-green-500',
+      accentClass:'text-green-700/80 dark:text-green-200/80'
+    }
+  };
+
+  function describeConfidence(value){
+    var entry=CONFIDENCE_LEVEL_STYLES[value];
+    if(!entry)return null;
+    return entry.emoji+' '+entry.label;
+  }
 
   var selectedQuestionIndex=0;
   var editingPollId=null;
@@ -5528,6 +5570,7 @@
     CURRENT_POLL_DATA.totalQuestions=data.totalQuestions;
     CURRENT_POLL_DATA.timerSeconds=data.timerSeconds||null;
     CURRENT_POLL_DATA.options=data.options||[];
+    CURRENT_POLL_DATA.metacognition=data.metacognition||null;
 
     var questionChanged=previousQuestionIndex===null||data.questionIndex!==previousQuestionIndex;
 
@@ -5673,6 +5716,7 @@
 
     // Update results bars
     renderResultsBars(data.results,data.correctAnswer,data.studentStatusList);
+    renderLiveMetacognition(data.metacognition||null);
 
     var resultsStrip=document.getElementById('results-reveal-strip');
     if(resultsStrip){
@@ -5791,7 +5835,15 @@
       if(studentsWithAnswer.length>0){
         barHtml+='<div class="teacher-result-students">';
         studentsWithAnswer.forEach(function(student){
-          barHtml+='<span class="teacher-result-student">'+escapeHtml(formatStudentName(student))+'</span>';
+          barHtml+='<span class="teacher-result-student">';
+          barHtml+=escapeHtml(formatStudentName(student));
+          var confidenceText=describeConfidence(student.confidence);
+          if(confidenceText){
+            var style=CONFIDENCE_LEVEL_STYLES[student.confidence]||{};
+            var badgeClass=style.badgeClass||'bg-brand-light-gray/60 text-brand-dark-gray/70 dark:bg-brand-dark-gray/40 dark:text-brand-white/70 border border-brand-light-gray/40 dark:border-brand-dark-gray/50';
+            barHtml+=' <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold '+badgeClass+'">'+escapeHtml(confidenceText)+'</span>';
+          }
+          barHtml+='</span>';
         });
         barHtml+='</div>';
       }
@@ -5799,6 +5851,119 @@
       card.innerHTML=barHtml;
       container.appendChild(card);
     });
+  }
+
+  function renderLiveMetacognition(metacognition){
+    var card=document.getElementById('live-metacognition-card');
+    if(!card)return;
+
+    if(!metacognition||!metacognition.enabled){
+      card.classList.add('hidden');
+      card.innerHTML='';
+      return;
+    }
+
+    var html='<div class="flex flex-wrap items-center justify-between gap-3 mb-4">';
+    html+='<div class="flex items-center gap-2">';
+    html+='<span class="material-symbols-outlined text-purple-600 dark:text-purple-300">psychology</span>';
+    html+='<h4 class="text-brand-dark-gray dark:text-brand-white font-semibold text-base">Confidence Pulse</h4>';
+    html+='</div>';
+    html+='<div class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">';
+    if(metacognition.totalResponses>0){
+      html+=escapeHtml(metacognition.totalResponses+' responses • '+metacognition.responseRate+'% of class');
+    }else{
+      html+='Waiting for students to respond...';
+    }
+    html+='</div>';
+    html+='</div>';
+
+    if(!metacognition.totalResponses){
+      html+='<p class="text-sm text-brand-dark-gray/70 dark:text-brand-white/70">Enable the confidence check to ask students how sure they feel. Responses will populate here immediately.</p>';
+      card.innerHTML=html;
+      card.classList.remove('hidden');
+      return;
+    }
+
+    var matrixDefs=[
+      {key:'confidentCorrect',emoji:'💯',title:'Conscious Competence',subtitle:'Confident & correct',cardClass:'rounded-lg border border-green-500/30 bg-green-500/10 p-3 shadow-sm',titleClass:'text-sm font-semibold text-green-700 dark:text-green-300',subtitleClass:'text-xs text-green-700/80 dark:text-green-300/80',valueClass:'text-2xl font-bold text-green-800 dark:text-green-200',countClass:'text-xs text-green-700/70 dark:text-green-300/70'},
+      {key:'confidentIncorrect',emoji:'⚠️',title:'Confidently Incorrect',subtitle:'Urgent misconception',cardClass:'rounded-lg border border-red-500/30 bg-red-500/10 p-3 shadow-sm',titleClass:'text-sm font-semibold text-red-700 dark:text-red-300',subtitleClass:'text-xs text-red-700/80 dark:text-red-300/80',valueClass:'text-2xl font-bold text-red-800 dark:text-red-200',countClass:'text-xs text-red-700/70 dark:text-red-300/70'},
+      {key:'uncertainCorrect',emoji:'🤔',title:'Imposter Syndrome',subtitle:'Unsure but correct',cardClass:'rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 shadow-sm',titleClass:'text-sm font-semibold text-amber-700 dark:text-amber-300',subtitleClass:'text-xs text-amber-700/80 dark:text-amber-300/80',valueClass:'text-2xl font-bold text-amber-800 dark:text-amber-200',countClass:'text-xs text-amber-700/70 dark:text-amber-300/70'},
+      {key:'uncertainIncorrect',emoji:'🤷',title:'Conscious Incompetence',subtitle:'Know they need help',cardClass:'rounded-lg border border-blue-500/30 bg-blue-500/10 p-3 shadow-sm',titleClass:'text-sm font-semibold text-blue-700 dark:text-blue-300',subtitleClass:'text-xs text-blue-700/80 dark:text-blue-300/80',valueClass:'text-2xl font-bold text-blue-800 dark:text-blue-200',countClass:'text-xs text-blue-700/70 dark:text-blue-300/70'}
+    ];
+
+    html+='<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">';
+    matrixDefs.forEach(function(def){
+      var pct=metacognition.matrixPercentages&&typeof metacognition.matrixPercentages[def.key]==='number'?metacognition.matrixPercentages[def.key]:0;
+      var count=metacognition.matrixCounts&&typeof metacognition.matrixCounts[def.key]==='number'?metacognition.matrixCounts[def.key]:0;
+      html+='<div class="'+def.cardClass+'">';
+      html+='<div class="flex items-center gap-2 mb-2">';
+      html+='<span class="text-xl">'+def.emoji+'</span>';
+      html+='<div>';
+      html+='<div class="'+def.titleClass+'">'+def.title+'</div>';
+      html+='<div class="'+def.subtitleClass+'">'+def.subtitle+'</div>';
+      html+='</div>';
+      html+='</div>';
+      html+='<div class="'+def.valueClass+'">'+pct+'%</div>';
+      html+='<div class="'+def.countClass+'">'+count+' students</div>';
+      html+='</div>';
+    });
+    html+='</div>';
+
+    var levelOrder=['guessing','somewhat-sure','very-sure','certain'];
+    html+='<div class="mt-5">';
+    html+='<h5 class="text-xs font-semibold uppercase tracking-wide text-brand-dark-gray/60 dark:text-brand-white/60 mb-2">Confidence Levels</h5>';
+    html+='<div class="space-y-2">';
+    levelOrder.forEach(function(level){
+      var style=CONFIDENCE_LEVEL_STYLES[level]||{};
+      var stats=metacognition.levels&&metacognition.levels[level]?metacognition.levels[level]:{total:0,totalPct:0,correctPct:0};
+      var label=style.label||level;
+      var emoji=style.emoji||'';
+      var textClass=style.textClass||'text-brand-dark-gray/80 dark:text-brand-white/80';
+      var accentClass=style.accentClass||'text-brand-dark-gray/60 dark:text-brand-white/60';
+      var barClass=style.barClass||'bg-primary';
+      html+='<div class="rounded-lg border border-brand-light-gray/50 dark:border-brand-dark-gray/50 bg-white/80 dark:bg-brand-dark-gray/40 px-3 py-2">';
+      html+='<div class="flex items-center justify-between text-sm mb-2">';
+      html+='<span class="font-semibold '+textClass+'">'+emoji+' '+label+'</span>';
+      html+='<span class="text-brand-dark-gray/60 dark:text-brand-white/60">'+stats.total+' • '+stats.totalPct+'%</span>';
+      html+='</div>';
+      html+='<div class="h-2 rounded-full bg-brand-light-gray/60 dark:bg-brand-dark-gray/60 overflow-hidden">';
+      html+='<div class="h-full '+barClass+'" style="width: '+Math.max(0,Math.min(100,stats.totalPct))+'%;"></div>';
+      html+='</div>';
+      html+='<div class="mt-2 text-[11px] uppercase tracking-wide '+accentClass+'">Accuracy '+stats.correctPct+'%</div>';
+      html+='</div>';
+    });
+    html+='</div>';
+    html+='</div>';
+
+    var flagged=Array.isArray(metacognition.flaggedStudents)?metacognition.flaggedStudents:[];
+    if(flagged.length>0){
+      html+='<div class="mt-5 rounded-lg border border-red-500/40 bg-red-500/10 p-3">';
+      html+='<div class="flex items-center gap-2 mb-2">';
+      html+='<span class="material-symbols-outlined text-red-600 dark:text-red-300">report</span>';
+      html+='<h5 class="text-sm font-semibold text-red-700 dark:text-red-200">Confidently Incorrect Students</h5>';
+      html+='</div>';
+      html+='<div class="flex flex-wrap gap-2">';
+      flagged.forEach(function(student){
+        var display=escapeHtml(student.name||student.email||'Student');
+        var confidenceText=describeConfidence(student.confidence);
+        html+='<div class="px-3 py-2 rounded-lg bg-white/80 dark:bg-brand-dark-gray/60 border border-red-500/30 text-sm text-red-700 dark:text-red-200">';
+        html+='<div class="font-semibold">'+display+'</div>';
+        if(confidenceText){
+          html+='<div class="text-xs text-red-700/80 dark:text-red-200/80">'+escapeHtml(confidenceText)+'</div>';
+        }
+        if(student.answer){
+          html+='<div class="text-xs text-red-700/70 dark:text-red-200/70">Answer: '+escapeHtml(student.answer)+'</div>';
+        }
+        html+='</div>';
+      });
+      html+='</div>';
+      html+='</div>';
+    }else{
+      html+='<p class="mt-5 text-xs text-brand-dark-gray/60 dark:text-brand-white/60">No confidently incorrect responses detected.</p>';
+    }
+
+    card.innerHTML=html;
+    card.classList.remove('hidden');
   }
 
   // Global filters for student status panel
@@ -6292,14 +6457,21 @@
       var textClass=isCorrect?'text-green-800 dark:text-green-200':(isIncorrect?'text-red-800 dark:text-red-200':'text-blue-800 dark:text-blue-200');
       var subTextClass=isCorrect?'text-green-700/80 dark:text-green-200/80':(isIncorrect?'text-red-700/80 dark:text-red-200/80':'text-blue-700/80 dark:text-blue-200/80');
       var statusLabel=isCorrect?'Correct':(isIncorrect?'Incorrect':'Submitted');
-      var answerLabel=student.answer?(' • '+student.answer):'';
+      var detailParts=[statusLabel];
+      if(student.answer){
+        detailParts.push(student.answer);
+      }
+      var confidenceText=describeConfidence(student.confidence);
+      if(confidenceText){
+        detailParts.push(confidenceText);
+      }
 
       tile.className='flex items-center justify-between gap-3 p-3 rounded-lg '+baseColorClass+' transition-all duration-200';
       icon.className+=' '+iconClass;
       icon.textContent=iconName;
       nameSpan.className+=' '+textClass;
       detailSpan.className+=' '+subTextClass;
-      detailSpan.textContent=statusLabel+answerLabel;
+      detailSpan.textContent=detailParts.join(' • ');
       actions.push(createResetButton(student));
       actions.push(createBlockButton(student));
     }else if(status==='LOCKED'){
@@ -6393,6 +6565,12 @@
     answerCell.textContent=student.answer||'';
     row.appendChild(answerCell);
 
+    var confidenceCell=document.createElement('td');
+    confidenceCell.className='px-3 py-2 text-sm text-brand-dark-gray/60 dark:text-brand-white/60 truncate';
+    var confidenceText=describeConfidence(student.confidence);
+    confidenceCell.textContent=confidenceText||'—';
+    row.appendChild(confidenceCell);
+
     var correctCell=document.createElement('td');
     correctCell.className='px-3 py-2 text-sm text-brand-dark-gray/70 dark:text-brand-white/70 text-center';
     if(student.isCorrect===true){
@@ -6450,7 +6628,8 @@
           (student.lastName||'').toLowerCase(),
           (student.email||'').toLowerCase(),
           (student.status||'').toLowerCase(),
-          (student.answer||'').toLowerCase()
+          (student.answer||'').toLowerCase(),
+          (describeConfidence(student.confidence)||'').toLowerCase()
         ];
         return fields.some(function(value){return value&&value.indexOf(query)!==-1;});
       });

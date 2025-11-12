@@ -66,6 +66,7 @@ Gets current question for student:
 
 #### `submitIndividualTimedAnswer(pollId, sessionId, studentEmail, actualQuestionIndex, answer, confidenceLevel)`
 Records answer and advances progress:
+- **SECURITY: Validates elapsed time server-side** - Rejects submissions if time limit exceeded, even if lock sweep hasn't run yet
 - Validates current question (prevents backwards navigation)
 - Checks for duplicate submissions
 - Records response in Responses sheet
@@ -384,11 +385,22 @@ All existing functionality preserved:
 
 ## Security Considerations
 
+### Time Limit Enforcement
+**Critical:** Time limits are enforced server-side in `submitIndividualTimedAnswer()` to prevent bypass:
+- Each submission calculates elapsed time from `studentState.startTime`
+- If `elapsedMinutes >= timeLimitMinutes`, submission is rejected and student is locked
+- This protects against:
+  - Client-side timer manipulation
+  - Delayed lock sweep jobs
+  - Race conditions between question load and submission
+- Lock state is updated atomically before throwing error
+
+### Other Security Measures
 - Question randomization prevents sharing answer order
-- Backwards navigation prevention enforced server-side
-- Time limit checked on both client and server
+- Backwards navigation prevention enforced server-side (validates `expectedQuestionIndex`)
 - Session ID prevents cross-session data access
 - Proctoring violations recorded same as live polls
+- Duplicate submission check prevents double-answering
 
 ## API Reference
 

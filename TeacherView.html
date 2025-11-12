@@ -1026,22 +1026,44 @@
 <body class="font-display bg-background-light dark:bg-background-dark text-brand-dark-gray dark:text-brand-white">
   <div class="flex h-screen w-full flex-col">
     <!-- Header - Default State -->
-    <header id="header-default" class="flex shrink-0 items-center justify-between whitespace-nowrap border-b border-solid border-veritas-navy/80 bg-veritas-navy px-6 py-4 shadow-md">
-      <div class="flex items-center gap-6 flex-1">
-        <div class="flex items-center gap-4 cursor-pointer hover:opacity-80 transition-opacity" onclick="showDashboard()">
+    <header id="header-default" class="flex flex-wrap items-center gap-4 border-b border-solid border-veritas-navy/80 bg-veritas-navy px-6 py-4 shadow-md">
+      <div class="flex items-center gap-3">
+        <button id="dashboard-sidebar-toggle" type="button" class="flex h-10 w-10 items-center justify-center rounded-full bg-brand-white/10 text-brand-white transition-colors hover:bg-brand-white/20 focus:outline-none focus:ring-2 focus:ring-brand-white/60" aria-label="Hide navigation" aria-expanded="true">
+          <span class="material-symbols-outlined text-2xl">menu_open</span>
+        </button>
+        <div class="flex items-center gap-4 cursor-pointer hover:opacity-80 transition-opacity" onclick="showDashboard()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showDashboard();}" role="button" tabindex="0">
           <img alt="Malvern Prep Logo" class="h-12 w-auto" src="https://raw.githubusercontent.com/stephenborish/veritasassets/f0a824864d7d66637a13b822bff99fa6830e6123/mplogo.png"/>
           <div class="flex flex-col">
             <h1 class="text-brand-white text-xl font-bold tracking-wide uppercase" style="letter-spacing: 0.15em;">Veritas</h1>
             <p class="text-brand-white/70 text-xs tracking-wide">Teacher Dashboard</p>
           </div>
         </div>
+      </div>
 
-        <!-- Subheader Strip -->
-        <div class="hidden md:flex items-center gap-6 ml-8">
+      <div id="header-session-controls" class="flex flex-1 flex-wrap items-center justify-center gap-3 text-sm">
+        <div class="min-w-[220px]">
+          <label for="poll-select" class="sr-only">Select Poll to Start Session</label>
+          <select id="poll-select" class="w-full rounded-lg border border-brand-white/30 bg-brand-white/10 px-3 py-2 text-sm text-brand-white placeholder-brand-white/70 focus:border-brand-white focus:outline-none focus:ring-2 focus:ring-veritas-gold/60">
+            <option value="">-- Choose a poll --</option>
+          </select>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="start-poll-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-veritas-gold text-white text-sm font-semibold hover:bg-veritas-gold/90 transition-colors shadow-sm disabled:cursor-not-allowed disabled:opacity-60" disabled>
+            <span class="material-symbols-outlined text-lg">play_circle</span>
+            <span>Start Session</span>
+          </button>
+          <button id="send-link-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+            <span class="material-symbols-outlined text-lg">mail</span>
+            <span>Send Links</span>
+          </button>
+          <button id="view-links-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+            <span class="material-symbols-outlined text-lg">visibility</span>
+            <span>View Links</span>
+          </button>
         </div>
       </div>
 
-      <div class="flex items-center gap-3">
+      <div class="ml-auto flex items-center gap-3">
         <div id="loader" class="loader" style="display: block;">
           <div class="h-6 w-6 animate-spin rounded-full border-2 border-brand-white/80 border-t-transparent"></div>
         </div>
@@ -1051,8 +1073,11 @@
     <!-- Header - Live Poll State -->
     <header id="header-live" class="shrink-0 bg-veritas-navy px-6 py-4 shadow-lg border-b border-veritas-navy/70" style="display: none;">
       <div class="flex w-full flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div class="flex items-center gap-4">
-          <div class="flex items-center gap-4 cursor-pointer hover:opacity-80 transition-opacity" onclick="showDashboard()">
+        <div class="flex items-center gap-3">
+          <button id="dashboard-sidebar-toggle-live" type="button" class="flex h-10 w-10 items-center justify-center rounded-full bg-brand-white/10 text-brand-white transition-colors hover:bg-brand-white/20 focus:outline-none focus:ring-2 focus:ring-brand-white/60" aria-label="Hide navigation" aria-expanded="true">
+            <span class="material-symbols-outlined text-2xl">menu_open</span>
+          </button>
+          <div class="flex items-center gap-4 cursor-pointer hover:opacity-80 transition-opacity" onclick="showDashboard()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showDashboard();}" role="button" tabindex="0">
             <img alt="Malvern Prep Logo" class="h-10 w-auto" src="https://raw.githubusercontent.com/stephenborish/veritasassets/f0a824864d7d66637a13b822bff99fa6830e6123/mplogo.png"/>
           </div>
           <div class="flex flex-col">
@@ -1062,14 +1087,14 @@
         </div>
 
         <!-- Compact Timer -->
-        <div class="flex items-center gap-2 bg-brand-white/10 rounded-lg px-3 py-1.5 border border-brand-white/20">
+        <div class="flex flex-wrap items-center gap-2 rounded-lg border border-brand-white/20 bg-brand-white/10 px-3 py-1.5">
           <button id="subtract-10s-btn" class="text-brand-white/60 hover:text-brand-white transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed p-0.5" aria-label="-10 seconds">
             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
           </button>
           <input
             type="text"
             id="timer-display"
-            class="text-base font-bold text-center text-brand-white transition-all bg-transparent w-16 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded placeholder-brand-white/40 disabled:opacity-70"
+            class="w-20 rounded bg-transparent text-center text-lg font-bold text-brand-white transition-all placeholder-brand-white/40 focus:outline-none focus:ring-1 focus:ring-sky-400 disabled:opacity-70"
             value="01:30"
             aria-label="Timer display"
           />
@@ -1139,6 +1164,39 @@
     </header>
 
     <div class="flex flex-grow overflow-hidden">
+      <!-- Left Navigation Sidebar -->
+      <aside id="dashboard-sidebar" class="flex h-full w-64 flex-shrink-0 flex-col border-r border-veritas-navy/25 bg-veritas-navy p-4 text-brand-white shadow-lg">
+        <div class="mb-4 px-1">
+          <p class="text-xs font-semibold uppercase tracking-[0.32em] text-brand-white/60">Navigation</p>
+        </div>
+        <nav class="flex flex-1 flex-col gap-2">
+          <button id="nav-polls-list" data-section-target="dashboard" class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg font-semibold transition-colors text-left" aria-current="page">
+            <span class="material-symbols-outlined">monitoring</span>
+            <span>Live Dashboard</span>
+          </button>
+          <button id="nav-create-poll" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-brand-white/10 text-brand-white hover:bg-brand-white/20 transition-colors text-left">
+            <span class="material-symbols-outlined">add_circle</span>
+            <span>Create New Poll</span>
+          </button>
+          <button id="nav-rosters" data-section-target="roster" class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left">
+            <span class="material-symbols-outlined">group</span>
+            <span>Classes &amp; Rosters</span>
+          </button>
+          <button id="nav-archived" data-section-target="archived" class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left">
+            <span class="material-symbols-outlined">inventory_2</span>
+            <span>Archived Polls</span>
+          </button>
+          <button id="nav-analytics" data-section-target="analytics" class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left">
+            <span class="material-symbols-outlined">analytics</span>
+            <span>Analytics Hub</span>
+          </button>
+        </nav>
+        <div class="mt-6 rounded-lg border border-brand-white/10 bg-brand-white/5 px-3 py-3 text-xs text-brand-white/70">
+          <p class="font-semibold uppercase tracking-[0.18em] text-brand-white/60">Tip</p>
+          <p class="mt-1 leading-relaxed">Use the controls in the top bar to quickly start a live session from any poll.</p>
+        </div>
+      </aside>
+
       <!-- Main Content Area -->
       <main class="flex-1 overflow-y-auto">
         <!-- Dashboard View (Default) - Redesigned -->
@@ -1148,33 +1206,7 @@
             <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
               <div>
                 <h2 class="text-2xl font-bold text-veritas-navy mb-1">Poll Library & Session Management</h2>
-                <p class="text-gray-600 text-sm">Select a poll to start a live session, or create, edit, and manage your polls</p>
-              </div>
-            </div>
-
-            <!-- Session Controls -->
-            <div class="bg-veritas-navy/5 rounded-lg p-4 mb-6 border border-veritas-navy/10">
-              <div class="flex flex-wrap items-end gap-4">
-                <div class="flex-1 min-w-[240px]">
-                  <label class="block text-sm font-medium mb-2 text-veritas-navy" for="poll-select">Select Poll to Start Session</label>
-                  <select id="poll-select" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-veritas-gold">
-                    <option value="">-- Choose a poll --</option>
-                  </select>
-                </div>
-                <div class="flex flex-wrap gap-2 items-center">
-                  <button id="start-poll-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-veritas-gold text-white text-sm font-semibold hover:bg-veritas-gold/90 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed" disabled>
-                    <span class="material-symbols-outlined text-lg">play_circle</span>
-                    <span>Start Session</span>
-                  </button>
-                  <button id="send-link-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm disabled:opacity-50" disabled>
-                    <span class="material-symbols-outlined text-lg">mail</span>
-                    <span>Send Links</span>
-                  </button>
-                  <button id="view-links-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50" disabled>
-                    <span class="material-symbols-outlined text-lg">visibility</span>
-                    <span>View Links</span>
-                  </button>
-                </div>
+                <p class="text-gray-600 text-sm">Use the session controls in the header to start a live session, or create, edit, and manage your polls below.</p>
               </div>
             </div>
 
@@ -1297,103 +1329,141 @@
           <!-- Main Content (Right) -->
           <div id="live-main-content" class="flex-1 overflow-y-auto px-6 py-8">
             <div class="flex flex-col gap-6">
-            <!-- VIOLATIONS ALERT PANEL - Top Priority -->
-            <div id="violations-alert-panel" class="hidden bg-gradient-to-r from-red-600 to-orange-600 rounded-xl border-2 border-red-300 dark:border-red-700 p-4 shadow-lg animate-pulse-slow">
-              <div class="flex items-start justify-between gap-4">
-                <div class="flex items-start gap-3 flex-1">
-                  <div class="flex-shrink-0 bg-white/20 rounded-full p-2">
-                    <span class="material-symbols-outlined text-white text-2xl">warning</span>
+              <div id="live-alert-stack" class="space-y-4">
+                <!-- VIOLATIONS ALERT PANEL - Top Priority -->
+                <div id="violations-alert-panel" class="hidden bg-gradient-to-r from-red-600 to-orange-600 rounded-xl border-2 border-red-300 dark:border-red-700 p-4 shadow-lg animate-pulse-slow">
+                  <div class="flex items-start justify-between gap-4">
+                    <div class="flex items-start gap-3 flex-1">
+                      <div class="flex-shrink-0 bg-white/20 rounded-full p-2">
+                        <span class="material-symbols-outlined text-white text-2xl">warning</span>
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <h3 class="text-white text-lg font-bold mb-1">Students Locked Out</h3>
+                        <p id="violations-summary" class="text-white/90 text-sm mb-3">Students need approval to re-enter the poll</p>
+                        <div id="violations-quick-list" class="flex flex-wrap gap-2">
+                          <!-- Quick violation tiles will be populated here -->
+                        </div>
+                      </div>
+                    </div>
+                    <button id="dismiss-violations-alert" class="flex-shrink-0 text-white/80 hover:text-white transition-colors">
+                      <span class="material-symbols-outlined">close</span>
+                    </button>
                   </div>
-                  <div class="flex-1 min-w-0">
-                    <h3 class="text-white text-lg font-bold mb-1">Students Locked Out</h3>
-                    <p id="violations-summary" class="text-white/90 text-sm mb-3">Students need approval to re-enter the poll</p>
-                    <div id="violations-quick-list" class="flex flex-wrap gap-2">
-                      <!-- Quick violation tiles will be populated here -->
+                </div>
+              </div>
+
+              <div class="grid gap-6 2xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+                <div class="flex flex-col gap-6">
+                  <div id="live-session-overview" class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    <div class="rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 bg-brand-white p-4 shadow-sm dark:bg-brand-dark-gray/30">
+                      <p class="text-xs font-semibold uppercase tracking-[0.22em] text-brand-dark-gray/60 dark:text-brand-white/60">Response Progress</p>
+                      <p id="live-overview-responses" class="mt-2 text-2xl font-bold text-brand-dark-gray dark:text-brand-white">0 / 0</p>
+                      <div class="mt-3 h-2 w-full overflow-hidden rounded-full bg-brand-light-gray/60 dark:bg-brand-white/10">
+                        <div id="live-overview-response-progress" class="h-full rounded-full bg-primary transition-all duration-300" style="width: 0%;"></div>
+                      </div>
+                      <p id="live-overview-response-caption" class="mt-2 text-xs text-brand-dark-gray/60 dark:text-brand-white/60">Waiting for students...</p>
+                    </div>
+                    <div class="rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 bg-brand-white p-4 shadow-sm dark:bg-brand-dark-gray/30">
+                      <p class="text-xs font-semibold uppercase tracking-[0.22em] text-brand-dark-gray/60 dark:text-brand-white/60">Accuracy</p>
+                      <p id="live-overview-accuracy" class="mt-2 text-2xl font-bold text-brand-dark-gray dark:text-brand-white">0%</p>
+                      <p id="live-overview-accuracy-caption" class="mt-2 text-xs text-brand-dark-gray/60 dark:text-brand-white/60">No responses yet</p>
+                    </div>
+                    <div class="rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 bg-brand-white p-4 shadow-sm dark:bg-brand-dark-gray/30">
+                      <p class="text-xs font-semibold uppercase tracking-[0.22em] text-brand-dark-gray/60 dark:text-brand-white/60">Lockout Queue</p>
+                      <div class="mt-2 flex items-baseline gap-2">
+                        <span id="live-overview-lockouts" class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">0</span>
+                        <span class="text-xs font-medium text-brand-dark-gray/60 dark:text-brand-white/60">students</span>
+                      </div>
+                      <p id="live-overview-lockouts-caption" class="mt-2 text-xs text-brand-dark-gray/60 dark:text-brand-white/60">No approvals pending</p>
+                      <button id="focus-lockouts-btn" type="button" class="mt-3 inline-flex items-center gap-1 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-white/10 dark:text-brand-white dark:hover:bg-brand-white/20" disabled>Review requests</button>
+                    </div>
+                    <div class="rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 bg-brand-white p-4 shadow-sm dark:bg-brand-dark-gray/30">
+                      <p class="text-xs font-semibold uppercase tracking-[0.22em] text-brand-dark-gray/60 dark:text-brand-white/60">Awaiting Responses</p>
+                      <p id="live-overview-waiting" class="mt-2 text-2xl font-bold text-brand-dark-gray dark:text-brand-white">0</p>
+                      <p id="live-overview-waiting-caption" class="mt-2 text-xs text-brand-dark-gray/60 dark:text-brand-white/60">Everyone has responded</p>
+                    </div>
+                  </div>
+
+                  <!-- Question Display -->
+                  <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm">
+                    <div class="flex flex-col gap-4">
+                      <div class="flex items-center justify-between">
+                        <p id="live-question-info" class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm font-medium leading-normal">Question 1 of 10</p>
+                        <div class="flex items-center gap-2">
+                          <span id="response-count-header" class="text-brand-dark-gray/80 dark:text-brand-white/80 text-sm font-semibold">0 / 0 answered</span>
+                        </div>
+                      </div>
+                      <h2 id="live-question-text" class="font-serif text-brand-dark-gray dark:text-brand-white tracking-tight text-xl leading-snug">Question text appears here</h2>
+                      <div id="question-image-container" class="teacher-question-image" style="display: none;">
+                        <img id="live-question-image" alt="Question" class="teacher-question-image-el" src="" referrerpolicy="no-referrer" onerror="this.style.display='none';"/>
+                        <button class="teacher-question-image-zoom" type="button" onclick="window.expandQuestionImage()">
+                          <span class="material-symbols-outlined">zoom_in</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Live Results -->
+                  <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm">
+                    <div class="flex justify-between items-center mb-6">
+                      <h3 class="text-brand-dark-gray dark:text-brand-white text-xl font-bold leading-normal">Live Results</h3>
+                      <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-primary dark:text-brand-white">group</span>
+                        <span id="response-count" class="text-brand-dark-gray dark:text-brand-white text-base font-medium">0 / 0 answered</span>
+                      </div>
+                    </div>
+                    <div id="results-bars" class="flex flex-col gap-3">
+                      <!-- Results bars will be populated dynamically -->
+                    </div>
+                    <div id="live-metacognition-card" class="mt-6 hidden rounded-xl border border-brand-light-gray/60 dark:border-brand-dark-gray/40 bg-brand-light-gray/10 dark:bg-brand-dark-gray/30 p-5"></div>
+                    <div id="results-reveal-strip" class="mt-6 hidden">
+                      <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-green-600/20 bg-green-600/5 px-4 py-3 dark:border-green-500/20 dark:bg-green-500/5">
+                        <div class="min-w-[200px]">
+                          <p class="text-sm font-semibold text-green-700 dark:text-green-400">Answer revealed to students</p>
+                          <p id="results-strip-status" class="text-xs text-green-700/70 dark:text-green-400/70">Students can now see the correct answer and results.</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                          <button id="hide-results-btn" class="flex items-center gap-2 rounded-full bg-brand-light-gray/60 text-brand-dark-gray px-4 py-2 text-sm font-semibold tracking-[0.015em] transition-colors hover:bg-brand-light-gray disabled:cursor-not-allowed disabled:opacity-60 dark:bg-brand-white/10 dark:text-brand-white dark:hover:bg-brand-white/20" type="button">
+                            <span class="material-symbols-outlined text-base">visibility_off</span>
+                            <span>Hide Results</span>
+                          </button>
+                          <button id="strip-next-btn" class="flex items-center gap-2 rounded-full bg-primary text-brand-white px-4 py-2 text-sm font-semibold tracking-[0.015em] shadow-sm transition-colors hover:bg-primary/90 dark:text-brand-white dark:bg-primary dark:hover:bg-primary/90" type="button">
+                            <span class="material-symbols-outlined text-base">skip_next</span>
+                            <span>Next Question</span>
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-                <button id="dismiss-violations-alert" class="flex-shrink-0 text-white/80 hover:text-white transition-colors">
-                  <span class="material-symbols-outlined">close</span>
-                </button>
-              </div>
-            </div>
 
-            <!-- ENHANCED EXITED STUDENTS PANEL (2025) -->
-            <div id="exited-students-panel" class="hidden bg-white dark:bg-brand-dark-gray/30 rounded-xl border-2 border-orange-400 dark:border-orange-500 shadow-lg">
-              <div class="bg-gradient-to-r from-orange-500 to-red-500 px-5 py-3 rounded-t-xl flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                  <span class="material-symbols-outlined text-white text-2xl">exit_to_app</span>
-                  <div>
-                    <h3 class="text-white text-lg font-bold">Students Exited Poll</h3>
-                    <p class="text-white/90 text-sm"><span id="exited-students-count">0</span> student(s) awaiting re-entry approval</p>
-                  </div>
-                </div>
-                <div class="flex items-center gap-2">
-                  <button id="approve-all-unlocks-btn" class="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2" title="Approve all students for re-entry">
-                    <span class="material-symbols-outlined text-base">check_circle</span>
-                    <span>Approve All</span>
-                  </button>
-                  <button id="toggle-exited-panel-btn" class="text-white/80 hover:text-white transition-colors p-1">
-                    <span class="material-symbols-outlined">expand_more</span>
-                  </button>
-                </div>
-              </div>
-              <div id="exited-students-list" class="p-4 grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto">
-                <!-- Exited student cards will be populated here -->
-              </div>
-            </div>
-
-            <!-- Question Display -->
-            <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm">
-              <div class="flex flex-col gap-4">
-                <div class="flex items-center justify-between">
-                  <p id="live-question-info" class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm font-medium leading-normal">Question 1 of 10</p>
-                  <div class="flex items-center gap-2">
-                    <span id="response-count-header" class="text-brand-dark-gray/80 dark:text-brand-white/80 text-sm font-semibold">0 / 0 answered</span>
-                  </div>
-                </div>
-                <h2 id="live-question-text" class="font-serif text-brand-dark-gray dark:text-brand-white tracking-tight text-xl leading-snug">Question text appears here</h2>
-                <div id="question-image-container" class="teacher-question-image" style="display: none;">
-                  <img id="live-question-image" alt="Question" class="teacher-question-image-el" src="" referrerpolicy="no-referrer" onerror="this.style.display='none';"/>
-                  <button class="teacher-question-image-zoom" type="button" onclick="window.expandQuestionImage()">
-                    <span class="material-symbols-outlined">zoom_in</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Live Results -->
-            <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm">
-              <div class="flex justify-between items-center mb-6">
-                <h3 class="text-brand-dark-gray dark:text-brand-white text-xl font-bold leading-normal">Live Results</h3>
-                <div class="flex items-center gap-3">
-                  <span class="material-symbols-outlined text-primary dark:text-brand-white">group</span>
-                  <span id="response-count" class="text-brand-dark-gray dark:text-brand-white text-base font-medium">0 / 0 answered</span>
-                </div>
-              </div>
-              <div id="results-bars" class="flex flex-col gap-3">
-                <!-- Results bars will be populated dynamically -->
-              </div>
-              <div id="live-metacognition-card" class="mt-6 hidden rounded-xl border border-brand-light-gray/60 dark:border-brand-dark-gray/40 bg-brand-light-gray/10 dark:bg-brand-dark-gray/30 p-5"></div>
-              <div id="results-reveal-strip" class="mt-6 hidden">
-                <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-green-600/20 bg-green-600/5 px-4 py-3 dark:border-green-500/20 dark:bg-green-500/5">
-                  <div class="min-w-[200px]">
-                    <p class="text-sm font-semibold text-green-700 dark:text-green-400">Answer revealed to students</p>
-                    <p id="results-strip-status" class="text-xs text-green-700/70 dark:text-green-400/70">Students can now see the correct answer and results.</p>
-                  </div>
-                  <div class="flex flex-wrap items-center gap-2">
-                    <button id="hide-results-btn" class="flex items-center gap-2 rounded-full bg-brand-light-gray/60 text-brand-dark-gray px-4 py-2 text-sm font-semibold tracking-[0.015em] transition-colors hover:bg-brand-light-gray disabled:cursor-not-allowed disabled:opacity-60 dark:bg-brand-white/10 dark:text-brand-white dark:hover:bg-brand-white/20" type="button">
-                      <span class="material-symbols-outlined text-base">visibility_off</span>
-                      <span>Hide Results</span>
-                    </button>
-                    <button id="strip-next-btn" class="flex items-center gap-2 rounded-full bg-primary text-brand-white px-4 py-2 text-sm font-semibold tracking-[0.015em] shadow-sm transition-colors hover:bg-primary/90 dark:text-brand-white dark:bg-primary dark:hover:bg-primary/90" type="button">
-                      <span class="material-symbols-outlined text-base">skip_next</span>
-                      <span>Next Question</span>
-                    </button>
+                <div class="flex flex-col gap-6">
+                  <!-- ENHANCED EXITED STUDENTS PANEL (2025) -->
+                  <div id="exited-students-panel" class="hidden rounded-xl border-2 border-orange-400 bg-white shadow-lg dark:border-orange-500 dark:bg-brand-dark-gray/30">
+                    <div class="bg-gradient-to-r from-orange-500 to-red-500 px-5 py-3 rounded-t-xl flex items-center justify-between">
+                      <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-white text-2xl">exit_to_app</span>
+                        <div>
+                          <h3 class="text-white text-lg font-bold">Students Exited Poll</h3>
+                          <p class="text-white/90 text-sm"><span id="exited-students-count">0</span> student(s) awaiting re-entry approval</p>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <button id="approve-all-unlocks-btn" class="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2" title="Approve all students for re-entry">
+                          <span class="material-symbols-outlined text-base">check_circle</span>
+                          <span>Approve All</span>
+                        </button>
+                        <button id="toggle-exited-panel-btn" class="text-white/80 hover:text-white transition-colors p-1">
+                          <span class="material-symbols-outlined">expand_more</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div id="exited-students-list" class="p-4 grid grid-cols-1 gap-3 max-h-64 overflow-y-auto md:grid-cols-2">
+                      <!-- Exited student cards will be populated here -->
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
             </div>
           </div>
         </div>
@@ -1746,31 +1816,6 @@
         </div>
       </main>
 
-      <!-- Right Sidebar Navigation -->
-      <aside class="w-64 bg-veritas-navy flex-col items-center p-4 border-l border-veritas-navy/20 hidden lg:flex">
-        <nav class="flex flex-col w-full gap-2">
-          <button id="nav-polls-list" data-section-target="dashboard" class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg font-semibold transition-colors text-left">
-            <span class="material-symbols-outlined">monitoring</span>
-            <span>Live Dashboard</span>
-          </button>
-          <button id="nav-create-poll" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-brand-white/70 hover:bg-brand-white/20 hover:text-brand-white transition-colors text-left">
-            <span class="material-symbols-outlined">add_circle</span>
-            <span>Create New Poll</span>
-          </button>
-          <button id="nav-rosters" data-section-target="roster" class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left">
-            <span class="material-symbols-outlined">group</span>
-            <span>Classes &amp; Rosters</span>
-          </button>
-          <button id="nav-archived" data-section-target="archived" class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left">
-            <span class="material-symbols-outlined">inventory_2</span>
-            <span>Archived Polls</span>
-          </button>
-          <button id="nav-analytics" data-section-target="analytics" class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left">
-            <span class="material-symbols-outlined">analytics</span>
-            <span>Analytics Hub</span>
-          </button>
-        </nav>
-      </aside>
     </div>
   </div>
 
@@ -2723,6 +2768,41 @@
     element.addEventListener('change',handler);
   }
 
+  function updateDashboardSidebarToggleState(){
+    var iconName=dashboardSidebarVisible?'menu_open':'menu';
+    var ariaLabel=dashboardSidebarVisible?'Hide navigation':'Show navigation';
+    dashboardSidebarToggleButtons.forEach(function(btn){
+      if(!btn)return;
+      var icon=btn.querySelector('.material-symbols-outlined');
+      if(icon){
+        icon.textContent=iconName;
+      }
+      btn.setAttribute('aria-label',ariaLabel);
+      btn.setAttribute('aria-expanded',dashboardSidebarVisible?'true':'false');
+    });
+  }
+
+  function setDashboardSidebarVisibility(visible){
+    if(!dashboardSidebar)return;
+    dashboardSidebarVisible=visible;
+    dashboardSidebar.style.display=visible?'flex':'none';
+    updateDashboardSidebarToggleState();
+  }
+
+  function toggleDashboardSidebar(event){
+    if(event){
+      event.preventDefault();
+    }
+    setDashboardSidebarVisibility(!dashboardSidebarVisible);
+  }
+
+  function registerDashboardSidebarToggle(id){
+    var btn=bindClick(id,toggleDashboardSidebar);
+    if(btn){
+      dashboardSidebarToggleButtons.push(btn);
+    }
+  }
+
   function storeButtonDefaultHtml(button){
     if(button && !button.dataset.defaultHtml){
       button.dataset.defaultHtml=button.innerHTML;
@@ -2799,6 +2879,10 @@
   var startPollBtn=document.getElementById('start-poll-btn');
   var sendLinkBtn=document.getElementById('send-link-btn');
   var viewLinksBtn=document.getElementById('view-links-btn');
+  var headerSessionControls=document.getElementById('header-session-controls');
+  var dashboardSidebar=document.getElementById('dashboard-sidebar');
+  var dashboardSidebarVisible=true;
+  var dashboardSidebarToggleButtons=[];
   var dashboard=document.getElementById('dashboard');
   var liveView=document.getElementById('live-view');
   var rosterManager=document.getElementById('roster-manager');
@@ -2906,6 +2990,19 @@
   bindClick('header-reset-question-btn',onResetQuestion);
   bindClick('hide-results-btn',onHideResults);
   bindClick('strip-next-btn',onNextQuestion);
+  registerDashboardSidebarToggle('dashboard-sidebar-toggle');
+  registerDashboardSidebarToggle('dashboard-sidebar-toggle-live');
+  updateDashboardSidebarToggleState();
+  if(dashboardSidebar){
+    dashboardSidebar.style.display='flex';
+  }
+  bindClick('focus-lockouts-btn',function(){
+    var panel=document.getElementById('exited-students-panel');
+    if(panel){
+      panel.classList.remove('hidden');
+      panel.scrollIntoView({behavior:'smooth',block:'start'});
+    }
+  });
   // New timer button event listeners
   bindClick('start-btn', startTimer);
   bindClick('pause-btn', pauseTimer);
@@ -3150,6 +3247,14 @@
         btn.classList.remove('font-semibold');
       }
     });
+
+    if(headerSessionControls){
+      if(section==='dashboard'){
+        headerSessionControls.classList.remove('hidden');
+      }else{
+        headerSessionControls.classList.add('hidden');
+      }
+    }
   }
 
   function clearLiveIntervals(){
@@ -3720,8 +3825,9 @@
     // Add click handler for poll names to open preview
     pollsTableBody.querySelectorAll('.poll-name-link').forEach(function(link){
       link.onclick=function(e){
+        e.preventDefault();
         e.stopPropagation();
-        openPollPreview(this.dataset.pollId);
+        startEditPoll(this.dataset.pollId);
       };
     });
   }
@@ -5517,6 +5623,98 @@
   }
 
   // --- Live View & Data Polling ---
+  function updateLiveOverviewFromData(data){
+    var totalResponses=(data&&typeof data.totalResponses==='number')?data.totalResponses:0;
+    var totalStudents=(data&&typeof data.totalStudents==='number')?data.totalStudents:0;
+    var responsesEl=document.getElementById('live-overview-responses');
+    var progressEl=document.getElementById('live-overview-response-progress');
+    var responseCaption=document.getElementById('live-overview-response-caption');
+
+    if(responsesEl){
+      responsesEl.textContent=totalResponses+' / '+totalStudents;
+    }
+
+    var completionPct=totalStudents>0?Math.round((totalResponses/totalStudents)*100):0;
+    if(progressEl){
+      var safeWidth=Math.max(0,Math.min(100,completionPct));
+      progressEl.style.width=safeWidth+'%';
+    }
+    if(responseCaption){
+      responseCaption.textContent=totalStudents>0?completionPct+'% complete':'Awaiting roster data';
+    }
+
+    var results=Array.isArray(data&&data.results)?data.results:[];
+    var correctAnswer=data&&data.correctAnswer;
+    var countedResponses=0;
+    var correctCount=0;
+
+    results.forEach(function(result){
+      if(!result)return;
+      var count=typeof result.count==='number'?result.count:0;
+      countedResponses+=count;
+      var answerText=result.answerText||result.text||'';
+      var isCorrect=result.isCorrect===true || (!!correctAnswer && answerText===correctAnswer);
+      if(isCorrect){
+        correctCount+=count;
+      }
+    });
+
+    var accuracyEl=document.getElementById('live-overview-accuracy');
+    var accuracyCaption=document.getElementById('live-overview-accuracy-caption');
+    var accuracyPct=countedResponses>0?Math.round((correctCount/countedResponses)*100):0;
+    if(accuracyEl){
+      accuracyEl.textContent=accuracyPct+'%';
+    }
+    if(accuracyCaption){
+      if(countedResponses===0){
+        accuracyCaption.textContent='No responses yet';
+      }else{
+        accuracyCaption.textContent=correctCount+' of '+countedResponses+' correct';
+      }
+    }
+  }
+
+  function updateLiveOverviewCounts(lockedCount,blockedCount,waitingCount){
+    var lockoutsEl=document.getElementById('live-overview-lockouts');
+    if(lockoutsEl){
+      lockoutsEl.textContent=lockedCount||0;
+    }
+
+    var lockoutsCaption=document.getElementById('live-overview-lockouts-caption');
+    if(lockoutsCaption){
+      var pendingTotal=(lockedCount||0)+(blockedCount||0);
+      if(pendingTotal===0){
+        lockoutsCaption.textContent='No approvals pending';
+      }else{
+        var parts=[];
+        if(lockedCount){parts.push(lockedCount+' locked');}
+        if(blockedCount){parts.push(blockedCount+' blocked');}
+        lockoutsCaption.textContent=parts.join(' • ');
+      }
+    }
+
+    var focusBtn=document.getElementById('focus-lockouts-btn');
+    if(focusBtn){
+      focusBtn.disabled=(lockedCount||0)===0;
+    }
+
+    var waitingEl=document.getElementById('live-overview-waiting');
+    if(waitingEl){
+      waitingEl.textContent=waitingCount||0;
+    }
+
+    var waitingCaption=document.getElementById('live-overview-waiting-caption');
+    if(waitingCaption){
+      if(!waitingCount){
+        waitingCaption.textContent='Everyone has responded';
+      }else if(waitingCount===1){
+        waitingCaption.textContent='1 student still working';
+      }else{
+        waitingCaption.textContent=waitingCount+' students still working';
+      }
+    }
+  }
+
   function updateLiveView(data){
     mainLoader.style.display='none';
     setButtonLoading(startPollBtn,false);
@@ -5694,6 +5892,8 @@
     if (responseCountHeader) {
       responseCountHeader.textContent=data.totalResponses+' / '+data.totalStudents+' answered';
     }
+
+    updateLiveOverviewFromData(data);
 
     // Update results bars
     renderResultsBars(data.results,data.correctAnswer,data.studentStatusList);
@@ -6714,6 +6914,7 @@
     var waitingCountEl=document.getElementById('waiting-count');
     if(waitingCountEl)waitingCountEl.textContent=waitingCount;
 
+    updateLiveOverviewCounts(lockedCount,blockedCount,waitingCount);
     updateViolationsAlert(flaggedStudents);
     updateExitedStudentsPanel(lockedStudents);
 
@@ -6841,6 +7042,7 @@
     var sidebar = document.getElementById('live-sidebar');
     var icon = document.getElementById('sidebar-toggle-icon');
     var label = document.getElementById('sidebar-toggle-label');
+    var toggleBtn=document.getElementById('toggle-sidebar-btn');
 
     if (!sidebar || !icon || !label) return;
 
@@ -6855,7 +7057,12 @@
       sidebar.classList.remove('w-80');
       sidebar.classList.add('w-0', 'hidden');
       icon.textContent = 'chevron_right';
-      label.textContent = '';
+      label.textContent = 'Show Sidebar';
+    }
+
+    if(toggleBtn){
+      toggleBtn.setAttribute('aria-expanded',sidebarVisible?'true':'false');
+      toggleBtn.setAttribute('aria-label',sidebarVisible?'Hide student sidebar':'Show student sidebar');
     }
   }
 

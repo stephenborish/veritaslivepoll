@@ -2320,6 +2320,8 @@
             btn.className = optionBaseClass;
             btn.dataset.answerText = option.text || '';
 
+            var displayText = (option.text || '').trim();
+
             var content = '<div class="option-leading">';
             content += '<span class="result-indicator" aria-hidden="true"></span>';
             content += '<div class="letter-badge" aria-hidden="true">' + letter + '</div>';
@@ -2328,8 +2330,8 @@
             if (option.imageURL) {
                 content += '<img src="' + escapeHtml(option.imageURL) + '" alt="Answer ' + letter + '" class="option-image" referrerpolicy="no-referrer">';
             }
-            if (option.text) {
-                content += '<p class="option-text">' + escapeHtml(option.text) + '</p>';
+            if (displayText) {
+                content += '<p class="option-text">' + escapeHtml(displayText).replace(/\n/g, '<br>') + '</p>';
             }
             content += '<span class="result-ribbon"></span>';
             content += '<span class="sr-only result-announcement"></span>';

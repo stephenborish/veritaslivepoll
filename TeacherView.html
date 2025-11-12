@@ -5643,16 +5643,40 @@
       responseCaption.textContent=totalStudents>0?completionPct+'% complete':'Awaiting roster data';
     }
 
-    var results=Array.isArray(data&&data.results)?data.results:[];
+    var rawResults=data&&data.results;
+    var resultsArray;
+    if(Array.isArray(rawResults)){
+      resultsArray=rawResults;
+    }else if(rawResults&&typeof rawResults==='object'){
+      resultsArray=Object.keys(rawResults).map(function(answerText){
+        var value=rawResults[answerText];
+        if(value&&typeof value==='object'&&!Array.isArray(value)){
+          var mapped={};
+          Object.keys(value).forEach(function(key){
+            mapped[key]=value[key];
+          });
+          mapped.answerText=answerText;
+          mapped.count=typeof value.count==='number'?value.count:0;
+          return mapped;
+        }
+        return {
+          answerText:answerText,
+          count:typeof value==='number'?value:0
+        };
+      });
+    }else{
+      resultsArray=[];
+    }
+
     var correctAnswer=data&&data.correctAnswer;
     var countedResponses=0;
     var correctCount=0;
 
-    results.forEach(function(result){
+    resultsArray.forEach(function(result){
       if(!result)return;
       var count=typeof result.count==='number'?result.count:0;
       countedResponses+=count;
-      var answerText=result.answerText||result.text||'';
+      var answerText=result.answerText||result.text||result.optionText||'';
       var isCorrect=result.isCorrect===true || (!!correctAnswer && answerText===correctAnswer);
       if(isCorrect){
         correctCount+=count;

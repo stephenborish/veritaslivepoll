@@ -2018,10 +2018,12 @@
                         iconEl.textContent = 'check_circle';
                         iconEl.className = 'material-symbols-outlined text-6xl text-green-300 mb-4 inline-block';
                     }
-                } else {
+                } else if (pendingAnswerText === null) {
+                    // Only show question if we're not waiting for confidence input
                     questionContainer.style.display = 'block';
                     statusContainer.style.display = 'none';
                 }
+                // If pendingAnswerText is not null, we're showing confidence question - don't change display
                 return;
             }
 

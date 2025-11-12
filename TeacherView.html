@@ -1150,45 +1150,6 @@
             </div>
           </div>
 
-          <!-- Recent Sessions Summary -->
-          <div class="dashboard-card mt-6">
-            <h2 class="text-xl font-bold text-veritas-navy mb-1">Recent Sessions</h2>
-            <p class="text-gray-600 text-sm mb-4">Your last 5 live poll sessions</p>
-
-            <div id="recent-sessions-container" class="space-y-0">
-              <!-- Populated dynamically -->
-              <div class="text-center py-6 text-gray-500 text-sm">
-                Loading recent sessions...
-              </div>
-            </div>
-
-            <button class="mt-4 text-veritas-navy text-sm font-semibold hover:text-veritas-gold transition-colors flex items-center gap-1" onclick="showAnalyticsView()">
-              <span>View All in Analytics</span>
-              <span class="material-symbols-outlined text-lg">arrow_forward</span>
-            </button>
-          </div>
-
-          <!-- Activity Pulse -->
-          <div class="dashboard-card mt-6">
-            <h2 class="text-xl font-bold text-veritas-navy mb-1">Activity Pulse</h2>
-            <p class="text-gray-600 text-sm mb-4">Student responses over the last 7 days</p>
-
-            <div id="activity-chart-container" style="width: 100%; height: 250px;">
-              <!-- Chart will be populated dynamically -->
-              <div class="text-center py-12 text-gray-500 text-sm">
-                Loading activity data...
-              </div>
-            </div>
-
-            <div class="mt-4 flex items-center justify-between text-sm">
-              <span class="text-gray-600">Total this week</span>
-              <span id="total-activity-week" class="font-semibold text-veritas-navy">-</span>
-            </div>
-            <div class="mt-2 flex items-center justify-between text-sm">
-              <span class="text-gray-600">Week-over-week change</span>
-              <span id="week-over-week-change" class="font-semibold">-</span>
-            </div>
-          </div>
         </div>
 
         <!-- Live Poll View -->
@@ -1297,53 +1258,50 @@
           <!-- Sidebar (1/3) -->
           <aside class="lg:col-span-1 flex flex-col gap-6 items-center">
             <!-- Timer -->
-            <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-3 shadow-sm w-full max-w-xs">
-              <h3 class="text-brand-dark-gray dark:text-brand-white text-sm font-bold leading-normal mb-2 text-center">Timer</h3>
-
-              <!-- Main Timer Container -->
-              <div class="flex items-center gap-2">
-                <!-- Timer Display and Controls Container -->
-                <div class="flex-1 flex flex-col items-center gap-1">
-                  <!-- Time Adjustment Button (Add) -->
-                  <button id="add-10s-btn" class="text-brand-dark-gray/40 dark:text-brand-white/40 hover:text-sky-500 dark:hover:text-sky-400 transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed" aria-label="+10 seconds">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+            <div class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-2 shadow-sm w-full max-w-xs">
+              <div class="flex items-center justify-between gap-2">
+                <!-- Timer Display and Adjustment Buttons -->
+                <div class="flex-1 flex items-center justify-center gap-1">
+                  <!-- Time Adjustment Button (Subtract) -->
+                  <button id="subtract-10s-btn" class="text-brand-dark-gray/40 dark:text-brand-white/40 hover:text-sky-500 dark:hover:text-sky-400 transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed p-0.5" aria-label="-10 seconds">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                   </button>
 
                   <!-- Timer Display (as an input) -->
                   <input
                     type="text"
                     id="timer-display"
-                    class="text-3xl font-black text-center text-brand-dark-gray dark:text-brand-white transition-all bg-transparent w-full focus:outline-none focus:ring-2 focus:ring-sky-500 rounded-lg placeholder-brand-dark-gray/40 dark:placeholder-brand-white/40 disabled:opacity-70"
+                    class="text-xl font-bold text-center text-brand-dark-gray dark:text-brand-white transition-all bg-transparent w-20 focus:outline-none focus:ring-1 focus:ring-sky-500 rounded placeholder-brand-dark-gray/40 dark:placeholder-brand-white/40 disabled:opacity-70"
                     value="01:30"
                     aria-label="Timer display"
                   />
 
-                  <!-- Time Adjustment Button (Subtract) -->
-                  <button id="subtract-10s-btn" class="text-brand-dark-gray/40 dark:text-brand-white/40 hover:text-sky-500 dark:hover:text-sky-400 transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed" aria-label="-10 seconds">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                  <!-- Time Adjustment Button (Add) -->
+                  <button id="add-10s-btn" class="text-brand-dark-gray/40 dark:text-brand-white/40 hover:text-sky-500 dark:hover:text-sky-400 transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed p-0.5" aria-label="+10 seconds">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
                   </button>
                 </div>
 
-                <!-- Main Control Buttons (Start / Pause / Reset) - Vertical -->
-                <div class="flex flex-col gap-1">
+                <!-- Main Control Buttons (Start / Pause / Reset) - Horizontal -->
+                <div class="flex items-center gap-1">
                   <!-- Start Button -->
-                  <button id="start-btn" class="bg-sky-500 hover:bg-sky-600 text-brand-white font-bold p-2 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Start timer">
-                    <span class="material-symbols-outlined text-lg">play_arrow</span>
+                  <button id="start-btn" class="bg-sky-500 hover:bg-sky-600 text-brand-white font-bold p-1.5 rounded transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Start timer">
+                    <span class="material-symbols-outlined text-base">play_arrow</span>
                   </button>
 
                   <!-- Pause Button (hidden by default) -->
-                  <button id="pause-btn" class="bg-amber-500 hover:bg-amber-600 text-brand-white font-bold p-2 rounded-lg transition-all duration-200 hidden" aria-label="Pause timer">
-                    <span class="material-symbols-outlined text-lg">pause</span>
+                  <button id="pause-btn" class="bg-amber-500 hover:bg-amber-600 text-brand-white font-bold p-1.5 rounded transition-all duration-200 hidden" aria-label="Pause timer">
+                    <span class="material-symbols-outlined text-base">pause</span>
                   </button>
 
                   <!-- Reset Button -->
-                  <button id="reset-btn" class="bg-brand-light-gray hover:bg-brand-light-gray/80 dark:bg-brand-dark-gray/60 dark:hover:bg-brand-dark-gray/80 text-brand-dark-gray dark:text-brand-white font-bold p-2 rounded-lg transition-all duration-200" aria-label="Reset timer">
-                    <span class="material-symbols-outlined text-lg">refresh</span>
+                  <button id="reset-btn" class="bg-brand-light-gray hover:bg-brand-light-gray/80 dark:bg-brand-dark-gray/60 dark:hover:bg-brand-dark-gray/80 text-brand-dark-gray dark:text-brand-white font-bold p-1.5 rounded transition-all duration-200" aria-label="Reset timer">
+                    <span class="material-symbols-outlined text-base">refresh</span>
                   </button>
                 </div>
               </div>
 
-              <p id="timer-status-message" class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 text-center mt-2">Timer idle.</p>
+              <p id="timer-status-message" class="text-[10px] text-brand-dark-gray/60 dark:text-brand-white/60 text-center mt-1">Timer idle.</p>
             </div>
 
             <style>
@@ -5901,103 +5859,67 @@
 
     console.log('Metacognition is enabled - rendering card');
 
-    var html='<div class="flex flex-wrap items-center justify-between gap-3 mb-4">';
+    var html='<div class="flex flex-wrap items-center justify-between gap-3 mb-3">';
     html+='<div class="flex items-center gap-2">';
     html+='<span class="material-symbols-outlined text-purple-600 dark:text-purple-300">psychology</span>';
     html+='<h4 class="text-brand-dark-gray dark:text-brand-white font-semibold text-base">Confidence Pulse</h4>';
     html+='</div>';
-    html+='<div class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">';
+    html+='<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">';
     if(metacognition.totalResponses>0){
       html+=escapeHtml(metacognition.totalResponses+' responses • '+metacognition.responseRate+'% of class');
     }else{
-      html+='Waiting for students to respond...';
+      html+='Waiting for students...';
     }
     html+='</div>';
     html+='</div>';
 
     if(!metacognition.totalResponses){
-      html+='<p class="text-sm text-brand-dark-gray/70 dark:text-brand-white/70">Enable the confidence check to ask students how sure they feel. Responses will populate here immediately.</p>';
+      html+='<p class="text-xs text-brand-dark-gray/70 dark:text-brand-white/70">Students will report their confidence level. Responses appear here instantly.</p>';
       card.innerHTML=html;
       card.classList.remove('hidden');
       return;
     }
 
+    // Compact 4-quadrant display - single row
     var matrixDefs=[
-      {key:'confidentCorrect',emoji:'💯',title:'Conscious Competence',subtitle:'Confident & correct',cardClass:'rounded-lg border border-green-500/30 bg-green-500/10 p-3 shadow-sm',titleClass:'text-sm font-semibold text-green-700 dark:text-green-300',subtitleClass:'text-xs text-green-700/80 dark:text-green-300/80',valueClass:'text-2xl font-bold text-green-800 dark:text-green-200',countClass:'text-xs text-green-700/70 dark:text-green-300/70'},
-      {key:'confidentIncorrect',emoji:'⚠️',title:'Confidently Incorrect',subtitle:'Urgent misconception',cardClass:'rounded-lg border border-red-500/30 bg-red-500/10 p-3 shadow-sm',titleClass:'text-sm font-semibold text-red-700 dark:text-red-300',subtitleClass:'text-xs text-red-700/80 dark:text-red-300/80',valueClass:'text-2xl font-bold text-red-800 dark:text-red-200',countClass:'text-xs text-red-700/70 dark:text-red-300/70'},
-      {key:'uncertainCorrect',emoji:'🤔',title:'Imposter Syndrome',subtitle:'Unsure but correct',cardClass:'rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 shadow-sm',titleClass:'text-sm font-semibold text-amber-700 dark:text-amber-300',subtitleClass:'text-xs text-amber-700/80 dark:text-amber-300/80',valueClass:'text-2xl font-bold text-amber-800 dark:text-amber-200',countClass:'text-xs text-amber-700/70 dark:text-amber-300/70'},
-      {key:'uncertainIncorrect',emoji:'🤷',title:'Conscious Incompetence',subtitle:'Know they need help',cardClass:'rounded-lg border border-blue-500/30 bg-blue-500/10 p-3 shadow-sm',titleClass:'text-sm font-semibold text-blue-700 dark:text-blue-300',subtitleClass:'text-xs text-blue-700/80 dark:text-blue-300/80',valueClass:'text-2xl font-bold text-blue-800 dark:text-blue-200',countClass:'text-xs text-blue-700/70 dark:text-blue-300/70'}
+      {key:'confidentCorrect',emoji:'💯',label:'Confident & Correct',bgClass:'bg-green-500/10',borderClass:'border-green-500/30',textClass:'text-green-700 dark:text-green-300'},
+      {key:'confidentIncorrect',emoji:'⚠️',label:'Confident & Wrong',bgClass:'bg-red-500/10',borderClass:'border-red-500/30',textClass:'text-red-700 dark:text-red-300'},
+      {key:'uncertainCorrect',emoji:'🤔',label:'Unsure but Correct',bgClass:'bg-amber-500/10',borderClass:'border-amber-500/30',textClass:'text-amber-700 dark:text-amber-300'},
+      {key:'uncertainIncorrect',emoji:'🤷',label:'Unsure & Wrong',bgClass:'bg-blue-500/10',borderClass:'border-blue-500/30',textClass:'text-blue-700 dark:text-blue-300'}
     ];
 
-    html+='<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">';
+    html+='<div class="grid grid-cols-2 gap-2 mb-3">';
     matrixDefs.forEach(function(def){
       var pct=metacognition.matrixPercentages&&typeof metacognition.matrixPercentages[def.key]==='number'?metacognition.matrixPercentages[def.key]:0;
       var count=metacognition.matrixCounts&&typeof metacognition.matrixCounts[def.key]==='number'?metacognition.matrixCounts[def.key]:0;
-      html+='<div class="'+def.cardClass+'">';
-      html+='<div class="flex items-center gap-2 mb-2">';
-      html+='<span class="text-xl">'+def.emoji+'</span>';
-      html+='<div>';
-      html+='<div class="'+def.titleClass+'">'+def.title+'</div>';
-      html+='<div class="'+def.subtitleClass+'">'+def.subtitle+'</div>';
+      html+='<div class="rounded-lg border '+def.borderClass+' '+def.bgClass+' p-2">';
+      html+='<div class="flex items-center gap-1.5 mb-1">';
+      html+='<span class="text-base">'+def.emoji+'</span>';
+      html+='<span class="text-xs font-medium '+def.textClass+'">'+def.label+'</span>';
       html+='</div>';
+      html+='<div class="flex items-baseline gap-1">';
+      html+='<span class="text-xl font-bold '+def.textClass+'">'+pct+'%</span>';
+      html+='<span class="text-[10px] '+def.textClass+' opacity-70">('+count+')</span>';
       html+='</div>';
-      html+='<div class="'+def.valueClass+'">'+pct+'%</div>';
-      html+='<div class="'+def.countClass+'">'+count+' students</div>';
       html+='</div>';
     });
     html+='</div>';
 
-    var levelOrder=['guessing','somewhat-sure','very-sure','certain'];
-    html+='<div class="mt-5">';
-    html+='<h5 class="text-xs font-semibold uppercase tracking-wide text-brand-dark-gray/60 dark:text-brand-white/60 mb-2">Confidence Levels</h5>';
-    html+='<div class="space-y-2">';
-    levelOrder.forEach(function(level){
-      var style=CONFIDENCE_LEVEL_STYLES[level]||{};
-      var stats=metacognition.levels&&metacognition.levels[level]?metacognition.levels[level]:{total:0,totalPct:0,correctPct:0};
-      var label=style.label||level;
-      var emoji=style.emoji||'';
-      var textClass=style.textClass||'text-brand-dark-gray/80 dark:text-brand-white/80';
-      var accentClass=style.accentClass||'text-brand-dark-gray/60 dark:text-brand-white/60';
-      var barClass=style.barClass||'bg-primary';
-      html+='<div class="rounded-lg border border-brand-light-gray/50 dark:border-brand-dark-gray/50 bg-white/80 dark:bg-brand-dark-gray/40 px-3 py-2">';
-      html+='<div class="flex items-center justify-between text-sm mb-2">';
-      html+='<span class="font-semibold '+textClass+'">'+emoji+' '+label+'</span>';
-      html+='<span class="text-brand-dark-gray/60 dark:text-brand-white/60">'+stats.total+' • '+stats.totalPct+'%</span>';
-      html+='</div>';
-      html+='<div class="h-2 rounded-full bg-brand-light-gray/60 dark:bg-brand-dark-gray/60 overflow-hidden">';
-      html+='<div class="h-full '+barClass+'" style="width: '+Math.max(0,Math.min(100,stats.totalPct))+'%;"></div>';
-      html+='</div>';
-      html+='<div class="mt-2 text-[11px] uppercase tracking-wide '+accentClass+'">Accuracy '+stats.correctPct+'%</div>';
-      html+='</div>';
-    });
-    html+='</div>';
-    html+='</div>';
-
+    // Show flagged students prominently but compact
     var flagged=Array.isArray(metacognition.flaggedStudents)?metacognition.flaggedStudents:[];
     if(flagged.length>0){
-      html+='<div class="mt-5 rounded-lg border border-red-500/40 bg-red-500/10 p-3">';
-      html+='<div class="flex items-center gap-2 mb-2">';
-      html+='<span class="material-symbols-outlined text-red-600 dark:text-red-300">report</span>';
-      html+='<h5 class="text-sm font-semibold text-red-700 dark:text-red-200">Confidently Incorrect Students</h5>';
+      html+='<div class="rounded-lg border border-red-500/40 bg-red-500/10 p-2">';
+      html+='<div class="flex items-center gap-1.5 mb-1.5">';
+      html+='<span class="material-symbols-outlined text-sm text-red-600 dark:text-red-300">report</span>';
+      html+='<span class="text-xs font-semibold text-red-700 dark:text-red-200">⚠️ Urgent: '+flagged.length+' Confidently Incorrect</span>';
       html+='</div>';
-      html+='<div class="flex flex-wrap gap-2">';
+      html+='<div class="flex flex-wrap gap-1.5">';
       flagged.forEach(function(student){
         var display=escapeHtml(student.name||student.email||'Student');
-        var confidenceText=describeConfidence(student.confidence);
-        html+='<div class="px-3 py-2 rounded-lg bg-white/80 dark:bg-brand-dark-gray/60 border border-red-500/30 text-sm text-red-700 dark:text-red-200">';
-        html+='<div class="font-semibold">'+display+'</div>';
-        if(confidenceText){
-          html+='<div class="text-xs text-red-700/80 dark:text-red-200/80">'+escapeHtml(confidenceText)+'</div>';
-        }
-        if(student.answer){
-          html+='<div class="text-xs text-red-700/70 dark:text-red-200/70">Answer: '+escapeHtml(student.answer)+'</div>';
-        }
-        html+='</div>';
+        html+='<span class="px-2 py-0.5 rounded bg-red-600/20 text-xs font-medium text-red-700 dark:text-red-200">'+display+'</span>';
       });
       html+='</div>';
       html+='</div>';
-    }else{
-      html+='<p class="mt-5 text-xs text-brand-dark-gray/60 dark:text-brand-white/60">No confidently incorrect responses detected.</p>';
     }
 
     card.innerHTML=html;

@@ -734,6 +734,46 @@
       transform: translateX(2px);
     }
 
+    #nav-create-poll {
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      color: #ffffff;
+      font-weight: 600;
+      background: transparent;
+    }
+
+    #nav-create-poll:hover {
+      border-color: rgba(255, 255, 255, 0.45);
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    #nav-create-poll:focus-visible {
+      outline: 2px solid rgba(255, 255, 255, 0.6);
+      outline-offset: 2px;
+    }
+
+    .question-nav-item.dragging {
+      opacity: 0.55;
+    }
+
+    .question-nav-item.drop-before::before,
+    .question-nav-item.drop-after::after {
+      content: '';
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      height: 2px;
+      background: var(--veritas-gold);
+      border-radius: 9999px;
+    }
+
+    .question-nav-item.drop-before::before {
+      top: -4px;
+    }
+
+    .question-nav-item.drop-after::after {
+      bottom: -4px;
+    }
+
     .dashboard-card {
       background: white;
       border-radius: 16px;
@@ -1174,7 +1214,7 @@
             <span class="material-symbols-outlined">monitoring</span>
             <span>Live Dashboard</span>
           </button>
-          <button id="nav-create-poll" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-brand-white/10 text-brand-white hover:bg-brand-white/20 transition-colors text-left">
+          <button id="nav-create-poll" class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left font-semibold">
             <span class="material-symbols-outlined">add_circle</span>
             <span>Create New Poll</span>
           </button>
@@ -1229,6 +1269,13 @@
                     <option value="all">All classes</option>
                   </select>
                 </label>
+                <div class="relative w-full sm:w-64">
+                  <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-gray-400">search</span>
+                  <input id="poll-search-input" type="search" placeholder="Search polls or questions..." class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-9 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-veritas-gold" aria-label="Search polls" />
+                  <button id="poll-search-clear-btn" type="button" class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none" aria-label="Clear search">
+                    <span class="material-symbols-outlined text-base leading-none">close</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1842,6 +1889,11 @@
         <!-- Question Navigator Sidebar -->
         <aside class="w-64 flex-shrink-0 border-r border-solid border-brand-light-gray dark:border-brand-dark-gray/20 bg-brand-white dark:bg-background-dark overflow-y-auto">
           <div class="flex h-full flex-col justify-between p-4">
+            <div class="mb-4">
+              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-dark-gray/60 dark:text-brand-white/60 mb-2">Question Order</p>
+              <p class="text-xs text-brand-dark-gray/70 dark:text-brand-white/70 leading-relaxed">Drag questions to reorder them manually. Use the handles to arrange them in any sequence you prefer.</p>
+              <p class="mt-2 text-xs text-brand-dark-gray/50 dark:text-brand-white/50 leading-relaxed">Individual timed sessions automatically randomize question and answer order for students.</p>
+            </div>
             <div id="question-navigator" class="flex flex-col gap-2">
               <!-- Question items will be added dynamically -->
             </div>
@@ -2083,6 +2135,10 @@
   var isLiveSession=false;
   var questionCounter=0;
   var questions=[];
+  var questionIdCounter=0;
+  var customQuestionOrder=[];
+  var draggedQuestionId=null;
+  var pollSearchQuery='';
 
   // OPTIMIZATION: Adaptive polling with backoff (like student view)
   var pollFailureCount=0;
@@ -2894,9 +2950,12 @@
   var linksModal=document.getElementById('student-links-modal');
   var pollSortSelect=document.getElementById('poll-sort-select');
   var pollFilterSelect=document.getElementById('poll-filter-select');
+  var pollSearchInput=document.getElementById('poll-search-input');
+  var pollSearchClearBtn=document.getElementById('poll-search-clear-btn');
   var pollsTableBody=document.getElementById('polls-table-body');
   var pollsEmptyState=document.getElementById('polls-empty-state');
   var classSelect=document.getElementById('class-select');
+  var questionNavigatorContainer=document.getElementById('question-navigator');
   var archivedClassFilterSelect=document.getElementById('archived-class-filter');
   var archivedList=document.getElementById('archived-list');
   var archivedEmptyState=document.getElementById('archived-empty-state');
@@ -2962,6 +3021,33 @@
   bindClick('save-poll-btn',savePoll);
   bindInput('new-poll-name','input',markPollDirty);
   bindChange(classSelect,markPollDirty,'class-select');
+
+  if(pollSearchInput){
+    pollSearchInput.addEventListener('input',function(){
+      pollSearchQuery=(this.value||'').trim();
+      refreshPollViews();
+      updatePollSearchClear();
+    });
+  }
+
+  if(pollSearchClearBtn){
+    pollSearchClearBtn.addEventListener('click',function(){
+      pollSearchQuery='';
+      if(pollSearchInput){
+        pollSearchInput.value='';
+        pollSearchInput.focus();
+      }
+      refreshPollViews();
+      updatePollSearchClear();
+    });
+  }
+
+  updatePollSearchClear();
+
+  if(questionNavigatorContainer){
+    questionNavigatorContainer.addEventListener('dragover',handleNavigatorDragOver);
+    questionNavigatorContainer.addEventListener('drop',handleNavigatorDrop);
+  }
 
   // Session type change handler
   var sessionTypeSelect=document.getElementById('session-type-select');
@@ -3604,10 +3690,51 @@
     archivedClassFilterSelect.value=archivedClassFilter;
   }
 
+  function updatePollSearchClear(){
+    if(!pollSearchClearBtn)return;
+    if(pollSearchQuery){
+      pollSearchClearBtn.classList.remove('hidden');
+    }else{
+      pollSearchClearBtn.classList.add('hidden');
+    }
+  }
+
+  function pollMatchesSearch(poll,normalizedQuery){
+    if(!normalizedQuery)return true;
+    var name=(poll&&poll.pollName?poll.pollName:'').toLowerCase();
+    if(name.indexOf(normalizedQuery)!==-1)return true;
+    var className=(poll&&poll.className?poll.className:'').toLowerCase();
+    if(className.indexOf(normalizedQuery)!==-1)return true;
+    if(!poll||!Array.isArray(poll.questions))return false;
+    for(var i=0;i<poll.questions.length;i++){
+      var question=poll.questions[i]||{};
+      var text=(question.questionText||'').toLowerCase();
+      if(text.indexOf(normalizedQuery)!==-1)return true;
+      var topic=(question.topicTag||question.topic||'').toLowerCase();
+      if(topic.indexOf(normalizedQuery)!==-1)return true;
+      var correctText=(question.correctAnswer||'').toLowerCase();
+      if(correctText&&correctText.indexOf(normalizedQuery)!==-1)return true;
+      var options=Array.isArray(question.options)?question.options:(Array.isArray(question.answers)?question.answers:[]);
+      for(var j=0;j<options.length;j++){
+        var option=options[j]||{};
+        var optionText=(option.text||option.label||'').toLowerCase();
+        if(optionText.indexOf(normalizedQuery)!==-1)return true;
+      }
+    }
+    return false;
+  }
+
   function getFilteredSortedPolls(){
     var list=ALL_POLLS.slice();
     if(pollClassFilter!=='all'){
       list=list.filter(function(poll){return poll.className===pollClassFilter;});
+    }
+
+    if(pollSearchQuery){
+      var normalizedQuery=pollSearchQuery.toLowerCase();
+      list=list.filter(function(poll){
+        return pollMatchesSearch(poll,normalizedQuery);
+      });
     }
 
     list.sort(function(a,b){
@@ -3638,10 +3765,18 @@
     var polls=getFilteredSortedPolls();
     renderPollTable(polls);
     updatePollDropdown(polls);
-    if(polls.length===0){
-      pollsEmptyState.classList.remove('hidden');
-    } else {
-      pollsEmptyState.classList.add('hidden');
+    if(pollsEmptyState){
+      if(polls.length===0){
+        pollsEmptyState.classList.remove('hidden');
+        var message='No polls found. Create your first poll to get started.';
+        if(pollSearchQuery){
+          var safeQuery=escapeHtml(pollSearchQuery);
+          message='No polls match “'+safeQuery+'”. Try a different title or question keyword.';
+        }
+        pollsEmptyState.innerHTML='<p>'+message+'</p>';
+      } else {
+        pollsEmptyState.classList.add('hidden');
+      }
     }
   }
 
@@ -7812,6 +7947,200 @@
     });
   }
 
+  function generateQuestionId(){
+    questionIdCounter+=1;
+    return 'q-'+questionIdCounter;
+  }
+
+  function assignQuestionId(question){
+    if(!question)return question;
+    if(!question._id){
+      question._id=generateQuestionId();
+    }else{
+      var match=String(question._id).match(/q-(\d+)/);
+      if(match){
+        var numeric=parseInt(match[1],10);
+        if(!isNaN(numeric)&&numeric>questionIdCounter){
+          questionIdCounter=numeric;
+        }
+      }
+    }
+    if(typeof question._createdOrder!=='number'){
+      question._createdOrder=Date.now();
+    }
+    return question;
+  }
+
+  function ensureCustomOrderIncludes(questionId,insertIndex){
+    if(!questionId)return;
+    var existingIndex=customQuestionOrder.indexOf(questionId);
+    if(existingIndex!==-1){
+      if(typeof insertIndex==='number'&&insertIndex!==existingIndex){
+        customQuestionOrder.splice(existingIndex,1);
+        if(insertIndex>customQuestionOrder.length){
+          insertIndex=customQuestionOrder.length;
+        }
+        customQuestionOrder.splice(insertIndex,0,questionId);
+      }
+      return;
+    }
+    if(typeof insertIndex==='number'&&insertIndex>=0&&insertIndex<=customQuestionOrder.length){
+      customQuestionOrder.splice(insertIndex,0,questionId);
+    }else{
+      customQuestionOrder.push(questionId);
+    }
+  }
+
+  function removeFromCustomOrder(questionId){
+    if(!questionId)return;
+    var index=customQuestionOrder.indexOf(questionId);
+    if(index!==-1){
+      customQuestionOrder.splice(index,1);
+    }
+  }
+
+  function buildOrderFromIds(orderIds){
+    var idMap=new Map();
+    questions.forEach(function(question){
+      if(question&&question._id){
+        idMap.set(question._id,question);
+      }
+    });
+    var ordered=[];
+    (orderIds||[]).forEach(function(id){
+      if(idMap.has(id)){
+        ordered.push(idMap.get(id));
+        idMap.delete(id);
+      }
+    });
+    idMap.forEach(function(question){
+      ordered.push(question);
+    });
+    return ordered;
+  }
+
+  function enforceQuestionOrder(preserveQuestionId){
+    var selectionId=preserveQuestionId||(questions[selectedQuestionIndex]&&questions[selectedQuestionIndex]._id)||null;
+    var ordered=buildOrderFromIds(customQuestionOrder);
+    questions=ordered;
+    customQuestionOrder=ordered.map(function(question){return question._id;});
+
+    if(questions.length===0){
+      selectedQuestionIndex=0;
+      return;
+    }
+
+    if(selectionId){
+      var newIndex=questions.findIndex(function(question){return question&&question._id===selectionId;});
+      if(newIndex!==-1){
+        selectedQuestionIndex=newIndex;
+      }else if(selectedQuestionIndex>=questions.length){
+        selectedQuestionIndex=Math.max(0,questions.length-1);
+      }
+    }else if(selectedQuestionIndex>=questions.length){
+      selectedQuestionIndex=Math.max(0,questions.length-1);
+    }
+  }
+
+  function clearDropIndicators(){
+    if(!questionNavigatorContainer)return;
+    questionNavigatorContainer.querySelectorAll('.question-nav-item').forEach(function(item){
+      item.classList.remove('drop-before','drop-after');
+    });
+  }
+
+  function clearDragVisuals(){
+    if(!questionNavigatorContainer)return;
+    questionNavigatorContainer.querySelectorAll('.question-nav-item').forEach(function(item){
+      item.classList.remove('drop-before','drop-after','dragging');
+    });
+  }
+
+  function moveQuestionToIndex(questionId,insertIndex){
+    if(!questionId)return;
+    var fromIndex=customQuestionOrder.indexOf(questionId);
+    if(fromIndex===-1)return;
+    if(insertIndex>customQuestionOrder.length){
+      insertIndex=customQuestionOrder.length;
+    }
+    if(insertIndex>fromIndex){
+      insertIndex--;
+    }
+    if(insertIndex===fromIndex)return;
+    customQuestionOrder.splice(fromIndex,1);
+    customQuestionOrder.splice(insertIndex,0,questionId);
+    enforceQuestionOrder(questionId);
+    renderQuestionNavigator();
+    renderQuestionWorkspace();
+    markPollDirty();
+  }
+
+  function handleQuestionDragStart(e){
+    draggedQuestionId=this.dataset.questionId||null;
+    if(!draggedQuestionId)return;
+    this.classList.add('dragging');
+    e.dataTransfer.effectAllowed='move';
+    try{e.dataTransfer.setData('text/plain',draggedQuestionId);}catch(err){}
+  }
+
+  function handleQuestionDragOver(e){
+    if(!draggedQuestionId)return;
+    var questionId=this.dataset.questionId;
+    if(!questionId||questionId===draggedQuestionId)return;
+    e.preventDefault();
+    clearDropIndicators();
+    var rect=this.getBoundingClientRect();
+    var before=(e.clientY-rect.top)<rect.height/2;
+    if(before){
+      this.classList.add('drop-before');
+      this.classList.remove('drop-after');
+    }else{
+      this.classList.add('drop-after');
+      this.classList.remove('drop-before');
+    }
+  }
+
+  function handleQuestionDragLeave(){
+    if(!this.classList.contains('question-nav-item'))return;
+    this.classList.remove('drop-before','drop-after');
+  }
+
+  function handleQuestionDrop(e){
+    if(!draggedQuestionId)return;
+    var questionId=this.dataset.questionId;
+    if(!questionId||questionId===draggedQuestionId)return;
+    e.preventDefault();
+    e.stopPropagation();
+    var rect=this.getBoundingClientRect();
+    var before=(e.clientY-rect.top)<rect.height/2;
+    clearDropIndicators();
+    var targetIndex=customQuestionOrder.indexOf(questionId);
+    if(targetIndex===-1)return;
+    var insertIndex=before?targetIndex:targetIndex+1;
+    moveQuestionToIndex(draggedQuestionId,insertIndex);
+    draggedQuestionId=null;
+  }
+
+  function handleQuestionDragEnd(){
+    clearDragVisuals();
+    draggedQuestionId=null;
+  }
+
+  function handleNavigatorDragOver(e){
+    if(!draggedQuestionId)return;
+    e.preventDefault();
+    clearDropIndicators();
+  }
+
+  function handleNavigatorDrop(e){
+    if(!draggedQuestionId)return;
+    if(e.target!==questionNavigatorContainer)return;
+    e.preventDefault();
+    clearDropIndicators();
+    moveQuestionToIndex(draggedQuestionId,customQuestionOrder.length);
+    draggedQuestionId=null;
+  }
+
   function setSaveStatus(message){
     var saveStatus=document.getElementById('save-status');
     if(saveStatus){
@@ -7838,6 +8167,9 @@
     questionCounter=0;
     questions=[];
     selectedQuestionIndex=0;
+    questionIdCounter=0;
+    customQuestionOrder=[];
+    draggedQuestionId=null;
 
     if(existingPoll){
       editingPollId=existingPoll.pollId;
@@ -7883,7 +8215,7 @@
             correctIndex=idx;
           }
         });
-        return {
+        return assignQuestionId({
           questionText:question.questionText||'',
           questionImage:null,
           questionImageURL:question.questionImageURL||null,
@@ -7892,7 +8224,7 @@
           correctAnswerIndex:correctIndex,
           timerSeconds:question.timerSeconds||null,
           metacognitionEnabled:!!question.metacognitionEnabled
-        };
+        });
       });
       if(questions.length===0){
         addQuestion(true);
@@ -7919,6 +8251,8 @@
       resetPollDirty('All changes saved');
     }
 
+    customQuestionOrder=questions.map(function(question){return question._id;});
+    enforceQuestionOrder();
     renderQuestionNavigator();
     renderQuestionWorkspace();
     modal.style.display='flex';
@@ -7932,10 +8266,21 @@
     editingPollId=null;
     document.getElementById('save-poll-btn').innerHTML='<span class="truncate">Publish Poll</span>';
     resetPollDirty('All changes saved');
+    customQuestionOrder=[];
+    questionIdCounter=0;
+    draggedQuestionId=null;
   }
 
   function addQuestion(suppressDirty){
     var skipDirty=suppressDirty===true;
+    var currentSelection=questions[selectedQuestionIndex];
+    var insertIndex=customQuestionOrder.length;
+    if(currentSelection&&currentSelection._id){
+      var manualIndex=customQuestionOrder.indexOf(currentSelection._id);
+      if(manualIndex!==-1){
+        insertIndex=manualIndex+1;
+      }
+    }
     var newQuestion={
       questionText:'',
       questionImage:null,
@@ -7949,8 +8294,10 @@
       timerSeconds:null,
       metacognitionEnabled:false
     };
+    assignQuestionId(newQuestion);
     questions.push(newQuestion);
-    selectedQuestionIndex=questions.length-1;
+    ensureCustomOrderIncludes(newQuestion._id,insertIndex);
+    enforceQuestionOrder(newQuestion._id);
     if(!skipDirty){
       markPollDirty();
     }
@@ -7963,8 +8310,16 @@
       await veritasAlert('A poll must have at least one question.',{title:'Edit poll'});
       return;
     }
+    var removedQuestion=questions[index];
+    var removedId=removedQuestion&&removedQuestion._id;
     questions.splice(index,1);
-    selectedQuestionIndex=Math.max(0,Math.min(selectedQuestionIndex,questions.length-1));
+    if(removedId){
+      removeFromCustomOrder(removedId);
+    }
+    if(selectedQuestionIndex>=questions.length){
+      selectedQuestionIndex=Math.max(0,questions.length-1);
+    }
+    enforceQuestionOrder();
     renderQuestionNavigator();
     renderQuestionWorkspace();
     markPollDirty();
@@ -7977,13 +8332,21 @@
     }
     // Deep copy the question
     var questionToDuplicate=questions[index];
+    if(!questionToDuplicate)return;
     var duplicatedQuestion=JSON.parse(JSON.stringify(questionToDuplicate));
+    delete duplicatedQuestion._id;
+    delete duplicatedQuestion._createdOrder;
+    assignQuestionId(duplicatedQuestion);
+    duplicatedQuestion._createdOrder=Date.now();
 
     // Insert the duplicated question right after the original
     questions.splice(index+1,0,duplicatedQuestion);
+    var manualIndex=questionToDuplicate._id?customQuestionOrder.indexOf(questionToDuplicate._id):-1;
+    var insertIndex=manualIndex===-1?customQuestionOrder.length:manualIndex+1;
+    ensureCustomOrderIncludes(duplicatedQuestion._id,insertIndex);
     questionCounter++;
-    selectedQuestionIndex=index+1;
 
+    enforceQuestionOrder(duplicatedQuestion._id);
     renderQuestionNavigator();
     renderQuestionWorkspace();
     markPollDirty();
@@ -7992,12 +8355,14 @@
   function renderQuestionNavigator(){
     var nav=document.getElementById('question-navigator');
     nav.innerHTML='';
-    
+    draggedQuestionId=null;
+    clearDragVisuals();
+
     questions.forEach(function(q,index){
       var isSelected=index===selectedQuestionIndex;
       var div=document.createElement('div');
-      div.className='group relative flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer '+(isSelected?'bg-primary/20 dark:bg-primary/30':'hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10');
-      
+      div.className='question-nav-item group relative flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer '+(isSelected?'bg-primary/20 dark:bg-primary/30':'hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10');
+
       var html='<span class="material-symbols-outlined '+(isSelected?'text-brand-dark-gray dark:text-brand-white':'text-brand-dark-gray/50 dark:text-brand-white/50')+'">drag_indicator</span>';
       html+='<p class="'+(isSelected?'text-primary dark:text-brand-white':'text-brand-dark-gray dark:text-brand-white')+' text-sm font-medium leading-normal">Question '+(index+1)+'</p>';
 
@@ -8013,6 +8378,14 @@
       html+='</div>';
 
       div.innerHTML=html;
+      div.dataset.questionId=q&&q._id?q._id:('question-'+index);
+      div.dataset.index=index;
+      div.setAttribute('draggable','true');
+      div.addEventListener('dragstart',handleQuestionDragStart);
+      div.addEventListener('dragover',handleQuestionDragOver);
+      div.addEventListener('dragleave',handleQuestionDragLeave);
+      div.addEventListener('drop',handleQuestionDrop);
+      div.addEventListener('dragend',handleQuestionDragEnd);
 
       div.onclick=function(e){
         if(e.target.classList.contains('material-symbols-outlined')&&(e.target.textContent==='close'||e.target.textContent==='content_copy'))return;

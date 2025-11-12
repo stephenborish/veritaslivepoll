@@ -1879,7 +1879,21 @@ function getIndividualTimedQuestion(pollId, sessionId, studentEmail) {
     }
 
     const actualQuestionIndex = studentState.questionOrder[studentState.currentQuestionIndex];
-    const question = poll.questions[actualQuestionIndex];
+    const sourceQuestion = poll.questions[actualQuestionIndex];
+    if (!sourceQuestion) {
+      throw new Error('Question not found for randomized delivery');
+    }
+
+    // Deep clone so we can safely randomize without mutating the stored poll data
+    const question = JSON.parse(JSON.stringify(sourceQuestion));
+
+    if (Array.isArray(question.options) && question.options.length > 1) {
+      question.options = shuffleArray_(question.options);
+    }
+
+    if (Array.isArray(question.answers) && question.answers.length > 1) {
+      question.answers = shuffleArray_(question.answers);
+    }
 
     // Calculate time remaining
     const timeLimitMinutes = poll.timeLimitMinutes;

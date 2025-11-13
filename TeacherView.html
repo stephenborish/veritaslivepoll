@@ -734,6 +734,46 @@
       transform: translateX(2px);
     }
 
+    #nav-create-poll {
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      color: #ffffff;
+      font-weight: 600;
+      background: transparent;
+    }
+
+    #nav-create-poll:hover {
+      border-color: rgba(255, 255, 255, 0.45);
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    #nav-create-poll:focus-visible {
+      outline: 2px solid rgba(255, 255, 255, 0.6);
+      outline-offset: 2px;
+    }
+
+    .question-nav-item.dragging {
+      opacity: 0.55;
+    }
+
+    .question-nav-item.drop-before::before,
+    .question-nav-item.drop-after::after {
+      content: '';
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      height: 2px;
+      background: var(--veritas-gold);
+      border-radius: 9999px;
+    }
+
+    .question-nav-item.drop-before::before {
+      top: -4px;
+    }
+
+    .question-nav-item.drop-after::after {
+      bottom: -4px;
+    }
+
     .dashboard-card {
       background: white;
       border-radius: 16px;
@@ -1174,7 +1214,7 @@
             <span class="material-symbols-outlined">monitoring</span>
             <span>Live Dashboard</span>
           </button>
-          <button id="nav-create-poll" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-brand-white/10 text-brand-white hover:bg-brand-white/20 transition-colors text-left">
+          <button id="nav-create-poll" class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg text-left border border-brand-white/20 font-semibold transition-colors">
             <span class="material-symbols-outlined">add_circle</span>
             <span>Create New Poll</span>
           </button>
@@ -1229,6 +1269,13 @@
                     <option value="all">All classes</option>
                   </select>
                 </label>
+                <div class="relative w-full sm:w-64">
+                  <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-gray-400">search</span>
+                  <input id="poll-search-input" type="search" placeholder="Search polls or questions..." class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-9 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-veritas-gold" aria-label="Search polls" />
+                  <button id="poll-search-clear-btn" type="button" class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none" aria-label="Clear search">
+                    <span class="material-symbols-outlined text-base leading-none">close</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1842,6 +1889,20 @@
         <!-- Question Navigator Sidebar -->
         <aside class="w-64 flex-shrink-0 border-r border-solid border-brand-light-gray dark:border-brand-dark-gray/20 bg-brand-white dark:bg-background-dark overflow-y-auto">
           <div class="flex h-full flex-col justify-between p-4">
+            <div class="mb-4">
+              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-dark-gray/60 dark:text-brand-white/60 mb-2">Question Order</p>
+              <div class="flex items-center gap-2">
+                <select id="question-sort-select" class="flex-1 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 bg-brand-white dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+                  <option value="custom">Custom order (drag &amp; drop)</option>
+                  <option value="alpha-asc">Alphabetical A → Z</option>
+                  <option value="alpha-desc">Alphabetical Z → A</option>
+                  <option value="timer-asc">Timer: shortest first</option>
+                  <option value="timer-desc">Timer: longest first</option>
+                </select>
+                <button id="question-sort-reset-btn" type="button" class="h-10 px-3 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 bg-brand-white dark:bg-brand-dark-gray/30 text-xs font-semibold text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray/40 dark:hover:bg-brand-dark-gray/50 transition-colors">Reset</button>
+              </div>
+              <p id="question-sort-help" class="mt-2 text-xs text-brand-dark-gray/60 dark:text-brand-white/60">Drag questions to reorder them manually.</p>
+            </div>
             <div id="question-navigator" class="flex flex-col gap-2">
               <!-- Question items will be added dynamically -->
             </div>
@@ -2083,6 +2144,11 @@
   var isLiveSession=false;
   var questionCounter=0;
   var questions=[];
+  var questionIdCounter=0;
+  var questionSortMode='custom';
+  var initialQuestionOrder=[];
+  var draggedQuestionId=null;
+  var pollSearchQuery='';
 
   // OPTIMIZATION: Adaptive polling with backoff (like student view)
   var pollFailureCount=0;
@@ -2894,9 +2960,15 @@
   var linksModal=document.getElementById('student-links-modal');
   var pollSortSelect=document.getElementById('poll-sort-select');
   var pollFilterSelect=document.getElementById('poll-filter-select');
+  var pollSearchInput=document.getElementById('poll-search-input');
+  var pollSearchClearBtn=document.getElementById('poll-search-clear-btn');
   var pollsTableBody=document.getElementById('polls-table-body');
   var pollsEmptyState=document.getElementById('polls-empty-state');
   var classSelect=document.getElementById('class-select');
+  var questionSortSelect=document.getElementById('question-sort-select');
+  var questionSortResetBtn=document.getElementById('question-sort-reset-btn');
+  var questionSortHelp=document.getElementById('question-sort-help');
+  var questionNavigatorContainer=document.getElementById('question-navigator');
   var archivedClassFilterSelect=document.getElementById('archived-class-filter');
   var archivedList=document.getElementById('archived-list');
   var archivedEmptyState=document.getElementById('archived-empty-state');
@@ -2962,6 +3034,41 @@
   bindClick('save-poll-btn',savePoll);
   bindInput('new-poll-name','input',markPollDirty);
   bindChange(classSelect,markPollDirty,'class-select');
+
+  if(pollSearchInput){
+    pollSearchInput.addEventListener('input',function(){
+      pollSearchQuery=(this.value||'').trim();
+      refreshPollViews();
+      updatePollSearchClear();
+    });
+  }
+
+  if(pollSearchClearBtn){
+    pollSearchClearBtn.addEventListener('click',function(){
+      pollSearchQuery='';
+      if(pollSearchInput){
+        pollSearchInput.value='';
+        pollSearchInput.focus();
+      }
+      refreshPollViews();
+      updatePollSearchClear();
+    });
+  }
+
+  if(questionSortSelect){
+    questionSortSelect.addEventListener('change',function(){
+      setQuestionSortMode(this.value||'custom');
+    });
+  }
+
+  if(questionSortResetBtn){
+    questionSortResetBtn.addEventListener('click',function(){
+      resetQuestionOrderToInitial();
+    });
+  }
+
+  updatePollSearchClear();
+  updateQuestionSortHelp();
 
   // Session type change handler
   var sessionTypeSelect=document.getElementById('session-type-select');
@@ -3610,6 +3717,35 @@
       list=list.filter(function(poll){return poll.className===pollClassFilter;});
     }
 
+    if(pollSearchQuery){
+      var query=pollSearchQuery.toLowerCase();
+      list=list.filter(function(poll){
+        if(!poll){
+          return false;
+        }
+        var nameMatch=(poll.pollName||'').toLowerCase().indexOf(query)!==-1;
+        var classMatch=(poll.className||'').toLowerCase().indexOf(query)!==-1;
+        if(nameMatch||classMatch){
+          return true;
+        }
+        if(Array.isArray(poll.questions)){
+          for(var i=0;i<poll.questions.length;i++){
+            var question=poll.questions[i]||{};
+            if((question.questionText||'').toLowerCase().indexOf(query)!==-1){
+              return true;
+            }
+            var options=question.options||question.answers||[];
+            for(var j=0;j<options.length;j++){
+              if((options[j]&&options[j].text||'').toLowerCase().indexOf(query)!==-1){
+                return true;
+              }
+            }
+          }
+        }
+        return false;
+      });
+    }
+
     list.sort(function(a,b){
       switch(pollSortMode){
         case 'updated_asc':
@@ -3642,6 +3778,18 @@
       pollsEmptyState.classList.remove('hidden');
     } else {
       pollsEmptyState.classList.add('hidden');
+    }
+    updatePollSearchClear();
+  }
+
+  function updatePollSearchClear(){
+    if(!pollSearchClearBtn){
+      return;
+    }
+    if(pollSearchQuery){
+      pollSearchClearBtn.classList.remove('hidden');
+    }else{
+      pollSearchClearBtn.classList.add('hidden');
     }
   }
 
@@ -7831,6 +7979,338 @@
     setSaveStatus(message||'All changes saved');
   }
 
+  function ensureQuestionHasId(question){
+    if(question&&!question._localId){
+      questionIdCounter++;
+      question._localId='q'+questionIdCounter;
+    }
+  }
+
+  function getCurrentQuestionId(){
+    var current=questions[selectedQuestionIndex];
+    return current&&current._localId?current._localId:null;
+  }
+
+  function setSelectedQuestionById(questionId){
+    if(!Array.isArray(questions)||questions.length===0){
+      selectedQuestionIndex=0;
+      return;
+    }
+    if(!questionId){
+      selectedQuestionIndex=Math.max(0,Math.min(selectedQuestionIndex,questions.length-1));
+      return;
+    }
+    for(var i=0;i<questions.length;i++){
+      if(questions[i]&&questions[i]._localId===questionId){
+        selectedQuestionIndex=i;
+        return;
+      }
+    }
+    selectedQuestionIndex=Math.max(0,Math.min(selectedQuestionIndex,questions.length-1));
+  }
+
+  function compareQuestionText(a,b){
+    var aText=(a&&a.questionText||'').toLowerCase();
+    var bText=(b&&b.questionText||'').toLowerCase();
+    return aText.localeCompare(bText);
+  }
+
+  function getTimerValueForSort(question){
+    var value=question?question.timerSeconds:null;
+    if(typeof value==='string'){
+      value=value.trim()===''?null:parseInt(value,10);
+    }
+    if(!isFinite(value)||value<=0){
+      return null;
+    }
+    return value;
+  }
+
+  function captureInitialQuestionOrder(){
+    initialQuestionOrder=questions.map(function(question){
+      return question&&question._localId;
+    }).filter(Boolean);
+  }
+
+  function updateQuestionSortHelp(){
+    if(questionSortSelect){
+      questionSortSelect.value=questionSortMode;
+    }
+    if(!questionSortHelp){
+      return;
+    }
+    var message='Drag questions to reorder them manually.';
+    switch(questionSortMode){
+      case 'alpha-asc':
+        message='Questions sorted A → Z. Switch back to Custom to drag manually.';
+        break;
+      case 'alpha-desc':
+        message='Questions sorted Z → A. Switch back to Custom to drag manually.';
+        break;
+      case 'timer-asc':
+        message='Questions sorted by timer (shortest first). Switch back to Custom to drag manually.';
+        break;
+      case 'timer-desc':
+        message='Questions sorted by timer (longest first). Switch back to Custom to drag manually.';
+        break;
+      default:
+        message='Drag questions to reorder them manually.';
+    }
+    questionSortHelp.textContent=message;
+  }
+
+  function clearQuestionDragIndicators(){
+    if(!questionNavigatorContainer){
+      return;
+    }
+    var items=questionNavigatorContainer.querySelectorAll('.question-nav-item');
+    for(var i=0;i<items.length;i++){
+      items[i].classList.remove('drop-before','drop-after','dragging');
+    }
+  }
+
+  function setQuestionSortMode(mode){
+    var desired=(mode||'custom');
+    if(desired==='custom'){
+      questionSortMode='custom';
+      updateQuestionSortHelp();
+      draggedQuestionId=null;
+      clearQuestionDragIndicators();
+      renderQuestionNavigator();
+      renderQuestionWorkspace();
+      return;
+    }
+    sortQuestionsByMode(desired);
+  }
+
+  function sortQuestionsByMode(mode,options){
+    options=options||{};
+    if(!Array.isArray(questions)||questions.length<=1){
+      questionSortMode=mode;
+      updateQuestionSortHelp();
+      renderQuestionNavigator();
+      renderQuestionWorkspace();
+      return;
+    }
+    var focusId=options.focusId||getCurrentQuestionId();
+    var beforeOrder=questions.map(function(question){return question&&question._localId;}).join('|');
+    var sorted=questions.slice();
+    sorted.sort(function(a,b){
+      switch(mode){
+        case 'alpha-desc':
+          return compareQuestionText(b,a);
+        case 'timer-asc':
+          var aTimer=getTimerValueForSort(a);
+          var bTimer=getTimerValueForSort(b);
+          if(aTimer===null&&bTimer===null){
+            return compareQuestionText(a,b);
+          }
+          if(aTimer===null){
+            return 1;
+          }
+          if(bTimer===null){
+            return -1;
+          }
+          if(aTimer===bTimer){
+            return compareQuestionText(a,b);
+          }
+          return aTimer-bTimer;
+        case 'timer-desc':
+          var aTimerDesc=getTimerValueForSort(a);
+          var bTimerDesc=getTimerValueForSort(b);
+          if(aTimerDesc===null&&bTimerDesc===null){
+            return compareQuestionText(a,b);
+          }
+          if(aTimerDesc===null){
+            return 1;
+          }
+          if(bTimerDesc===null){
+            return -1;
+          }
+          if(aTimerDesc===bTimerDesc){
+            return compareQuestionText(a,b);
+          }
+          return bTimerDesc-aTimerDesc;
+        case 'alpha-asc':
+        default:
+          return compareQuestionText(a,b);
+      }
+    });
+    var afterOrder=sorted.map(function(question){return question&&question._localId;}).join('|');
+    questions=sorted;
+    questionSortMode=mode;
+    updateQuestionSortHelp();
+    draggedQuestionId=null;
+    setSelectedQuestionById(focusId);
+    renderQuestionNavigator();
+    renderQuestionWorkspace();
+    if(beforeOrder!==afterOrder&&options.markDirty!==false){
+      markPollDirty();
+    }
+  }
+
+  function resetQuestionOrderToInitial(){
+    if(!Array.isArray(questions)||questions.length<=1){
+      questionSortMode='custom';
+      updateQuestionSortHelp();
+      return;
+    }
+    var previousOrder=questions.map(function(question){return question&&question._localId;}).join('|');
+    var orderedIds=[];
+    var seen={};
+    initialQuestionOrder.forEach(function(id){
+      if(!id||seen[id]){
+        return;
+      }
+      for(var i=0;i<questions.length;i++){
+        if(questions[i]&&questions[i]._localId===id){
+          orderedIds.push(id);
+          seen[id]=true;
+          break;
+        }
+      }
+    });
+    questions.forEach(function(question){
+      if(question&&question._localId&&!seen[question._localId]){
+        orderedIds.push(question._localId);
+        seen[question._localId]=true;
+      }
+    });
+    questionSortMode='custom';
+    updateQuestionSortHelp();
+    draggedQuestionId=null;
+    var newOrder=orderedIds.join('|');
+    if(newOrder===previousOrder){
+      clearQuestionDragIndicators();
+      renderQuestionNavigator();
+      renderQuestionWorkspace();
+      return;
+    }
+    var focusId=getCurrentQuestionId();
+    var map={};
+    questions.forEach(function(question){
+      if(question&&question._localId){
+        map[question._localId]=question;
+      }
+    });
+    var reordered=[];
+    orderedIds.forEach(function(id){
+      if(map[id]){
+        reordered.push(map[id]);
+        delete map[id];
+      }
+    });
+    Object.keys(map).forEach(function(id){
+      reordered.push(map[id]);
+    });
+    questions=reordered;
+    clearQuestionDragIndicators();
+    setSelectedQuestionById(focusId);
+    renderQuestionNavigator();
+    renderQuestionWorkspace();
+    markPollDirty();
+  }
+
+  function reorderQuestion(sourceId,targetId,position){
+    if(!sourceId||!targetId||sourceId===targetId){
+      return;
+    }
+    var previousSelectionId=getCurrentQuestionId();
+    var orderBefore=questions.map(function(question){return question&&question._localId;}).join('|');
+    var fromIndex=-1;
+    var targetIndex=-1;
+    for(var i=0;i<questions.length;i++){
+      var qId=questions[i]&&questions[i]._localId;
+      if(qId===sourceId){
+        fromIndex=i;
+      }
+      if(qId===targetId){
+        targetIndex=i;
+      }
+    }
+    if(fromIndex===-1||targetIndex===-1){
+      return;
+    }
+    var moving=questions.splice(fromIndex,1)[0];
+    var insertIndex=questions.findIndex(function(question){return question&&question._localId===targetId;});
+    if(position==='after'){
+      questions.splice(insertIndex+1,0,moving);
+    }else{
+      questions.splice(insertIndex,0,moving);
+    }
+    questionSortMode='custom';
+    updateQuestionSortHelp();
+    var orderAfter=questions.map(function(question){return question&&question._localId;}).join('|');
+    if(orderBefore!==orderAfter){
+      markPollDirty();
+    }
+    setSelectedQuestionById(previousSelectionId||sourceId);
+    renderQuestionNavigator();
+    renderQuestionWorkspace();
+  }
+
+  function handleQuestionDragStart(event,questionId,element){
+    if(questionSortMode!=='custom'){
+      event.preventDefault();
+      return;
+    }
+    draggedQuestionId=questionId;
+    if(element){
+      element.classList.add('dragging');
+    }
+    if(event&&event.dataTransfer){
+      event.dataTransfer.effectAllowed='move';
+      try{
+        event.dataTransfer.setData('text/plain',questionId||'');
+      }catch(err){
+        // ignore
+      }
+    }
+  }
+
+  function handleQuestionDragOver(event,element){
+    if(questionSortMode!=='custom'||!draggedQuestionId){
+      return;
+    }
+    event.preventDefault();
+    if(!element){
+      return;
+    }
+    var rect=element.getBoundingClientRect();
+    var before=event.clientY<rect.top+rect.height/2;
+    element.classList.toggle('drop-before',before);
+    element.classList.toggle('drop-after',!before);
+  }
+
+  function handleQuestionDragLeave(element){
+    if(!element){
+      return;
+    }
+    element.classList.remove('drop-before','drop-after');
+  }
+
+  function handleQuestionDrop(event,questionId,element){
+    if(questionSortMode!=='custom'||!draggedQuestionId){
+      return;
+    }
+    event.preventDefault();
+    if(!element){
+      return;
+    }
+    var rect=element.getBoundingClientRect();
+    var before=event.clientY<rect.top+rect.height/2;
+    handleQuestionDragLeave(element);
+    reorderQuestion(draggedQuestionId,questionId,before?'before':'after');
+  }
+
+  function handleQuestionDragEnd(element){
+    draggedQuestionId=null;
+    if(element){
+      element.classList.remove('dragging');
+    }
+    clearQuestionDragIndicators();
+  }
+
   // --- Poll Creator Modal ---
   function openPollCreator(existingPoll){
     var saveButton=document.getElementById('save-poll-btn');
@@ -7838,6 +8318,12 @@
     questionCounter=0;
     questions=[];
     selectedQuestionIndex=0;
+    questionIdCounter=0;
+    questionSortMode='custom';
+    draggedQuestionId=null;
+    if(questionSortSelect){
+      questionSortSelect.value='custom';
+    }
 
     if(existingPoll){
       editingPollId=existingPoll.pollId;
@@ -7883,7 +8369,7 @@
             correctIndex=idx;
           }
         });
-        return {
+        var questionData={
           questionText:question.questionText||'',
           questionImage:null,
           questionImageURL:question.questionImageURL||null,
@@ -7893,6 +8379,8 @@
           timerSeconds:question.timerSeconds||null,
           metacognitionEnabled:!!question.metacognitionEnabled
         };
+        ensureQuestionHasId(questionData);
+        return questionData;
       });
       if(questions.length===0){
         addQuestion(true);
@@ -7919,6 +8407,8 @@
       resetPollDirty('All changes saved');
     }
 
+    captureInitialQuestionOrder();
+    updateQuestionSortHelp();
     renderQuestionNavigator();
     renderQuestionWorkspace();
     modal.style.display='flex';
@@ -7930,6 +8420,14 @@
     questionCounter=0;
     selectedQuestionIndex=0;
     editingPollId=null;
+    questionIdCounter=0;
+    initialQuestionOrder=[];
+    questionSortMode='custom';
+    draggedQuestionId=null;
+    if(questionSortSelect){
+      questionSortSelect.value='custom';
+    }
+    updateQuestionSortHelp();
     document.getElementById('save-poll-btn').innerHTML='<span class="truncate">Publish Poll</span>';
     resetPollDirty('All changes saved');
   }
@@ -7949,13 +8447,19 @@
       timerSeconds:null,
       metacognitionEnabled:false
     };
+    ensureQuestionHasId(newQuestion);
     questions.push(newQuestion);
-    selectedQuestionIndex=questions.length-1;
-    if(!skipDirty){
-      markPollDirty();
+    var newQuestionId=newQuestion._localId;
+    if(questionSortMode!=='custom'){
+      sortQuestionsByMode(questionSortMode,{focusId:newQuestionId,markDirty:!skipDirty});
+    }else{
+      selectedQuestionIndex=questions.length-1;
+      if(!skipDirty){
+        markPollDirty();
+      }
+      renderQuestionNavigator();
+      renderQuestionWorkspace();
     }
-    renderQuestionNavigator();
-    renderQuestionWorkspace();
   }
 
   async function deleteQuestion(index){
@@ -7963,8 +8467,17 @@
       await veritasAlert('A poll must have at least one question.',{title:'Edit poll'});
       return;
     }
-    questions.splice(index,1);
-    selectedQuestionIndex=Math.max(0,Math.min(selectedQuestionIndex,questions.length-1));
+    var removedQuestion=questions.splice(index,1)[0];
+    if(removedQuestion&&removedQuestion._localId){
+      initialQuestionOrder=initialQuestionOrder.filter(function(id){return id!==removedQuestion._localId;});
+    }
+    var nextSelection=null;
+    if(questions[index]){
+      nextSelection=questions[index]._localId;
+    }else if(questions[index-1]){
+      nextSelection=questions[index-1]._localId;
+    }
+    setSelectedQuestionById(nextSelection);
     renderQuestionNavigator();
     renderQuestionWorkspace();
     markPollDirty();
@@ -7978,26 +8491,49 @@
     // Deep copy the question
     var questionToDuplicate=questions[index];
     var duplicatedQuestion=JSON.parse(JSON.stringify(questionToDuplicate));
+    delete duplicatedQuestion._localId;
+    ensureQuestionHasId(duplicatedQuestion);
 
     // Insert the duplicated question right after the original
     questions.splice(index+1,0,duplicatedQuestion);
     questionCounter++;
-    selectedQuestionIndex=index+1;
 
-    renderQuestionNavigator();
-    renderQuestionWorkspace();
-    markPollDirty();
+    if(questionSortMode!=='custom'){
+      sortQuestionsByMode(questionSortMode,{focusId:duplicatedQuestion._localId});
+    }else{
+      selectedQuestionIndex=index+1;
+      renderQuestionNavigator();
+      renderQuestionWorkspace();
+      markPollDirty();
+    }
   }
 
   function renderQuestionNavigator(){
-    var nav=document.getElementById('question-navigator');
+    var nav=questionNavigatorContainer||document.getElementById('question-navigator');
+    if(!nav){
+      return;
+    }
     nav.innerHTML='';
-    
+
     questions.forEach(function(q,index){
+      var questionId=q&&q._localId;
       var isSelected=index===selectedQuestionIndex;
       var div=document.createElement('div');
-      div.className='group relative flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer '+(isSelected?'bg-primary/20 dark:bg-primary/30':'hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10');
-      
+      var baseClass='group question-nav-item relative flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer ';
+      if(questionSortMode==='custom'){
+        baseClass+='cursor-grab ';
+      }
+      baseClass+=isSelected?'bg-primary/20 dark:bg-primary/30':'hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10';
+      div.className=baseClass;
+      if(questionSortMode==='custom'){
+        div.setAttribute('draggable','true');
+      }else{
+        div.setAttribute('draggable','false');
+      }
+      if(questionId){
+        div.dataset.questionId=questionId;
+      }
+
       var html='<span class="material-symbols-outlined '+(isSelected?'text-brand-dark-gray dark:text-brand-white':'text-brand-dark-gray/50 dark:text-brand-white/50')+'">drag_indicator</span>';
       html+='<p class="'+(isSelected?'text-primary dark:text-brand-white':'text-brand-dark-gray dark:text-brand-white')+' text-sm font-medium leading-normal">Question '+(index+1)+'</p>';
 
@@ -8015,8 +8551,10 @@
       div.innerHTML=html;
 
       div.onclick=function(e){
-        if(e.target.classList.contains('material-symbols-outlined')&&(e.target.textContent==='close'||e.target.textContent==='content_copy'))return;
-        selectedQuestionIndex=index;
+        if(e.target.classList.contains('material-symbols-outlined')&&(e.target.textContent==='close'||e.target.textContent==='content_copy')){
+          return;
+        }
+        setSelectedQuestionById(questionId);
         renderQuestionNavigator();
         renderQuestionWorkspace();
       };
@@ -8036,7 +8574,23 @@
           deleteQuestion(parseInt(this.dataset.index));
         };
       }
-      
+
+      div.addEventListener('dragstart',function(event){
+        handleQuestionDragStart(event,questionId,div);
+      });
+      div.addEventListener('dragover',function(event){
+        handleQuestionDragOver(event,div);
+      });
+      div.addEventListener('dragleave',function(){
+        handleQuestionDragLeave(div);
+      });
+      div.addEventListener('drop',function(event){
+        handleQuestionDrop(event,questionId,div);
+      });
+      div.addEventListener('dragend',function(){
+        handleQuestionDragEnd(div);
+      });
+
       nav.appendChild(div);
     });
   }

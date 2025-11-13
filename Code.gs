@@ -620,6 +620,21 @@ const DataAccess = {
 
       if (!row) return null;
 
+      const answerOrdersRaw = row[7];
+      let parsedAnswerOrders = {};
+      if (typeof answerOrdersRaw === 'string') {
+        try {
+          parsedAnswerOrders = JSON.parse(answerOrdersRaw || '{}');
+        } catch (err) {
+          Logger.error('Failed to parse answer order map (student)', err);
+          parsedAnswerOrders = {};
+        }
+      } else if (Array.isArray(answerOrdersRaw)) {
+        parsedAnswerOrders = {};
+      }
+
+      const isLockedValue = row.length > 8 ? row[8] : row[7];
+
       return {
         pollId: row[0],
         sessionId: row[1],
@@ -628,7 +643,8 @@ const DataAccess = {
         endTime: row[4],
         currentQuestionIndex: typeof row[5] === 'number' ? row[5] : parseInt(row[5], 10) || 0,
         questionOrder: JSON.parse(row[6] || '[]'),
-        isLocked: row[7] === true || row[7] === 'TRUE' || row[7] === 'true'
+        answerOrders: parsedAnswerOrders,
+        isLocked: isLockedValue === true || isLockedValue === 'TRUE' || isLockedValue === 'true'
       };
     },
 
@@ -640,19 +656,35 @@ const DataAccess = {
       const values = getDataRangeValues_(sheet);
       return values
         .filter(r => r[0] === pollId && r[1] === sessionId)
-        .map(row => ({
-          pollId: row[0],
-          sessionId: row[1],
-          studentEmail: row[2],
-          startTime: row[3],
-          endTime: row[4],
-          currentQuestionIndex: typeof row[5] === 'number' ? row[5] : parseInt(row[5], 10) || 0,
-          questionOrder: JSON.parse(row[6] || '[]'),
-          isLocked: row[7] === true || row[7] === 'TRUE' || row[7] === 'true'
-        }));
+        .map(row => {
+          const answerOrdersRaw = row[7];
+          let parsedAnswerOrders = {};
+          if (typeof answerOrdersRaw === 'string') {
+            try {
+              parsedAnswerOrders = JSON.parse(answerOrdersRaw || '{}');
+            } catch (err) {
+              Logger.error('Failed to parse answer order map (session)', err);
+              parsedAnswerOrders = {};
+            }
+          }
+
+          const isLockedValue = row.length > 8 ? row[8] : row[7];
+
+          return {
+            pollId: row[0],
+            sessionId: row[1],
+            studentEmail: row[2],
+            startTime: row[3],
+            endTime: row[4],
+            currentQuestionIndex: typeof row[5] === 'number' ? row[5] : parseInt(row[5], 10) || 0,
+            questionOrder: JSON.parse(row[6] || '[]'),
+            answerOrders: parsedAnswerOrders,
+            isLocked: isLockedValue === true || isLockedValue === 'TRUE' || isLockedValue === 'true'
+          };
+        });
     },
 
-    initStudent: function(pollId, sessionId, studentEmail, questionOrder) {
+    initStudent: function(pollId, sessionId, studentEmail, questionOrder, answerOrders) {
       const ss = SpreadsheetApp.getActiveSpreadsheet();
       const sheet = ss.getSheetByName("IndividualSessionState");
       if (!sheet) {
@@ -674,6 +706,7 @@ const DataAccess = {
         null, // endTime
         0, // currentQuestionIndex
         JSON.stringify(questionOrder),
+        JSON.stringify(answerOrders || {}),
         false // isLocked
       ];
 
@@ -688,6 +721,7 @@ const DataAccess = {
         endTime: null,
         currentQuestionIndex: 0,
         questionOrder: questionOrder,
+        answerOrders: answerOrders || {},
         isLocked: false
       };
     },
@@ -712,6 +746,26 @@ const DataAccess = {
       return false;
     },
 
+    setAnswerOrders: function(pollId, sessionId, studentEmail, answerOrders) {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const sheet = ss.getSheetByName("IndividualSessionState");
+      if (!sheet) {
+        throw new Error('IndividualSessionState sheet not found.');
+      }
+
+      const values = getDataRangeValues_(sheet);
+      for (let i = 0; i < values.length; i++) {
+        if (values[i][0] === pollId && values[i][1] === sessionId && values[i][2] === studentEmail) {
+          const rowIndex = i + 2;
+          sheet.getRange(rowIndex, 8).setValue(JSON.stringify(answerOrders || {}));
+          Logger.log('Answer order map updated', { pollId, sessionId, studentEmail });
+          return true;
+        }
+      }
+
+      return false;
+    },
+
     lockStudent: function(pollId, sessionId, studentEmail) {
       const ss = SpreadsheetApp.getActiveSpreadsheet();
       const sheet = ss.getSheetByName("IndividualSessionState");
@@ -725,7 +779,7 @@ const DataAccess = {
           const rowIndex = i + 2;
           const endTime = new Date().toISOString();
           sheet.getRange(rowIndex, 5).setValue(endTime); // Set endTime
-          sheet.getRange(rowIndex, 8).setValue(true); // Set isLocked
+          sheet.getRange(rowIndex, 9).setValue(true); // Set isLocked
           Logger.log('Student locked', { pollId, sessionId, studentEmail, endTime });
           return true;
         }
@@ -1118,7 +1172,7 @@ function setupSheet() {
     .setFontWeight("bold").setBackground("#4285f4").setFontColor("#ffffff");
 
   const individualSessionStateSheet = ss.getSheetByName("IndividualSessionState");
-  individualSessionStateSheet.getRange("A1:H1").setValues([["PollID", "SessionID", "StudentEmail", "StartTime", "EndTime", "CurrentQuestionIndex", "QuestionOrderJSON", "IsLocked"]])
+  individualSessionStateSheet.getRange("A1:I1").setValues([["PollID", "SessionID", "StudentEmail", "StartTime", "EndTime", "CurrentQuestionIndex", "QuestionOrderJSON", "AnswerOrdersJSON", "IsLocked"]])
     .setFontWeight("bold").setBackground("#4285f4").setFontColor("#ffffff");
 
   // Freeze header rows
@@ -1821,13 +1875,19 @@ function initializeIndividualTimedStudent(pollId, sessionId, studentEmail) {
       // Generate randomized question order
       const questionIndices = poll.questions.map((q, idx) => idx);
       const shuffledIndices = shuffleArray_(questionIndices);
+      const answerOrders = buildInitialAnswerOrderMap_(poll);
 
       studentState = DataAccess.individualSessionState.initStudent(
         pollId,
         sessionId,
         studentEmail,
-        shuffledIndices
+        shuffledIndices,
+        answerOrders
       );
+    } else if (!studentState.answerOrders || typeof studentState.answerOrders !== 'object') {
+      const regeneratedOrders = buildInitialAnswerOrderMap_(poll);
+      studentState.answerOrders = regeneratedOrders;
+      DataAccess.individualSessionState.setAnswerOrders(pollId, sessionId, studentEmail, regeneratedOrders);
     }
 
     // Check if time limit expired
@@ -1881,6 +1941,29 @@ function getIndividualTimedQuestion(pollId, sessionId, studentEmail) {
     const actualQuestionIndex = studentState.questionOrder[studentState.currentQuestionIndex];
     const question = poll.questions[actualQuestionIndex];
 
+    // Determine randomized answer order (stable per student)
+    const answerOrderMap = studentState.answerOrders || {};
+    let answerOrder = answerOrderMap[actualQuestionIndex];
+    const optionCount = Array.isArray(question.options) ? question.options.length : 0;
+
+    if (!Array.isArray(answerOrder) || answerOrder.length !== optionCount) {
+      const freshOrder = optionCount > 0
+        ? shuffleArray_(question.options.map((_, idx) => idx))
+        : [];
+      answerOrderMap[actualQuestionIndex] = freshOrder;
+      DataAccess.individualSessionState.setAnswerOrders(pollId, sessionId, studentEmail, answerOrderMap);
+      answerOrder = freshOrder;
+    }
+
+    const shuffledOptions = Array.isArray(question.options)
+      ? answerOrder.map(idx => question.options[idx])
+      : [];
+
+    const questionPayload = {
+      ...question,
+      options: shuffledOptions
+    };
+
     // Calculate time remaining
     const timeLimitMinutes = poll.timeLimitMinutes;
     const startTime = new Date(studentState.startTime).getTime();
@@ -1890,13 +1973,14 @@ function getIndividualTimedQuestion(pollId, sessionId, studentEmail) {
 
     return {
       sessionId: sessionId,
-      question: question,
+      question: questionPayload,
       actualQuestionIndex: actualQuestionIndex,
       progressIndex: studentState.currentQuestionIndex,
       totalQuestions: poll.questions.length,
       timeRemainingSeconds: Math.max(0, Math.floor(remainingMs / 1000)),
       startTime: studentState.startTime,
-      timeLimitMinutes: timeLimitMinutes
+      timeLimitMinutes: timeLimitMinutes,
+      answerOrder: answerOrder
     };
   })();
 }
@@ -2225,6 +2309,25 @@ function shuffleArray_(array) {
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   return shuffled;
+}
+
+function buildInitialAnswerOrderMap_(poll) {
+  const map = {};
+  if (!poll || !Array.isArray(poll.questions)) {
+    return map;
+  }
+
+  poll.questions.forEach((question, index) => {
+    if (!question || !Array.isArray(question.options)) {
+      map[index] = [];
+      return;
+    }
+
+    const optionIndices = question.options.map((_, optionIndex) => optionIndex);
+    map[index] = shuffleArray_(optionIndices);
+  });
+
+  return map;
 }
 
 function updatePoll(pollId, pollName, className, questions, sessionType, timeLimitMinutes) {

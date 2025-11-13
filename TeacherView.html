@@ -734,23 +734,6 @@
       transform: translateX(2px);
     }
 
-    #nav-create-poll {
-      border: 1px solid rgba(255, 255, 255, 0.28);
-      color: #ffffff;
-      font-weight: 600;
-      background: transparent;
-    }
-
-    #nav-create-poll:hover {
-      border-color: rgba(255, 255, 255, 0.45);
-      background: rgba(255, 255, 255, 0.12);
-    }
-
-    #nav-create-poll:focus-visible {
-      outline: 2px solid rgba(255, 255, 255, 0.6);
-      outline-offset: 2px;
-    }
-
     .question-nav-item.dragging {
       opacity: 0.55;
     }
@@ -1214,7 +1197,7 @@
             <span class="material-symbols-outlined">monitoring</span>
             <span>Live Dashboard</span>
           </button>
-          <button id="nav-create-poll" class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg text-left border border-brand-white/25 hover:border-brand-white/40 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-white/40 font-semibold">
+          <button id="nav-create-poll" class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors font-semibold">
             <span class="material-symbols-outlined">add_circle</span>
             <span>Create New Poll</span>
           </button>
@@ -1271,7 +1254,7 @@
                 </label>
                 <div class="relative w-full sm:w-64">
                   <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-gray-400">search</span>
-                  <input id="poll-search-input" type="search" placeholder="Search polls or questions..." class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-9 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-veritas-gold" aria-label="Search polls" />
+                  <input id="poll-search-input" type="search" placeholder="Search polls, questions, or live session terms..." class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-9 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-veritas-gold" aria-label="Search polls" />
                   <button id="poll-search-clear-btn" type="button" class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none" aria-label="Clear search">
                     <span class="material-symbols-outlined text-base leading-none">close</span>
                   </button>
@@ -1891,17 +1874,10 @@
           <div class="flex h-full flex-col justify-between p-4">
             <div class="mb-4">
               <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-dark-gray/60 dark:text-brand-white/60 mb-2">Question Order</p>
-              <div class="flex items-center gap-2">
-                <select id="question-sort-select" class="flex-1 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 bg-brand-white dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
-                  <option value="custom">Custom order (drag &amp; drop)</option>
-                  <option value="alpha-asc">Alphabetical A → Z</option>
-                  <option value="alpha-desc">Alphabetical Z → A</option>
-                  <option value="timer-asc">Timer: shortest first</option>
-                  <option value="timer-desc">Timer: longest first</option>
-                </select>
-                <button id="question-sort-reset-btn" type="button" class="h-10 px-3 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 bg-brand-white dark:bg-brand-dark-gray/30 text-xs font-semibold text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray/40 dark:hover:bg-brand-dark-gray/50 transition-colors">Reset</button>
+              <div class="flex items-start justify-between gap-2">
+                <p id="question-sort-help" class="flex-1 text-xs leading-relaxed text-brand-dark-gray/60 dark:text-brand-white/60">Drag questions to reorder them manually.</p>
+                <button id="question-sort-reset-btn" type="button" class="h-9 px-3 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 bg-brand-white dark:bg-brand-dark-gray/30 text-xs font-semibold text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray/40 dark:hover:bg-brand-dark-gray/50 transition-colors">Reset order</button>
               </div>
-              <p id="question-sort-help" class="mt-2 text-xs text-brand-dark-gray/60 dark:text-brand-white/60">Drag questions to reorder them manually.</p>
             </div>
             <div id="question-navigator" class="flex flex-col gap-2">
               <!-- Question items will be added dynamically -->
@@ -2145,7 +2121,6 @@
   var questionCounter=0;
   var questions=[];
   var questionIdCounter=0;
-  var questionSortMode='custom';
   var customQuestionOrder=[];
   var initialQuestionOrder=[];
   var draggedQuestionId=null;
@@ -2966,7 +2941,6 @@
   var pollsTableBody=document.getElementById('polls-table-body');
   var pollsEmptyState=document.getElementById('polls-empty-state');
   var classSelect=document.getElementById('class-select');
-  var questionSortSelect=document.getElementById('question-sort-select');
   var questionSortResetBtn=document.getElementById('question-sort-reset-btn');
   var questionSortHelp=document.getElementById('question-sort-help');
   var questionNavigatorContainer=document.getElementById('question-navigator');
@@ -3057,12 +3031,7 @@
   }
 
   updatePollSearchClear();
-
-  if(questionSortSelect){
-    questionSortSelect.addEventListener('change',function(){
-      setQuestionSortMode(this.value||'custom');
-    });
-  }
+  setQuestionReorderHelp();
 
   if(questionSortResetBtn){
     questionSortResetBtn.addEventListener('click',function(){
@@ -3731,20 +3700,52 @@
     if(name.indexOf(normalizedQuery)!==-1)return true;
     var className=(poll&&poll.className?poll.className:'').toLowerCase();
     if(className.indexOf(normalizedQuery)!==-1)return true;
-    if(!poll||!Array.isArray(poll.questions))return false;
-    for(var i=0;i<poll.questions.length;i++){
-      var question=poll.questions[i]||{};
-      var text=(question.questionText||'').toLowerCase();
-      if(text.indexOf(normalizedQuery)!==-1)return true;
-      var topic=(question.topicTag||question.topic||'').toLowerCase();
-      if(topic.indexOf(normalizedQuery)!==-1)return true;
-      var correctText=(question.correctAnswer||'').toLowerCase();
-      if(correctText&&correctText.indexOf(normalizedQuery)!==-1)return true;
-      var options=Array.isArray(question.options)?question.options:(Array.isArray(question.answers)?question.answers:[]);
-      for(var j=0;j<options.length;j++){
-        var option=options[j]||{};
-        var optionText=(option.text||option.label||'').toLowerCase();
-        if(optionText.indexOf(normalizedQuery)!==-1)return true;
+    if(!poll)return false;
+    if(Array.isArray(poll.questions)){
+      for(var i=0;i<poll.questions.length;i++){
+        var question=poll.questions[i]||{};
+        var text=(question.questionText||'').toLowerCase();
+        if(text.indexOf(normalizedQuery)!==-1)return true;
+        var topic=(question.topicTag||question.topic||'').toLowerCase();
+        if(topic.indexOf(normalizedQuery)!==-1)return true;
+        var correctText=(question.correctAnswer||'').toLowerCase();
+        if(correctText&&correctText.indexOf(normalizedQuery)!==-1)return true;
+        var options=Array.isArray(question.options)?question.options:(Array.isArray(question.answers)?question.answers:[]);
+        for(var j=0;j<options.length;j++){
+          var option=options[j]||{};
+          var optionText=(option.text||option.label||'').toLowerCase();
+          if(optionText.indexOf(normalizedQuery)!==-1)return true;
+        }
+      }
+    }
+    var sessionCollections=[];
+    if(poll&&Array.isArray(poll.liveSessions))sessionCollections.push(poll.liveSessions);
+    if(poll&&Array.isArray(poll.recentSessions))sessionCollections.push(poll.recentSessions);
+    if(poll&&Array.isArray(poll.sessions))sessionCollections.push(poll.sessions);
+    for(var c=0;c<sessionCollections.length;c++){
+      var collection=sessionCollections[c];
+      for(var s=0;s<collection.length;s++){
+        var session=collection[s]||{};
+        var sessionNameRaw=session.sessionName||session.title||'';
+        var sessionName=(typeof sessionNameRaw==='string'?sessionNameRaw:String(sessionNameRaw||'')).toLowerCase();
+        if(sessionName.indexOf(normalizedQuery)!==-1)return true;
+        var sessionNotesRaw=session.notes||session.summary||'';
+        var sessionNotes=(typeof sessionNotesRaw==='string'?sessionNotesRaw:String(sessionNotesRaw||'')).toLowerCase();
+        if(sessionNotes.indexOf(normalizedQuery)!==-1)return true;
+        var sessionQuestions=Array.isArray(session.questions)?session.questions:[];
+        for(var q=0;q<sessionQuestions.length;q++){
+          var sessionQuestion=sessionQuestions[q]||{};
+          var sessionTextRaw=sessionQuestion.questionText||sessionQuestion.text||'';
+          var sessionText=(typeof sessionTextRaw==='string'?sessionTextRaw:String(sessionTextRaw||'')).toLowerCase();
+          if(sessionText.indexOf(normalizedQuery)!==-1)return true;
+          var sessionOptions=Array.isArray(sessionQuestion.options)?sessionQuestion.options:[];
+          for(var so=0;so<sessionOptions.length;so++){
+            var sessionOption=sessionOptions[so]||{};
+            var sessionOptionRaw=sessionOption.text||sessionOption.label||'';
+            var sessionOptionText=(typeof sessionOptionRaw==='string'?sessionOptionRaw:String(sessionOptionRaw||'')).toLowerCase();
+            if(sessionOptionText.indexOf(normalizedQuery)!==-1)return true;
+          }
+        }
       }
     }
     return false;
@@ -7891,7 +7892,14 @@
       .withFailureHandler(function(error){
         handleError(error);
       })
-      .updatePoll(currentPreviewPoll.pollId,currentPreviewPoll.pollName,currentPreviewPoll.className,currentPreviewPoll.questions);
+      .updatePoll(
+        currentPreviewPoll.pollId,
+        currentPreviewPoll.pollName,
+        currentPreviewPoll.className,
+        currentPreviewPoll.questions,
+        currentPreviewPoll.sessionType,
+        currentPreviewPoll.timeLimitMinutes
+      );
   }
 
   function togglePreviewReorder(){
@@ -7933,7 +7941,14 @@
       .withFailureHandler(function(error){
         handleError(error);
       })
-      .updatePoll(currentPreviewPoll.pollId,currentPreviewPoll.pollName,currentPreviewPoll.className,currentPreviewPoll.questions);
+      .updatePoll(
+        currentPreviewPoll.pollId,
+        currentPreviewPoll.pollName,
+        currentPreviewPoll.className,
+        currentPreviewPoll.questions,
+        currentPreviewPoll.sessionType,
+        currentPreviewPoll.timeLimitMinutes
+      );
   }
 
   var draggedItemIndex=null;
@@ -8045,70 +8060,11 @@
     return ordered;
   }
 
-  function compareQuestionTextAsc(a,b){
-    var aText=(a&&a.questionText?a.questionText:'').toLowerCase();
-    var bText=(b&&b.questionText?b.questionText:'').toLowerCase();
-    if(aText===bText){
-      return (a&&a.questionText?a.questionText:'').localeCompare(b&&b.questionText?b.questionText:'');
-    }
-    return aText.localeCompare(bText);
-  }
-
-  function getQuestionTimerValue(question){
-    if(!question)return null;
-    var value=question.timerSeconds;
-    if(typeof value==='string'&&value.trim()!==''){
-      value=parseInt(value,10);
-    }
-    if(typeof value==='number'&&isFinite(value)){
-      return value;
-    }
-    return null;
-  }
-
   function enforceQuestionOrder(preserveQuestionId){
     var selectionId=preserveQuestionId||(questions[selectedQuestionIndex]&&questions[selectedQuestionIndex]._id)||null;
-    if(questionSortMode==='custom'){
-      var ordered=buildOrderFromIds(customQuestionOrder);
-      questions=ordered;
-      customQuestionOrder=ordered.map(function(question){return question._id;});
-    }else if(questionSortMode==='alpha-asc'){
-      questions.sort(function(a,b){
-        return compareQuestionTextAsc(a,b);
-      });
-    }else if(questionSortMode==='alpha-desc'){
-      questions.sort(function(a,b){
-        return compareQuestionTextAsc(b,a);
-      });
-    }else if(questionSortMode==='timer-asc'){
-      questions.sort(function(a,b){
-        var aVal=getQuestionTimerValue(a);
-        var bVal=getQuestionTimerValue(b);
-        if(aVal===null&&bVal===null){
-          return compareQuestionTextAsc(a,b);
-        }
-        if(aVal===null)return 1;
-        if(bVal===null)return -1;
-        if(aVal===bVal){
-          return compareQuestionTextAsc(a,b);
-        }
-        return aVal-bVal;
-      });
-    }else if(questionSortMode==='timer-desc'){
-      questions.sort(function(a,b){
-        var aVal=getQuestionTimerValue(a);
-        var bVal=getQuestionTimerValue(b);
-        if(aVal===null&&bVal===null){
-          return compareQuestionTextAsc(a,b);
-        }
-        if(aVal===null)return 1;
-        if(bVal===null)return -1;
-        if(aVal===bVal){
-          return compareQuestionTextAsc(a,b);
-        }
-        return bVal-aVal;
-      });
-    }
+    var ordered=buildOrderFromIds(customQuestionOrder);
+    questions=ordered;
+    customQuestionOrder=ordered.map(function(question){return question._id;});
 
     if(questions.length===0){
       selectedQuestionIndex=0;
@@ -8127,48 +8083,10 @@
     }
   }
 
-  function updateQuestionSortUi(){
-    if(questionSortSelect){
-      questionSortSelect.value=questionSortMode;
-    }
+  function setQuestionReorderHelp(){
     if(questionSortHelp){
-      var message='Drag questions to reorder them manually.';
-      switch(questionSortMode){
-        case 'alpha-asc':
-          message='Questions sorted alphabetically (A → Z). Dragging is disabled while this sort is active.';
-          break;
-        case 'alpha-desc':
-          message='Questions sorted alphabetically (Z → A). Dragging is disabled while this sort is active.';
-          break;
-        case 'timer-asc':
-          message='Questions sorted by timer (shortest first). Dragging is disabled while this sort is active.';
-          break;
-        case 'timer-desc':
-          message='Questions sorted by timer (longest first). Dragging is disabled while this sort is active.';
-          break;
-        default:
-          message='Drag questions to reorder them manually.';
-          break;
-      }
-      questionSortHelp.textContent=message;
+      questionSortHelp.textContent='Drag questions to reorder them manually.';
     }
-  }
-
-  function setQuestionSortMode(mode){
-    var nextMode=mode||'custom';
-    if(questionSortMode===nextMode){
-      enforceQuestionOrder();
-      updateQuestionSortUi();
-      renderQuestionNavigator();
-      renderQuestionWorkspace();
-      return;
-    }
-    questionSortMode=nextMode;
-    updateQuestionSortUi();
-    enforceQuestionOrder();
-    renderQuestionNavigator();
-    renderQuestionWorkspace();
-    markPollDirty();
   }
 
   function resetQuestionOrderToInitial(){
@@ -8177,12 +8095,11 @@
     var ordered=buildOrderFromIds(initialQuestionOrder);
     questions=ordered;
     customQuestionOrder=ordered.map(function(question){return question._id;});
-    questionSortMode='custom';
-    updateQuestionSortUi();
     enforceQuestionOrder(selectionId);
     renderQuestionNavigator();
     renderQuestionWorkspace();
     markPollDirty();
+    setQuestionReorderHelp();
   }
 
   function clearDropIndicators(){
@@ -8219,7 +8136,6 @@
   }
 
   function handleQuestionDragStart(e){
-    if(questionSortMode!=='custom')return;
     draggedQuestionId=this.dataset.questionId||null;
     if(!draggedQuestionId)return;
     this.classList.add('dragging');
@@ -8228,7 +8144,7 @@
   }
 
   function handleQuestionDragOver(e){
-    if(questionSortMode!=='custom'||!draggedQuestionId)return;
+    if(!draggedQuestionId)return;
     var questionId=this.dataset.questionId;
     if(!questionId||questionId===draggedQuestionId)return;
     e.preventDefault();
@@ -8250,7 +8166,7 @@
   }
 
   function handleQuestionDrop(e){
-    if(questionSortMode!=='custom'||!draggedQuestionId)return;
+    if(!draggedQuestionId)return;
     var questionId=this.dataset.questionId;
     if(!questionId||questionId===draggedQuestionId)return;
     e.preventDefault();
@@ -8271,13 +8187,13 @@
   }
 
   function handleNavigatorDragOver(e){
-    if(questionSortMode!=='custom'||!draggedQuestionId)return;
+    if(!draggedQuestionId)return;
     e.preventDefault();
     clearDropIndicators();
   }
 
   function handleNavigatorDrop(e){
-    if(questionSortMode!=='custom'||!draggedQuestionId)return;
+    if(!draggedQuestionId)return;
     if(e.target!==questionNavigatorContainer)return;
     e.preventDefault();
     clearDropIndicators();
@@ -8314,9 +8230,8 @@
     questionIdCounter=0;
     customQuestionOrder=[];
     initialQuestionOrder=[];
-    questionSortMode='custom';
     draggedQuestionId=null;
-    updateQuestionSortUi();
+    setQuestionReorderHelp();
 
     if(existingPoll){
       editingPollId=existingPoll.pollId;
@@ -8326,7 +8241,6 @@
       }
       classSelect.value=existingPoll.className||'';
 
-      // Set session type and time limit
       var sessionTypeSelect=document.getElementById('session-type-select');
       var timeLimitInput=document.getElementById('time-limit-input');
       var timeLimitGroup=document.getElementById('time-limit-group');
@@ -8337,8 +8251,8 @@
           if(timeLimitInput&&existingPoll.timeLimitMinutes){
             timeLimitInput.value=existingPoll.timeLimitMinutes;
           }
-        }else{
-          if(timeLimitGroup)timeLimitGroup.style.display='none';
+        }else if(timeLimitGroup){
+          timeLimitGroup.style.display='none';
         }
       }
 
@@ -8351,10 +8265,8 @@
             imageFileId:opt.imageFileId||null
           };
         });
-        if(answers.length<2){
-          while(answers.length<2){
-            answers.push({text:'',image:null,imageURL:null,imageFileId:null});
-          }
+        while(answers.length<2){
+          answers.push({text:'',image:null,imageURL:null,imageFileId:null});
         }
         var correctIndex=0;
         answers.forEach(function(answer,idx){
@@ -8385,13 +8297,12 @@
       document.getElementById('new-poll-name').value='';
       classSelect.value='';
 
-      // Reset session type and time limit
-      var sessionTypeSelect=document.getElementById('session-type-select');
-      var timeLimitInput=document.getElementById('time-limit-input');
-      var timeLimitGroup=document.getElementById('time-limit-group');
-      if(sessionTypeSelect)sessionTypeSelect.value='LIVE_POLL';
-      if(timeLimitInput)timeLimitInput.value='';
-      if(timeLimitGroup)timeLimitGroup.style.display='none';
+      var newSessionTypeSelect=document.getElementById('session-type-select');
+      var newTimeLimitInput=document.getElementById('time-limit-input');
+      var newTimeLimitGroup=document.getElementById('time-limit-group');
+      if(newSessionTypeSelect)newSessionTypeSelect.value='LIVE_POLL';
+      if(newTimeLimitInput)newTimeLimitInput.value='';
+      if(newTimeLimitGroup)newTimeLimitGroup.style.display='none';
 
       addQuestion(true);
       saveButton.innerHTML='<span class="truncate">Publish Poll</span>';
@@ -8400,7 +8311,6 @@
 
     customQuestionOrder=questions.map(function(question){return question._id;});
     initialQuestionOrder=customQuestionOrder.slice();
-    updateQuestionSortUi();
     enforceQuestionOrder();
     renderQuestionNavigator();
     renderQuestionWorkspace();
@@ -8415,12 +8325,11 @@
     editingPollId=null;
     document.getElementById('save-poll-btn').innerHTML='<span class="truncate">Publish Poll</span>';
     resetPollDirty('All changes saved');
-    questionSortMode='custom';
     customQuestionOrder=[];
     initialQuestionOrder=[];
     questionIdCounter=0;
     draggedQuestionId=null;
-    updateQuestionSortUi();
+    setQuestionReorderHelp();
   }
 
   function addQuestion(suppressDirty){
@@ -8532,16 +8441,12 @@
       div.innerHTML=html;
       div.dataset.questionId=q&&q._id?q._id:('question-'+index);
       div.dataset.index=index;
-      if(questionSortMode==='custom'){
-        div.setAttribute('draggable','true');
-        div.addEventListener('dragstart',handleQuestionDragStart);
-        div.addEventListener('dragover',handleQuestionDragOver);
-        div.addEventListener('dragleave',handleQuestionDragLeave);
-        div.addEventListener('drop',handleQuestionDrop);
-        div.addEventListener('dragend',handleQuestionDragEnd);
-      }else{
-        div.setAttribute('draggable','false');
-      }
+      div.setAttribute('draggable','true');
+      div.addEventListener('dragstart',handleQuestionDragStart);
+      div.addEventListener('dragover',handleQuestionDragOver);
+      div.addEventListener('dragleave',handleQuestionDragLeave);
+      div.addEventListener('drop',handleQuestionDrop);
+      div.addEventListener('dragend',handleQuestionDragEnd);
 
       div.onclick=function(e){
         if(e.target.classList.contains('material-symbols-outlined')&&(e.target.textContent==='close'||e.target.textContent==='content_copy'))return;

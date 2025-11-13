@@ -460,9 +460,20 @@ const URLShortener = {
 
 function normalizeSheetBoolean_(value, defaultValue = false) {
   if (typeof value === 'boolean') return value;
-  if (value === 'TRUE' || value === 'true' || value === 1) return true;
-  if (value === 'FALSE' || value === 'false' || value === 0) return false;
-  if (value === '' || value === null || value === undefined) return defaultValue;
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed === '') return defaultValue;
+    if (trimmed === 'TRUE' || trimmed === 'true') return true;
+    if (trimmed === 'FALSE' || trimmed === 'false') return false;
+    if (trimmed === '1') return true;
+    if (trimmed === '0') return false;
+    return defaultValue;
+  }
+
+  if (value === 1) return true;
+  if (value === 0) return false;
+  if (value === null || value === undefined) return defaultValue;
   return defaultValue;
 }
 

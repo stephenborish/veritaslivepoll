@@ -1998,7 +1998,9 @@
                     return;
                 }
 
-                if (data.hasSubmitted) {
+                // Only update hasAnsweredCurrent if we've actually attempted to submit
+                // This prevents premature hiding of options due to stale server data
+                if (data.hasSubmitted && (pendingSubmission || hasAnsweredCurrent)) {
                     hasAnsweredCurrent = true;
                     pendingSubmission = false;
                 }
@@ -2331,7 +2333,9 @@
                 content += '<img src="' + escapeHtml(option.imageURL) + '" alt="Answer ' + letter + '" class="option-image" referrerpolicy="no-referrer">';
             }
             if (displayText) {
-                content += '<p class="option-text">' + escapeHtml(displayText).replace(/\n/g, '<br>') + '</p>';
+                // Remove carriage returns and normalize line endings before converting to <br>
+                var cleanText = displayText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+                content += '<p class="option-text">' + escapeHtml(cleanText).replace(/\n/g, '<br>') + '</p>';
             }
             content += '<span class="result-ribbon"></span>';
             content += '<span class="sr-only result-announcement"></span>';

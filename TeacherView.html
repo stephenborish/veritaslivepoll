@@ -1359,29 +1359,6 @@
           <!-- Main Content (Right) -->
           <div id="live-main-content" class="flex-1 overflow-y-auto px-6 py-8">
             <div class="flex flex-col gap-6">
-              <div id="live-alert-stack" class="space-y-4">
-                <!-- VIOLATIONS ALERT PANEL - Top Priority -->
-                <div id="violations-alert-panel" class="hidden bg-gradient-to-r from-red-600 to-orange-600 rounded-xl border-2 border-red-300 dark:border-red-700 p-4 shadow-lg animate-pulse-slow">
-                  <div class="flex items-start justify-between gap-4">
-                    <div class="flex items-start gap-3 flex-1">
-                      <div class="flex-shrink-0 bg-white/20 rounded-full p-2">
-                        <span class="material-symbols-outlined text-white text-2xl">warning</span>
-                      </div>
-                      <div class="flex-1 min-w-0">
-                        <h3 class="text-white text-lg font-bold mb-1">Students Locked Out</h3>
-                        <p id="violations-summary" class="text-white/90 text-sm mb-3">Students need approval to re-enter the poll</p>
-                        <div id="violations-quick-list" class="flex flex-wrap gap-2">
-                          <!-- Quick violation tiles will be populated here -->
-                        </div>
-                      </div>
-                    </div>
-                    <button id="dismiss-violations-alert" class="flex-shrink-0 text-white/80 hover:text-white transition-colors">
-                      <span class="material-symbols-outlined">close</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
               <div class="grid gap-6 2xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
                 <div class="flex flex-col gap-6">
                   <div id="live-session-overview" class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -1468,6 +1445,27 @@
                 </div>
 
                 <div class="flex flex-col gap-6">
+                  <!-- VIOLATIONS ALERT PANEL - Sidebar -->
+                  <div id="violations-alert-panel" class="hidden bg-gradient-to-r from-red-600 to-orange-600 rounded-xl border-2 border-red-300 dark:border-red-700 p-4 shadow-lg animate-pulse-slow">
+                    <div class="flex items-start justify-between gap-4">
+                      <div class="flex items-start gap-3 flex-1">
+                        <div class="flex-shrink-0 bg-white/20 rounded-full p-2">
+                          <span class="material-symbols-outlined text-white text-2xl">warning</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <h3 class="text-white text-lg font-bold mb-1">Students Locked Out</h3>
+                          <p id="violations-summary" class="text-white/90 text-sm mb-3">Students need approval to re-enter the poll</p>
+                          <div id="violations-quick-list" class="flex flex-wrap gap-2">
+                            <!-- Quick violation tiles will be populated here -->
+                          </div>
+                        </div>
+                      </div>
+                      <button id="dismiss-violations-alert" class="flex-shrink-0 text-white/80 hover:text-white transition-colors">
+                        <span class="material-symbols-outlined">close</span>
+                      </button>
+                    </div>
+                  </div>
+
                   <!-- ENHANCED EXITED STUDENTS PANEL (2025) -->
                   <div id="exited-students-panel" class="hidden rounded-xl border-2 border-orange-400 bg-white shadow-lg dark:border-orange-500 dark:bg-brand-dark-gray/30">
                     <div class="bg-gradient-to-r from-orange-500 to-red-500 px-5 py-3 rounded-t-xl flex items-center justify-between">

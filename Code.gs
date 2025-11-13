@@ -652,8 +652,8 @@ const DataAccess = {
         parsedAnswerOrders = {};
       }
 
-      const isLockedRaw = row.length > 8 ? row[8] : row[7];
-      const isLocked = normalizeSheetBoolean_(isLockedRaw, false);
+      const isLockedValue = row.length > 8 ? row[8] : row[7];
+      const isLocked = normalizeSheetBoolean_(isLockedValue, false);
 
       return {
         pollId: row[0],
@@ -688,8 +688,8 @@ const DataAccess = {
             }
           }
 
-          const isLockedRaw = row.length > 8 ? row[8] : row[7];
-          const isLocked = normalizeSheetBoolean_(isLockedRaw, false);
+          const isLockedValue = row.length > 8 ? row[8] : row[7];
+          const isLocked = normalizeSheetBoolean_(isLockedValue, false);
 
           return {
             pollId: row[0],

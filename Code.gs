@@ -458,6 +458,36 @@ const URLShortener = {
   }
 };
 
+function normalizeSheetBoolean_(value, defaultValue = false) {
+  if (typeof value === 'boolean') return value;
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed === '') return defaultValue;
+    if (trimmed === 'TRUE' || trimmed === 'true') return true;
+    if (trimmed === 'FALSE' || trimmed === 'false') return false;
+    if (trimmed === '1') return true;
+    if (trimmed === '0') return false;
+    return defaultValue;
+  }
+
+  if (value === 1) return true;
+  if (value === 0) return false;
+  if (value === null || value === undefined) return defaultValue;
+  return defaultValue;
+}
+
+function migrateIndividualSessionLockColumn_(sheet, rowIndex, rowValues) {
+  const hasDedicatedLockColumn = rowValues.length > 8 && rowValues[8] !== '' && rowValues[8] !== null && rowValues[8] !== undefined;
+  if (hasDedicatedLockColumn) {
+    return normalizeSheetBoolean_(rowValues[8], false);
+  }
+
+  const normalizedLock = normalizeSheetBoolean_(rowValues[7], false);
+  sheet.getRange(rowIndex, 9).setValue(normalizedLock);
+  return normalizedLock;
+}
+
 // --- DATA ACCESS LAYER (Database-Style Queries) ---
 const DataAccess = {
   responses: {
@@ -634,6 +664,7 @@ const DataAccess = {
       }
 
       const isLockedValue = row.length > 8 ? row[8] : row[7];
+      const isLocked = normalizeSheetBoolean_(isLockedValue, false);
 
       return {
         pollId: row[0],
@@ -644,7 +675,7 @@ const DataAccess = {
         currentQuestionIndex: typeof row[5] === 'number' ? row[5] : parseInt(row[5], 10) || 0,
         questionOrder: JSON.parse(row[6] || '[]'),
         answerOrders: parsedAnswerOrders,
-        isLocked: isLockedValue === true || isLockedValue === 'TRUE' || isLockedValue === 'true'
+        isLocked: isLocked
       };
     },
 
@@ -669,6 +700,7 @@ const DataAccess = {
           }
 
           const isLockedValue = row.length > 8 ? row[8] : row[7];
+          const isLocked = normalizeSheetBoolean_(isLockedValue, false);
 
           return {
             pollId: row[0],
@@ -679,7 +711,7 @@ const DataAccess = {
             currentQuestionIndex: typeof row[5] === 'number' ? row[5] : parseInt(row[5], 10) || 0,
             questionOrder: JSON.parse(row[6] || '[]'),
             answerOrders: parsedAnswerOrders,
-            isLocked: isLockedValue === true || isLockedValue === 'TRUE' || isLockedValue === 'true'
+            isLocked: isLocked
           };
         });
     },
@@ -757,6 +789,7 @@ const DataAccess = {
       for (let i = 0; i < values.length; i++) {
         if (values[i][0] === pollId && values[i][1] === sessionId && values[i][2] === studentEmail) {
           const rowIndex = i + 2;
+          migrateIndividualSessionLockColumn_(sheet, rowIndex, values[i]);
           sheet.getRange(rowIndex, 8).setValue(JSON.stringify(answerOrders || {}));
           Logger.log('Answer order map updated', { pollId, sessionId, studentEmail });
           return true;

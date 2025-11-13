@@ -1110,31 +1110,31 @@
         </div>
 
         <!-- Compact Timer -->
-        <div class="flex items-center gap-2 rounded-lg border border-brand-white/20 bg-brand-white/10 px-3 py-1.5 flex-shrink-0">
-          <button id="subtract-10s-btn" class="text-brand-white/60 hover:text-brand-white transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed p-0.5 flex-shrink-0" aria-label="-10 seconds">
+        <div class="flex flex-wrap items-center gap-2 rounded-lg border border-brand-white/20 bg-brand-white/10 px-3 py-1.5">
+          <button id="subtract-10s-btn" class="text-brand-white/60 hover:text-brand-white transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed p-0.5" aria-label="-10 seconds">
             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
           </button>
           <input
             type="text"
             id="timer-display"
-            class="w-20 rounded bg-transparent text-center text-lg font-bold text-brand-white transition-all placeholder-brand-white/40 focus:outline-none focus:ring-1 focus:ring-sky-400 disabled:opacity-70 flex-shrink-0"
+            class="w-20 rounded bg-transparent text-center text-lg font-bold text-brand-white transition-all placeholder-brand-white/40 focus:outline-none focus:ring-1 focus:ring-sky-400 disabled:opacity-70"
             value="01:30"
             aria-label="Timer display"
           />
-          <button id="add-10s-btn" class="text-brand-white/60 hover:text-brand-white transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed p-0.5 flex-shrink-0" aria-label="+10 seconds">
+          <button id="add-10s-btn" class="text-brand-white/60 hover:text-brand-white transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed p-0.5" aria-label="+10 seconds">
             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
           </button>
-          <div class="w-px h-4 bg-brand-white/30 flex-shrink-0"></div>
-          <button id="start-btn" class="bg-sky-500 hover:bg-sky-600 text-brand-white font-bold p-1 rounded transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0" aria-label="Start timer">
+          <div class="w-px h-4 bg-brand-white/30"></div>
+          <button id="start-btn" class="bg-sky-500 hover:bg-sky-600 text-brand-white font-bold p-1 rounded transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Start timer">
             <span class="material-symbols-outlined text-sm">play_arrow</span>
           </button>
-          <button id="pause-btn" class="bg-amber-500 hover:bg-amber-600 text-brand-white font-bold p-1 rounded transition-all duration-200 hidden flex-shrink-0" aria-label="Pause timer">
+          <button id="pause-btn" class="bg-amber-500 hover:bg-amber-600 text-brand-white font-bold p-1 rounded transition-all duration-200 hidden" aria-label="Pause timer">
             <span class="material-symbols-outlined text-sm">pause</span>
           </button>
-          <button id="reset-btn" class="bg-brand-white/20 hover:bg-brand-white/30 text-brand-white font-bold p-1 rounded transition-all duration-200 flex-shrink-0" aria-label="Reset timer">
+          <button id="reset-btn" class="bg-brand-white/20 hover:bg-brand-white/30 text-brand-white font-bold p-1 rounded transition-all duration-200" aria-label="Reset timer">
             <span class="material-symbols-outlined text-sm">refresh</span>
           </button>
-          <p id="timer-status-message" class="text-[10px] text-brand-white/60 ml-2 hidden lg:block whitespace-nowrap">Timer idle.</p>
+          <p id="timer-status-message" class="text-[10px] text-brand-white/60 ml-2">Timer idle.</p>
         </div>
 
         <div class="flex flex-1 flex-col gap-3 lg:flex-row lg:items-center lg:justify-end">
@@ -1150,7 +1150,7 @@
             </button>
           </div>
           <div class="hidden lg:block h-6 w-px bg-brand-white/30"></div>
-          <div class="flex items-center gap-2 lg:justify-end flex-wrap lg:flex-nowrap">
+          <div class="flex flex-wrap items-center gap-2 lg:justify-end">
             <button id="header-start-btn" class="flex min-w-[88px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-brand-white text-veritas-navy text-sm font-semibold leading-normal tracking-[0.01em] gap-2 hover:bg-brand-light-gray transition-colors">
               <span class="material-symbols-outlined text-lg">play_arrow</span>
               <span class="truncate">Start</span>
@@ -1160,7 +1160,7 @@
               <span class="truncate">End &amp; Reveal</span>
             </button>
             <div class="mx-2 hidden h-6 w-px bg-brand-white/30 lg:block"></div>
-            <div class="flex items-center gap-2 flex-shrink-0">
+            <div class="flex flex-wrap items-center gap-2">
               <button id="header-back-btn" class="flex min-w-[80px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-brand-white/15 text-brand-white text-sm font-semibold leading-normal tracking-[0.01em] gap-2 hover:bg-brand-white/25 transition-colors">
                 <span class="material-symbols-outlined text-lg">skip_previous</span>
                 <span class="truncate">Back</span>
@@ -1425,7 +1425,7 @@
           </div>
 
           <!-- Sidebar (Right) -->
-          <aside id="live-sidebar" class="w-80 flex-shrink-0 flex flex-col transition-all duration-300 overflow-y-auto border-l border-brand-light-gray dark:border-brand-dark-gray/40 bg-brand-white dark:bg-brand-dark-gray/30">
+          <aside id="live-sidebar" class="w-80 flex flex-col transition-all duration-300 overflow-y-auto border-l border-brand-light-gray dark:border-brand-dark-gray/40 bg-brand-white dark:bg-brand-dark-gray/30">
             <!-- Sidebar Toggle Button -->
             <div class="sticky top-0 z-10 bg-brand-white dark:bg-brand-dark-gray p-2 border-b border-brand-light-gray dark:border-brand-dark-gray/40">
               <button id="toggle-sidebar-btn" onclick="toggleSidebar()" class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-veritas-navy/10 hover:bg-veritas-navy/20 transition-colors text-sm font-medium">

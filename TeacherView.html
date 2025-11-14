@@ -6688,6 +6688,61 @@
     });
   }
 
+  function updateLockoutBanner() {
+    var banner = document.getElementById('lockout-alert-banner');
+    var namesEl = document.getElementById('lockout-student-names');
+    var actionsEl = document.getElementById('lockout-actions');
+
+    if (!banner || !namesEl || !actionsEl) {
+      return;
+    }
+
+    var lockoutStudents = Array.isArray(currentStudentStatusData)
+      ? currentStudentStatusData.filter(function(student) {
+          return student && (student.status === 'LOCKED' || student.status === 'AWAITING_FULLSCREEN');
+        })
+      : [];
+
+    if (lockoutStudents.length === 0) {
+      banner.classList.add('hidden');
+      namesEl.textContent = '';
+      actionsEl.innerHTML = '';
+      return;
+    }
+
+    banner.classList.remove('hidden');
+
+    var descriptions = lockoutStudents.map(function(student) {
+      var description = formatStudentName(student);
+      if (student.status === 'AWAITING_FULLSCREEN') {
+        description += ' (awaiting fullscreen)';
+      } else {
+        description += ' (locked out)';
+      }
+      return description;
+    });
+    namesEl.textContent = descriptions.join(', ');
+
+    actionsEl.innerHTML = '';
+    lockoutStudents.forEach(function(student) {
+      var button = createUnlockButton(student);
+      var label = button.querySelector('span:last-child');
+      if (label) {
+        label.textContent = 'Approve ' + formatStudentName(student);
+      }
+      button.onclick = async function() {
+        var email = this.dataset.email;
+        var pollId = this.dataset.pollId;
+        var lockVersion = parseInt(this.dataset.lockVersion, 10);
+        if (isNaN(lockVersion)) {
+          lockVersion = 0;
+        }
+        await approveStudentUnlock(email, pollId, lockVersion, this);
+      };
+      actionsEl.appendChild(button);
+    });
+  }
+
   /**
    * ENHANCED: Update exited students panel (2025)
    * More visible and functional than the violations alert
@@ -7411,6 +7466,7 @@
 
     updateLiveOverviewCounts(lockedCount,blockedCount,waitingCount);
     updateViolationsAlert(flaggedStudents);
+    updateLockoutBanner();
     updateExitedStudentsPanel(lockedStudents);
 
     if(tbody)tbody.innerHTML='';

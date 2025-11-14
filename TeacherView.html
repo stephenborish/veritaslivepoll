@@ -3441,6 +3441,7 @@
   var pollFilterSelect=document.getElementById('poll-filter-select');
   var pollSearchInput=document.getElementById('poll-search-input');
   var pollSearchClearBtn=document.getElementById('poll-search-clear-btn');
+  var pollsCardView=document.getElementById('polls-card-view');
   var pollsTableBody=document.getElementById('polls-table-body');
   var pollsEmptyState=document.getElementById('polls-empty-state');
   var classSelect=document.getElementById('class-select');
@@ -4295,6 +4296,7 @@
 
   function refreshPollViews(){
     var polls=getFilteredSortedPolls();
+    renderPollCards(polls);
     renderPollTable(polls);
     updatePollDropdown(polls);
     if(pollsEmptyState){
@@ -4353,6 +4355,106 @@
       .getPollForEditing(pollId);
   }
 
+  function renderPollCards(polls){
+    if(!pollsCardView){
+      return;
+    }
+
+    pollsCardView.innerHTML='';
+
+    if(!polls||polls.length===0){
+      return;
+    }
+
+    polls.forEach(function(poll){
+      var card=document.createElement('article');
+      card.className='poll-card';
+      if(poll&&poll.pollId){
+        card.dataset.pollId=poll.pollId;
+      }
+      card.setAttribute('tabindex','0');
+      card.setAttribute('role','group');
+      var safeName=escapeHtml(poll&&poll.pollName?poll.pollName:'Untitled Poll');
+      card.setAttribute('aria-label','Poll '+(poll&&poll.pollName?poll.pollName:'Untitled poll'));
+
+      var className=escapeHtml(poll&&poll.className?poll.className:'Unassigned');
+      var questionCount=Array.isArray(poll&&poll.questions)?poll.questions.length:0;
+      var questionLabel=questionCount===1?'Question':'Questions';
+      var lastRunText=poll&&poll.lastRunAt?
+        'Last run '+formatDateTime(poll.lastRunAt):
+        'Not run yet';
+      var lastRun=escapeHtml(lastRunText);
+      var updatedDescriptor=poll&&poll.updatedAt?
+        'Updated '+formatDateTime(poll.updatedAt):
+        'Created '+formatDateTime(poll&&poll.createdAt);
+      var updated=escapeHtml(updatedDescriptor);
+
+      var recentSessionCount=0;
+      ['liveSessions','recentSessions','sessions'].forEach(function(key){
+        if(poll&&Array.isArray(poll[key])){
+          recentSessionCount=Math.max(recentSessionCount,poll[key].length);
+        }
+      });
+      var sessionBadgeText=recentSessionCount>0?
+        recentSessionCount+' session'+(recentSessionCount===1?'':'s'):
+        'No sessions yet';
+      sessionBadgeText=escapeHtml(sessionBadgeText);
+
+      var parts=[];
+      parts.push('<div class="poll-card-header">');
+      parts.push('<div class="poll-card-title">'+safeName+'</div>');
+      parts.push('<div class="poll-card-meta">');
+      parts.push('<span class="poll-card-badge class-badge"><span class="material-symbols-outlined text-base">school</span>'+className+'</span>');
+      parts.push('<span class="poll-card-badge"><span class="material-symbols-outlined text-base">quiz</span>'+questionCount+' '+questionLabel+'</span>');
+      parts.push('<span class="poll-card-badge"><span class="material-symbols-outlined text-base">history</span>'+sessionBadgeText+'</span>');
+      parts.push('</div>');
+      parts.push('</div>');
+
+      parts.push('<div class="poll-card-stats">');
+      parts.push('<div class="poll-card-stat"><span class="material-symbols-outlined text-base">schedule</span><span>'+lastRun+'</span></div>');
+      parts.push('<div class="poll-card-stat"><span class="material-symbols-outlined text-base">update</span><span>'+updated+'</span></div>');
+      parts.push('</div>');
+
+      parts.push('<div class="poll-card-actions">');
+      parts.push('<button type="button" class="poll-card-btn primary poll-select-btn" data-poll-id="'+(poll&&poll.pollId?poll.pollId:'')+'" aria-label="Select '+safeName+' for a session"><span class="material-symbols-outlined text-base">play_arrow</span><span>Start</span></button>');
+      parts.push('<button type="button" class="poll-card-btn secondary poll-copy-btn" data-poll-id="'+(poll&&poll.pollId?poll.pollId:'')+'" aria-label="Duplicate '+safeName+'"><span class="material-symbols-outlined text-base">content_copy</span><span>Duplicate</span></button>');
+      parts.push('<button type="button" class="poll-card-btn secondary poll-edit-btn" data-poll-id="'+(poll&&poll.pollId?poll.pollId:'')+'" aria-label="Edit '+safeName+'"><span class="material-symbols-outlined text-base">stylus_note</span><span>Edit</span></button>');
+      parts.push('<button type="button" class="poll-card-btn danger poll-delete-btn" data-poll-id="'+(poll&&poll.pollId?poll.pollId:'')+'" aria-label="Delete '+safeName+'"><span class="material-symbols-outlined text-base">delete</span><span>Delete</span></button>');
+      parts.push('</div>');
+
+      card.innerHTML=parts.join('');
+
+      card.addEventListener('click',function(event){
+        if(event.target.closest('.poll-card-btn')){
+          return;
+        }
+        var pollId=this.dataset.pollId;
+        if(!pollId)return;
+        pollSelect.value=pollId;
+        onPollSelectChange();
+        showDashboard();
+      });
+
+      card.addEventListener('keydown',function(event){
+        if(event.target.closest('.poll-card-btn')){
+          return;
+        }
+        if(event.key==='Enter'||event.key===' '||event.key==='Spacebar'){
+          event.preventDefault();
+          var pollId=this.dataset.pollId;
+          if(!pollId)return;
+          pollSelect.value=pollId;
+          onPollSelectChange();
+          showDashboard();
+        }
+      });
+
+      pollsCardView.appendChild(card);
+    });
+
+    attachPollActionHandlers(pollsCardView);
+  }
+
   function renderPollTable(polls){
     polls=polls||getFilteredSortedPolls();
     pollsTableBody.innerHTML='';
@@ -4386,18 +4488,30 @@
       pollsTableBody.appendChild(row);
     });
 
-    pollsTableBody.querySelectorAll('.poll-select-btn').forEach(function(btn){
+    attachPollActionHandlers(pollsTableBody);
+  }
+
+  function attachPollActionHandlers(root){
+    if(!root){
+      return;
+    }
+
+    root.querySelectorAll('.poll-select-btn').forEach(function(btn){
       btn.onclick=function(){
         var id=this.dataset.pollId;
+        if(!id){
+          return;
+        }
         pollSelect.value=id;
         onPollSelectChange();
         showDashboard();
       };
     });
 
-    pollsTableBody.querySelectorAll('.poll-copy-btn').forEach(function(btn){
+    root.querySelectorAll('.poll-copy-btn').forEach(function(btn){
       btn.onclick=async function(){
-        var pollId=this.dataset.pollId;
+        var button=this;
+        var pollId=button.dataset.pollId;
         var poll=ALL_POLLS.find(function(p){return p.pollId===pollId;});
         if(!poll)return;
 
@@ -4413,8 +4527,9 @@
           return;
         }
 
-        btn.disabled=true;
-        btn.textContent='Copying...';
+        var originalLabel=button.textContent;
+        button.disabled=true;
+        button.textContent='Copying...';
 
         if(PREVIEW_MODE){
           setTimeout(async function(){
@@ -4425,8 +4540,8 @@
             clone.updatedAt=clone.createdAt;
             ALL_POLLS.push(clone);
             refreshPollViews();
-            btn.disabled=false;
-            btn.textContent='Copy';
+            button.disabled=false;
+            button.textContent=originalLabel;
             await veritasAlert('Poll copied (preview data only).',{title:'Poll copied'});
           },140);
           return;
@@ -4443,27 +4558,28 @@
                 destructive:true
               });
             }
-            btn.disabled=false;
-            btn.textContent='Copy';
+            button.disabled=false;
+            button.textContent=originalLabel;
           })
           .withFailureHandler(function(error){
             handleError(error);
-            btn.disabled=false;
-            btn.textContent='Copy';
+            button.disabled=false;
+            button.textContent=originalLabel;
           })
           .copyPoll(pollId,newName,poll.className);
       };
     });
 
-    pollsTableBody.querySelectorAll('.poll-edit-btn').forEach(function(btn){
+    root.querySelectorAll('.poll-edit-btn').forEach(function(btn){
       btn.onclick=function(){
         startEditPoll(this.dataset.pollId,this);
       };
     });
 
-    pollsTableBody.querySelectorAll('.poll-delete-btn').forEach(function(btn){
+    root.querySelectorAll('.poll-delete-btn').forEach(function(btn){
       btn.onclick=async function(){
-        var id=this.dataset.pollId;
+        var button=this;
+        var id=button.dataset.pollId;
         var confirmed=await veritasConfirm('Delete this poll permanently? This will also remove all responses.',{
           title:'Delete poll',
           confirmText:'Delete',
@@ -4489,8 +4605,7 @@
       };
     });
 
-    // Add click handler for poll names to open preview
-    pollsTableBody.querySelectorAll('.poll-name-link').forEach(function(link){
+    root.querySelectorAll('.poll-name-link').forEach(function(link){
       link.onclick=function(e){
         e.preventDefault();
         e.stopPropagation();

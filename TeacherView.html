@@ -1568,8 +1568,8 @@
                 <div class="flex items-center gap-4">
                   <span class="material-symbols-outlined text-white text-4xl animate-pulse-glow">check_circle</span>
                   <div>
-                    <p class="text-white text-xl font-bold mb-1">✅ Everyone Responded!</p>
-                    <p class="text-white/90 text-sm font-medium">All students have submitted their answers. Ready to reveal and advance.</p>
+                    <p id="all-responded-title" class="text-white text-xl font-bold mb-1">✅ Everyone Responded!</p>
+                    <p id="all-responded-subtitle" class="text-white/90 text-sm font-medium">All students have submitted their answers. Ready to reveal and advance.</p>
                   </div>
                 </div>
                 <div class="flex items-center gap-2">
@@ -6073,6 +6073,9 @@
     var responsesEl=document.getElementById('live-overview-responses');
     var progressEl=document.getElementById('live-overview-response-progress');
     var responseCaption=document.getElementById('live-overview-response-caption');
+    var allRespondedBanner=document.getElementById('all-responded-banner');
+    var bannerTitle=document.getElementById('all-responded-title');
+    var bannerSubtitle=document.getElementById('all-responded-subtitle');
 
     if(responsesEl){
       responsesEl.textContent=totalResponses+' / '+totalStudents;
@@ -6085,6 +6088,30 @@
     }
     if(responseCaption){
       responseCaption.textContent=totalStudents>0?completionPct+'% complete':'Awaiting roster data';
+    }
+
+    var allResponded=totalStudents>0&&totalResponses===totalStudents;
+    if(allRespondedBanner){
+      if(allResponded){
+        allRespondedBanner.classList.remove('hidden');
+        if(bannerTitle){
+          bannerTitle.textContent='✅ Everyone Responded!';
+        }
+        if(bannerSubtitle){
+          if(totalStudents===1){
+            bannerSubtitle.textContent='The lone student has submitted their answer. Ready to reveal and advance.';
+          }else{
+            bannerSubtitle.textContent='All '+totalStudents+' students have submitted their answers. Ready to reveal and advance.';
+          }
+        }
+      }else{
+        allRespondedBanner.classList.add('hidden');
+      }
+    }
+
+    var remainingSeconds=typeof totalSeconds==='number'?totalSeconds:(typeof timerRemainingSeconds==='number'?timerRemainingSeconds:0);
+    if(typeof window.checkAllRespondedState==='function'){
+      window.checkAllRespondedState(allResponded?remainingSeconds:0);
     }
 
     var rawResults=data&&data.results;
@@ -9719,7 +9746,7 @@
 
   // Auto-Pulse "Next Question" Button When All Responded
   // This is called from renderStudentStatus when all students have answered
-  window.checkAllRespondedState = function() {
+  window.checkAllRespondedState = function(remainingSeconds) {
     if (!isLiveSession) return;
 
     var nextBtn = document.getElementById('header-next-btn');
@@ -9732,13 +9759,15 @@
       // Add pulsing effect to Next button
       nextBtn.classList.add('pulse-ready');
 
-      // Calculate time saved (if timer is running)
-      if (isRunning && totalSeconds > 0) {
-        var timeSavedBadge = document.getElementById('time-saved-badge');
-        var timeSavedAmount = document.getElementById('time-saved-amount');
-        if (timeSavedBadge && timeSavedAmount) {
-          timeSavedAmount.textContent = totalSeconds;
+      var timeSavedBadge = document.getElementById('time-saved-badge');
+      var timeSavedAmount = document.getElementById('time-saved-amount');
+      if (timeSavedBadge && timeSavedAmount) {
+        var safeRemaining = typeof remainingSeconds === 'number' ? Math.max(0, Math.round(remainingSeconds)) : 0;
+        if (safeRemaining > 0) {
+          timeSavedAmount.textContent = safeRemaining;
           timeSavedBadge.classList.remove('hidden');
+        } else {
+          timeSavedBadge.classList.add('hidden');
         }
       }
     } else {

@@ -1125,6 +1125,157 @@
       animation: celebrate-bounce 0.6s ease-out;
     }
 
+    /* Session HUD cards for quick-glance metrics */
+    .session-hud-surface {
+      background: linear-gradient(135deg, rgba(18, 56, 93, 0.04), rgba(197, 160, 90, 0.08));
+    }
+
+    .dark .session-hud-surface {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.7), rgba(56, 189, 248, 0.12));
+    }
+
+    .session-hud-grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+
+    .hud-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 8px;
+      padding: 18px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid rgba(18, 56, 93, 0.08);
+      box-shadow: 0 10px 30px -18px rgba(18, 56, 93, 0.45);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .dark .hud-card {
+      background: rgba(15, 23, 35, 0.85);
+      border-color: rgba(255, 255, 255, 0.05);
+      box-shadow: 0 10px 35px -22px rgba(15, 23, 35, 0.9);
+    }
+
+    .hud-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 18px 40px -18px rgba(18, 56, 93, 0.4);
+    }
+
+    .hud-card-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(17, 24, 39, 0.55);
+    }
+
+    .dark .hud-card-label {
+      color: rgba(255, 255, 255, 0.55);
+    }
+
+    .hud-card-value {
+      font-size: 1.85rem;
+      font-weight: 800;
+      color: var(--veritas-navy);
+      letter-spacing: -0.02em;
+    }
+
+    .dark .hud-card-value {
+      color: rgba(255, 255, 255, 0.92);
+    }
+
+    .hud-card-caption {
+      font-size: 0.85rem;
+      color: rgba(55, 65, 81, 0.75);
+    }
+
+    .dark .hud-card-caption {
+      color: rgba(226, 232, 240, 0.65);
+    }
+
+    .hud-trend {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .hud-trend-up {
+      color: #15803d;
+    }
+
+    .hud-trend-down {
+      color: #b91c1c;
+    }
+
+    .hud-trend-steady {
+      color: rgba(55, 65, 81, 0.75);
+    }
+
+    .dark .hud-trend-steady {
+      color: rgba(226, 232, 240, 0.7);
+    }
+
+    .hud-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      padding: 4px 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .hud-chip[data-variant="ready"] {
+      background: rgba(59, 130, 246, 0.12);
+      color: #2563eb;
+    }
+
+    .hud-chip[data-variant="running"] {
+      background: rgba(16, 185, 129, 0.12);
+      color: #059669;
+    }
+
+    .hud-chip[data-variant="critical"] {
+      background: rgba(248, 113, 113, 0.18);
+      color: #dc2626;
+      animation: timer-pulse-critical 1s ease-in-out infinite;
+    }
+
+    .hud-chip[data-variant="paused"] {
+      background: rgba(148, 163, 184, 0.16);
+      color: rgba(30, 41, 59, 0.8);
+    }
+
+    .hud-chip[data-variant="complete"] {
+      background: rgba(34, 197, 94, 0.18);
+      color: #15803d;
+    }
+
+    @media (max-width: 768px) {
+      .session-hud-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      }
+      .hud-card {
+        padding: 16px;
+      }
+      .hud-card-value {
+        font-size: 1.55rem;
+      }
+    }
+
     /* ENHANCED POLL CARD STYLES */
     .poll-card {
       background: white;
@@ -1599,6 +1750,71 @@
                   <span>UNLOCK ALL</span>
                 </button>
               </div>
+            </div>
+          </div>
+
+          <!-- ⚡ Rapid-Glance Session HUD -->
+          <div id="session-hud-container" class="flex-shrink-0 session-hud-surface border-b border-brand-light-gray/60 dark:border-white/10">
+            <div class="max-w-7xl mx-auto px-6 py-4 session-hud-grid">
+              <article id="hud-responses-card" class="hud-card" aria-live="polite">
+                <div class="hud-card-label text-brand-dark-gray/80 dark:text-brand-white/70">
+                  <span class="material-symbols-outlined text-base">how_to_vote</span>
+                  Responses
+                </div>
+                <div id="hud-response-count" class="hud-card-value">0 / 0</div>
+                <div class="flex items-center justify-between text-xs">
+                  <p id="hud-response-caption" class="hud-card-caption">Awaiting roster data</p>
+                  <span id="hud-response-trend" class="hud-trend hud-trend-steady">
+                    • steady
+                  </span>
+                </div>
+              </article>
+
+              <article id="hud-accuracy-card" class="hud-card" aria-live="polite">
+                <div class="hud-card-label text-brand-dark-gray/80 dark:text-brand-white/70">
+                  <span class="material-symbols-outlined text-base">verified</span>
+                  Accuracy
+                </div>
+                <div id="hud-accuracy-value" class="hud-card-value">--%</div>
+                <div class="flex items-center justify-between text-xs">
+                  <p id="hud-accuracy-caption" class="hud-card-caption">Waiting for responses</p>
+                  <span id="hud-accuracy-trend" class="hud-trend hud-trend-steady">• steady</span>
+                </div>
+              </article>
+
+              <article id="hud-lockouts-card" class="hud-card" aria-live="polite">
+                <div class="hud-card-label text-brand-dark-gray/80 dark:text-brand-white/70">
+                  <span class="material-symbols-outlined text-base">lock_clock</span>
+                  Approvals
+                </div>
+                <div class="flex items-center justify-between gap-3">
+                  <div>
+                    <div id="hud-lockouts-value" class="hud-card-value">0</div>
+                    <p id="hud-lockouts-caption" class="hud-card-caption">No approvals pending</p>
+                  </div>
+                  <button id="hud-focus-lockouts-btn" type="button" class="inline-flex items-center gap-1.5 rounded-full bg-veritas-navy/10 text-veritas-navy dark:bg-brand-white/10 dark:text-brand-white px-3 py-2 text-[0.7rem] font-semibold tracking-[0.14em] uppercase transition-all disabled:opacity-40" disabled title="Jump to students needing unlock">
+                    <span class="material-symbols-outlined text-sm">target</span>
+                    Focus
+                  </button>
+                </div>
+              </article>
+
+              <article id="hud-pace-card" class="hud-card" aria-live="polite">
+                <div class="hud-card-label text-brand-dark-gray/80 dark:text-brand-white/70">
+                  <span class="material-symbols-outlined text-base">speed</span>
+                  Session Pace
+                </div>
+                <div class="flex items-center justify-between gap-3">
+                  <div>
+                    <div id="hud-pace-value" class="hud-card-value">--:--</div>
+                    <p id="hud-pace-caption" class="hud-card-caption">Timer ready</p>
+                  </div>
+                  <span id="hud-pace-chip" class="hud-chip" data-variant="ready">
+                    <span id="hud-pace-chip-icon" class="material-symbols-outlined text-sm">pause_circle</span>
+                    <span id="hud-pace-chip-label">Ready</span>
+                  </span>
+                </div>
+              </article>
             </div>
           </div>
 
@@ -2407,6 +2623,11 @@
   var initialQuestionOrder=[];
   var draggedQuestionId=null;
   var pollSearchQuery='';
+  var sessionHudState={
+    lastCompletionPct:null,
+    lastAccuracyPct:null,
+    lastLockoutTotal:null
+  };
 
   // OPTIMIZATION: Adaptive polling with backoff (like student view)
   var pollFailureCount=0;
@@ -3359,13 +3580,15 @@
   if(dashboardSidebar){
     dashboardSidebar.style.display='flex';
   }
-  bindClick('focus-lockouts-btn',function(){
+  function focusLockoutsSection(){
     var panel=document.getElementById('exited-students-panel');
     if(panel){
       panel.classList.remove('hidden');
       panel.scrollIntoView({behavior:'smooth',block:'start'});
     }
-  });
+  }
+  bindClick('focus-lockouts-btn',focusLockoutsSection);
+  bindClick('hud-focus-lockouts-btn',focusLockoutsSection);
   // New timer button event listeners
   bindClick('start-btn', startTimer);
   bindClick('pause-btn', pauseTimer);
@@ -6076,6 +6299,9 @@
     var allRespondedBanner=document.getElementById('all-responded-banner');
     var bannerTitle=document.getElementById('all-responded-title');
     var bannerSubtitle=document.getElementById('all-responded-subtitle');
+    var hudResponseCount=document.getElementById('hud-response-count');
+    var hudResponseCaption=document.getElementById('hud-response-caption');
+    var hudResponseTrend=document.getElementById('hud-response-trend');
 
     if(responsesEl){
       responsesEl.textContent=totalResponses+' / '+totalStudents;
@@ -6090,22 +6316,57 @@
       responseCaption.textContent=totalStudents>0?completionPct+'% complete':'Awaiting roster data';
     }
 
+    if(hudResponseCount){
+      hudResponseCount.textContent=(totalStudents>0?totalResponses:'0')+' / '+(totalStudents||0);
+    }
+    if(hudResponseCaption){
+      hudResponseCaption.textContent=totalStudents>0?completionPct+'% complete':'Awaiting roster data';
+    }
+    if(hudResponseTrend){
+      hudResponseTrend.classList.remove('hud-trend-up','hud-trend-down','hud-trend-steady');
+      var previousPct=sessionHudState.lastCompletionPct;
+      if(previousPct===null||totalStudents===0){
+        hudResponseTrend.textContent='• steady';
+        hudResponseTrend.classList.add('hud-trend-steady');
+      }else{
+        var delta=completionPct-previousPct;
+        if(delta>0){
+          hudResponseTrend.textContent='▲ +'+delta+'%';
+          hudResponseTrend.classList.add('hud-trend-up');
+        }else if(delta<0){
+          hudResponseTrend.textContent='▼ '+delta+'%';
+          hudResponseTrend.classList.add('hud-trend-down');
+        }else{
+          hudResponseTrend.textContent='• steady';
+          hudResponseTrend.classList.add('hud-trend-steady');
+        }
+      }
+    }
+    sessionHudState.lastCompletionPct=totalStudents>0?completionPct:null;
+
     var allResponded=totalStudents>0&&totalResponses===totalStudents;
     if(allRespondedBanner){
       if(allResponded){
         allRespondedBanner.classList.remove('hidden');
+        if(!allRespondedBanner.classList.contains('celebrate')){
+          allRespondedBanner.classList.add('celebrate');
+          setTimeout(function(){
+            allRespondedBanner.classList.remove('celebrate');
+          },650);
+        }
         if(bannerTitle){
           bannerTitle.textContent='✅ Everyone Responded!';
         }
         if(bannerSubtitle){
           if(totalStudents===1){
             bannerSubtitle.textContent='The lone student has submitted their answer. Ready to reveal and advance.';
-          }else{
-            bannerSubtitle.textContent='All '+totalStudents+' students have submitted their answers. Ready to reveal and advance.';
-          }
+        }else{
+          bannerSubtitle.textContent='All '+totalStudents+' students have submitted their answers. Ready to reveal and advance.';
         }
+      }
       }else{
         allRespondedBanner.classList.add('hidden');
+        allRespondedBanner.classList.remove('celebrate');
       }
     }
 
@@ -6156,6 +6417,9 @@
 
     var accuracyEl=document.getElementById('live-overview-accuracy');
     var accuracyCaption=document.getElementById('live-overview-accuracy-caption');
+    var hudAccuracyValue=document.getElementById('hud-accuracy-value');
+    var hudAccuracyCaption=document.getElementById('hud-accuracy-caption');
+    var hudAccuracyTrend=document.getElementById('hud-accuracy-trend');
     var accuracyPct=countedResponses>0?Math.round((correctCount/countedResponses)*100):0;
     if(accuracyEl){
       accuracyEl.textContent=accuracyPct+'%';
@@ -6167,6 +6431,43 @@
         accuracyCaption.textContent=correctCount+' of '+countedResponses+' correct';
       }
     }
+
+    if(hudAccuracyValue){
+      hudAccuracyValue.textContent=countedResponses>0?accuracyPct+'%':'--%';
+    }
+    if(hudAccuracyCaption){
+      if(countedResponses===0){
+        hudAccuracyCaption.textContent='Waiting for responses';
+      }else{
+        hudAccuracyCaption.textContent=correctCount+' of '+countedResponses+' correct';
+      }
+    }
+    if(hudAccuracyTrend){
+      hudAccuracyTrend.classList.remove('hud-trend-up','hud-trend-down','hud-trend-steady');
+      if(countedResponses===0){
+        hudAccuracyTrend.textContent='• steady';
+        hudAccuracyTrend.classList.add('hud-trend-steady');
+      }else{
+        var previousAccuracy=sessionHudState.lastAccuracyPct;
+        if(previousAccuracy===null){
+          hudAccuracyTrend.textContent='• steady';
+          hudAccuracyTrend.classList.add('hud-trend-steady');
+        }else{
+          var accuracyDelta=accuracyPct-previousAccuracy;
+          if(accuracyDelta>0){
+            hudAccuracyTrend.textContent='▲ +'+accuracyDelta+'%';
+            hudAccuracyTrend.classList.add('hud-trend-up');
+          }else if(accuracyDelta<0){
+            hudAccuracyTrend.textContent='▼ '+accuracyDelta+'%';
+            hudAccuracyTrend.classList.add('hud-trend-down');
+          }else{
+            hudAccuracyTrend.textContent='• steady';
+            hudAccuracyTrend.classList.add('hud-trend-steady');
+          }
+        }
+      }
+    }
+    sessionHudState.lastAccuracyPct=countedResponses>0?accuracyPct:null;
   }
 
   function updateLiveOverviewCounts(lockedCount,blockedCount,waitingCount){
@@ -6176,6 +6477,10 @@
     }
 
     var lockoutsCaption=document.getElementById('live-overview-lockouts-caption');
+    var hudLockoutsValue=document.getElementById('hud-lockouts-value');
+    var hudLockoutsCaption=document.getElementById('hud-lockouts-caption');
+    var hudLockoutsCard=document.getElementById('hud-lockouts-card');
+    var hudFocusBtn=document.getElementById('hud-focus-lockouts-btn');
     if(lockoutsCaption){
       var pendingTotal=(lockedCount||0)+(blockedCount||0);
       if(pendingTotal===0){
@@ -6187,6 +6492,31 @@
         lockoutsCaption.textContent=parts.join(' • ');
       }
     }
+
+    var pendingTotalForHud=(lockedCount||0)+(blockedCount||0);
+    if(hudLockoutsValue){
+      hudLockoutsValue.textContent=pendingTotalForHud;
+    }
+    if(hudLockoutsCaption){
+      if(pendingTotalForHud===0){
+        hudLockoutsCaption.textContent='No approvals pending';
+      }else{
+        hudLockoutsCaption.textContent='Requires quick approval';
+      }
+    }
+    if(hudFocusBtn){
+      var isDisabled=pendingTotalForHud===0;
+      hudFocusBtn.disabled=isDisabled;
+      hudFocusBtn.setAttribute('aria-disabled',isDisabled?'true':'false');
+    }
+    if(hudLockoutsCard){
+      if(pendingTotalForHud>0){
+        hudLockoutsCard.classList.add('student-needs-attention');
+      }else{
+        hudLockoutsCard.classList.remove('student-needs-attention');
+      }
+    }
+    sessionHudState.lastLockoutTotal=pendingTotalForHud;
 
     var focusBtn=document.getElementById('focus-lockouts-btn');
     if(focusBtn){
@@ -6705,12 +7035,14 @@
 
     if (lockoutStudents.length === 0) {
       banner.classList.add('hidden');
+      banner.setAttribute('aria-hidden','true');
       namesEl.textContent = '';
       actionsEl.innerHTML = '';
       return;
     }
 
     banner.classList.remove('hidden');
+    banner.setAttribute('aria-hidden','false');
 
     var descriptions = lockoutStudents.map(function(student) {
       var description = formatStudentName(student);
@@ -7643,6 +7975,60 @@
     return formatTime(seconds);
   }
 
+  function updateHudTimer(){
+    var paceValue=document.getElementById('hud-pace-value');
+    if(!paceValue)return;
+
+    var paceCaption=document.getElementById('hud-pace-caption');
+    var paceChip=document.getElementById('hud-pace-chip');
+    var paceChipIcon=document.getElementById('hud-pace-chip-icon');
+    var paceChipLabel=document.getElementById('hud-pace-chip-label');
+
+    paceValue.textContent=formatTime(totalSeconds);
+
+    var variant='ready';
+    var caption='Timer ready';
+    var icon='pause_circle';
+    var label='Ready';
+
+    if(totalSeconds<=0){
+      variant='complete';
+      caption='All time used';
+      icon='task_alt';
+      label='Complete';
+    }else if(isRunning){
+      if(totalSeconds<=15){
+        variant='critical';
+        caption='Wrap up now';
+        icon='emergency';
+        label='Critical';
+      }else{
+        variant='running';
+        caption='Timer running';
+        icon='play_arrow';
+        label='Running';
+      }
+    }else if(totalSeconds<timerPresetSeconds){
+      variant='paused';
+      caption='Paused — extend or resume';
+      icon='pause_circle';
+      label='Paused';
+    }
+
+    if(paceCaption){
+      paceCaption.textContent=caption;
+    }
+    if(paceChip){
+      paceChip.setAttribute('data-variant',variant);
+    }
+    if(paceChipIcon){
+      paceChipIcon.textContent=icon;
+    }
+    if(paceChipLabel){
+      paceChipLabel.textContent=label;
+    }
+  }
+
   /**
    * Updates the timer display on the screen
    */
@@ -7685,6 +8071,8 @@
         }
       }
     }
+
+    updateHudTimer();
   }
 
   /**
@@ -7708,6 +8096,8 @@
     if (add10sBtn) add10sBtn.disabled = running;
     if (subtract10sBtn) subtract10sBtn.disabled = running;
     if (timerDisplay) timerDisplay.disabled = running;
+
+    updateHudTimer();
   }
 
   /**
@@ -7854,6 +8244,7 @@
     // Update legacy variables
     timerRemainingSeconds = totalSeconds;
     timerPresetSeconds = totalSeconds;
+    updateHudTimer();
   }
 
   function updateTimerStatus(message, tone){

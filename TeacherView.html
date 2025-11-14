@@ -3781,7 +3781,8 @@
   var sessionHudState={
     lastCompletionPct:null,
     lastAccuracyPct:null,
-    lastLockoutTotal:null
+    lastLockoutTotal:null,
+    allRespondedCelebrated:false
   };
 
   // OPTIMIZATION: Adaptive polling with backoff (like student view)
@@ -8329,10 +8330,11 @@
     if(allRespondedBanner){
       if(allResponded){
         allRespondedBanner.classList.remove('hidden');
-        if(!allRespondedBanner.classList.contains('celebrate')){
+        if(!sessionHudState.allRespondedCelebrated){
           triggerCelebration(allRespondedBanner, 'all-responded');
           // Track activity
           trackAllResponded();
+          sessionHudState.allRespondedCelebrated=true;
         }
         if(bannerTitle){
           bannerTitle.textContent='✅ Everyone Responded!';
@@ -8347,6 +8349,7 @@
       }else{
         allRespondedBanner.classList.add('hidden');
         allRespondedBanner.classList.remove('celebrate');
+        sessionHudState.allRespondedCelebrated=false;
       }
     }
 

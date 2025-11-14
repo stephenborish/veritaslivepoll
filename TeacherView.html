@@ -1780,6 +1780,411 @@
       animation: bounce-subtle 2s ease-in-out infinite;
     }
 
+    /* ========================================
+       🎨 PHASE 3: ACTIVITY FEED & ENHANCEMENTS
+       ======================================== */
+
+    /* === ACTIVITY FEED SYSTEM === */
+    .activity-feed {
+      position: fixed;
+      bottom: 100px;
+      right: 24px;
+      width: 320px;
+      max-height: 400px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(18, 56, 93, 0.2);
+      border: 1px solid rgba(18, 56, 93, 0.1);
+      display: flex;
+      flex-direction: column;
+      z-index: 999;
+      opacity: 0;
+      transform: translateY(20px);
+      pointer-events: none;
+      transition: all 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .dark .activity-feed {
+      background: rgba(15, 23, 35, 0.95);
+      border-color: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+    }
+
+    .activity-feed.is-open {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: all;
+    }
+
+    .activity-feed-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(18, 56, 93, 0.1);
+    }
+
+    .dark .activity-feed-header {
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .activity-feed-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--veritas-navy);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dark .activity-feed-title {
+      color: white;
+    }
+
+    .activity-feed-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 10px;
+      background: var(--veritas-gold);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+
+    .activity-feed-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
+      transition: all 150ms ease;
+    }
+
+    .activity-feed-close:hover {
+      background: rgba(18, 56, 93, 0.1);
+      color: var(--veritas-navy);
+    }
+
+    .dark .activity-feed-close:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+
+    .activity-feed-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 0;
+    }
+
+    .activity-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 20px;
+      border-left: 3px solid transparent;
+      transition: all 150ms ease;
+      animation: activity-slide-in 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes activity-slide-in {
+      from {
+        opacity: 0;
+        transform: translateX(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .activity-item:hover {
+      background: rgba(18, 56, 93, 0.04);
+      border-left-color: var(--veritas-gold);
+    }
+
+    .dark .activity-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .activity-icon {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .activity-icon.success {
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+    }
+
+    .activity-icon.warning {
+      background: rgba(245, 158, 11, 0.15);
+      color: #f59e0b;
+    }
+
+    .activity-icon.error {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+    }
+
+    .activity-icon.info {
+      background: rgba(59, 130, 246, 0.15);
+      color: #3b82f6;
+    }
+
+    .activity-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .activity-message {
+      font-size: 0.875rem;
+      color: var(--text-primary);
+      line-height: 1.4;
+      margin-bottom: 2px;
+    }
+
+    .dark .activity-message {
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .activity-time {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .activity-feed-empty {
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--text-secondary);
+    }
+
+    .activity-feed-empty .material-symbols-outlined {
+      font-size: 48px;
+      opacity: 0.3;
+      margin-bottom: 8px;
+    }
+
+    /* === ENHANCED STUDENT STATUS TILES === */
+    .student-tile {
+      position: relative;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 2px solid transparent;
+      background: white;
+      transition: all 200ms ease;
+      cursor: pointer;
+    }
+
+    .dark .student-tile {
+      background: rgba(15, 23, 35, 0.5);
+    }
+
+    .student-tile:hover {
+      border-color: var(--veritas-gold);
+      transform: translateX(4px);
+      box-shadow: 0 4px 12px rgba(18, 56, 93, 0.15);
+    }
+
+    .student-tile.status-correct {
+      border-left: 4px solid #10b981;
+      background: linear-gradient(to right, rgba(16, 185, 129, 0.08), transparent);
+    }
+
+    .student-tile.status-incorrect {
+      border-left: 4px solid #ef4444;
+      background: linear-gradient(to right, rgba(239, 68, 68, 0.08), transparent);
+    }
+
+    .student-tile.status-locked {
+      border-left: 4px solid #f59e0b;
+      background: linear-gradient(to right, rgba(245, 158, 11, 0.08), transparent);
+      animation: pulse-gentle 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-gentle {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.85; }
+    }
+
+    .student-tile.status-waiting {
+      border-left: 4px solid #94a3b8;
+      background: linear-gradient(to right, rgba(148, 163, 184, 0.08), transparent);
+    }
+
+    .student-tile-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .student-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--text-primary);
+    }
+
+    .dark .student-name {
+      color: rgba(255, 255, 255, 0.95);
+    }
+
+    .student-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+
+    .student-status-badge.correct {
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+    }
+
+    .student-status-badge.incorrect {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+    }
+
+    .student-status-badge.locked {
+      background: rgba(245, 158, 11, 0.15);
+      color: #f59e0b;
+    }
+
+    .student-status-badge.waiting {
+      background: rgba(148, 163, 184, 0.15);
+      color: #64748b;
+    }
+
+    .student-details {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .student-answer {
+      font-weight: 600;
+    }
+
+    .student-tile-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+      opacity: 0;
+      transition: opacity 200ms ease;
+    }
+
+    .student-tile:hover .student-tile-actions {
+      opacity: 1;
+    }
+
+    .student-action-btn {
+      flex: 1;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(18, 56, 93, 0.2);
+      background: white;
+      color: var(--veritas-navy);
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 150ms ease;
+    }
+
+    .dark .student-action-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+
+    .student-action-btn:hover {
+      background: var(--veritas-navy);
+      color: white;
+      border-color: var(--veritas-navy);
+    }
+
+    .dark .student-action-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    /* === ENHANCED MODAL DESIGNS === */
+    .modal-section {
+      margin-bottom: 24px;
+    }
+
+    .modal-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      cursor: pointer;
+      user-select: none;
+      transition: all 150ms ease;
+    }
+
+    .modal-section-header:hover {
+      color: var(--veritas-gold);
+    }
+
+    .modal-section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .modal-section-toggle {
+      transition: transform 200ms ease;
+    }
+
+    .modal-section.is-collapsed .modal-section-toggle {
+      transform: rotate(-90deg);
+    }
+
+    .modal-section-content {
+      max-height: 1000px;
+      overflow: hidden;
+      transition: max-height 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .modal-section.is-collapsed .modal-section-content {
+      max-height: 0;
+    }
+
+    /* === RESPONSIVE ADJUSTMENTS === */
+    @media (max-width: 1024px) {
+      .activity-feed {
+        width: 280px;
+        bottom: 80px;
+        right: 16px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .activity-feed {
+        width: calc(100vw - 32px);
+        right: 16px;
+        left: 16px;
+        bottom: 70px;
+      }
+    }
+
     /* Session HUD cards for quick-glance metrics */
     .session-hud-surface {
       background: linear-gradient(135deg, rgba(18, 56, 93, 0.04), rgba(197, 160, 90, 0.08));
@@ -2677,6 +3082,14 @@
         <div id="fab-container" class="fab-container" style="display: none;">
           <!-- FAB Menu Items -->
           <div id="fab-menu" class="fab-menu">
+            <!-- Activity Feed Toggle -->
+            <div class="fab-action">
+              <span class="fab-label">Activity Feed</span>
+              <button id="fab-activity-btn" class="fab-button fab-info" title="View recent activity" aria-label="Toggle activity feed">
+                <span class="material-symbols-outlined">notifications</span>
+              </button>
+            </div>
+
             <!-- Next Question Action -->
             <div class="fab-action">
               <span class="fab-label">Next Question →</span>
@@ -2714,6 +3127,27 @@
           <button id="fab-main-toggle" class="fab-main" aria-label="Quick actions menu" aria-expanded="false">
             <span class="material-symbols-outlined">bolt</span>
           </button>
+        </div>
+
+        <!-- 📊 Real-Time Activity Feed - Shows recent student actions -->
+        <div id="activity-feed" class="activity-feed">
+          <div class="activity-feed-header">
+            <div class="activity-feed-title">
+              <span class="material-symbols-outlined">notifications</span>
+              <span>Recent Activity</span>
+              <span id="activity-feed-count" class="activity-feed-badge">0</span>
+            </div>
+            <button id="activity-feed-close" class="activity-feed-close" aria-label="Close activity feed">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          <div id="activity-feed-list" class="activity-feed-list">
+            <!-- Activity items will be dynamically inserted here -->
+            <div class="activity-feed-empty">
+              <span class="material-symbols-outlined">inbox</span>
+              <p>No recent activity</p>
+            </div>
+          </div>
         </div>
 
         <!-- End of Live Poll View Redesign -->
@@ -3781,9 +4215,317 @@
     if (type === 'all-responded') {
       showToast('success', '🎉 All Students Responded!', 'Great work! Everyone has submitted their answer.');
       setAmbientState('all-responded');
+      playSoundEffect('celebration');
     } else if (type === 'perfect-accuracy') {
       showToast('success', '💯 Perfect Accuracy!', '100% of students got the answer correct!');
+      playSoundEffect('celebration');
     }
+  }
+
+  // === Activity Feed System ===
+  var activityFeedData = [];
+  var activityFeedOpen = false;
+  var maxActivityItems = 50; // Keep last 50 activities
+
+  function initializeActivityFeed() {
+    const activityFeed = document.getElementById('activity-feed');
+    const activityFeedClose = document.getElementById('activity-feed-close');
+    const fabActivityBtn = document.getElementById('fab-activity-btn');
+
+    if (!activityFeed) return;
+
+    // Close button handler
+    if (activityFeedClose) {
+      activityFeedClose.addEventListener('click', function() {
+        closeActivityFeed();
+      });
+    }
+
+    // FAB toggle button handler
+    if (fabActivityBtn) {
+      fabActivityBtn.addEventListener('click', function() {
+        toggleActivityFeed();
+        closeFABMenu();
+      });
+    }
+
+    // Click outside to close
+    document.addEventListener('click', function(e) {
+      if (activityFeedOpen &&
+          !activityFeed.contains(e.target) &&
+          !fabActivityBtn.contains(e.target)) {
+        closeActivityFeed();
+      }
+    });
+  }
+
+  function toggleActivityFeed() {
+    if (activityFeedOpen) {
+      closeActivityFeed();
+    } else {
+      openActivityFeed();
+    }
+  }
+
+  function openActivityFeed() {
+    const activityFeed = document.getElementById('activity-feed');
+    if (!activityFeed) return;
+
+    activityFeed.classList.add('is-open');
+    activityFeedOpen = true;
+  }
+
+  function closeActivityFeed() {
+    const activityFeed = document.getElementById('activity-feed');
+    if (!activityFeed) return;
+
+    activityFeed.classList.remove('is-open');
+    activityFeedOpen = false;
+  }
+
+  function addActivityItem(type, icon, message) {
+    const timestamp = new Date();
+    const activity = {
+      type: type, // 'success', 'warning', 'error', 'info'
+      icon: icon, // Material icon name
+      message: message,
+      timestamp: timestamp
+    };
+
+    activityFeedData.unshift(activity); // Add to beginning
+
+    // Keep only maxActivityItems
+    if (activityFeedData.length > maxActivityItems) {
+      activityFeedData = activityFeedData.slice(0, maxActivityItems);
+    }
+
+    renderActivityFeed();
+  }
+
+  function renderActivityFeed() {
+    const list = document.getElementById('activity-feed-list');
+    const count = document.getElementById('activity-feed-count');
+
+    if (!list) return;
+
+    if (activityFeedData.length === 0) {
+      list.innerHTML = `
+        <div class="activity-feed-empty">
+          <span class="material-symbols-outlined">inbox</span>
+          <p>No recent activity</p>
+        </div>
+      `;
+      if (count) count.textContent = '0';
+      return;
+    }
+
+    if (count) count.textContent = activityFeedData.length.toString();
+
+    const items = activityFeedData.map(function(activity) {
+      const timeAgo = getTimeAgo(activity.timestamp);
+      return `
+        <div class="activity-item">
+          <div class="activity-icon ${activity.type}">
+            <span class="material-symbols-outlined">${activity.icon}</span>
+          </div>
+          <div class="activity-content">
+            <div class="activity-message">${escapeHtml(activity.message)}</div>
+            <div class="activity-time">${timeAgo}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    list.innerHTML = items;
+  }
+
+  function getTimeAgo(timestamp) {
+    const now = new Date();
+    const seconds = Math.floor((now - timestamp) / 1000);
+
+    if (seconds < 10) return 'just now';
+    if (seconds < 60) return seconds + 's ago';
+
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return minutes + 'm ago';
+
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return hours + 'h ago';
+
+    const days = Math.floor(hours / 24);
+    return days + 'd ago';
+  }
+
+  // Hook into existing events to add activities
+  function trackStudentResponse(studentName, isCorrect) {
+    const type = isCorrect ? 'success' : 'info';
+    const icon = isCorrect ? 'check_circle' : 'radio_button_unchecked';
+    const message = `${studentName} answered ${isCorrect ? 'correctly' : ''}`;
+    addActivityItem(type, icon, message);
+  }
+
+  function trackStudentLockout(studentName) {
+    addActivityItem('warning', 'lock_person', `${studentName} was locked out`);
+  }
+
+  function trackStudentUnlock(studentName) {
+    addActivityItem('success', 'lock_open', `${studentName} was unlocked`);
+  }
+
+  function trackAllResponded() {
+    addActivityItem('success', 'celebration', 'All students responded!');
+  }
+
+  function trackQuestionAdvance(questionNum) {
+    addActivityItem('info', 'arrow_forward', `Advanced to Question ${questionNum}`);
+  }
+
+  // === Sound Effects System ===
+  var soundEffectsEnabled = false; // Disabled by default, can be enabled via settings
+  var audioContext = null;
+
+  function initializeAudioContext() {
+    if (!audioContext && typeof AudioContext !== 'undefined') {
+      audioContext = new AudioContext();
+    } else if (!audioContext && typeof webkitAudioContext !== 'undefined') {
+      audioContext = new webkitAudioContext();
+    }
+    return audioContext;
+  }
+
+  function playSoundEffect(type) {
+    if (!soundEffectsEnabled) return;
+
+    const ctx = initializeAudioContext();
+    if (!ctx) return;
+
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+
+    // Configure sound based on type
+    switch(type) {
+      case 'success':
+        // Happy ascending chime
+        oscillator.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+        oscillator.frequency.exponentialRampToValueAtTime(783.99, ctx.currentTime + 0.1); // G5
+        gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+        oscillator.start(ctx.currentTime);
+        oscillator.stop(ctx.currentTime + 0.3);
+        break;
+
+      case 'celebration':
+        // Triple ascending tones
+        playTone(ctx, 523.25, 0.0, 0.1, 0.25); // C5
+        playTone(ctx, 659.25, 0.1, 0.1, 0.25); // E5
+        playTone(ctx, 783.99, 0.2, 0.15, 0.3); // G5
+        break;
+
+      case 'warning':
+        // Descending tone
+        oscillator.frequency.setValueAtTime(440, ctx.currentTime); // A4
+        oscillator.frequency.exponentialRampToValueAtTime(220, ctx.currentTime + 0.15);
+        gainNode.gain.setValueAtTime(0.25, ctx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+        oscillator.start(ctx.currentTime);
+        oscillator.stop(ctx.currentTime + 0.2);
+        break;
+
+      case 'notification':
+        // Single gentle tone
+        oscillator.frequency.value = 880; // A5
+        oscillator.type = 'sine';
+        gainNode.gain.setValueAtTime(0.2, ctx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+        oscillator.start(ctx.currentTime);
+        oscillator.stop(ctx.currentTime + 0.15);
+        break;
+    }
+  }
+
+  function playTone(ctx, frequency, startTime, duration, gain) {
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+
+    osc.connect(g);
+    g.connect(ctx.destination);
+
+    osc.frequency.value = frequency;
+    osc.type = 'sine';
+    g.gain.setValueAtTime(gain, ctx.currentTime + startTime);
+    g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + startTime + duration);
+
+    osc.start(ctx.currentTime + startTime);
+    osc.stop(ctx.currentTime + startTime + duration);
+  }
+
+  function toggleSoundEffects() {
+    soundEffectsEnabled = !soundEffectsEnabled;
+    showToast('info', 'Sound Effects', soundEffectsEnabled ? 'Sound effects enabled' : 'Sound effects disabled', 2000);
+  }
+
+  // === Keyboard Shortcuts System ===
+  var keyboardShortcutsEnabled = true;
+
+  function initializeKeyboardShortcuts() {
+    document.addEventListener('keydown', function(e) {
+      if (!keyboardShortcutsEnabled) return;
+
+      // Don't trigger if user is typing in an input
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      // Check if in live view
+      const liveView = document.getElementById('live-view');
+      if (!liveView || liveView.style.display === 'none') return;
+
+      switch(e.key) {
+        case 'ArrowRight':
+          e.preventDefault();
+          const nextBtn = document.getElementById('header-next-btn');
+          if (nextBtn && !nextBtn.disabled) nextBtn.click();
+          break;
+
+        case 'ArrowLeft':
+          e.preventDefault();
+          const backBtn = document.getElementById('header-back-btn');
+          if (backBtn && !backBtn.disabled) backBtn.click();
+          break;
+
+        case ' ': // Space
+          // Only for timer control
+          if (e.target.id === 'timer-display') return; // Allow editing timer
+          e.preventDefault();
+          const timerState = timerActive;
+          if (timerState) {
+            pauseTimer();
+          } else {
+            startTimer();
+          }
+          break;
+
+        case 'r':
+        case 'R':
+          e.preventDefault();
+          const resetBtn = document.getElementById('header-reset-question-btn');
+          if (resetBtn && !resetBtn.disabled) resetBtn.click();
+          break;
+
+        case 'a':
+        case 'A':
+          e.preventDefault();
+          toggleActivityFeed();
+          break;
+
+        case 'Escape':
+          e.preventDefault();
+          if (activityFeedOpen) closeActivityFeed();
+          if (fabMenuOpen) closeFABMenu();
+          break;
+      }
+    });
   }
 
   // === Initialize Enhanced UI Systems ===
@@ -3791,7 +4533,13 @@
     // Initialize FAB system
     initializeFAB();
 
-    console.log('✨ Enhanced UI systems initialized');
+    // Initialize Activity Feed
+    initializeActivityFeed();
+
+    // Initialize Keyboard Shortcuts
+    initializeKeyboardShortcuts();
+
+    console.log('✨ Enhanced UI systems initialized (Phase 3)');
   });
 
   function describeConfidence(value){
@@ -7583,6 +8331,8 @@
         allRespondedBanner.classList.remove('hidden');
         if(!allRespondedBanner.classList.contains('celebrate')){
           triggerCelebration(allRespondedBanner, 'all-responded');
+          // Track activity
+          trackAllResponded();
         }
         if(bannerTitle){
           bannerTitle.textContent='✅ Everyone Responded!';

@@ -3581,6 +3581,211 @@
     }
   }
 
+  // === Sparkline Visualization System ===
+  // Track historical data for sparklines
+  var sparklineData = {
+    responses: [],
+    accuracy: [],
+    maxPoints: 20 // Keep last 20 data points
+  };
+
+  function addSparklineDataPoint(metric, value) {
+    if (!sparklineData[metric]) {
+      sparklineData[metric] = [];
+    }
+    sparklineData[metric].push(value);
+
+    // Keep only maxPoints
+    if (sparklineData[metric].length > sparklineData.maxPoints) {
+      sparklineData[metric].shift();
+    }
+  }
+
+  function renderSparkline(containerId, data, color) {
+    const container = document.getElementById(containerId);
+    if (!container || !data || data.length < 2) return;
+
+    const width = 100;
+    const height = 28;
+    const padding = 2;
+
+    // Calculate min/max for scaling
+    const min = Math.min(...data);
+    const max = Math.max(...data);
+    const range = max - min || 1;
+
+    // Create SVG if it doesn't exist
+    let svg = container.querySelector('svg');
+    if (!svg) {
+      svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'sparkline');
+      svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+      // Add gradient definition
+      const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+      gradient.setAttribute('id', `sparkline-gradient-${containerId}`);
+      gradient.setAttribute('x1', '0%');
+      gradient.setAttribute('y1', '0%');
+      gradient.setAttribute('x2', '0%');
+      gradient.setAttribute('y2', '100%');
+
+      const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+      stop1.setAttribute('offset', '0%');
+      stop1.setAttribute('stop-color', color || '#c5a05a');
+      stop1.setAttribute('stop-opacity', '0.5');
+
+      const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+      stop2.setAttribute('offset', '100%');
+      stop2.setAttribute('stop-color', color || '#c5a05a');
+      stop2.setAttribute('stop-opacity', '0.1');
+
+      gradient.appendChild(stop1);
+      gradient.appendChild(stop2);
+      defs.appendChild(gradient);
+      svg.appendChild(defs);
+
+      container.appendChild(svg);
+    }
+
+    // Clear previous content except defs
+    const defs = svg.querySelector('defs');
+    svg.innerHTML = '';
+    if (defs) svg.appendChild(defs);
+
+    // Calculate points
+    const stepX = (width - 2 * padding) / (data.length - 1);
+    let linePoints = '';
+    let areaPoints = `${padding},${height - padding}`;
+
+    data.forEach((value, index) => {
+      const x = padding + index * stepX;
+      const y = padding + (height - 2 * padding) * (1 - (value - min) / range);
+
+      if (index === 0) {
+        linePoints = `M ${x},${y}`;
+      } else {
+        linePoints += ` L ${x},${y}`;
+      }
+
+      areaPoints += ` ${x},${y}`;
+    });
+
+    areaPoints += ` ${padding + (data.length - 1) * stepX},${height - padding}`;
+
+    // Create area path
+    const area = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    area.setAttribute('d', areaPoints + ' Z');
+    area.setAttribute('class', 'sparkline-area');
+    area.setAttribute('fill', `url(#sparkline-gradient-${containerId})`);
+    svg.appendChild(area);
+
+    // Create line path
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    line.setAttribute('d', linePoints);
+    line.setAttribute('class', 'sparkline-line');
+    line.setAttribute('stroke', color || '#c5a05a');
+    svg.appendChild(line);
+
+    // Add dots
+    data.forEach((value, index) => {
+      const x = padding + index * stepX;
+      const y = padding + (height - 2 * padding) * (1 - (value - min) / range);
+
+      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dot.setAttribute('cx', x);
+      dot.setAttribute('cy', y);
+      dot.setAttribute('class', 'sparkline-dot');
+      dot.setAttribute('fill', color || '#c5a05a');
+      svg.appendChild(dot);
+    });
+  }
+
+  // === Loading Skeleton System ===
+  function createSkeletonLoader(type = 'card') {
+    const skeleton = document.createElement('div');
+    skeleton.className = 'animate-pulse';
+
+    if (type === 'card') {
+      skeleton.innerHTML = `
+        <div class="bg-gray-200 dark:bg-gray-700 h-40 rounded-t-2xl"></div>
+        <div class="p-4 space-y-3">
+          <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+          <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+          <div class="flex gap-2 mt-4">
+            <div class="h-8 bg-gray-200 dark:bg-gray-700 rounded flex-1"></div>
+            <div class="h-8 bg-gray-200 dark:bg-gray-700 rounded flex-1"></div>
+          </div>
+        </div>
+      `;
+    } else if (type === 'hud') {
+      skeleton.innerHTML = `
+        <div class="flex gap-4">
+          <div class="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+          <div class="flex-1 space-y-2">
+            <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
+            <div class="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    return skeleton;
+  }
+
+  // === Enhanced Visual Timer States ===
+  function updateTimerVisualState(remainingSeconds, totalSeconds) {
+    const timerContainers = [
+      document.getElementById('timer-main-container'),
+      document.getElementById('timer-compact-container')
+    ];
+
+    timerContainers.forEach(function(container) {
+      if (!container) return;
+
+      // Remove all state classes
+      container.classList.remove('timer-warning', 'timer-critical');
+
+      // Calculate percentage remaining
+      const percentage = totalSeconds > 0 ? (remainingSeconds / totalSeconds) * 100 : 100;
+
+      // Apply appropriate state class
+      if (remainingSeconds <= 10 && remainingSeconds > 0) {
+        container.classList.add('timer-critical');
+        setAmbientState('time-critical');
+      } else if (percentage <= 25 && remainingSeconds > 10) {
+        container.classList.add('timer-warning');
+      } else {
+        setAmbientState('normal');
+      }
+    });
+  }
+
+  // === Celebration Animation System ===
+  function triggerCelebration(element, type = 'default') {
+    if (!element) return;
+
+    element.classList.remove('celebrate');
+
+    // Force reflow to restart animation
+    void element.offsetWidth;
+
+    element.classList.add('celebrate');
+
+    // Remove class after animation completes
+    setTimeout(function() {
+      element.classList.remove('celebrate');
+    }, 600);
+
+    // Show toast notification for major milestones
+    if (type === 'all-responded') {
+      showToast('success', '🎉 All Students Responded!', 'Great work! Everyone has submitted their answer.');
+      setAmbientState('all-responded');
+    } else if (type === 'perfect-accuracy') {
+      showToast('success', '💯 Perfect Accuracy!', '100% of students got the answer correct!');
+    }
+  }
+
   // === Initialize Enhanced UI Systems ===
   document.addEventListener('DOMContentLoaded', function() {
     // Initialize FAB system
@@ -5253,7 +5458,7 @@
 
     polls.forEach(function(poll){
       var card=document.createElement('article');
-      card.className='poll-card';
+      card.className='poll-card-enhanced';
       if(poll&&poll.pollId){
         card.dataset.pollId=poll.pollId;
       }
@@ -5285,27 +5490,45 @@
         'No sessions yet';
       sessionBadgeText=escapeHtml(sessionBadgeText);
 
+      // Get first question text for preview
+      var firstQuestionText='';
+      if(poll&&Array.isArray(poll.questions)&&poll.questions.length>0){
+        var firstQ=poll.questions[0];
+        firstQuestionText=firstQ&&firstQ.questionText?firstQ.questionText:'';
+      }
+      var previewText=firstQuestionText||'No questions yet';
+      var safePreviewText=escapeHtml(previewText);
+
       var parts=[];
+
+      // Preview section with first question
+      parts.push('<div class="poll-card-preview">');
+      parts.push('<div class="poll-card-preview-text">'+safePreviewText+'</div>');
+      parts.push('</div>');
+
+      // Card body
+      parts.push('<div class="poll-card-body">');
       parts.push('<div class="poll-card-header">');
       parts.push('<div class="poll-card-title">'+safeName+'</div>');
       parts.push('<div class="poll-card-meta">');
       parts.push('<span class="poll-card-badge class-badge"><span class="material-symbols-outlined text-base">school</span>'+className+'</span>');
-      parts.push('<span class="poll-card-badge"><span class="material-symbols-outlined text-base">quiz</span>'+questionCount+' '+questionLabel+'</span>');
-      parts.push('<span class="poll-card-badge"><span class="material-symbols-outlined text-base">history</span>'+sessionBadgeText+'</span>');
       parts.push('</div>');
       parts.push('</div>');
 
-      parts.push('<div class="poll-card-stats">');
-      parts.push('<div class="poll-card-stat"><span class="material-symbols-outlined text-base">schedule</span><span>'+lastRun+'</span></div>');
-      parts.push('<div class="poll-card-stat"><span class="material-symbols-outlined text-base">update</span><span>'+updated+'</span></div>');
+      // Quick stats with icons
+      parts.push('<div class="poll-card-meta">');
+      parts.push('<span class="poll-card-quick-stat"><span class="material-symbols-outlined" style="font-size: 14px">quiz</span>'+questionCount+' '+questionLabel+'</span>');
+      parts.push('<span class="poll-card-quick-stat"><span class="material-symbols-outlined" style="font-size: 14px">history</span>'+sessionBadgeText+'</span>');
       parts.push('</div>');
 
       parts.push('<div class="poll-card-actions">');
       parts.push('<button type="button" class="poll-card-btn primary poll-select-btn" data-poll-id="'+(poll&&poll.pollId?poll.pollId:'')+'" aria-label="Select '+safeName+' for a session"><span class="material-symbols-outlined text-base">play_arrow</span><span>Start</span></button>');
-      parts.push('<button type="button" class="poll-card-btn secondary poll-copy-btn" data-poll-id="'+(poll&&poll.pollId?poll.pollId:'')+'" aria-label="Duplicate '+safeName+'"><span class="material-symbols-outlined text-base">content_copy</span><span>Duplicate</span></button>');
-      parts.push('<button type="button" class="poll-card-btn secondary poll-edit-btn" data-poll-id="'+(poll&&poll.pollId?poll.pollId:'')+'" aria-label="Edit '+safeName+'"><span class="material-symbols-outlined text-base">stylus_note</span><span>Edit</span></button>');
-      parts.push('<button type="button" class="poll-card-btn danger poll-delete-btn" data-poll-id="'+(poll&&poll.pollId?poll.pollId:'')+'" aria-label="Delete '+safeName+'"><span class="material-symbols-outlined text-base">delete</span><span>Delete</span></button>');
+      parts.push('<button type="button" class="poll-card-btn secondary poll-edit-btn" data-poll-id="'+(poll&&poll.pollId?poll.pollId:'')+'" aria-label="Edit '+safeName+'"><span class="material-symbols-outlined text-base">edit</span></button>');
+      parts.push('<button type="button" class="poll-card-btn secondary poll-copy-btn" data-poll-id="'+(poll&&poll.pollId?poll.pollId:'')+'" aria-label="Duplicate '+safeName+'" title="Duplicate poll"><span class="material-symbols-outlined text-base">content_copy</span></button>');
+      parts.push('<button type="button" class="poll-card-btn danger poll-delete-btn" data-poll-id="'+(poll&&poll.pollId?poll.pollId:'')+'" aria-label="Delete '+safeName+'" title="Delete poll"><span class="material-symbols-outlined text-base">delete</span></button>');
       parts.push('</div>');
+
+      parts.push('</div>'); // End card body
 
       card.innerHTML=parts.join('');
 
@@ -7351,15 +7574,15 @@
       hudResponsePercent.textContent=completionPct+'%';
     }
 
+    // Track sparkline data for responses
+    addSparklineDataPoint('responses', completionPct);
+
     var allResponded=totalStudents>0&&totalResponses===totalStudents;
     if(allRespondedBanner){
       if(allResponded){
         allRespondedBanner.classList.remove('hidden');
         if(!allRespondedBanner.classList.contains('celebrate')){
-          allRespondedBanner.classList.add('celebrate');
-          setTimeout(function(){
-            allRespondedBanner.classList.remove('celebrate');
-          },650);
+          triggerCelebration(allRespondedBanner, 'all-responded');
         }
         if(bannerTitle){
           bannerTitle.textContent='✅ Everyone Responded!';
@@ -7449,6 +7672,17 @@
       var hudAccuracyPercent=document.getElementById('hud-accuracy-percent');
       if(hudAccuracyPercent){
         hudAccuracyPercent.textContent=accuracyPct+'%';
+      }
+
+      // Track sparkline data for accuracy
+      addSparklineDataPoint('accuracy', accuracyPct);
+
+      // Celebrate perfect accuracy
+      if(accuracyPct === 100 && countedResponses >= 3) {
+        var accuracyCard = document.getElementById('hud-accuracy-card');
+        if(accuracyCard && !accuracyCard.classList.contains('celebrate')) {
+          triggerCelebration(accuracyCard, 'perfect-accuracy');
+        }
       }
     }
 

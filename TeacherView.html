@@ -1043,6 +1043,230 @@
     .animate-pulse-slow {
       animation: pulse-slow 2s ease-in-out infinite;
     }
+
+    /* ENHANCED TIMER VISUAL FEEDBACK SYSTEM */
+    /* Timer state classes - applied dynamically based on time remaining */
+    .timer-warning {
+      background: rgba(245, 158, 11, 0.25) !important;
+      border-color: rgba(245, 158, 11, 0.4) !important;
+    }
+
+    .timer-warning #timer-display,
+    .timer-warning #timer-display-compact {
+      color: #fbbf24 !important; /* amber-400 */
+    }
+
+    .timer-critical {
+      background: rgba(239, 68, 68, 0.25) !important;
+      border-color: rgba(239, 68, 68, 0.5) !important;
+      animation: timer-pulse-critical 1s ease-in-out infinite;
+    }
+
+    .timer-critical #timer-display,
+    .timer-critical #timer-display-compact {
+      color: #f87171 !important; /* red-400 */
+    }
+
+    @keyframes timer-pulse-critical {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+      }
+      50% {
+        box-shadow: 0 0 20px 4px rgba(239, 68, 68, 0.6);
+      }
+    }
+
+    /* Next Question button pulse when ready */
+    .pulse-ready {
+      animation: pulse-glow-gold 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-glow-gold {
+      0%, 100% {
+        box-shadow: 0 4px 12px rgba(197, 160, 90, 0.4);
+      }
+      50% {
+        box-shadow: 0 8px 24px rgba(197, 160, 90, 0.7), 0 0 40px rgba(197, 160, 90, 0.3);
+      }
+    }
+
+    /* Student tile animations for attention */
+    .student-needs-attention {
+      animation: border-pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes border-pulse {
+      0%, 100% {
+        border-color: rgba(239, 68, 68, 0.5);
+      }
+      50% {
+        border-color: rgba(239, 68, 68, 1);
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+      }
+    }
+
+    /* Celebration animation for all-responded */
+    @keyframes celebrate-bounce {
+      0%, 100% {
+        transform: scale(1);
+      }
+      25% {
+        transform: scale(1.05);
+      }
+      50% {
+        transform: scale(0.95);
+      }
+      75% {
+        transform: scale(1.02);
+      }
+    }
+
+    .celebrate {
+      animation: celebrate-bounce 0.6s ease-out;
+    }
+
+    /* ENHANCED POLL CARD STYLES */
+    .poll-card {
+      background: white;
+      border-radius: 12px;
+      border: 2px solid rgba(18, 56, 93, 0.12);
+      padding: 20px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .poll-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 24px rgba(18, 56, 93, 0.15);
+      border-color: rgba(18, 56, 93, 0.25);
+    }
+
+    .poll-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #12385d, #c5a05a);
+    }
+
+    .poll-card-header {
+      margin-bottom: 16px;
+    }
+
+    .poll-card-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #12385d;
+      margin-bottom: 6px;
+      line-height: 1.3;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .poll-card-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .poll-card-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(18, 56, 93, 0.08);
+      color: #12385d;
+    }
+
+    .poll-card-badge.class-badge {
+      background: rgba(197, 160, 90, 0.15);
+      color: #8b6914;
+    }
+
+    .poll-card-stats {
+      display: flex;
+      gap: 16px;
+      padding: 12px 0;
+      border-top: 1px solid rgba(18, 56, 93, 0.1);
+      margin-bottom: 12px;
+    }
+
+    .poll-card-stat {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #6b7280;
+      font-size: 13px;
+    }
+
+    .poll-card-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .poll-card-btn {
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      border: none;
+      cursor: pointer;
+    }
+
+    .poll-card-btn.primary {
+      background: #12385d;
+      color: white;
+    }
+
+    .poll-card-btn.primary:hover {
+      background: #0f2d4a;
+      transform: scale(1.02);
+    }
+
+    .poll-card-btn.secondary {
+      background: rgba(18, 56, 93, 0.08);
+      color: #12385d;
+    }
+
+    .poll-card-btn.secondary:hover {
+      background: rgba(18, 56, 93, 0.15);
+    }
+
+    .poll-card-btn.danger {
+      background: rgba(239, 68, 68, 0.1);
+      color: #dc2626;
+    }
+
+    .poll-card-btn.danger:hover {
+      background: rgba(239, 68, 68, 0.2);
+    }
+
+    /* View Toggle Button States */
+    #view-cards-btn.active {
+      background: #12385d !important;
+      color: white !important;
+    }
+
+    #view-table-btn.active {
+      background: #12385d !important;
+      color: white !important;
+    }
   </style>
   </style>
 </head>
@@ -1108,45 +1332,53 @@
           </div>
         </div>
 
-        <!-- CENTER SECTION: Timer (Dominant) -->
-        <div class="flex flex-col items-center gap-1">
-          <div class="flex items-center gap-2 rounded-xl border-2 border-brand-white/20 bg-brand-white/10 px-4 py-2.5">
-            <button id="subtract-10s-btn" class="text-brand-white/70 hover:text-brand-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed" aria-label="-10 seconds">
-              <span class="material-symbols-outlined text-lg">remove</span>
+        <!-- CENTER SECTION: Timer (Dominant) - ENHANCED with Larger Touch Targets -->
+        <div class="flex flex-col items-center gap-1.5">
+          <div id="timer-main-container" class="flex items-center gap-2 rounded-xl border-2 border-brand-white/20 bg-brand-white/10 px-5 py-3 transition-all duration-300">
+            <button id="subtract-10s-btn" class="w-9 h-9 flex items-center justify-center rounded-lg bg-brand-white/10 text-brand-white hover:bg-brand-white/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" aria-label="-10 seconds" title="Subtract 10 seconds">
+              <span class="material-symbols-outlined text-xl">remove</span>
             </button>
             <input
               type="text"
               id="timer-display"
-              class="w-24 rounded bg-transparent text-center text-3xl font-bold text-brand-white transition-all placeholder-brand-white/40 focus:outline-none focus:ring-0 disabled:opacity-70"
+              class="w-28 rounded bg-transparent text-center text-4xl font-bold text-brand-white transition-all placeholder-brand-white/40 focus:outline-none focus:ring-2 focus:ring-veritas-gold disabled:opacity-70 cursor-pointer"
               value="01:30"
               aria-label="Timer display"
+              title="Click to edit time"
             />
-            <button id="add-10s-btn" class="text-brand-white/70 hover:text-brand-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed" aria-label="+10 seconds">
-              <span class="material-symbols-outlined text-lg">add</span>
+            <button id="add-10s-btn" class="w-9 h-9 flex items-center justify-center rounded-lg bg-brand-white/10 text-brand-white hover:bg-brand-white/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" aria-label="+10 seconds" title="Add 10 seconds">
+              <span class="material-symbols-outlined text-xl">add</span>
             </button>
-            <div class="w-px h-6 bg-brand-white/30 mx-1"></div>
-            <button id="start-btn" class="bg-sky-500 hover:bg-sky-600 text-brand-white font-bold p-1.5 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Start timer">
-              <span class="material-symbols-outlined text-lg">play_arrow</span>
+            <div class="w-px h-8 bg-brand-white/30 mx-2"></div>
+            <button id="start-btn" class="bg-emerald-500 hover:bg-emerald-600 text-brand-white font-bold px-3 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md" aria-label="Start timer" title="Start timer (Space)">
+              <span class="material-symbols-outlined text-xl">play_arrow</span>
             </button>
-            <button id="pause-btn" class="bg-amber-500 hover:bg-amber-600 text-brand-white font-bold p-1.5 rounded transition-colors hidden" aria-label="Pause timer">
-              <span class="material-symbols-outlined text-lg">pause</span>
+            <button id="pause-btn" class="bg-amber-500 hover:bg-amber-600 text-brand-white font-bold px-3 py-2 rounded-lg transition-colors hidden shadow-md" aria-label="Pause timer" title="Pause timer (Space)">
+              <span class="material-symbols-outlined text-xl">pause</span>
             </button>
-            <button id="reset-btn" class="bg-brand-white/20 hover:bg-brand-white/30 text-brand-white font-bold p-1.5 rounded transition-colors" aria-label="Reset timer">
-              <span class="material-symbols-outlined text-lg">refresh</span>
+            <button id="reset-btn" class="bg-brand-white/20 hover:bg-brand-white/30 text-brand-white font-bold px-3 py-2 rounded-lg transition-colors shadow-sm" aria-label="Reset timer" title="Reset timer">
+              <span class="material-symbols-outlined text-xl">refresh</span>
             </button>
           </div>
-          <p id="timer-status-message" class="text-xs text-brand-white/60 uppercase tracking-wide">Individually Timed</p>
+          <div class="flex items-center gap-2">
+            <p id="timer-status-message" class="text-xs text-brand-white/70 uppercase tracking-wide font-semibold">Individually Timed</p>
+            <span class="text-brand-white/40">•</span>
+            <div class="flex gap-1">
+              <button id="add-30s-btn" class="px-2 py-0.5 text-xs bg-brand-white/10 hover:bg-brand-white/20 text-brand-white/90 rounded transition-colors font-semibold" title="Add 30 seconds">+30s</button>
+              <button id="add-60s-btn" class="px-2 py-0.5 text-xs bg-brand-white/10 hover:bg-brand-white/20 text-brand-white/90 rounded transition-colors font-semibold" title="Add 60 seconds">+1m</button>
+            </div>
+          </div>
         </div>
 
         <!-- RIGHT SECTION: Action Cluster -->
         <div class="flex items-center justify-end gap-2 flex-wrap">
-          <!-- Primary Action -->
-          <button id="header-next-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-veritas-gold text-white text-sm font-bold hover:bg-veritas-gold/90 transition-colors shadow-sm">
+          <!-- Primary Action - ENHANCED with Larger Size and Prominence -->
+          <button id="header-next-btn" class="flex items-center gap-2 h-12 px-6 rounded-lg bg-veritas-gold text-white text-base font-bold hover:bg-veritas-gold/90 transition-all shadow-lg hover:shadow-xl transform hover:scale-105" title="Advance to next question (→ arrow key)">
             <span>Next Question</span>
-            <span class="material-symbols-outlined text-lg">arrow_forward</span>
+            <span class="material-symbols-outlined text-xl">arrow_forward</span>
           </button>
-          <button id="header-end-show-btn" class="hidden items-center gap-2 h-10 px-5 rounded-lg bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition-colors shadow-sm" title="Close responses and reveal answer to students">
-            <span class="material-symbols-outlined text-lg">check_circle</span>
+          <button id="header-end-show-btn" class="hidden items-center gap-2 h-12 px-6 rounded-lg bg-emerald-600 text-white text-base font-bold hover:bg-emerald-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105" title="Close responses and reveal answer to students">
+            <span class="material-symbols-outlined text-xl">check_circle</span>
             <span>End &amp; Reveal</span>
           </button>
 
@@ -1258,7 +1490,24 @@
               </div>
             </div>
 
-            <div class="overflow-hidden rounded-lg border border-gray-200">
+            <!-- ENHANCED: Toggle between Table and Card View -->
+            <div class="mb-4 flex items-center justify-end gap-2">
+              <span class="text-xs text-gray-500 font-medium">View:</span>
+              <button id="view-cards-btn" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-veritas-navy/10 text-veritas-navy transition-colors" title="Card view">
+                <span class="material-symbols-outlined text-base align-middle">grid_view</span>
+              </button>
+              <button id="view-table-btn" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors" title="Table view">
+                <span class="material-symbols-outlined text-base align-middle">table_rows</span>
+              </button>
+            </div>
+
+            <!-- Card View (Default, More Visual) -->
+            <div id="polls-card-view" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              <!-- Poll cards will be dynamically inserted here -->
+            </div>
+
+            <!-- Table View (Optional, More Compact) -->
+            <div id="polls-table-view" class="overflow-hidden rounded-lg border border-gray-200 hidden">
               <table class="min-w-full divide-y divide-gray-200 text-sm">
                 <thead class="bg-gray-50 text-gray-600">
                   <tr>
@@ -1271,8 +1520,18 @@
                 </thead>
                 <tbody id="polls-table-body" class="divide-y divide-gray-100 bg-white"></tbody>
               </table>
-              <div id="polls-empty-state" class="p-6 text-center text-gray-500 hidden">
-                <p>No polls found. Create your first poll to get started.</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="polls-empty-state" class="p-12 text-center text-gray-500 hidden">
+              <div class="max-w-md mx-auto">
+                <span class="material-symbols-outlined text-6xl text-gray-300 mb-4">quiz</span>
+                <h3 class="text-lg font-semibold text-gray-700 mb-2">No Polls Yet</h3>
+                <p class="text-sm mb-6">Create your first poll to get started with live polling in your classroom.</p>
+                <button onclick="createNewPoll()" class="inline-flex items-center gap-2 px-5 py-2.5 bg-veritas-navy text-white rounded-lg font-semibold hover:bg-veritas-navy/90 transition-colors">
+                  <span class="material-symbols-outlined text-lg">add_circle</span>
+                  <span>Create New Poll</span>
+                </button>
               </div>
             </div>
           </div>
@@ -1284,28 +1543,40 @@
 
           <!-- 🚨 ATTENTION ZONE - Appears only when teacher action needed -->
           <div id="attention-banner-container" class="flex-shrink-0">
-            <!-- Lockout Alert -->
-            <div id="lockout-alert-banner" class="hidden bg-gradient-to-r from-red-600 to-red-700 border-b-4 border-red-800 px-6 py-4">
+            <!-- Lockout Alert (ENHANCED - High Visibility!) -->
+            <div id="lockout-alert-banner" class="hidden bg-gradient-to-r from-red-600 to-red-700 border-b-4 border-red-800 px-6 py-4 shadow-lg animate-fade-up">
               <div class="flex items-center justify-between gap-4">
                 <div class="flex items-center gap-4 flex-1 min-w-0">
-                  <span class="material-symbols-outlined text-white text-3xl flex-shrink-0">lock_person</span>
+                  <span class="material-symbols-outlined text-white text-4xl flex-shrink-0 animate-pulse">lock_person</span>
                   <div class="flex-1 min-w-0">
-                    <h3 class="text-white text-lg font-bold mb-1">Students Locked Out - Need Approval</h3>
-                    <p id="lockout-student-names" class="text-white/95 text-sm mb-3 font-medium">Loading...</p>
-                    <div id="lockout-actions" class="flex flex-wrap gap-2">
-                      <!-- Individual unlock buttons will be populated here -->
+                    <div class="flex items-center gap-3 mb-1">
+                      <h3 class="text-white text-xl font-bold">🔒 Students Locked Out</h3>
+                      <span class="px-2 py-0.5 bg-white/20 rounded-full text-white text-xs font-bold uppercase tracking-wide">Action Required</span>
+                    </div>
+                    <p id="lockout-student-names" class="text-white/95 text-base mb-3 font-semibold">Loading...</p>
+                    <div id="lockout-actions" class="flex flex-wrap gap-2.5">
+                      <!-- Individual unlock buttons will be populated here with larger touch targets -->
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- All Responded Alert -->
-            <div id="all-responded-banner" class="hidden bg-gradient-to-r from-green-600 to-green-700 border-b-4 border-green-800 px-6 py-3">
+            <!-- All Responded Alert (ENHANCED - More Celebratory!) -->
+            <div id="all-responded-banner" class="hidden bg-gradient-to-r from-green-600 to-green-700 border-b-4 border-green-800 px-6 py-4 animate-fade-up">
               <div class="flex items-center justify-between gap-4">
-                <div class="flex items-center gap-3">
-                  <span class="material-symbols-outlined text-white text-2xl">check_circle</span>
-                  <p class="text-white text-base font-semibold">✅ All students have responded! Ready to reveal.</p>
+                <div class="flex items-center gap-4">
+                  <span class="material-symbols-outlined text-white text-4xl animate-pulse-glow">check_circle</span>
+                  <div>
+                    <p class="text-white text-xl font-bold mb-1">✅ Everyone Responded!</p>
+                    <p class="text-white/90 text-sm font-medium">All students have submitted their answers. Ready to reveal and advance.</p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span id="time-saved-badge" class="hidden px-3 py-1.5 bg-white/20 rounded-lg text-white text-sm font-bold">
+                    <span class="material-symbols-outlined text-base align-middle">schedule</span>
+                    Saved <span id="time-saved-amount">0</span>s
+                  </span>
                 </div>
               </div>
             </div>
@@ -1342,19 +1613,19 @@
                 </div>
               </div>
 
-              <!-- Timer & Status (Center) -->
+              <!-- Timer & Status (Center) - ENHANCED with Color Feedback -->
               <div class="flex items-center gap-4 flex-shrink-0">
-                <div class="flex items-center gap-2 px-3 py-1.5 bg-brand-white/15 rounded-lg">
+                <div id="timer-compact-container" class="flex items-center gap-2 px-3 py-1.5 bg-brand-white/15 rounded-lg transition-all duration-300">
                   <span class="material-symbols-outlined text-brand-white text-lg">timer</span>
-                  <input type="text" id="timer-display-compact" class="w-16 bg-transparent text-center text-lg font-bold text-brand-white focus:outline-none" value="--:--" readonly>
+                  <input type="text" id="timer-display-compact" class="w-20 bg-transparent text-center text-xl font-bold text-brand-white focus:outline-none" value="--:--" readonly>
                 </div>
                 <div class="h-6 w-px bg-brand-white/30"></div>
                 <div class="flex items-center gap-2 px-3 py-1.5 bg-brand-white/15 rounded-lg">
-                  <span id="response-count-compact" class="text-brand-white text-sm font-bold whitespace-nowrap">0/0</span>
-                  <div class="w-32 h-2 bg-brand-white/20 rounded-full overflow-hidden">
-                    <div id="live-overview-response-progress-compact" class="h-full bg-brand-white transition-all duration-300" style="width: 0%;"></div>
+                  <span id="response-count-compact" class="text-brand-white text-base font-bold whitespace-nowrap">0/0</span>
+                  <div class="w-40 h-2.5 bg-brand-white/20 rounded-full overflow-hidden">
+                    <div id="live-overview-response-progress-compact" class="h-full bg-brand-white transition-all duration-500" style="width: 0%;"></div>
                   </div>
-                  <span id="response-percent-compact" class="text-brand-white/90 text-sm font-semibold">0%</span>
+                  <span id="response-percent-compact" class="text-brand-white/90 text-base font-bold">0%</span>
                 </div>
               </div>
 
@@ -7296,6 +7567,36 @@
 
     // Update legacy variables for compatibility
     timerRemainingSeconds = totalSeconds;
+
+    // ENHANCED: Visual feedback based on time remaining
+    var timerMainContainer = document.getElementById('timer-main-container');
+    var timerCompactContainer = document.getElementById('timer-compact-container');
+    var timerDisplayCompact = document.getElementById('timer-display-compact');
+
+    // Sync compact timer display
+    if (timerDisplayCompact) {
+      timerDisplayCompact.value = formatTime(totalSeconds);
+    }
+
+    // Apply color feedback classes
+    if (timerMainContainer && timerCompactContainer) {
+      // Remove all timer state classes
+      timerMainContainer.classList.remove('timer-warning', 'timer-critical');
+      timerCompactContainer.classList.remove('timer-warning', 'timer-critical');
+
+      if (isRunning) {
+        // Critical: less than 15 seconds (red, pulsing)
+        if (totalSeconds > 0 && totalSeconds <= 15) {
+          timerMainContainer.classList.add('timer-critical');
+          timerCompactContainer.classList.add('timer-critical');
+        }
+        // Warning: less than 30 seconds (yellow)
+        else if (totalSeconds > 15 && totalSeconds <= 30) {
+          timerMainContainer.classList.add('timer-warning');
+          timerCompactContainer.classList.add('timer-warning');
+        }
+      }
+    }
   }
 
   /**
@@ -9295,7 +9596,164 @@
     });
   }
 
-  console.log('✓ Teacher Panel Ready');
+  // ==========================================================================
+  // ENHANCED UI FEATURES (2025 Redesign)
+  // ==========================================================================
+
+  // Quick Time Preset Buttons (+30s, +1m)
+  var add30sBtn = document.getElementById('add-30s-btn');
+  if (add30sBtn) {
+    add30sBtn.addEventListener('click', function() {
+      if (!isRunning) {
+        editTime(30);
+      }
+    });
+  }
+
+  var add60sBtn = document.getElementById('add-60s-btn');
+  if (add60sBtn) {
+    add60sBtn.addEventListener('click', function() {
+      if (!isRunning) {
+        editTime(60);
+      }
+    });
+  }
+
+  // Card/Table View Toggle for Dashboard
+  var viewCardsBtn = document.getElementById('view-cards-btn');
+  var viewTableBtn = document.getElementById('view-table-btn');
+  var pollsCardView = document.getElementById('polls-card-view');
+  var pollsTableView = document.getElementById('polls-table-view');
+
+  if (viewCardsBtn && viewTableBtn && pollsCardView && pollsTableView) {
+    // Default to card view
+    viewCardsBtn.classList.add('active');
+
+    viewCardsBtn.addEventListener('click', function() {
+      pollsCardView.classList.remove('hidden');
+      pollsTableView.classList.add('hidden');
+      viewCardsBtn.classList.add('active');
+      viewTableBtn.classList.remove('active');
+      localStorage.setItem('vlp_poll_view', 'cards');
+    });
+
+    viewTableBtn.addEventListener('click', function() {
+      pollsCardView.classList.add('hidden');
+      pollsTableView.classList.remove('hidden');
+      viewTableBtn.classList.add('active');
+      viewCardsBtn.classList.remove('active');
+      localStorage.setItem('vlp_poll_view', 'table');
+    });
+
+    // Restore saved view preference
+    var savedView = localStorage.getItem('vlp_poll_view');
+    if (savedView === 'table') {
+      viewTableBtn.click();
+    }
+  }
+
+  // Keyboard Shortcuts for Live Poll Session
+  document.addEventListener('keydown', function(e) {
+    // Only activate shortcuts when NOT typing in an input/textarea
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+      return;
+    }
+
+    // Only during live session
+    if (!isLiveSession) return;
+
+    switch(e.key) {
+      case 'ArrowRight':
+      case 'n':
+      case 'N':
+        // Next Question
+        e.preventDefault();
+        var nextBtn = document.getElementById('header-next-btn');
+        if (nextBtn && !nextBtn.disabled && nextBtn.offsetParent !== null) {
+          nextBtn.click();
+        }
+        break;
+
+      case 'ArrowLeft':
+      case 'b':
+      case 'B':
+        // Back/Previous Question
+        e.preventDefault();
+        var backBtn = document.getElementById('header-back-btn');
+        if (backBtn && !backBtn.disabled && backBtn.offsetParent !== null) {
+          backBtn.click();
+        }
+        break;
+
+      case ' ':
+      case 'Spacebar':
+        // Toggle Timer (Start/Pause)
+        e.preventDefault();
+        if (isRunning) {
+          pauseTimer();
+        } else if (totalSeconds > 0) {
+          startTimer();
+        }
+        break;
+
+      case 'r':
+      case 'R':
+        // Reset Timer
+        e.preventDefault();
+        if (!isRunning) {
+          resetTimer();
+        }
+        break;
+
+      case 'e':
+      case 'E':
+        // End & Reveal
+        e.preventDefault();
+        var endShowBtn = document.getElementById('header-end-show-btn');
+        if (endShowBtn && !endShowBtn.disabled && endShowBtn.offsetParent !== null) {
+          endShowBtn.click();
+        }
+        break;
+    }
+  });
+
+  // Auto-Pulse "Next Question" Button When All Responded
+  // This is called from renderStudentStatus when all students have answered
+  window.checkAllRespondedState = function() {
+    if (!isLiveSession) return;
+
+    var nextBtn = document.getElementById('header-next-btn');
+    var allRespondedBanner = document.getElementById('all-responded-banner');
+
+    if (!nextBtn) return;
+
+    // Check if all-responded banner is visible
+    if (allRespondedBanner && !allRespondedBanner.classList.contains('hidden')) {
+      // Add pulsing effect to Next button
+      nextBtn.classList.add('pulse-ready');
+
+      // Calculate time saved (if timer is running)
+      if (isRunning && totalSeconds > 0) {
+        var timeSavedBadge = document.getElementById('time-saved-badge');
+        var timeSavedAmount = document.getElementById('time-saved-amount');
+        if (timeSavedBadge && timeSavedAmount) {
+          timeSavedAmount.textContent = totalSeconds;
+          timeSavedBadge.classList.remove('hidden');
+        }
+      }
+    } else {
+      // Remove pulsing effect
+      nextBtn.classList.remove('pulse-ready');
+
+      // Hide time saved badge
+      var timeSavedBadge = document.getElementById('time-saved-badge');
+      if (timeSavedBadge) {
+        timeSavedBadge.classList.add('hidden');
+      }
+    }
+  };
+
+  console.log('✓ Teacher Panel Ready (Enhanced UI)');
 })();
   </script>
   

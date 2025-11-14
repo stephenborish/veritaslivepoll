@@ -195,11 +195,11 @@
     .teacher-result-card {
       position: relative;
       overflow: hidden;
-      border-radius: var(--radius-lg);
+      border-radius: var(--radius-md);
       border: 1px solid var(--navy-14);
       background: var(--bg-card);
-      box-shadow: 0 2px 8px rgba(18, 56, 93, 0.08);
-      margin-bottom: 16px;
+      box-shadow: 0 1px 4px rgba(18, 56, 93, 0.06);
+      margin-bottom: 10px;
     }
 
     .teacher-result-card:last-child {
@@ -225,8 +225,8 @@
       z-index: 1;
       display: flex;
       align-items: stretch;
-      gap: 16px;
-      padding: 18px 20px;
+      gap: 12px;
+      padding: 12px 16px;
     }
 
     .teacher-result-leading {
@@ -238,42 +238,42 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 44px;
-      height: 44px;
-      border-radius: 10px;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
       background: var(--navy-12);
       color: var(--veritas-navy);
       font-weight: 700;
-      font-size: 1.05rem;
+      font-size: 0.95rem;
     }
 
     .teacher-result-body {
       flex: 1;
       display: flex;
-      gap: 16px;
+      gap: 10px;
       align-items: flex-start;
       min-width: 0;
     }
 
     .teacher-result-image-wrap {
-      width: 110px;
-      max-width: 110px;
+      width: 80px;
+      max-width: 80px;
       flex-shrink: 0;
     }
 
     .teacher-result-image {
       width: 100%;
-      max-height: 110px;
+      max-height: 80px;
       object-fit: contain;
-      border-radius: 10px;
+      border-radius: 6px;
       border: 1px solid rgba(18, 56, 93, 0.18);
       background: var(--bg-elevated);
     }
 
     .teacher-result-text {
       color: var(--veritas-navy);
-      font-size: 0.98rem;
-      line-height: 1.55;
+      font-size: 0.9rem;
+      line-height: 1.5;
     }
 
     .teacher-result-text--empty {
@@ -286,18 +286,18 @@
       flex-direction: column;
       align-items: flex-end;
       justify-content: center;
-      gap: 4px;
-      min-width: 90px;
+      gap: 2px;
+      min-width: 70px;
       color: var(--veritas-navy);
       font-weight: 700;
     }
 
     .teacher-result-percentage span:first-child {
-      font-size: 1.05rem;
+      font-size: 0.95rem;
     }
 
     .teacher-result-count {
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       font-weight: 500;
       color: var(--text-secondary);
     }
@@ -307,16 +307,16 @@
       z-index: 1;
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
-      padding: 12px 20px 18px;
+      gap: 6px;
+      padding: 8px 16px 10px;
       border-top: 1px solid var(--navy-12);
       background: var(--navy-06);
     }
 
     .teacher-result-student {
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       font-weight: 600;
-      padding: 4px 10px;
+      padding: 3px 8px;
       border-radius: var(--radius-full);
       background: rgba(18, 56, 93, 0.15);
       color: var(--veritas-navy);
@@ -2537,7 +2537,7 @@
     <!-- Header - Live Poll State (REDESIGNED 3-SECTION LAYOUT) -->
     <header id="header-live" class="shrink-0 bg-veritas-navy shadow-lg border-b-2 border-veritas-gold" style="display: none;">
       <!-- Top Bar: 3-Column Grid Layout -->
-      <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-6 px-6 py-4">
+      <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-6 px-6 py-2">
 
         <!-- LEFT SECTION: Question Info -->
         <div class="flex items-center gap-4 min-w-0">
@@ -2550,31 +2550,31 @@
         </div>
 
         <!-- CENTER SECTION: Timer (Dominant) - ENHANCED with Larger Touch Targets -->
-        <div class="flex flex-col items-center gap-1.5">
-          <div id="timer-main-container" class="flex items-center gap-2 rounded-xl border-2 border-brand-white/20 bg-brand-white/10 px-5 py-3 transition-all duration-300">
-            <button id="subtract-10s-btn" class="w-9 h-9 flex items-center justify-center rounded-lg bg-brand-white/10 text-brand-white hover:bg-brand-white/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" aria-label="-10 seconds" title="Subtract 10 seconds">
-              <span class="material-symbols-outlined text-xl">remove</span>
+        <div class="flex flex-col items-center gap-1">
+          <div id="timer-main-container" class="flex items-center gap-2 rounded-lg border-2 border-brand-white/20 bg-brand-white/10 px-3 py-1.5 transition-all duration-300">
+            <button id="subtract-10s-btn" class="w-7 h-7 flex items-center justify-center rounded-lg bg-brand-white/10 text-brand-white hover:bg-brand-white/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" aria-label="-10 seconds" title="Subtract 10 seconds">
+              <span class="material-symbols-outlined text-lg">remove</span>
             </button>
             <input
               type="text"
               id="timer-display"
-              class="w-28 rounded bg-transparent text-center text-4xl font-bold text-brand-white transition-all placeholder-brand-white/40 focus:outline-none focus:ring-2 focus:ring-veritas-gold disabled:opacity-70 cursor-pointer"
+              class="w-24 rounded bg-transparent text-center text-2xl font-bold text-brand-white transition-all placeholder-brand-white/40 focus:outline-none focus:ring-2 focus:ring-veritas-gold disabled:opacity-70 cursor-pointer"
               value="01:30"
               aria-label="Timer display"
               title="Click to edit time"
             />
-            <button id="add-10s-btn" class="w-9 h-9 flex items-center justify-center rounded-lg bg-brand-white/10 text-brand-white hover:bg-brand-white/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" aria-label="+10 seconds" title="Add 10 seconds">
-              <span class="material-symbols-outlined text-xl">add</span>
+            <button id="add-10s-btn" class="w-7 h-7 flex items-center justify-center rounded-lg bg-brand-white/10 text-brand-white hover:bg-brand-white/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" aria-label="+10 seconds" title="Add 10 seconds">
+              <span class="material-symbols-outlined text-lg">add</span>
             </button>
-            <div class="w-px h-8 bg-brand-white/30 mx-2"></div>
-            <button id="start-btn" class="bg-emerald-500 hover:bg-emerald-600 text-brand-white font-bold px-3 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md" aria-label="Start timer" title="Start timer (Space)">
-              <span class="material-symbols-outlined text-xl">play_arrow</span>
+            <div class="w-px h-6 bg-brand-white/30 mx-1"></div>
+            <button id="start-btn" class="bg-emerald-500 hover:bg-emerald-600 text-brand-white font-bold px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md" aria-label="Start timer" title="Start timer (Space)">
+              <span class="material-symbols-outlined text-lg">play_arrow</span>
             </button>
-            <button id="pause-btn" class="bg-amber-500 hover:bg-amber-600 text-brand-white font-bold px-3 py-2 rounded-lg transition-colors hidden shadow-md" aria-label="Pause timer" title="Pause timer (Space)">
-              <span class="material-symbols-outlined text-xl">pause</span>
+            <button id="pause-btn" class="bg-amber-500 hover:bg-amber-600 text-brand-white font-bold px-2.5 py-1.5 rounded-lg transition-colors hidden shadow-md" aria-label="Pause timer" title="Pause timer (Space)">
+              <span class="material-symbols-outlined text-lg">pause</span>
             </button>
-            <button id="reset-btn" class="bg-brand-white/20 hover:bg-brand-white/30 text-brand-white font-bold px-3 py-2 rounded-lg transition-colors shadow-sm" aria-label="Reset timer" title="Reset timer">
-              <span class="material-symbols-outlined text-xl">refresh</span>
+            <button id="reset-btn" class="bg-brand-white/20 hover:bg-brand-white/30 text-brand-white font-bold px-2.5 py-1.5 rounded-lg transition-colors shadow-sm" aria-label="Reset timer" title="Reset timer">
+              <span class="material-symbols-outlined text-lg">refresh</span>
             </button>
           </div>
           <div class="flex items-center gap-2">
@@ -2902,7 +2902,7 @@
           </div>
 
           <!-- ULTRA-COMPACT QUESTION HEADER (Single Line) -->
-          <div class="flex-shrink-0 bg-veritas-navy border-b-2 border-veritas-gold px-6 py-3">
+          <div class="flex-shrink-0 bg-veritas-navy border-b-2 border-veritas-gold px-6 py-2">
             <div class="flex items-center gap-4">
               <!-- Question Info (Left) -->
               <div class="flex-1 min-w-0">
@@ -2955,12 +2955,12 @@
 
               <!-- Results Content (Scrollable) -->
               <div class="flex-1 overflow-y-auto bg-white dark:bg-brand-dark-gray/30 px-6 py-4">
-                <div id="results-bars" class="flex flex-col gap-3">
+                <div id="results-bars" class="flex flex-col gap-2">
                   <!-- Results will be populated dynamically with condensed names -->
                 </div>
 
                 <!-- Metacognition Card -->
-                <div id="live-metacognition-card" class="mt-6 hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-brand-dark-gray/50 p-5"></div>
+                <div id="live-metacognition-card" class="mt-3 hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-brand-dark-gray/50 p-4"></div>
 
                 <!-- Results Reveal Strip -->
                 <div id="results-reveal-strip" class="mt-6 hidden">
@@ -8688,8 +8688,9 @@
     }
 
     // Update question display
-    document.getElementById('live-question-info').textContent='Question '+(data.questionIndex+1)+' of '+data.totalQuestions;
+    document.getElementById('live-question-info').textContent='Q'+(data.questionIndex+1)+'/'+data.totalQuestions;
     document.getElementById('live-question-text').textContent=data.questionText;
+    document.getElementById('live-question-text-compact').textContent=data.questionText;
 
     // Handle question image with cache-busting
     var questionImageContainer=document.getElementById('question-image-container');

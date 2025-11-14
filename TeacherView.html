@@ -1125,6 +1125,661 @@
       animation: celebrate-bounce 0.6s ease-out;
     }
 
+    /* ========================================
+       🎨 ENHANCED DESIGN SYSTEM v2.0
+       Optimized for Live Classroom Scenarios
+       ======================================== */
+
+    /* === FLOATING ACTION BUTTON (FAB) SYSTEM === */
+    .fab-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column-reverse;
+      align-items: flex-end;
+      gap: 12px;
+    }
+
+    .fab-main {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--veritas-navy), #0f2d4a);
+      color: white;
+      border: none;
+      box-shadow: 0 8px 24px rgba(18, 56, 93, 0.35),
+                  0 0 0 0 rgba(197, 160, 90, 0.4);
+      cursor: pointer;
+      transition: all 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .fab-main:hover {
+      transform: scale(1.08) rotate(5deg);
+      box-shadow: 0 12px 32px rgba(18, 56, 93, 0.45),
+                  0 0 40px rgba(197, 160, 90, 0.3);
+    }
+
+    .fab-main:active {
+      transform: scale(0.95);
+    }
+
+    .fab-main .material-symbols-outlined {
+      font-size: 28px;
+      transition: transform 280ms ease;
+    }
+
+    .fab-main.is-open .material-symbols-outlined {
+      transform: rotate(45deg);
+    }
+
+    .fab-menu {
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 12px;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(20px);
+      transition: all 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .fab-menu.is-open {
+      opacity: 1;
+      pointer-events: all;
+      transform: translateY(0);
+    }
+
+    .fab-action {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: fab-slide-in 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+
+    .fab-action:nth-child(1) { animation-delay: 50ms; }
+    .fab-action:nth-child(2) { animation-delay: 100ms; }
+    .fab-action:nth-child(3) { animation-delay: 150ms; }
+    .fab-action:nth-child(4) { animation-delay: 200ms; }
+
+    @keyframes fab-slide-in {
+      from {
+        opacity: 0;
+        transform: translateX(20px) scale(0.8);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+      }
+    }
+
+    .fab-label {
+      background: rgba(18, 56, 93, 0.95);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      opacity: 0;
+      transition: opacity 200ms ease;
+    }
+
+    .fab-action:hover .fab-label {
+      opacity: 1;
+    }
+
+    .fab-button {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      transition: all 200ms ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .fab-button:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .fab-button.fab-primary {
+      background: linear-gradient(135deg, #c5a05a, #b8954f);
+      color: white;
+    }
+
+    .fab-button.fab-success {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+    }
+
+    .fab-button.fab-info {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white;
+    }
+
+    .fab-button.fab-danger {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+    }
+
+    /* === TOAST NOTIFICATION SYSTEM === */
+    .toast-container {
+      position: fixed;
+      top: 80px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 420px;
+    }
+
+    .toast {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 16px 20px;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15),
+                  0 2px 8px rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(10px);
+      animation: toast-slide-in 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+      border-left: 4px solid currentColor;
+      position: relative;
+      overflow: hidden;
+    }
+
+    @keyframes toast-slide-in {
+      from {
+        opacity: 0;
+        transform: translateX(100%) scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+      }
+    }
+
+    .toast.toast-out {
+      animation: toast-slide-out 280ms ease-out both;
+    }
+
+    @keyframes toast-slide-out {
+      to {
+        opacity: 0;
+        transform: translateX(100%) scale(0.9);
+      }
+    }
+
+    .toast-success {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(5, 150, 105, 0.95));
+      color: white;
+    }
+
+    .toast-error {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(220, 38, 38, 0.95));
+      color: white;
+    }
+
+    .toast-warning {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(217, 119, 6, 0.95));
+      color: white;
+    }
+
+    .toast-info {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.95), rgba(37, 99, 235, 0.95));
+      color: white;
+    }
+
+    .toast-icon {
+      flex-shrink: 0;
+      font-size: 24px;
+      animation: toast-icon-pop 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes toast-icon-pop {
+      0% { transform: scale(0); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+
+    .toast-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .toast-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+    }
+
+    .toast-message {
+      font-size: 0.85rem;
+      opacity: 0.95;
+      line-height: 1.4;
+    }
+
+    .toast-close {
+      flex-shrink: 0;
+      background: none;
+      border: none;
+      color: currentColor;
+      cursor: pointer;
+      padding: 4px;
+      opacity: 0.7;
+      transition: opacity 150ms ease;
+      border-radius: 4px;
+    }
+
+    .toast-close:hover {
+      opacity: 1;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .toast-progress {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.3);
+      transform-origin: left;
+      animation: toast-progress 5s linear;
+    }
+
+    @keyframes toast-progress {
+      from { transform: scaleX(1); }
+      to { transform: scaleX(0); }
+    }
+
+    /* === PROGRESS RING ANIMATIONS === */
+    .progress-ring-container {
+      position: relative;
+      width: 52px;
+      height: 52px;
+    }
+
+    .progress-ring {
+      transform: rotate(-90deg);
+      width: 100%;
+      height: 100%;
+    }
+
+    .progress-ring-circle-bg {
+      fill: none;
+      stroke: rgba(18, 56, 93, 0.1);
+      stroke-width: 4;
+    }
+
+    .dark .progress-ring-circle-bg {
+      stroke: rgba(255, 255, 255, 0.08);
+    }
+
+    .progress-ring-circle {
+      fill: none;
+      stroke: var(--veritas-navy);
+      stroke-width: 4;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 500ms cubic-bezier(0.4, 0, 0.2, 1),
+                  stroke 300ms ease;
+    }
+
+    .dark .progress-ring-circle {
+      stroke: rgba(59, 130, 246, 0.85);
+    }
+
+    .progress-ring-circle.ring-success {
+      stroke: #10b981;
+    }
+
+    .progress-ring-circle.ring-warning {
+      stroke: #f59e0b;
+    }
+
+    .progress-ring-circle.ring-danger {
+      stroke: #ef4444;
+    }
+
+    .progress-ring-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--veritas-navy);
+    }
+
+    .dark .progress-ring-text {
+      color: white;
+    }
+
+    /* === SPARKLINE TREND VISUALIZATION === */
+    .sparkline-container {
+      width: 100%;
+      height: 28px;
+      margin-top: 8px;
+    }
+
+    .sparkline {
+      width: 100%;
+      height: 100%;
+    }
+
+    .sparkline-line {
+      fill: none;
+      stroke: var(--veritas-gold);
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0.7;
+    }
+
+    .sparkline-area {
+      fill: url(#sparkline-gradient);
+      opacity: 0.3;
+    }
+
+    .sparkline-dot {
+      fill: var(--veritas-gold);
+      r: 3;
+      opacity: 0;
+      transition: opacity 200ms ease;
+    }
+
+    .sparkline-container:hover .sparkline-dot {
+      opacity: 1;
+    }
+
+    /* === ENHANCED HUD CARDS WITH PROGRESS === */
+    .hud-card-enhanced {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .hud-card-progress {
+      flex-shrink: 0;
+    }
+
+    .hud-card-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    /* === AMBIENT STATE INDICATORS === */
+    .ambient-state-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 5;
+      transition: background-color 600ms ease;
+    }
+
+    .ambient-state-overlay.state-normal {
+      background: transparent;
+    }
+
+    .ambient-state-overlay.state-all-responded {
+      background: radial-gradient(circle at top,
+                                  rgba(16, 185, 129, 0.08) 0%,
+                                  transparent 60%);
+      animation: ambient-pulse-success 3s ease-in-out infinite;
+    }
+
+    .ambient-state-overlay.state-time-critical {
+      background: radial-gradient(circle at top,
+                                  rgba(245, 158, 11, 0.08) 0%,
+                                  transparent 60%);
+      animation: ambient-pulse-warning 2s ease-in-out infinite;
+    }
+
+    .ambient-state-overlay.state-lockouts {
+      background: radial-gradient(circle at top,
+                                  rgba(239, 68, 68, 0.08) 0%,
+                                  transparent 60%);
+      animation: ambient-pulse-danger 1.5s ease-in-out infinite;
+    }
+
+    @keyframes ambient-pulse-success {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+
+    @keyframes ambient-pulse-warning {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
+    @keyframes ambient-pulse-danger {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; }
+    }
+
+    /* === KEYBOARD SHORTCUT HINTS === */
+    .kbd-hint {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(18, 56, 93, 0.1);
+      border: 1px solid rgba(18, 56, 93, 0.2);
+      font-size: 0.7rem;
+      font-weight: 600;
+      font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+      color: var(--veritas-navy);
+      margin-left: 6px;
+      opacity: 0;
+      transition: opacity 200ms ease;
+    }
+
+    .dark .kbd-hint {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+      color: white;
+    }
+
+    button:hover .kbd-hint,
+    button:focus .kbd-hint {
+      opacity: 0.7;
+    }
+
+    /* === GESTURE HINT SYSTEM === */
+    .gesture-hint {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-bottom: 8px;
+      padding: 6px 12px;
+      background: rgba(18, 56, 93, 0.95);
+      color: white;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 200ms ease, transform 200ms ease;
+      z-index: 1000;
+    }
+
+    .gesture-hint::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: rgba(18, 56, 93, 0.95);
+    }
+
+    *:hover > .gesture-hint,
+    *:focus > .gesture-hint {
+      opacity: 1;
+      transform: translateX(-50%) translateY(-4px);
+    }
+
+    /* === ENHANCED POLL CARDS === */
+    .poll-card-enhanced {
+      position: relative;
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(18, 56, 93, 0.08);
+      transition: all 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+      cursor: pointer;
+      border: 2px solid transparent;
+    }
+
+    .dark .poll-card-enhanced {
+      background: rgba(15, 23, 35, 0.7);
+      border-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .poll-card-enhanced:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(18, 56, 93, 0.16);
+      border-color: var(--veritas-gold);
+    }
+
+    .poll-card-preview {
+      height: 140px;
+      background: linear-gradient(135deg,
+                                  rgba(18, 56, 93, 0.08),
+                                  rgba(197, 160, 90, 0.08));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .poll-card-preview::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L30 60M0 30L60 30' stroke='rgba(18,56,93,0.04)' stroke-width='1' fill='none'/%3E%3C/svg%3E");
+    }
+
+    .poll-card-preview-text {
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: var(--veritas-navy);
+      text-align: center;
+      max-height: 100%;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      position: relative;
+      z-index: 1;
+    }
+
+    .poll-card-body {
+      padding: 18px;
+    }
+
+    .poll-card-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(18, 56, 93, 0.08);
+    }
+
+    .poll-card-quick-stat {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    /* === RESPONSIVE ENHANCEMENTS === */
+    @media (max-width: 1024px) {
+      .fab-container {
+        bottom: 16px;
+        right: 16px;
+      }
+
+      .fab-main {
+        width: 56px;
+        height: 56px;
+      }
+
+      .fab-button {
+        width: 48px;
+        height: 48px;
+      }
+
+      .toast-container {
+        right: 16px;
+        left: 16px;
+        max-width: none;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .fab-container {
+        bottom: 12px;
+        right: 12px;
+      }
+
+      .fab-label {
+        display: none;
+      }
+
+      .toast-container {
+        top: 72px;
+      }
+
+      .progress-ring-container {
+        width: 44px;
+        height: 44px;
+      }
+    }
+
+    /* === UTILITY ANIMATIONS === */
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    .shimmer {
+      background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.3) 50%,
+        rgba(255, 255, 255, 0) 100%
+      );
+      background-size: 200% 100%;
+      animation: shimmer 2s infinite;
+    }
+
+    @keyframes bounce-subtle {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+
+    .bounce-subtle {
+      animation: bounce-subtle 2s ease-in-out infinite;
+    }
+
     /* Session HUD cards for quick-glance metrics */
     .session-hud-surface {
       background: linear-gradient(135deg, rgba(18, 56, 93, 0.04), rgba(197, 160, 90, 0.08));
@@ -1422,6 +2077,12 @@
   </style>
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-brand-dark-gray dark:text-brand-white">
+  <!-- 🎯 Ambient State Overlay - Provides visual feedback for system states -->
+  <div id="ambient-state-overlay" class="ambient-state-overlay state-normal"></div>
+
+  <!-- 🔔 Toast Notification Container - For elegant, non-intrusive alerts -->
+  <div id="toast-container" class="toast-container"></div>
+
   <div class="flex h-screen w-full flex-col">
     <!-- Header - Default State -->
     <header id="header-default" class="flex flex-wrap items-center gap-4 border-b border-solid border-veritas-navy/80 bg-veritas-navy px-6 py-4 shadow-md">
@@ -1527,6 +2188,7 @@
           <button id="header-next-btn" class="flex items-center gap-2 h-12 px-6 rounded-lg bg-veritas-gold text-white text-base font-bold hover:bg-veritas-gold/90 transition-all shadow-lg hover:shadow-xl transform hover:scale-105" title="Advance to next question (→ arrow key)">
             <span>Next Question</span>
             <span class="material-symbols-outlined text-xl">arrow_forward</span>
+            <span class="kbd-hint">→</span>
           </button>
           <button id="header-end-show-btn" class="hidden items-center gap-2 h-12 px-6 rounded-lg bg-emerald-600 text-white text-base font-bold hover:bg-emerald-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105" title="Close responses and reveal answer to students">
             <span class="material-symbols-outlined text-xl">check_circle</span>
@@ -1756,29 +2418,45 @@
           <!-- ⚡ Rapid-Glance Session HUD -->
           <div id="session-hud-container" class="flex-shrink-0 session-hud-surface border-b border-brand-light-gray/60 dark:border-white/10">
             <div class="max-w-7xl mx-auto px-6 py-4 session-hud-grid">
-              <article id="hud-responses-card" class="hud-card" aria-live="polite">
-                <div class="hud-card-label text-brand-dark-gray/80 dark:text-brand-white/70">
-                  <span class="material-symbols-outlined text-base">how_to_vote</span>
-                  Responses
+              <article id="hud-responses-card" class="hud-card hud-card-enhanced" aria-live="polite">
+                <div class="hud-card-progress">
+                  <div class="progress-ring-container">
+                    <svg class="progress-ring" viewBox="0 0 52 52">
+                      <circle class="progress-ring-circle-bg" cx="26" cy="26" r="22"></circle>
+                      <circle id="hud-response-ring" class="progress-ring-circle" cx="26" cy="26" r="22"
+                              stroke-dasharray="138.23" stroke-dashoffset="138.23"></circle>
+                    </svg>
+                    <div id="hud-response-percent" class="progress-ring-text">0%</div>
+                  </div>
                 </div>
-                <div id="hud-response-count" class="hud-card-value">0 / 0</div>
-                <div class="flex items-center justify-between text-xs">
+                <div class="hud-card-info">
+                  <div class="hud-card-label text-brand-dark-gray/80 dark:text-brand-white/70">
+                    <span class="material-symbols-outlined text-base">how_to_vote</span>
+                    Responses
+                  </div>
+                  <div id="hud-response-count" class="hud-card-value">0 / 0</div>
                   <p id="hud-response-caption" class="hud-card-caption">Awaiting roster data</p>
-                  <span id="hud-response-trend" class="hud-trend hud-trend-steady">
-                    • steady
-                  </span>
                 </div>
               </article>
 
-              <article id="hud-accuracy-card" class="hud-card" aria-live="polite">
-                <div class="hud-card-label text-brand-dark-gray/80 dark:text-brand-white/70">
-                  <span class="material-symbols-outlined text-base">verified</span>
-                  Accuracy
+              <article id="hud-accuracy-card" class="hud-card hud-card-enhanced" aria-live="polite">
+                <div class="hud-card-progress">
+                  <div class="progress-ring-container">
+                    <svg class="progress-ring" viewBox="0 0 52 52">
+                      <circle class="progress-ring-circle-bg" cx="26" cy="26" r="22"></circle>
+                      <circle id="hud-accuracy-ring" class="progress-ring-circle ring-success" cx="26" cy="26" r="22"
+                              stroke-dasharray="138.23" stroke-dashoffset="138.23"></circle>
+                    </svg>
+                    <div id="hud-accuracy-percent" class="progress-ring-text">--</div>
+                  </div>
                 </div>
-                <div id="hud-accuracy-value" class="hud-card-value">--%</div>
-                <div class="flex items-center justify-between text-xs">
+                <div class="hud-card-info">
+                  <div class="hud-card-label text-brand-dark-gray/80 dark:text-brand-white/70">
+                    <span class="material-symbols-outlined text-base">verified</span>
+                    Accuracy
+                  </div>
+                  <div id="hud-accuracy-value" class="hud-card-value">--%</div>
                   <p id="hud-accuracy-caption" class="hud-card-caption">Waiting for responses</p>
-                  <span id="hud-accuracy-trend" class="hud-trend hud-trend-steady">• steady</span>
                 </div>
               </article>
 
@@ -1993,6 +2671,49 @@
             <span id="sidebar-toggle-label"></span>
           </div>
 
+        </div>
+
+        <!-- ⚡ Floating Action Button (FAB) Cluster - Primary Actions for Live Session -->
+        <div id="fab-container" class="fab-container" style="display: none;">
+          <!-- FAB Menu Items -->
+          <div id="fab-menu" class="fab-menu">
+            <!-- Next Question Action -->
+            <div class="fab-action">
+              <span class="fab-label">Next Question →</span>
+              <button id="fab-next-btn" class="fab-button fab-primary" title="Advance to next question" aria-label="Next question">
+                <span class="material-symbols-outlined">arrow_forward</span>
+              </button>
+            </div>
+
+            <!-- Show Results Action -->
+            <div class="fab-action">
+              <span class="fab-label">Show Results</span>
+              <button id="fab-show-results-btn" class="fab-button fab-success" title="Reveal answer to students" aria-label="Show results">
+                <span class="material-symbols-outlined">visibility</span>
+              </button>
+            </div>
+
+            <!-- Reset Question Action -->
+            <div class="fab-action">
+              <span class="fab-label">Reset Question</span>
+              <button id="fab-reset-btn" class="fab-button fab-info" title="Reset current question" aria-label="Reset question">
+                <span class="material-symbols-outlined">replay</span>
+              </button>
+            </div>
+
+            <!-- Stop Session Action -->
+            <div class="fab-action">
+              <span class="fab-label">End Session</span>
+              <button id="fab-stop-btn" class="fab-button fab-danger" title="End the entire session" aria-label="Stop session">
+                <span class="material-symbols-outlined">stop</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- FAB Main Toggle Button -->
+          <button id="fab-main-toggle" class="fab-main" aria-label="Quick actions menu" aria-expanded="false">
+            <span class="material-symbols-outlined">bolt</span>
+          </button>
         </div>
 
         <!-- End of Live Poll View Redesign -->
@@ -2703,6 +3424,170 @@
       accentClass:'text-green-700/80 dark:text-green-200/80'
     }
   };
+
+  /* ========================================
+     🎨 ENHANCED UI SYSTEM - JAVASCRIPT
+     ======================================== */
+
+  // === Toast Notification System ===
+  function showToast(type, title, message, duration = 5000) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+
+    const icons = {
+      success: 'check_circle',
+      error: 'error',
+      warning: 'warning',
+      info: 'info'
+    };
+
+    toast.innerHTML = `
+      <span class="material-symbols-outlined toast-icon">${icons[type] || 'notifications'}</span>
+      <div class="toast-content">
+        <div class="toast-title">${title}</div>
+        <div class="toast-message">${message}</div>
+      </div>
+      <button class="toast-close" onclick="this.closest('.toast').remove()">
+        <span class="material-symbols-outlined" style="font-size: 18px">close</span>
+      </button>
+      <div class="toast-progress"></div>
+    `;
+
+    container.appendChild(toast);
+
+    // Auto-remove after duration
+    setTimeout(() => {
+      toast.classList.add('toast-out');
+      setTimeout(() => toast.remove(), 300);
+    }, duration);
+  }
+
+  // === Floating Action Button (FAB) System ===
+  let fabMenuOpen = false;
+
+  function initializeFAB() {
+    const fabMainToggle = document.getElementById('fab-main-toggle');
+    const fabMenu = document.getElementById('fab-menu');
+    const fabContainer = document.getElementById('fab-container');
+
+    if (!fabMainToggle || !fabMenu) return;
+
+    fabMainToggle.addEventListener('click', function() {
+      fabMenuOpen = !fabMenuOpen;
+
+      if (fabMenuOpen) {
+        fabMenu.classList.add('is-open');
+        fabMainToggle.classList.add('is-open');
+        fabMainToggle.setAttribute('aria-expanded', 'true');
+      } else {
+        fabMenu.classList.remove('is-open');
+        fabMainToggle.classList.remove('is-open');
+        fabMainToggle.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    // Wire up FAB actions to existing functions
+    const fabNextBtn = document.getElementById('fab-next-btn');
+    const fabShowResultsBtn = document.getElementById('fab-show-results-btn');
+    const fabResetBtn = document.getElementById('fab-reset-btn');
+    const fabStopBtn = document.getElementById('fab-stop-btn');
+
+    if (fabNextBtn) {
+      fabNextBtn.addEventListener('click', function() {
+        nextQuestion();
+        closeFABMenu();
+      });
+    }
+
+    if (fabShowResultsBtn) {
+      fabShowResultsBtn.addEventListener('click', function() {
+        const endShowBtn = document.getElementById('header-end-show-btn');
+        if (endShowBtn && endShowBtn.style.display !== 'none') {
+          endShowBtn.click();
+        }
+        closeFABMenu();
+      });
+    }
+
+    if (fabResetBtn) {
+      fabResetBtn.addEventListener('click', function() {
+        resetLiveQuestion();
+        closeFABMenu();
+      });
+    }
+
+    if (fabStopBtn) {
+      fabStopBtn.addEventListener('click', function() {
+        stopPoll();
+        closeFABMenu();
+      });
+    }
+
+    // Close FAB menu when clicking outside
+    document.addEventListener('click', function(e) {
+      if (fabMenuOpen && !fabContainer.contains(e.target)) {
+        closeFABMenu();
+      }
+    });
+  }
+
+  function closeFABMenu() {
+    fabMenuOpen = false;
+    const fabMenu = document.getElementById('fab-menu');
+    const fabMainToggle = document.getElementById('fab-main-toggle');
+    if (fabMenu) fabMenu.classList.remove('is-open');
+    if (fabMainToggle) {
+      fabMainToggle.classList.remove('is-open');
+      fabMainToggle.setAttribute('aria-expanded', 'false');
+    }
+  }
+
+  // === Progress Ring Updates ===
+  function updateProgressRing(ringId, percentage) {
+    const ring = document.getElementById(ringId);
+    if (!ring) return;
+
+    const circumference = 138.23; // 2 * π * 22 (radius)
+    const offset = circumference - (percentage / 100) * circumference;
+    ring.style.strokeDashoffset = offset;
+
+    // Update ring color based on percentage
+    ring.classList.remove('ring-success', 'ring-warning', 'ring-danger');
+    if (percentage >= 70) {
+      ring.classList.add('ring-success');
+    } else if (percentage >= 40) {
+      ring.classList.add('ring-warning');
+    } else {
+      ring.classList.add('ring-danger');
+    }
+  }
+
+  // === Ambient State Management ===
+  function setAmbientState(state) {
+    const overlay = document.getElementById('ambient-state-overlay');
+    if (!overlay) return;
+
+    // Remove all state classes
+    overlay.className = 'ambient-state-overlay';
+
+    // Add new state class
+    if (state && state !== 'normal') {
+      overlay.classList.add(`state-${state}`);
+    } else {
+      overlay.classList.add('state-normal');
+    }
+  }
+
+  // === Initialize Enhanced UI Systems ===
+  document.addEventListener('DOMContentLoaded', function() {
+    // Initialize FAB system
+    initializeFAB();
+
+    console.log('✨ Enhanced UI systems initialized');
+  });
 
   function describeConfidence(value){
     var entry=CONFIDENCE_LEVEL_STYLES[value];
@@ -6459,6 +7344,13 @@
     }
     sessionHudState.lastCompletionPct=totalStudents>0?completionPct:null;
 
+    // Update progress ring for responses
+    updateProgressRing('hud-response-ring', completionPct);
+    var hudResponsePercent=document.getElementById('hud-response-percent');
+    if(hudResponsePercent){
+      hudResponsePercent.textContent=completionPct+'%';
+    }
+
     var allResponded=totalStudents>0&&totalResponses===totalStudents;
     if(allRespondedBanner){
       if(allResponded){
@@ -6550,6 +7442,16 @@
     if(hudAccuracyValue){
       hudAccuracyValue.textContent=countedResponses>0?accuracyPct+'%':'--%';
     }
+
+    // Update progress ring for accuracy
+    if(countedResponses>0){
+      updateProgressRing('hud-accuracy-ring', accuracyPct);
+      var hudAccuracyPercent=document.getElementById('hud-accuracy-percent');
+      if(hudAccuracyPercent){
+        hudAccuracyPercent.textContent=accuracyPct+'%';
+      }
+    }
+
     if(hudAccuracyCaption){
       if(countedResponses===0){
         hudAccuracyCaption.textContent='Waiting for responses';

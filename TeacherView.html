@@ -6749,8 +6749,13 @@
    */
   function updateExitedStudentsPanel(lockedStudents) {
     var panel = document.getElementById('exited-students-panel');
-    var list = document.getElementById('exited-students-list');
+    var list = document.getElementById('exited-students-list-inline');
     var countSpan = document.getElementById('exited-students-count');
+
+    if (!panel || !list || !countSpan) {
+      console.warn('Exited students panel elements missing.');
+      return;
+    }
 
     // Filter for only LOCKED students (not AWAITING_FULLSCREEN)
     var exitedStudents = lockedStudents.filter(function(s) {
@@ -9667,14 +9672,20 @@
   var toggleExitedPanelBtn = document.getElementById('toggle-exited-panel-btn');
   if (toggleExitedPanelBtn) {
     toggleExitedPanelBtn.addEventListener('click', function() {
-      var list = document.getElementById('exited-students-list');
+      var list = document.getElementById('exited-students-list-inline');
+      if (!list) return;
+
       var icon = this.querySelector('.material-symbols-outlined');
       if (list.style.display === 'none') {
-        list.style.display = 'grid';
-        icon.textContent = 'expand_more';
+        list.style.display = '';
+        if (icon) {
+          icon.textContent = 'expand_more';
+        }
       } else {
         list.style.display = 'none';
-        icon.textContent = 'expand_less';
+        if (icon) {
+          icon.textContent = 'expand_less';
+        }
       }
     });
   }

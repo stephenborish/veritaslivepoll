@@ -2549,8 +2549,8 @@
           </div>
         </div>
 
-        <!-- CENTER SECTION: Timer (Dominant) - ENHANCED with Larger Touch Targets -->
-        <div class="flex flex-col items-center gap-1">
+        <!-- CENTER SECTION: Timer (Dominant) - ENHANCED with Larger Touch Targets (REMOVED per user request) -->
+        <div class="flex flex-col items-center gap-1" style="display: none;">
           <div id="timer-main-container" class="flex items-center gap-2 rounded-lg border-2 border-brand-white/20 bg-brand-white/10 px-3 py-1.5 transition-all duration-300">
             <button id="subtract-10s-btn" class="w-7 h-7 flex items-center justify-center rounded-lg bg-brand-white/10 text-brand-white hover:bg-brand-white/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" aria-label="-10 seconds" title="Subtract 10 seconds">
               <span class="material-symbols-outlined text-lg">remove</span>
@@ -2820,8 +2820,8 @@
             </div>
           </div>
 
-          <!-- ⚡ Rapid-Glance Session HUD -->
-          <div id="session-hud-container" class="flex-shrink-0 session-hud-surface border-b border-brand-light-gray/60 dark:border-white/10">
+          <!-- ⚡ Rapid-Glance Session HUD (REMOVED per user request) -->
+          <div id="session-hud-container" class="flex-shrink-0 session-hud-surface border-b border-brand-light-gray/60 dark:border-white/10" style="display: none;">
             <div class="max-w-7xl mx-auto px-6 py-4 session-hud-grid">
               <article id="hud-responses-card" class="hud-card hud-card-enhanced" aria-live="polite">
                 <div class="hud-card-progress">
@@ -2908,12 +2908,12 @@
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-3">
                   <span id="live-question-info" class="text-brand-white text-sm font-bold whitespace-nowrap">Q1/10</span>
-                  <h2 id="live-question-text-compact" class="text-brand-white text-base font-semibold truncate">Question text will appear here...</h2>
+                  <h2 id="live-question-text-compact" class="text-brand-white text-base font-semibold">Question text will appear here...</h2>
                 </div>
               </div>
 
-              <!-- Timer & Status (Center) - ENHANCED with Color Feedback -->
-              <div class="flex items-center gap-4 flex-shrink-0">
+              <!-- Timer & Status (Center) - ENHANCED with Color Feedback (REMOVED per user request) -->
+              <div class="flex items-center gap-4 flex-shrink-0" style="display: none;">
                 <div id="timer-compact-container" class="flex items-center gap-2 px-3 py-1.5 bg-brand-white/15 rounded-lg transition-all duration-300">
                   <span class="material-symbols-outlined text-brand-white text-lg">timer</span>
                   <input type="text" id="timer-display-compact" class="w-20 bg-transparent text-center text-xl font-bold text-brand-white focus:outline-none" value="--:--" readonly>
@@ -3771,6 +3771,7 @@
   var visualTimerInterval=null;
   var isPaused=false;
   var isLiveSession=false;
+  var isNavigating=false; // Flag to prevent polling during question navigation
   var questionCounter=0;
   var questions=[];
   var questionIdCounter=0;
@@ -8121,13 +8122,24 @@
     updateTimerDisplay();
     updateTimerStatus('Timer ready for previous question.','info');
     isPaused=false;
+    isNavigating=true; // Set flag to prevent polling during navigation
     if(PREVIEW_MODE){
+      isNavigating=false;
       previewOnlyNotice('navigate to a previous question');
       return;
     }
     google.script.run
-      .withSuccessHandler(updateLiveView)
-      .withFailureHandler(handleError)
+      .withSuccessHandler(function(data){
+        updateLiveView(data);
+        // Clear navigation flag after a short delay to ensure state is fully synced
+        setTimeout(function(){
+          isNavigating=false;
+        },500);
+      })
+      .withFailureHandler(function(error){
+        isNavigating=false;
+        handleError(error);
+      })
       .previousQuestion();
   }
 
@@ -8142,13 +8154,24 @@
     updateTimerStatus('Timer ready for next question.','info');
     isPaused=false;
     violationsAlertDismissed=false; // Reset violations alert for new question
+    isNavigating=true; // Set flag to prevent polling during navigation
     if(PREVIEW_MODE){
+      isNavigating=false;
       previewOnlyNotice('advance to the next question');
       return;
     }
     google.script.run
-      .withSuccessHandler(updateLiveView)
-      .withFailureHandler(handleError)
+      .withSuccessHandler(function(data){
+        updateLiveView(data);
+        // Clear navigation flag after a short delay to ensure state is fully synced
+        setTimeout(function(){
+          isNavigating=false;
+        },500);
+      })
+      .withFailureHandler(function(error){
+        isNavigating=false;
+        handleError(error);
+      })
       .nextQuestion();
   }
 
@@ -9873,7 +9896,7 @@
   }
 
   function pollForResults(){
-    if(isPaused||!isLiveSession)return;
+    if(isPaused||!isLiveSession||isNavigating)return;
     var pollId=CURRENT_POLL_DATA.pollId;
     var questionIndex=CURRENT_POLL_DATA.questionIndex;
     if(pollId===undefined||questionIndex===undefined)return;

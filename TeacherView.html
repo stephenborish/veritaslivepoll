@@ -1632,82 +1632,136 @@
       transform: translateX(-50%) translateY(-4px);
     }
 
-    /* === ENHANCED POLL CARDS === */
-    .poll-card-enhanced {
-      position: relative;
+    /* ENHANCED POLL CARD STYLES */
+    .poll-card {
       background: white;
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 2px 12px rgba(18, 56, 93, 0.08);
-      transition: all 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
-      cursor: pointer;
-      border: 2px solid transparent;
-    }
-
-    .dark .poll-card-enhanced {
-      background: rgba(15, 23, 35, 0.7);
-      border-color: rgba(255, 255, 255, 0.05);
-    }
-
-    .poll-card-enhanced:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 32px rgba(18, 56, 93, 0.16);
-      border-color: var(--veritas-gold);
-    }
-
-    .poll-card-preview {
-      height: 140px;
-      background: linear-gradient(135deg,
-                                  rgba(18, 56, 93, 0.08),
-                                  rgba(197, 160, 90, 0.08));
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      border-radius: 12px;
+      border: 2px solid rgba(18, 56, 93, 0.12);
       padding: 20px;
+      transition: all 0.3s ease;
+      cursor: pointer;
       position: relative;
       overflow: hidden;
     }
 
-    .poll-card-preview::before {
+    .poll-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 24px rgba(18, 56, 93, 0.15);
+      border-color: rgba(18, 56, 93, 0.25);
+    }
+
+    .poll-card::before {
       content: '';
       position: absolute;
-      inset: 0;
-      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L30 60M0 30L60 30' stroke='rgba(18,56,93,0.04)' stroke-width='1' fill='none'/%3E%3C/svg%3E");
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #12385d, #c5a05a);
     }
 
-    .poll-card-preview-text {
-      font-size: 0.9rem;
-      line-height: 1.5;
-      color: var(--veritas-navy);
-      text-align: center;
-      max-height: 100%;
-      overflow: hidden;
+    .poll-card-header {
+      margin-bottom: 16px;
+    }
+
+    .poll-card-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #12385d;
+      margin-bottom: 6px;
+      line-height: 1.3;
       display: -webkit-box;
-      -webkit-line-clamp: 4;
+      -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
-      position: relative;
-      z-index: 1;
-    }
-
-    .poll-card-body {
-      padding: 18px;
+      overflow: hidden;
     }
 
     .poll-card-meta {
       display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px solid rgba(18, 56, 93, 0.08);
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
     }
 
-    .poll-card-quick-stat {
-      display: flex;
+    .poll-card-badge {
+      display: inline-flex;
       align-items: center;
       gap: 4px;
-      font-size: 0.75rem;
-      color: var(--text-secondary);
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(18, 56, 93, 0.08);
+      color: #12385d;
+    }
+
+    .poll-card-badge.class-badge {
+      background: rgba(197, 160, 90, 0.15);
+      color: #8b6914;
+    }
+
+    .poll-card-stats {
+      display: flex;
+      gap: 16px;
+      padding: 12px 0;
+      border-top: 1px solid rgba(18, 56, 93, 0.1);
+      margin-bottom: 12px;
+    }
+
+    .poll-card-stat {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #6b7280;
+      font-size: 13px;
+    }
+
+    .poll-card-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .poll-card-btn {
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      border: none;
+      cursor: pointer;
+    }
+
+    .poll-card-btn.primary {
+      background: #12385d;
+      color: white;
+    }
+
+    .poll-card-btn.primary:hover {
+      background: #0f2d4a;
+      transform: scale(1.02);
+    }
+
+    .poll-card-btn.secondary {
+      background: rgba(18, 56, 93, 0.08);
+      color: #12385d;
+    }
+
+    .poll-card-btn.secondary:hover {
+      background: rgba(18, 56, 93, 0.15);
+    }
+
+    .poll-card-btn.danger {
+      background: rgba(239, 68, 68, 0.1);
+      color: #dc2626;
+    }
+
+    .poll-card-btn.danger:hover {
+      background: rgba(239, 68, 68, 0.2);
     }
 
     /* === RESPONSIVE ENHANCEMENTS === */
@@ -2549,40 +2603,40 @@
           </div>
         </div>
 
-        <!-- CENTER SECTION: Timer (Dominant) - ENHANCED with Larger Touch Targets (REMOVED per user request) -->
-        <div class="flex flex-col items-center gap-1" style="display: none;">
+        <!-- CENTER SECTION: Timer (Dominant) - ENHANCED with Larger Touch Targets -->
+        <div class="flex flex-col items-center gap-1">
           <div id="timer-main-container" class="flex items-center gap-2 rounded-lg border-2 border-brand-white/20 bg-brand-white/10 px-3 py-1.5 transition-all duration-300">
-            <button id="subtract-10s-btn" class="w-7 h-7 flex items-center justify-center rounded-lg bg-brand-white/10 text-brand-white hover:bg-brand-white/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" aria-label="-10 seconds" title="Subtract 10 seconds">
-              <span class="material-symbols-outlined text-lg">remove</span>
+            <button id="subtract-10s-btn" class="w-9 h-9 flex items-center justify-center rounded-lg bg-brand-white/10 text-brand-white hover:bg-brand-white/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" aria-label="-10 seconds" title="Subtract 10 seconds">
+              <span class="material-symbols-outlined text-xl">remove</span>
             </button>
             <input
               type="text"
               id="timer-display"
-              class="w-24 rounded bg-transparent text-center text-2xl font-bold text-brand-white transition-all placeholder-brand-white/40 focus:outline-none focus:ring-2 focus:ring-veritas-gold disabled:opacity-70 cursor-pointer"
+              class="w-32 rounded bg-transparent text-center text-4xl font-bold text-brand-white transition-all placeholder-brand-white/40 focus:outline-none focus:ring-2 focus:ring-veritas-gold disabled:opacity-70 cursor-pointer"
               value="01:30"
               aria-label="Timer display"
               title="Click to edit time"
             />
-            <button id="add-10s-btn" class="w-7 h-7 flex items-center justify-center rounded-lg bg-brand-white/10 text-brand-white hover:bg-brand-white/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" aria-label="+10 seconds" title="Add 10 seconds">
-              <span class="material-symbols-outlined text-lg">add</span>
+            <button id="add-10s-btn" class="w-9 h-9 flex items-center justify-center rounded-lg bg-brand-white/10 text-brand-white hover:bg-brand-white/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" aria-label="+10 seconds" title="Add 10 seconds">
+              <span class="material-symbols-outlined text-xl">add</span>
             </button>
-            <div class="w-px h-6 bg-brand-white/30 mx-1"></div>
-            <button id="start-btn" class="bg-emerald-500 hover:bg-emerald-600 text-brand-white font-bold px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md" aria-label="Start timer" title="Start timer (Space)">
-              <span class="material-symbols-outlined text-lg">play_arrow</span>
+            <div class="w-px h-8 bg-brand-white/30 mx-1"></div>
+            <button id="start-btn" class="w-9 h-9 flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-brand-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md" aria-label="Start timer" title="Start timer (Space)">
+              <span class="material-symbols-outlined text-2xl">play_arrow</span>
             </button>
-            <button id="pause-btn" class="bg-amber-500 hover:bg-amber-600 text-brand-white font-bold px-2.5 py-1.5 rounded-lg transition-colors hidden shadow-md" aria-label="Pause timer" title="Pause timer (Space)">
-              <span class="material-symbols-outlined text-lg">pause</span>
+            <button id="pause-btn" class="w-9 h-9 flex items-center justify-center bg-amber-500 hover:bg-amber-600 text-brand-white rounded-lg transition-colors hidden shadow-md" aria-label="Pause timer" title="Pause timer (Space)">
+              <span class="material-symbols-outlined text-2xl">pause</span>
             </button>
-            <button id="reset-btn" class="bg-brand-white/20 hover:bg-brand-white/30 text-brand-white font-bold px-2.5 py-1.5 rounded-lg transition-colors shadow-sm" aria-label="Reset timer" title="Reset timer">
-              <span class="material-symbols-outlined text-lg">refresh</span>
+            <button id="reset-btn" class="w-9 h-9 flex items-center justify-center bg-brand-white/20 hover:bg-brand-white/30 text-brand-white rounded-lg transition-colors shadow-sm" aria-label="Reset timer" title="Reset timer (R key)">
+              <span class="material-symbols-outlined text-2xl">refresh</span>
             </button>
           </div>
           <div class="flex items-center gap-2">
             <p id="timer-status-message" class="text-xs text-brand-white/70 uppercase tracking-wide font-semibold">Individually Timed</p>
             <span class="text-brand-white/40">•</span>
             <div class="flex gap-1">
-              <button id="add-30s-btn" class="px-2 py-0.5 text-xs bg-brand-white/10 hover:bg-brand-white/20 text-brand-white/90 rounded transition-colors font-semibold" title="Add 30 seconds">+30s</button>
-              <button id="add-60s-btn" class="px-2 py-0.5 text-xs bg-brand-white/10 hover:bg-brand-white/20 text-brand-white/90 rounded transition-colors font-semibold" title="Add 60 seconds">+1m</button>
+              <button id="add-30s-btn" class="px-3 py-1 text-xs bg-brand-white/10 hover:bg-brand-white/20 text-brand-white/90 rounded-md transition-colors font-semibold" title="Add 30 seconds">+30s</button>
+              <button id="add-60s-btn" class="px-3 py-1 text-xs bg-brand-white/10 hover:bg-brand-white/20 text-brand-white/90 rounded-md transition-colors font-semibold" title="Add 60 seconds">+1m</button>
             </div>
           </div>
         </div>
@@ -2595,25 +2649,25 @@
             <span class="material-symbols-outlined text-xl">arrow_forward</span>
             <span class="kbd-hint">→</span>
           </button>
-          <button id="header-end-show-btn" class="hidden items-center gap-2 h-12 px-6 rounded-lg bg-emerald-600 text-white text-base font-bold hover:bg-emerald-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105" title="Close responses and reveal answer to students">
+          <button id="header-end-show-btn" class="hidden items-center gap-2 h-12 px-6 rounded-lg bg-emerald-600 text-white text-base font-bold hover:bg-emerald-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105" title="Close responses and reveal answer to students (E key)">
             <span class="material-symbols-outlined text-xl">check_circle</span>
             <span>End &amp; Reveal</span>
           </button>
 
           <!-- Secondary Actions -->
-          <button id="header-reset-question-btn" class="flex items-center gap-2 h-10 px-4 rounded-lg border-2 border-brand-white/30 bg-transparent text-brand-white text-sm font-semibold hover:bg-brand-white/10 transition-colors">
+          <button id="header-reset-question-btn" class="flex items-center gap-2 h-10 px-4 rounded-lg border-2 border-brand-white/30 bg-transparent text-brand-white text-sm font-semibold hover:bg-brand-white/10 transition-colors" title="Reset Question (R key)">
             <span class="material-symbols-outlined text-base">replay</span>
             <span class="hidden xl:inline">Reset Question</span>
           </button>
-          <button id="header-send-link-btn" class="flex items-center gap-1.5 h-10 px-3 rounded-lg bg-brand-white/10 text-brand-white text-sm font-semibold hover:bg-brand-white/20 transition-colors">
+          <button id="header-send-link-btn" class="flex items-center gap-1.5 h-10 px-4 rounded-lg bg-brand-white/10 text-brand-white text-sm font-semibold hover:bg-brand-white/20 transition-colors">
             <span class="material-symbols-outlined text-base">mail</span>
             <span class="hidden xl:inline">Send Links</span>
           </button>
-          <button id="header-view-links-btn" class="flex items-center gap-1.5 h-10 px-3 rounded-lg bg-brand-white/10 text-brand-white text-sm font-semibold hover:bg-brand-white/20 transition-colors">
+          <button id="header-view-links-btn" class="flex items-center gap-1.5 h-10 px-4 rounded-lg bg-brand-white/10 text-brand-white text-sm font-semibold hover:bg-brand-white/20 transition-colors">
             <span class="material-symbols-outlined text-base">visibility</span>
             <span class="hidden xl:inline">View Links</span>
           </button>
-          <button id="header-back-btn" class="flex items-center gap-1.5 h-10 px-3 rounded-lg bg-brand-white/10 text-brand-white text-sm font-semibold hover:bg-brand-white/20 transition-colors">
+          <button id="header-back-btn" class="flex items-center gap-1.5 h-10 px-4 rounded-lg bg-brand-white/10 text-brand-white text-sm font-semibold hover:bg-brand-white/20 transition-colors" title="Previous Question (← arrow key)">
             <span class="material-symbols-outlined text-base">arrow_back</span>
             <span class="hidden xl:inline">Back</span>
           </button>
@@ -3550,18 +3604,18 @@
             </select>
           </div>
 
-          <div class="form-group mb-6">
-            <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white" for="session-type-select">Session Type</label>
-            <select id="session-type-select" class="w-full max-w-md rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
-              <option value="LIVE_POLL">Live Poll (Teacher-paced, class reviews each question together)</option>
-              <option value="INDIVIDUAL_TIMED">Individual Timed Session (Students work independently with time limit)</option>
-            </select>
-          </div>
-
-          <div id="time-limit-group" class="form-group mb-6" style="display: none;">
-            <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white" for="time-limit-input">Time Limit (minutes)</label>
-            <input type="number" id="time-limit-input" min="1" max="180" placeholder="30" class="w-full max-w-md rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"/>
-            <p class="text-xs text-brand-dark-gray/70 dark:text-brand-white/60 mt-1">Students will be automatically locked when time expires</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white" for="session-type-select">Session Type</label>
+              <select id="session-type-select" class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+                <option value="LIVE_POLL">Live Session (Teacher-Paced)</option>
+                <option value="INDIVIDUAL_TIMED">Individual Timed Session (Student-Paced)</option>
+              </select>
+            </div>
+            <div id="time-limit-container" style="display: none;">
+              <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white" for="time-limit-input">Time Limit (minutes)</label>
+              <input type="number" id="time-limit-input" min="1" max="180" placeholder="e.g., 45" class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+            </div>
           </div>
 
           <div id="question-builder-workspace">
@@ -4541,6 +4595,15 @@
     // Initialize Keyboard Shortcuts
     initializeKeyboardShortcuts();
 
+    // Individual Timed Session UI logic in Poll Creator
+    var sessionTypeSelect = document.getElementById('session-type-select');
+    var timeLimitContainer = document.getElementById('time-limit-container');
+    if (sessionTypeSelect && timeLimitContainer) {
+        sessionTypeSelect.addEventListener('change', function() {
+            timeLimitContainer.style.display = this.value === 'individual' ? 'block' : 'none';
+        });
+    }
+
     console.log('✨ Enhanced UI systems initialized (Phase 3)');
   });
 
@@ -5388,20 +5451,6 @@
     questionNavigatorContainer.addEventListener('drop',handleNavigatorDrop);
   }
 
-  // Session type change handler
-  var sessionTypeSelect=document.getElementById('session-type-select');
-  var timeLimitGroup=document.getElementById('time-limit-group');
-  if(sessionTypeSelect&&timeLimitGroup){
-    sessionTypeSelect.addEventListener('change',function(){
-      if(sessionTypeSelect.value==='INDIVIDUAL_TIMED'){
-        timeLimitGroup.style.display='block';
-      }else{
-        timeLimitGroup.style.display='none';
-      }
-      markPollDirty();
-    });
-  }
-
   if(startPollBtn){
     startPollBtn.addEventListener('click',onStartPoll);
   }else{
@@ -6195,113 +6244,78 @@
       .getPollForEditing(pollId);
   }
 
-  function renderPollCards(polls){
-    if(!pollsCardView){
+  function renderPollCards(polls) {
+    if (!pollsCardView) {
       return;
     }
 
-    pollsCardView.innerHTML='';
+    pollsCardView.innerHTML = '';
 
-    if(!polls||polls.length===0){
+    if (!polls || polls.length === 0) {
       return;
     }
 
-    polls.forEach(function(poll){
-      var card=document.createElement('article');
-      card.className='poll-card-enhanced';
-      if(poll&&poll.pollId){
-        card.dataset.pollId=poll.pollId;
+    polls.forEach(function(poll) {
+      var card = document.createElement('article');
+      card.className = 'poll-card';
+      if (poll && poll.pollId) {
+        card.dataset.pollId = poll.pollId;
       }
-      card.setAttribute('tabindex','0');
-      card.setAttribute('role','group');
-      var safeName=escapeHtml(poll&&poll.pollName?poll.pollName:'Untitled Poll');
-      card.setAttribute('aria-label','Poll '+(poll&&poll.pollName?poll.pollName:'Untitled poll'));
+      card.setAttribute('tabindex', '0');
+      card.setAttribute('role', 'group');
+      var safeName = escapeHtml(poll && poll.pollName ? poll.pollName : 'Untitled Poll');
+      card.setAttribute('aria-label', 'Poll: ' + safeName);
 
-      var className=escapeHtml(poll&&poll.className?poll.className:'Unassigned');
-      var questionCount=Array.isArray(poll&&poll.questions)?poll.questions.length:0;
-      var questionLabel=questionCount===1?'Question':'Questions';
-      var lastRunText=poll&&poll.lastRunAt?
-        'Last run '+formatDateTime(poll.lastRunAt):
-        'Not run yet';
-      var lastRun=escapeHtml(lastRunText);
-      var updatedDescriptor=poll&&poll.updatedAt?
-        'Updated '+formatDateTime(poll.updatedAt):
-        'Created '+formatDateTime(poll&&poll.createdAt);
-      var updated=escapeHtml(updatedDescriptor);
+      var className = escapeHtml(poll && poll.className ? poll.className : 'Unassigned');
+      var questionCount = Array.isArray(poll && poll.questions) ? poll.questions.length : 0;
+      var lastEdited = formatDateTime(poll.updatedAt || poll.lastRunAt || poll.createdAt);
 
-      var recentSessionCount=0;
-      ['liveSessions','recentSessions','sessions'].forEach(function(key){
-        if(poll&&Array.isArray(poll[key])){
-          recentSessionCount=Math.max(recentSessionCount,poll[key].length);
-        }
-      });
-      var sessionBadgeText=recentSessionCount>0?
-        recentSessionCount+' session'+(recentSessionCount===1?'':'s'):
-        'No sessions yet';
-      sessionBadgeText=escapeHtml(sessionBadgeText);
+      var htmlParts = [];
 
-      // Get first question text for preview
-      var firstQuestionText='';
-      if(poll&&Array.isArray(poll.questions)&&poll.questions.length>0){
-        var firstQ=poll.questions[0];
-        firstQuestionText=firstQ&&firstQ.questionText?firstQ.questionText:'';
-      }
-      var previewText=firstQuestionText||'No questions yet';
-      var safePreviewText=escapeHtml(previewText);
+      // Header
+      htmlParts.push('<div class="poll-card-header">');
+      htmlParts.push('<div class="poll-card-title">' + safeName + '</div>');
+      htmlParts.push('</div>');
 
-      var parts=[];
+      // Meta Badges
+      htmlParts.push('<div class="poll-card-meta">');
+      htmlParts.push('<span class="poll-card-badge class-badge"><span class="material-symbols-outlined text-sm">school</span>' + className + '</span>');
+      htmlParts.push('</div>');
 
-      // Preview section with first question
-      parts.push('<div class="poll-card-preview">');
-      parts.push('<div class="poll-card-preview-text">'+safePreviewText+'</div>');
-      parts.push('</div>');
+      // Stats
+      htmlParts.push('<div class="poll-card-stats">');
+      htmlParts.push('<div class="poll-card-stat"><span class="material-symbols-outlined text-base">quiz</span><span>' + questionCount + ' Questions</span></div>');
+      htmlParts.push('<div class="poll-card-stat"><span class="material-symbols-outlined text-base">edit_calendar</span><span>' + lastEdited + '</span></div>');
+      htmlParts.push('</div>');
 
-      // Card body
-      parts.push('<div class="poll-card-body">');
-      parts.push('<div class="poll-card-header">');
-      parts.push('<div class="poll-card-title">'+safeName+'</div>');
-      parts.push('<div class="poll-card-meta">');
-      parts.push('<span class="poll-card-badge class-badge"><span class="material-symbols-outlined text-base">school</span>'+className+'</span>');
-      parts.push('</div>');
-      parts.push('</div>');
+      // Actions
+      htmlParts.push('<div class="poll-card-actions">');
+      htmlParts.push('<button type="button" class="poll-card-btn secondary poll-edit-btn" data-poll-id="' + (poll && poll.pollId ? poll.pollId : '') + '" aria-label="Edit ' + safeName + '"><span class="material-symbols-outlined text-base">edit</span>Edit</button>');
+      htmlParts.push('<button type="button" class="poll-card-btn danger poll-delete-btn" data-poll-id="' + (poll && poll.pollId ? poll.pollId : '') + '" aria-label="Delete ' + safeName + '"><span class="material-symbols-outlined text-base">delete</span>Delete</button>');
+      htmlParts.push('</div>');
 
-      // Quick stats with icons
-      parts.push('<div class="poll-card-meta">');
-      parts.push('<span class="poll-card-quick-stat"><span class="material-symbols-outlined" style="font-size: 14px">quiz</span>'+questionCount+' '+questionLabel+'</span>');
-      parts.push('<span class="poll-card-quick-stat"><span class="material-symbols-outlined" style="font-size: 14px">history</span>'+sessionBadgeText+'</span>');
-      parts.push('</div>');
+      card.innerHTML = htmlParts.join('');
 
-      parts.push('<div class="poll-card-actions">');
-      parts.push('<button type="button" class="poll-card-btn primary poll-select-btn" data-poll-id="'+(poll&&poll.pollId?poll.pollId:'')+'" aria-label="Select '+safeName+' for a session"><span class="material-symbols-outlined text-base">play_arrow</span><span>Start</span></button>');
-      parts.push('<button type="button" class="poll-card-btn secondary poll-edit-btn" data-poll-id="'+(poll&&poll.pollId?poll.pollId:'')+'" aria-label="Edit '+safeName+'"><span class="material-symbols-outlined text-base">edit</span></button>');
-      parts.push('<button type="button" class="poll-card-btn secondary poll-copy-btn" data-poll-id="'+(poll&&poll.pollId?poll.pollId:'')+'" aria-label="Duplicate '+safeName+'" title="Duplicate poll"><span class="material-symbols-outlined text-base">content_copy</span></button>');
-      parts.push('<button type="button" class="poll-card-btn danger poll-delete-btn" data-poll-id="'+(poll&&poll.pollId?poll.pollId:'')+'" aria-label="Delete '+safeName+'" title="Delete poll"><span class="material-symbols-outlined text-base">delete</span></button>');
-      parts.push('</div>');
-
-      parts.push('</div>'); // End card body
-
-      card.innerHTML=parts.join('');
-
-      card.addEventListener('click',function(event){
-        if(event.target.closest('.poll-card-btn')){
+      card.addEventListener('click', function(event) {
+        if (event.target.closest('.poll-card-btn')) {
           return;
         }
-        var pollId=this.dataset.pollId;
-        if(!pollId)return;
-        pollSelect.value=pollId;
+        var pollId = this.dataset.pollId;
+        if (!pollId) return;
+        pollSelect.value = pollId;
         onPollSelectChange();
         showDashboard();
       });
 
-      card.addEventListener('keydown',function(event){
-        if(event.target.closest('.poll-card-btn')){
+      card.addEventListener('keydown', function(event) {
+        if (event.target.closest('.poll-card-btn')) {
           return;
         }
-        if(event.key==='Enter'||event.key===' '||event.key==='Spacebar'){
+        if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
           event.preventDefault();
-          var pollId=this.dataset.pollId;
-          if(!pollId)return;
-          pollSelect.value=pollId;
+          var pollId = this.dataset.pollId;
+          if (!pollId) return;
+          pollSelect.value = pollId;
           onPollSelectChange();
           showDashboard();
         }
@@ -8017,31 +8031,64 @@
   });
 
   // --- Poll Lifecycle Controls ---
-  async function onStartPoll(){
-    var pollId=pollSelect.value;
-    if(!pollId){
-      await veritasAlert('Please select a poll first.',{title:'Live poll'});
+  async function onStartPoll() {
+    var pollId = pollSelect.value;
+    if (!pollId) {
+      await veritasAlert('Please select a poll first.', { title: 'Live poll' });
       return;
     }
-    setButtonLoading(startPollBtn,true,'Starting...');
+
+    var selectedPoll = ALL_POLLS.find(function(p) { return p.pollId === pollId; });
+    if (!selectedPoll) {
+      await veritasAlert('Could not find the selected poll data.', { title: 'Error' });
+      setButtonLoading(startPollBtn, false);
+      return;
+    }
+
+    setButtonLoading(startPollBtn, true, 'Starting...');
     clearLiveIntervals();
-    isPaused=false;
-    isLiveSession=true;
-    if(PREVIEW_MODE){
-      setButtonLoading(startPollBtn,false);
-      await previewOnlyNotice('start a live poll');
+    isPaused = false;
+    isLiveSession = true; // This flag might need adjustment based on session type
+
+    if (PREVIEW_MODE) {
+      setButtonLoading(startPollBtn, false);
+      await previewOnlyNotice('start a session');
       return;
     }
-    google.script.run
-      .withSuccessHandler(function(data){
-        setButtonLoading(startPollBtn,false);
-        updateLiveView(data);
-      })
-      .withFailureHandler(function(error){
-        setButtonLoading(startPollBtn,false);
-        handleError(error);
-      })
-      .startPoll(pollId);
+
+    if (selectedPoll.sessionType === 'INDIVIDUAL_TIMED') {
+      google.script.run
+        .withSuccessHandler(async function(data) {
+          setButtonLoading(startPollBtn, false);
+          if (data && data.success) {
+            await veritasAlert(
+              `Individual Timed Session started successfully for ${selectedPoll.className}. The session will run for ${data.timeLimitMinutes} minutes. Students can now begin using their personalized links.`,
+              { title: 'Session Started' }
+            );
+            // Stay on the dashboard to monitor, maybe refresh data in future.
+            showDashboard();
+          } else {
+            handleError(new Error((data && data.error) || 'Failed to start individual session.'));
+          }
+        })
+        .withFailureHandler(function(error) {
+          setButtonLoading(startPollBtn, false);
+          handleError(error);
+        })
+        .startIndividualTimedSession(pollId);
+    } else {
+      // Default to live session
+      google.script.run
+        .withSuccessHandler(function(data) {
+          setButtonLoading(startPollBtn, false);
+          updateLiveView(data);
+        })
+        .withFailureHandler(function(error) {
+          setButtonLoading(startPollBtn, false);
+          handleError(error);
+        })
+        .startPoll(pollId);
+    }
   }
 
   function onResumePoll(){
@@ -11060,21 +11107,6 @@
       }
       classSelect.value=existingPoll.className||'';
 
-      var sessionTypeSelect=document.getElementById('session-type-select');
-      var timeLimitInput=document.getElementById('time-limit-input');
-      var timeLimitGroup=document.getElementById('time-limit-group');
-      if(sessionTypeSelect){
-        sessionTypeSelect.value=existingPoll.sessionType||'LIVE_POLL';
-        if(existingPoll.sessionType==='INDIVIDUAL_TIMED'){
-          if(timeLimitGroup)timeLimitGroup.style.display='block';
-          if(timeLimitInput&&existingPoll.timeLimitMinutes){
-            timeLimitInput.value=existingPoll.timeLimitMinutes;
-          }
-        }else if(timeLimitGroup){
-          timeLimitGroup.style.display='none';
-        }
-      }
-
       questions=existingPoll.questions.map(function(question){
         var answers=(question.options||[]).map(function(opt){
           return {
@@ -11115,13 +11147,6 @@
       editingPollId=null;
       document.getElementById('new-poll-name').value='';
       classSelect.value='';
-
-      var newSessionTypeSelect=document.getElementById('session-type-select');
-      var newTimeLimitInput=document.getElementById('time-limit-input');
-      var newTimeLimitGroup=document.getElementById('time-limit-group');
-      if(newSessionTypeSelect)newSessionTypeSelect.value='LIVE_POLL';
-      if(newTimeLimitInput)newTimeLimitInput.value='';
-      if(newTimeLimitGroup)newTimeLimitGroup.style.display='none';
 
       addQuestion(true);
       saveButton.innerHTML='<span class="truncate">Publish Poll</span>';
@@ -11610,19 +11635,9 @@
 
     var pollName=document.getElementById('new-poll-name').value.trim();
     var className=(classSelect.value||'').trim();
-    var sessionType=document.getElementById('session-type-select').value||'LIVE_POLL';
-    var timeLimitMinutes=null;
+    var sessionType = document.getElementById('session-type-select').value;
+    var timeLimitMinutes = document.getElementById('time-limit-input').value;
 
-    if(sessionType==='INDIVIDUAL_TIMED'){
-      var timeLimitValue=document.getElementById('time-limit-input').value;
-      if(!timeLimitValue||parseInt(timeLimitValue)<=0){
-        await veritasAlert('Please enter a valid time limit for individual timed sessions.',{title:'Save poll'});
-        savePollBtn.disabled=false;
-        savePollBtn.innerHTML=defaultLabel;
-        return;
-      }
-      timeLimitMinutes=parseInt(timeLimitValue);
-    }
 
     if(!pollName||!className){
       await veritasAlert('Please enter a poll name and select a class.',{title:'Save poll'});
@@ -11847,9 +11862,13 @@
         });
 
       if(editingPollId){
-        request.updatePoll(editingPollId,pollName,className,payloadQuestions,sessionType,timeLimitMinutes);
+        request.updatePoll(editingPollId, pollName, className, payloadQuestions,
+         sessionType, timeLimitMinutes
+        );
       } else {
-        request.createNewPoll(pollName,className,payloadQuestions,sessionType,timeLimitMinutes);
+        request.createNewPoll(pollName, className, payloadQuestions,
+         sessionType, timeLimitMinutes
+        );
       }
     } catch(err){
       console.error('Upload/save error:',err);
@@ -12132,6 +12151,105 @@
     });
   }
 
+  // Card/Table View Toggle for Dashboard
+  var viewCardsBtn = document.getElementById('view-cards-btn');
+  var viewTableBtn = document.getElementById('view-table-btn');
+  var pollsCardView = document.getElementById('polls-card-view');
+  var pollsTableView = document.getElementById('polls-table-view');
+
+  if (viewCardsBtn && viewTableBtn && pollsCardView && pollsTableView) {
+    // Default to card view
+    viewCardsBtn.classList.add('active');
+
+    viewCardsBtn.addEventListener('click', function() {
+      pollsCardView.classList.remove('hidden');
+      pollsTableView.classList.add('hidden');
+      viewCardsBtn.classList.add('active');
+      viewTableBtn.classList.remove('active');
+      localStorage.setItem('vlp_poll_view', 'cards');
+    });
+
+    viewTableBtn.addEventListener('click', function() {
+      pollsCardView.classList.add('hidden');
+      pollsTableView.classList.remove('hidden');
+      viewTableBtn.classList.add('active');
+      viewCardsBtn.classList.remove('active');
+      localStorage.setItem('vlp_poll_view', 'table');
+    });
+
+    // Restore saved view preference
+    var savedView = localStorage.getItem('vlp_poll_view');
+    if (savedView === 'table') {
+      viewTableBtn.click();
+    }
+  }
+
+  // Keyboard Shortcuts for Live Poll Session
+  document.addEventListener('keydown', function(e) {
+    // Only activate shortcuts when NOT typing in an input/textarea
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+      return;
+    }
+
+    // Only during live session
+    if (!isLiveSession) return;
+
+    switch(e.key) {
+      case 'ArrowRight':
+      case 'n':
+      case 'N':
+        // Next Question
+        e.preventDefault();
+        var nextBtn = document.getElementById('header-next-btn');
+        if (nextBtn && !nextBtn.disabled && nextBtn.offsetParent !== null) {
+          nextBtn.click();
+        }
+        break;
+
+      case 'ArrowLeft':
+      case 'b':
+      case 'B':
+        // Back/Previous Question
+        e.preventDefault();
+        var backBtn = document.getElementById('header-back-btn');
+        if (backBtn && !backBtn.disabled && backBtn.offsetParent !== null) {
+          backBtn.click();
+        }
+        break;
+
+      case ' ':
+      case 'Spacebar':
+        // Toggle Timer (Start/Pause)
+        e.preventDefault();
+        if (isRunning) {
+          pauseTimer();
+        } else if (totalSeconds > 0) {
+          startTimer();
+        }
+        break;
+
+      case 'r':
+      case 'R':
+        // Reset Timer
+        e.preventDefault();
+        if (!isRunning) {
+          resetTimer();
+        }
+        break;
+
+      case 'e':
+      case 'E':
+        // End & Reveal
+        e.preventDefault();
+        var endShowBtn = document.getElementById('header-end-show-btn');
+        if (endShowBtn && !endShowBtn.disabled && endShowBtn.offsetParent !== null) {
+          endShowBtn.click();
+        }
+        break;
+    }
+  });
+
+  // Auto-Pulse "Next Question" Button When All Responded
   // Card/Table View Toggle for Dashboard
   var viewCardsBtn = document.getElementById('view-cards-btn');
   var viewTableBtn = document.getElementById('view-table-btn');

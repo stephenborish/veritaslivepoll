@@ -950,6 +950,29 @@
       </div>
     </div>
 
+    <!-- Individual Timed Session Entry Screen -->
+    <div id="individual-session-entry-screen" class="w-full max-w-4xl mx-auto text-center animate-fade-in px-6" style="display: none;">
+        <div class="bg-white rounded-3xl shadow-2xl border border-gray-100 p-12 sm:p-16 relative">
+            <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-1.5 bg-gradient-to-r from-transparent via-[#c5a05a] to-transparent rounded-full"></div>
+            <div class="mb-8">
+                <div class="w-20 h-20 mx-auto rounded-2xl flex items-center justify-center mb-6" style="background: linear-gradient(135deg, #12385d 0%, #1a4a75 100%);">
+                    <span class="material-symbols-outlined text-5xl text-white">timer</span>
+                </div>
+            </div>
+            <div class="mb-10">
+                <h1 id="individual-session-title" class="text-5xl sm:text-6xl font-bold mb-6" style="color: #12385d; letter-spacing: -0.02em;">Timed Assessment</h1>
+                <p id="individual-session-instructions" class="text-lg text-gray-600 leading-relaxed max-w-2xl mx-auto">
+                    You will have <strong id="individual-session-time-limit" class="text-veritas-navy">45 minutes</strong> to answer <strong id="individual-session-question-count" class="text-veritas-navy">20 questions</strong>.
+                    <br><br>The timer will start as soon as you begin. Good luck.
+                </p>
+            </div>
+            <button id="begin-individual-session-btn" class="relative inline-flex items-center justify-center gap-3 px-12 py-4 rounded-xl text-white text-lg font-semibold transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-4 focus:ring-[#12385d]/20" style="background: linear-gradient(135deg, #12385d 0%, #1a4a75 100%); z-index: 10;">
+                <span class="material-symbols-outlined text-2xl">play_arrow</span>
+                <span>Begin Assessment</span>
+            </button>
+        </div>
+    </div>
+
     <!-- Student App Container -->
     <div class="w-full max-w-6xl mx-auto" id="student-container" style="display: none;">
       <div id="student-loader" class="text-center py-12 animate-fade-in" style="display: block;">
@@ -1062,6 +1085,11 @@
         var entryScreen = document.getElementById('entry-screen');
         var startSessionBtn = document.getElementById('start-session-btn');
         var studentContainer = document.getElementById('student-container');
+        var individualSessionEntryScreen = document.getElementById('individual-session-entry-screen');
+        var beginIndividualSessionBtn = document.getElementById('begin-individual-session-btn');
+            if (beginIndividualSessionBtn) {
+                beginIndividualSessionBtn.onclick = beginIndividualSession;
+            }
         // Simple image zoom function (same approach as teacher panel)
         window.expandImage = function(imgElement) {
             var imgSrc = imgElement.src;
@@ -2125,6 +2153,11 @@
                 return;
             }
 
+            if (data.status === 'INDIVIDUAL_TIMED_ENTRY') {
+                showIndividualSessionEntry(data);
+                return;
+            }
+
             if (preLiveCard) {
                 preLiveCard.style.display = 'none';
             }
@@ -2679,6 +2712,40 @@
                 iconEl.textContent = 'error';
                 iconEl.className = 'material-symbols-outlined text-6xl text-yellow-300 mb-4 inline-block';
             }
+        }
+
+        function showIndividualSessionEntry(data) {
+            entryScreen.style.display = 'none';
+            studentContainer.style.display = 'none';
+            individualSessionEntryScreen.style.display = 'block';
+
+            document.getElementById('individual-session-title').textContent = data.pollName || 'Timed Assessment';
+            document.getElementById('individual-session-time-limit').textContent = data.timeLimitMinutes || 'a few';
+            document.getElementById('individual-session-question-count').textContent = data.questionCount || 'several';
+        }
+
+        function beginIndividualSession() {
+            // Show loader while we start the session
+            individualSessionEntryScreen.style.display = 'none';
+            studentContainer.style.display = 'block';
+            studentLoader.style.display = 'block';
+
+            if (!currentPollState.pollId || !currentPollState.sessionId) {
+                handleError(new Error("Missing session information. Please refresh."));
+                return;
+            }
+
+            google.script.run
+                .withSuccessHandler(function(response) {
+                    if (response.success) {
+                        // Immediately poll for the first question
+                        pollForStatus(true);
+                    } else {
+                        handleError(new Error(response.error || 'Could not begin the session.'));
+                    }
+                })
+                .withFailureHandler(handleError)
+                .beginIndividualTimedAttempt(currentPollState.pollId, currentPollState.sessionId, SESSION_TOKEN);
         }
     })();
     </script>

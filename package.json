@@ -1,0 +1,9 @@
+{
+  "name": "veritas-live-poll",
+  "version": "1.0.0",
+  "description": "Google Apps Script web app for live polling",
+  "dependencies": {},
+  "devDependencies": {
+    "@playwright/test": "^1.40.1"
+  }
+}

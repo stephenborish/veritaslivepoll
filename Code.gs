@@ -477,17 +477,6 @@ function normalizeSheetBoolean_(value, defaultValue = false) {
   return defaultValue;
 }
 
-function migrateIndividualSessionLockColumn_(sheet, rowIndex, rowValues) {
-  const hasDedicatedLockColumn = rowValues.length > 8 && rowValues[8] !== '' && rowValues[8] !== null && rowValues[8] !== undefined;
-  if (hasDedicatedLockColumn) {
-    return normalizeSheetBoolean_(rowValues[8], false);
-  }
-
-  const normalizedLock = normalizeSheetBoolean_(rowValues[7], false);
-  sheet.getRange(rowIndex, 9).setValue(normalizedLock);
-  return normalizedLock;
-}
-
 // --- DATA ACCESS LAYER (Database-Style Queries) ---
 const DataAccess = {
   responses: {
@@ -638,205 +627,6 @@ const DataAccess = {
       }
     }
   },
-
-  individualSessionState: {
-    getByStudent: function(pollId, sessionId, studentEmail) {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      const sheet = ss.getSheetByName("IndividualSessionState");
-      if (!sheet) return null;
-
-      const values = getDataRangeValues_(sheet);
-      const row = values.find(r => r[0] === pollId && r[1] === sessionId && r[2] === studentEmail);
-
-      if (!row) return null;
-
-      const answerOrdersRaw = row[7];
-      let parsedAnswerOrders = {};
-      if (typeof answerOrdersRaw === 'string') {
-        try {
-          parsedAnswerOrders = JSON.parse(answerOrdersRaw || '{}');
-        } catch (err) {
-          Logger.error('Failed to parse answer order map (student)', err);
-          parsedAnswerOrders = {};
-        }
-      } else if (Array.isArray(answerOrdersRaw)) {
-        parsedAnswerOrders = {};
-      }
-
-      const isLockedValue = row.length > 8 ? row[8] : row[7];
-      const isLocked = normalizeSheetBoolean_(isLockedValue, false);
-
-      return {
-        pollId: row[0],
-        sessionId: row[1],
-        studentEmail: row[2],
-        startTime: row[3],
-        endTime: row[4],
-        currentQuestionIndex: typeof row[5] === 'number' ? row[5] : parseInt(row[5], 10) || 0,
-        questionOrder: JSON.parse(row[6] || '[]'),
-        answerOrders: parsedAnswerOrders,
-        isLocked: isLocked
-      };
-    },
-
-    getBySession: function(pollId, sessionId) {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      const sheet = ss.getSheetByName("IndividualSessionState");
-      if (!sheet) return [];
-
-      const values = getDataRangeValues_(sheet);
-      return values
-        .filter(r => r[0] === pollId && r[1] === sessionId)
-        .map(row => {
-          const answerOrdersRaw = row[7];
-          let parsedAnswerOrders = {};
-          if (typeof answerOrdersRaw === 'string') {
-            try {
-              parsedAnswerOrders = JSON.parse(answerOrdersRaw || '{}');
-            } catch (err) {
-              Logger.error('Failed to parse answer order map (session)', err);
-              parsedAnswerOrders = {};
-            }
-          }
-
-          const isLockedValue = row.length > 8 ? row[8] : row[7];
-          const isLocked = normalizeSheetBoolean_(isLockedValue, false);
-
-          return {
-            pollId: row[0],
-            sessionId: row[1],
-            studentEmail: row[2],
-            startTime: row[3],
-            endTime: row[4],
-            currentQuestionIndex: typeof row[5] === 'number' ? row[5] : parseInt(row[5], 10) || 0,
-            questionOrder: JSON.parse(row[6] || '[]'),
-            answerOrders: parsedAnswerOrders,
-            isLocked: isLocked
-          };
-        });
-    },
-
-    initStudent: function(pollId, sessionId, studentEmail, questionOrder, answerOrders) {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      const sheet = ss.getSheetByName("IndividualSessionState");
-      if (!sheet) {
-        throw new Error('IndividualSessionState sheet not found. Run setupSheet() first.');
-      }
-
-      // Check if student already has state for this session
-      const existing = this.getByStudent(pollId, sessionId, studentEmail);
-      if (existing) {
-        return existing;
-      }
-
-      const startTime = new Date().toISOString();
-      const rowData = [
-        pollId,
-        sessionId,
-        studentEmail,
-        startTime,
-        null, // endTime
-        0, // currentQuestionIndex
-        JSON.stringify(questionOrder),
-        JSON.stringify(answerOrders || {}),
-        false // isLocked
-      ];
-
-      sheet.appendRow(rowData);
-      Logger.log('Individual session state initialized', { pollId, sessionId, studentEmail });
-
-      return {
-        pollId: pollId,
-        sessionId: sessionId,
-        studentEmail: studentEmail,
-        startTime: startTime,
-        endTime: null,
-        currentQuestionIndex: 0,
-        questionOrder: questionOrder,
-        answerOrders: answerOrders || {},
-        isLocked: false
-      };
-    },
-
-    updateProgress: function(pollId, sessionId, studentEmail, currentQuestionIndex) {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      const sheet = ss.getSheetByName("IndividualSessionState");
-      if (!sheet) {
-        throw new Error('IndividualSessionState sheet not found.');
-      }
-
-      const values = getDataRangeValues_(sheet);
-      for (let i = 0; i < values.length; i++) {
-        if (values[i][0] === pollId && values[i][1] === sessionId && values[i][2] === studentEmail) {
-          const rowIndex = i + 2; // +2 for header row and 1-indexing
-          sheet.getRange(rowIndex, 6).setValue(currentQuestionIndex);
-          Logger.log('Progress updated', { pollId, sessionId, studentEmail, currentQuestionIndex });
-          return true;
-        }
-      }
-
-      return false;
-    },
-
-    setAnswerOrders: function(pollId, sessionId, studentEmail, answerOrders) {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      const sheet = ss.getSheetByName("IndividualSessionState");
-      if (!sheet) {
-        throw new Error('IndividualSessionState sheet not found.');
-      }
-
-      const values = getDataRangeValues_(sheet);
-      for (let i = 0; i < values.length; i++) {
-        if (values[i][0] === pollId && values[i][1] === sessionId && values[i][2] === studentEmail) {
-          const rowIndex = i + 2;
-          migrateIndividualSessionLockColumn_(sheet, rowIndex, values[i]);
-          sheet.getRange(rowIndex, 8).setValue(JSON.stringify(answerOrders || {}));
-          Logger.log('Answer order map updated', { pollId, sessionId, studentEmail });
-          return true;
-        }
-      }
-
-      return false;
-    },
-
-    lockStudent: function(pollId, sessionId, studentEmail) {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      const sheet = ss.getSheetByName("IndividualSessionState");
-      if (!sheet) {
-        throw new Error('IndividualSessionState sheet not found.');
-      }
-
-      const values = getDataRangeValues_(sheet);
-      for (let i = 0; i < values.length; i++) {
-        if (values[i][0] === pollId && values[i][1] === sessionId && values[i][2] === studentEmail) {
-          const rowIndex = i + 2;
-          const endTime = new Date().toISOString();
-          sheet.getRange(rowIndex, 5).setValue(endTime); // Set endTime
-          sheet.getRange(rowIndex, 9).setValue(true); // Set isLocked
-          Logger.log('Student locked', { pollId, sessionId, studentEmail, endTime });
-          return true;
-        }
-      }
-
-      return false;
-    },
-
-    clearSession: function(pollId, sessionId) {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      const sheet = ss.getSheetByName("IndividualSessionState");
-      if (!sheet) return;
-
-      const values = getDataRangeValues_(sheet);
-      for (let i = values.length - 1; i >= 0; i--) {
-        if (values[i][0] === pollId && values[i][1] === sessionId) {
-          const rowIndex = i + 2;
-          sheet.deleteRow(rowIndex);
-        }
-      }
-
-      Logger.log('Individual session state cleared', { pollId, sessionId });
-    }
-  }
 };
 
 // --- LIVE STATE VERSIONING & HEARTBEAT TRACKING ---
@@ -1170,7 +960,7 @@ function setupSheet() {
     return;
   }
   
-  const sheetNames = ["Classes", "Rosters", "Polls", "LiveStatus", "Responses", "IndividualSessionState"];
+  const sheetNames = ["Classes", "Rosters", "Polls", "LiveStatus", "Responses"];
   sheetNames.forEach(name => {
     if (!ss.getSheetByName(name)) {
       ss.insertSheet(name);
@@ -1187,7 +977,7 @@ function setupSheet() {
     .setFontWeight("bold").setBackground("#4285f4").setFontColor("#ffffff");
 
   const pollsSheet = ss.getSheetByName("Polls");
-  pollsSheet.getRange("A1:I1").setValues([["PollID", "PollName", "ClassName", "QuestionIndex", "QuestionDataJSON", "CreatedAt", "UpdatedAt", "SessionType", "TimeLimitMinutes"]])
+  pollsSheet.getRange("A1:G1").setValues([["PollID", "PollName", "ClassName", "QuestionIndex", "QuestionDataJSON", "CreatedAt", "UpdatedAt"]])
     .setFontWeight("bold").setBackground("#4285f4").setFontColor("#ffffff");
   
   const liveSheet = ss.getSheetByName("LiveStatus");
@@ -1204,12 +994,8 @@ function setupSheet() {
   responsesSheet.getRange("A1:H1").setValues([["ResponseID", "Timestamp", "PollID", "QuestionIndex", "StudentEmail", "Answer", "IsCorrect", "ConfidenceLevel"]])
     .setFontWeight("bold").setBackground("#4285f4").setFontColor("#ffffff");
 
-  const individualSessionStateSheet = ss.getSheetByName("IndividualSessionState");
-  individualSessionStateSheet.getRange("A1:I1").setValues([["PollID", "SessionID", "StudentEmail", "StartTime", "EndTime", "CurrentQuestionIndex", "QuestionOrderJSON", "AnswerOrdersJSON", "IsLocked"]])
-    .setFontWeight("bold").setBackground("#4285f4").setFontColor("#ffffff");
-
   // Freeze header rows
-  [classesSheet, rostersSheet, pollsSheet, liveSheet, responsesSheet, individualSessionStateSheet].forEach(sheet => {
+  [classesSheet, rostersSheet, pollsSheet, liveSheet, responsesSheet].forEach(sheet => {
     sheet.setFrozenRows(1);
   });
   
@@ -1718,7 +1504,7 @@ function deleteClassRecord(className) {
   })();
 }
 
-function createNewPoll(pollName, className, questions, sessionType, timeLimitMinutes) {
+function createNewPoll(pollName, className, questions) {
   return withErrorHandling(() => {
     if (!pollName || !className || !Array.isArray(questions) || questions.length === 0) {
       throw new Error('Invalid poll data: name, class, and questions are required');
@@ -1728,21 +1514,14 @@ function createNewPoll(pollName, className, questions, sessionType, timeLimitMin
       throw new Error('Maximum 50 questions per poll');
     }
 
-    // Validate session type specific requirements
-    if (sessionType === 'INDIVIDUAL_TIMED') {
-      if (!timeLimitMinutes || timeLimitMinutes <= 0) {
-        throw new Error('Time limit is required for individual timed sessions');
-      }
-    }
-
     const pollId = "P-" + Utilities.getUuid();
     const timestamp = new Date().toISOString();
 
-    writePollRows_(pollId, pollName, className, questions, timestamp, timestamp, sessionType, timeLimitMinutes);
+    writePollRows_(pollId, pollName, className, questions, timestamp, timestamp);
 
     CacheManager.invalidate('ALL_POLLS_DATA');
 
-    Logger.log('Poll created', { pollId: pollId, pollName: pollName, questionCount: questions.length, sessionType: sessionType || 'LIVE_POLL' });
+    Logger.log('Poll created', { pollId: pollId, pollName: pollName, questionCount: questions.length });
 
     return DataAccess.polls.getAll();
   })();
@@ -2022,348 +1801,13 @@ function getIndividualTimedQuestion(pollId, sessionId, studentEmail) {
  * Submit answer for individual timed session
  * Prevents backward navigation and advances to next question
  */
-function submitIndividualTimedAnswer(pollId, sessionId, studentEmail, actualQuestionIndex, answer, confidenceLevel) {
-  return withErrorHandling(() => {
-    const poll = DataAccess.polls.getById(pollId);
-    if (!poll) throw new Error('Poll not found');
-
-    const studentState = DataAccess.individualSessionState.getByStudent(pollId, sessionId, studentEmail);
-    if (!studentState) {
-      throw new Error('Student not initialized for this session');
-    }
-
-    if (studentState.isLocked) {
-      throw new Error('Session is locked - time expired or already completed');
-    }
-
-    // CRITICAL: Check elapsed time to prevent submissions after time limit
-    // This protects against client-side timer bypass or delayed lock sweeps
-    const metadata = DataAccess.liveStatus.getMetadata();
-    const timeLimitMinutes = metadata.timeLimitMinutes || poll.timeLimitMinutes;
-    const startTime = new Date(studentState.startTime).getTime();
-    const currentTime = Date.now();
-    const elapsedMinutes = (currentTime - startTime) / (1000 * 60);
-
-    if (elapsedMinutes >= timeLimitMinutes) {
-      // Time limit exceeded - lock the student and reject submission
-      DataAccess.individualSessionState.lockStudent(pollId, sessionId, studentEmail);
-      Logger.log('Submission rejected: time limit exceeded', {
-        pollId: pollId,
-        studentEmail: studentEmail,
-        elapsedMinutes: elapsedMinutes.toFixed(2),
-        timeLimitMinutes: timeLimitMinutes
-      });
-      throw new Error('Time limit exceeded. Your session has been locked and this response cannot be recorded.');
-    }
-
-    // Verify this is the current question (prevent backwards navigation)
-    const expectedQuestionIndex = studentState.questionOrder[studentState.currentQuestionIndex];
-    if (actualQuestionIndex !== expectedQuestionIndex) {
-      throw new Error('Cannot submit answer for non-current question');
-    }
-
-    // Check if already answered this question
-    const alreadyAnswered = DataAccess.responses.hasAnswered(pollId, actualQuestionIndex, studentEmail);
-    if (alreadyAnswered) {
-      throw new Error('Question already answered');
-    }
-
-    // Validate answer
-    const question = poll.questions[actualQuestionIndex];
-    if (!question) throw new Error('Question not found');
-
-    const isCorrect = (answer === question.correctAnswer);
-
-    // Record response
-    const responseId = Utilities.getUuid();
-    const timestamp = new Date().toISOString();
-    DataAccess.responses.add([
-      responseId,
-      timestamp,
-      pollId,
-      actualQuestionIndex,
-      studentEmail,
-      answer,
-      isCorrect,
-      confidenceLevel || null
-    ]);
-
-    // Advance to next question
-    const nextProgressIndex = studentState.currentQuestionIndex + 1;
-    DataAccess.individualSessionState.updateProgress(pollId, sessionId, studentEmail, nextProgressIndex);
-
-    // Check if completed all questions
-    const isComplete = nextProgressIndex >= poll.questions.length;
-    if (isComplete) {
-      DataAccess.individualSessionState.lockStudent(pollId, sessionId, studentEmail);
-    }
-
-    Logger.log('Individual timed answer submitted', {
-      pollId: pollId,
-      studentEmail: studentEmail,
-      actualQuestionIndex: actualQuestionIndex,
-      isCorrect: isCorrect,
-      nextProgressIndex: nextProgressIndex,
-      isComplete: isComplete
-    });
-
-    return {
-      success: true,
-      isCorrect: isCorrect,
-      isComplete: isComplete,
-      nextProgressIndex: nextProgressIndex,
-      totalQuestions: poll.questions.length
-    };
-  })();
-}
 
 /**
  * Check and lock students who exceeded time limit
  * Called periodically or on-demand
  */
-function checkAndLockTimedOutStudents(pollId, sessionId) {
-  return withErrorHandling(() => {
-    const poll = DataAccess.polls.getById(pollId);
-    if (!poll) throw new Error('Poll not found');
 
-    const metadata = DataAccess.liveStatus.getMetadata();
-    const timeLimitMinutes = metadata.timeLimitMinutes || poll.timeLimitMinutes;
-
-    const studentStates = DataAccess.individualSessionState.getBySession(pollId, sessionId);
-    let lockedCount = 0;
-
-    studentStates.forEach(state => {
-      if (state.isLocked) return; // Already locked
-
-      const startTime = new Date(state.startTime).getTime();
-      const currentTime = Date.now();
-      const elapsedMinutes = (currentTime - startTime) / (1000 * 60);
-
-      if (elapsedMinutes >= timeLimitMinutes) {
-        DataAccess.individualSessionState.lockStudent(pollId, sessionId, state.studentEmail);
-        lockedCount++;
-      }
-    });
-
-    Logger.log('Timed out students locked', { pollId, sessionId, lockedCount });
-
-    return {
-      success: true,
-      lockedCount: lockedCount
-    };
-  })();
-}
-
-/**
- * End individual timed session
- * Locks all students and closes session
- */
-function endIndividualTimedSession(pollId) {
-  return withErrorHandling(() => {
-    const metadata = DataAccess.liveStatus.getMetadata();
-    const sessionId = metadata.sessionId;
-
-    if (!sessionId) {
-      throw new Error('No active session found');
-    }
-
-    // Lock all students
-    const studentStates = DataAccess.individualSessionState.getBySession(pollId, sessionId);
-    studentStates.forEach(state => {
-      if (!state.isLocked) {
-        DataAccess.individualSessionState.lockStudent(pollId, sessionId, state.studentEmail);
-      }
-    });
-
-    // Update live status to ended
-    DataAccess.liveStatus.set(pollId, -1, "CLOSED", {
-      reason: 'ENDED',
-      sessionPhase: 'ENDED',
-      endedAt: new Date().toISOString(),
-      sessionId: sessionId
-    });
-
-    Logger.log('Individual timed session ended', { pollId, sessionId });
-
-    return {
-      success: true,
-      message: 'Session ended',
-      sessionId: sessionId
-    };
-  })();
-}
-
-/**
- * Get comprehensive analytics for individual timed session
- * Includes student progress, scores, violations, metacognition, and time data
- */
-function getIndividualTimedSessionAnalytics(pollId, sessionId) {
-  return withErrorHandling(() => {
-    const poll = DataAccess.polls.getById(pollId);
-    if (!poll) throw new Error('Poll not found');
-
-    const studentStates = DataAccess.individualSessionState.getBySession(pollId, sessionId);
-    const responses = DataAccess.responses.getByPoll(pollId);
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const proctorSheet = ss.getSheetByName('ProctorState');
-
-    // Build student analytics
-    const studentAnalytics = [];
-
-    studentStates.forEach(state => {
-      const studentEmail = state.studentEmail;
-
-      // Get student responses
-      const studentResponses = responses.filter(r => r[4] === studentEmail);
-      const answeredCount = studentResponses.filter(r => typeof r[3] === 'number' && r[3] >= 0).length;
-      const correctCount = studentResponses.filter(r => r[6] === true || r[6] === 'TRUE').length;
-      const score = answeredCount > 0 ? (correctCount / answeredCount) * 100 : 0;
-
-      // Get violations
-      const violations = responses.filter(r => r[4] === studentEmail && r[3] === -1 && PROCTOR_VIOLATION_VALUES.indexOf(r[5]) !== -1);
-      const violationCount = violations.length;
-
-      // Calculate time data
-      const startTime = new Date(state.startTime).getTime();
-      const endTime = state.endTime ? new Date(state.endTime).getTime() : Date.now();
-      const timeSpentMinutes = (endTime - startTime) / (1000 * 60);
-      const isTimedOut = state.isLocked && timeSpentMinutes >= poll.timeLimitMinutes;
-
-      // Get metacognition data
-      const metacognitionResponses = studentResponses.filter(r => r[7] !== null && r[7] !== undefined);
-      let metacognitionScore = null;
-      if (metacognitionResponses.length > 0) {
-        const totalConfidence = metacognitionResponses.reduce((sum, r) => sum + (parseFloat(r[7]) || 0), 0);
-        metacognitionScore = totalConfidence / metacognitionResponses.length;
-      }
-
-      // Compute calibration (confident + correct vs confident + incorrect)
-      let calibrationStatus = 'N/A';
-      if (metacognitionResponses.length > 0) {
-        const confidentCorrect = metacognitionResponses.filter(r => parseFloat(r[7]) >= 0.7 && (r[6] === true || r[6] === 'TRUE')).length;
-        const confidentIncorrect = metacognitionResponses.filter(r => parseFloat(r[7]) >= 0.7 && (r[6] === false || r[6] === 'FALSE')).length;
-
-        if (confidentCorrect > confidentIncorrect) {
-          calibrationStatus = 'Well-Calibrated';
-        } else if (confidentIncorrect > confidentCorrect) {
-          calibrationStatus = 'Overconfident';
-        } else {
-          calibrationStatus = 'Mixed';
-        }
-      }
-
-      studentAnalytics.push({
-        studentEmail: studentEmail,
-        progress: `${answeredCount}/${poll.questions.length}`,
-        progressPercent: (answeredCount / poll.questions.length) * 100,
-        score: score.toFixed(1),
-        correctCount: correctCount,
-        totalAnswered: answeredCount,
-        violationCount: violationCount,
-        timeSpentMinutes: timeSpentMinutes.toFixed(2),
-        isCompleted: state.currentQuestionIndex >= poll.questions.length,
-        isLocked: state.isLocked,
-        isTimedOut: isTimedOut,
-        metacognitionScore: metacognitionScore ? metacognitionScore.toFixed(2) : 'N/A',
-        calibrationStatus: calibrationStatus,
-        startTime: state.startTime,
-        endTime: state.endTime
-      });
-    });
-
-    // Compute overall statistics
-    const totalStudents = studentAnalytics.length;
-    const completedStudents = studentAnalytics.filter(s => s.isCompleted).length;
-    const timedOutStudents = studentAnalytics.filter(s => s.isTimedOut).length;
-    const averageScore = totalStudents > 0
-      ? (studentAnalytics.reduce((sum, s) => sum + parseFloat(s.score), 0) / totalStudents).toFixed(1)
-      : 0;
-    const averageTimeSpent = totalStudents > 0
-      ? (studentAnalytics.reduce((sum, s) => sum + parseFloat(s.timeSpentMinutes), 0) / totalStudents).toFixed(2)
-      : 0;
-    const totalViolations = studentAnalytics.reduce((sum, s) => sum + s.violationCount, 0);
-
-    // Question-level analytics
-    const questionAnalytics = [];
-    poll.questions.forEach((question, idx) => {
-      const questionResponses = responses.filter(r => r[3] === idx);
-      const correctResponses = questionResponses.filter(r => r[6] === true || r[6] === 'TRUE');
-      const totalResponses = questionResponses.length;
-      const difficulty = totalResponses > 0 ? ((correctResponses.length / totalResponses) * 100).toFixed(1) : 'N/A';
-
-      questionAnalytics.push({
-        questionIndex: idx,
-        questionText: question.text.substring(0, 100) + (question.text.length > 100 ? '...' : ''),
-        totalResponses: totalResponses,
-        correctResponses: correctResponses.length,
-        difficulty: difficulty,
-        difficultyLabel: difficulty !== 'N/A' ? (parseFloat(difficulty) >= 75 ? 'Easy' : parseFloat(difficulty) >= 50 ? 'Medium' : 'Hard') : 'N/A'
-      });
-    });
-
-    Logger.log('Individual timed session analytics computed', {
-      pollId: pollId,
-      sessionId: sessionId,
-      totalStudents: totalStudents
-    });
-
-    return {
-      sessionInfo: {
-        pollId: pollId,
-        sessionId: sessionId,
-        pollName: poll.pollName,
-        className: poll.className,
-        timeLimitMinutes: poll.timeLimitMinutes,
-        questionCount: poll.questions.length,
-        sessionType: 'INDIVIDUAL_TIMED'
-      },
-      overallStats: {
-        totalStudents: totalStudents,
-        completedStudents: completedStudents,
-        completionRate: totalStudents > 0 ? ((completedStudents / totalStudents) * 100).toFixed(1) : 0,
-        timedOutStudents: timedOutStudents,
-        averageScore: averageScore,
-        averageTimeSpent: averageTimeSpent,
-        totalViolations: totalViolations
-      },
-      studentAnalytics: studentAnalytics.sort((a, b) => parseFloat(b.score) - parseFloat(a.score)),
-      questionAnalytics: questionAnalytics
-    };
-  })();
-}
-
-/**
- * Helper function to shuffle array (Fisher-Yates)
- */
-function shuffleArray_(array) {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
-}
-
-function buildInitialAnswerOrderMap_(poll) {
-  const map = {};
-  if (!poll || !Array.isArray(poll.questions)) {
-    return map;
-  }
-
-  poll.questions.forEach((question, index) => {
-    if (!question || !Array.isArray(question.options)) {
-      map[index] = [];
-      return;
-    }
-
-    const optionIndices = question.options.map((_, optionIndex) => optionIndex);
-    map[index] = shuffleArray_(optionIndices);
-  });
-
-  return map;
-}
-
-function updatePoll(pollId, pollName, className, questions, sessionType, timeLimitMinutes) {
+function updatePoll(pollId, pollName, className, questions) {
   return withErrorHandling(() => {
     if (!pollId || !pollName || !className || !Array.isArray(questions) || questions.length === 0) {
       throw new Error('Invalid poll data: poll ID, name, class, and questions are required');
@@ -2379,11 +1823,7 @@ function updatePoll(pollId, pollName, className, questions, sessionType, timeLim
     const createdAt = existingPoll && existingPoll.createdAt ? existingPoll.createdAt : new Date().toISOString();
     const updatedAt = new Date().toISOString();
 
-    // Preserve existing session type and time limit if not provided
-    const finalSessionType = sessionType !== undefined ? sessionType : (existingPoll ? existingPoll.sessionType : 'LIVE_POLL');
-    const finalTimeLimitMinutes = timeLimitMinutes !== undefined ? timeLimitMinutes : (existingPoll ? existingPoll.timeLimitMinutes : null);
-
-    writePollRows_(pollId, pollName, className, questions, createdAt, updatedAt, finalSessionType, finalTimeLimitMinutes);
+    writePollRows_(pollId, pollName, className, questions, createdAt, updatedAt);
 
     CacheManager.invalidate('ALL_POLLS_DATA');
 
@@ -5103,6 +4543,22 @@ function computeAnswerPercentages_(answerCounts) {
 // STUDENT APP FUNCTIONS
 // =============================================================================
 
+function beginIndividualTimedAttempt(pollId, sessionId, token) {
+  return withErrorHandling(() => {
+    const studentEmail = TokenManager.getStudentEmail(token);
+    if (!studentEmail) {
+      throw new Error('Invalid or expired session token.');
+    }
+
+    // This function will create the student's session state if it doesn't exist.
+    initializeIndividualTimedStudent(pollId, sessionId, studentEmail);
+
+    Logger.log('Student began individual timed attempt', { pollId, sessionId, studentEmail });
+
+    return { success: true };
+  })();
+}
+
 function getStudentPollStatus(token, context) {
   return withErrorHandling(() => {
     const statusValues = DataAccess.liveStatus.get();
@@ -5112,6 +4568,7 @@ function getStudentPollStatus(token, context) {
     const questionIndex = statusValues[1];
     const pollStatus = statusValues[2];
     const sessionPhaseFromMetadata = metadata && metadata.sessionPhase ? metadata.sessionPhase : null;
+
     const endedAtMetadata = metadata && Object.prototype.hasOwnProperty.call(metadata, 'endedAt') ? metadata.endedAt : null;
     const sessionEnded = sessionPhaseFromMetadata === 'ENDED' || (!!endedAtMetadata && endedAtMetadata !== null && endedAtMetadata !== '');
 
@@ -5381,7 +4838,102 @@ function getStudentPollStatus(token, context) {
 }
 
 
-function submitStudentAnswer(pollId, questionIndex, answerText, token, confidenceLevel = null) {
+function submitIndividualTimedAnswer(pollId, sessionId, studentEmail, actualQuestionIndex, answer, confidenceLevel) {
+  return withErrorHandling(() => {
+    const poll = DataAccess.polls.getById(pollId);
+    if (!poll) throw new Error('Poll not found');
+
+    const studentState = DataAccess.individualSessionState.getByStudent(pollId, sessionId, studentEmail);
+    if (!studentState) {
+      throw new Error('Student not initialized for this session');
+    }
+
+    if (studentState.isLocked) {
+      throw new Error('Session is locked - time expired or already completed');
+    }
+
+    // CRITICAL: Check elapsed time to prevent submissions after time limit
+    // This protects against client-side timer bypass or delayed lock sweeps
+    const metadata = DataAccess.liveStatus.getMetadata();
+    const timeLimitMinutes = metadata.timeLimitMinutes || poll.timeLimitMinutes;
+    const startTime = new Date(studentState.startTime).getTime();
+    const currentTime = Date.now();
+    const elapsedMinutes = (currentTime - startTime) / (1000 * 60);
+
+    if (elapsedMinutes >= timeLimitMinutes) {
+      // Time limit exceeded - lock the student and reject submission
+      DataAccess.individualSessionState.lockStudent(pollId, sessionId, studentEmail);
+      Logger.log('Submission rejected: time limit exceeded', {
+        pollId: pollId,
+        studentEmail: studentEmail,
+        elapsedMinutes: elapsedMinutes.toFixed(2),
+        timeLimitMinutes: timeLimitMinutes
+      });
+      throw new Error('Time limit exceeded. Your session has been locked and this response cannot be recorded.');
+    }
+
+    // Verify this is the current question (prevent backwards navigation)
+    const expectedQuestionIndex = studentState.questionOrder[studentState.currentQuestionIndex];
+    if (actualQuestionIndex !== expectedQuestionIndex) {
+      throw new Error('Cannot submit answer for non-current question');
+    }
+
+    // Check if already answered this question
+    const alreadyAnswered = DataAccess.responses.hasAnswered(pollId, actualQuestionIndex, studentEmail);
+    if (alreadyAnswered) {
+      throw new Error('Question already answered');
+    }
+
+    // Validate answer
+    const question = poll.questions[actualQuestionIndex];
+    if (!question) throw new Error('Question not found');
+
+    const isCorrect = (answer === question.correctAnswer);
+
+    // Record response
+    const responseId = Utilities.getUuid();
+    const timestamp = new Date().toISOString();
+    DataAccess.responses.add([
+      responseId,
+      timestamp,
+      pollId,
+      actualQuestionIndex,
+      studentEmail,
+      answer,
+      isCorrect,
+      confidenceLevel || null
+    ]);
+
+    // Advance to next question
+    const nextProgressIndex = studentState.currentQuestionIndex + 1;
+    DataAccess.individualSessionState.updateProgress(pollId, sessionId, studentEmail, nextProgressIndex);
+
+    // Check if completed all questions
+    const isComplete = nextProgressIndex >= poll.questions.length;
+    if (isComplete) {
+      DataAccess.individualSessionState.lockStudent(pollId, sessionId, studentEmail);
+    }
+
+    Logger.log('Individual timed answer submitted', {
+      pollId: pollId,
+      studentEmail: studentEmail,
+      actualQuestionIndex: actualQuestionIndex,
+      isCorrect: isCorrect,
+      nextProgressIndex: nextProgressIndex,
+      isComplete: isComplete
+    });
+
+    return {
+      success: true,
+      isCorrect: isCorrect,
+      isComplete: isComplete,
+      nextProgressIndex: nextProgressIndex,
+      totalQuestions: poll.questions.length
+    };
+  })();
+}
+
+function submitLivePollAnswer(pollId, questionIndex, answerText, token, confidenceLevel = null) {
   return withErrorHandling(() => {
     const studentEmail = token ? TokenManager.getStudentEmail(token) : TokenManager.getCurrentStudentEmail();
 

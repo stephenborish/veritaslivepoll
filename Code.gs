@@ -627,6 +627,114 @@ const DataAccess = {
       }
     }
   },
+
+  individualSessionState: {
+    getByStudent: function(pollId, sessionId, studentEmail) {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const sheet = ss.getSheetByName("IndividualSessionState");
+      const values = getDataRangeValues_(sheet);
+
+      for (let i = 0; i < values.length; i++) {
+        if (values[i][0] === pollId && values[i][1] === sessionId && values[i][2] === studentEmail) {
+          return {
+            pollId: values[i][0],
+            sessionId: values[i][1],
+            studentEmail: values[i][2],
+            startTime: values[i][3],
+            endTime: values[i][4],
+            questionOrder: JSON.parse(values[i][5] || "[]"),
+            currentQuestionIndex: values[i][6],
+            isLocked: values[i][7],
+            answerOrders: JSON.parse(values[i][8] || "{}"),
+            rowIndex: i + 2
+          };
+        }
+      }
+      return null;
+    },
+
+    initStudent: function(pollId, sessionId, studentEmail, questionOrder, answerOrders) {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const sheet = ss.getSheetByName("IndividualSessionState");
+      const startTime = new Date().toISOString();
+
+      const newRow = [
+        pollId,
+        sessionId,
+        studentEmail,
+        startTime,
+        null, // endTime
+        JSON.stringify(questionOrder),
+        0,    // currentQuestionIndex
+        false,// isLocked
+        JSON.stringify(answerOrders)
+      ];
+
+      sheet.appendRow(newRow);
+
+      return {
+        pollId: pollId,
+        sessionId: sessionId,
+        studentEmail: studentEmail,
+        startTime: startTime,
+        endTime: null,
+        questionOrder: questionOrder,
+        currentQuestionIndex: 0,
+        isLocked: false,
+        answerOrders: answerOrders,
+        rowIndex: sheet.getLastRow()
+      };
+    },
+
+    updateProgress: function(pollId, sessionId, studentEmail, newIndex) {
+      const studentState = this.getByStudent(pollId, sessionId, studentEmail);
+      if (studentState) {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName("IndividualSessionState");
+        sheet.getRange(studentState.rowIndex, 7).setValue(newIndex);
+      }
+    },
+
+    lockStudent: function(pollId, sessionId, studentEmail) {
+      const studentState = this.getByStudent(pollId, sessionId, studentEmail);
+      if (studentState) {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName("IndividualSessionState");
+        sheet.getRange(studentState.rowIndex, 8).setValue(true);
+        sheet.getRange(studentState.rowIndex, 5).setValue(new Date().toISOString());
+      }
+    },
+
+    setAnswerOrders: function(pollId, sessionId, studentEmail, answerOrders) {
+      const studentState = this.getByStudent(pollId, sessionId, studentEmail);
+      if (studentState) {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName("IndividualSessionState");
+        sheet.getRange(studentState.rowIndex, 9).setValue(JSON.stringify(answerOrders));
+      }
+    },
+
+    getAllForSession: function(pollId, sessionId) {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const sheet = ss.getSheetByName("IndividualSessionState");
+      const values = getDataRangeValues_(sheet);
+
+      return values
+        .filter(row => row[0] === pollId && row[1] === sessionId)
+        .map((row, index) => ({
+          pollId: row[0],
+          sessionId: row[1],
+          studentEmail: row[2],
+          startTime: row[3],
+          endTime: row[4],
+          questionOrder: JSON.parse(row[5] || "[]"),
+          currentQuestionIndex: row[6],
+          isLocked: row[7],
+          answerOrders: JSON.parse(row[8] || "{}"),
+          rowIndex: index + 2
+        }));
+    }
+  }
 };
 
 // --- LIVE STATE VERSIONING & HEARTBEAT TRACKING ---
@@ -960,7 +1068,7 @@ function setupSheet() {
     return;
   }
   
-  const sheetNames = ["Classes", "Rosters", "Polls", "LiveStatus", "Responses"];
+  const sheetNames = ["Classes", "Rosters", "Polls", "LiveStatus", "Responses", "IndividualSessionState"];
   sheetNames.forEach(name => {
     if (!ss.getSheetByName(name)) {
       ss.insertSheet(name);
@@ -994,8 +1102,12 @@ function setupSheet() {
   responsesSheet.getRange("A1:H1").setValues([["ResponseID", "Timestamp", "PollID", "QuestionIndex", "StudentEmail", "Answer", "IsCorrect", "ConfidenceLevel"]])
     .setFontWeight("bold").setBackground("#4285f4").setFontColor("#ffffff");
 
+  const individualSessionStateSheet = ss.getSheetByName("IndividualSessionState");
+  individualSessionStateSheet.getRange("A1:I1").setValues([["PollID", "SessionID", "StudentEmail", "StartTime", "EndTime", "QuestionOrder", "CurrentQuestionIndex", "IsLocked", "AnswerOrders"]])
+    .setFontWeight("bold").setBackground("#4285f4").setFontColor("#ffffff");
+
   // Freeze header rows
-  [classesSheet, rostersSheet, pollsSheet, liveSheet, responsesSheet].forEach(sheet => {
+  [classesSheet, rostersSheet, pollsSheet, liveSheet, responsesSheet, individualSessionStateSheet].forEach(sheet => {
     sheet.setFrozenRows(1);
   });
   
@@ -1193,6 +1305,51 @@ function getTeacherDashboardData() {
     return {
       classes: classes,
       polls: polls
+    };
+  })();
+}
+
+function getIndividualTimedSessionTeacherView(pollId, sessionId) {
+  return withErrorHandling(() => {
+    const poll = DataAccess.polls.getById(pollId);
+    if (!poll) throw new Error('Poll not found');
+
+    const roster = DataAccess.roster.getByClass(poll.className);
+    const studentStates = DataAccess.individualSessionState.getAllForSession(pollId, sessionId);
+
+    const studentData = roster.map(student => {
+      const state = studentStates.find(s => s.studentEmail === student.email);
+      if (state) {
+        const timeLimitMinutes = poll.timeLimitMinutes;
+        const startTime = new Date(state.startTime).getTime();
+        const elapsedMs = Date.now() - startTime;
+        const remainingMs = (timeLimitMinutes * 60 * 1000) - elapsedMs;
+
+        return {
+          ...student,
+          status: state.isLocked ? 'Finished' : 'In Progress',
+          progress: state.currentQuestionIndex,
+          totalQuestions: poll.questions.length,
+          timeRemainingSeconds: Math.max(0, Math.floor(remainingMs / 1000)),
+          isLocked: state.isLocked
+        };
+      } else {
+        return {
+          ...student,
+          status: 'Not Started',
+          progress: 0,
+          totalQuestions: poll.questions.length,
+          timeRemainingSeconds: poll.timeLimitMinutes * 60,
+          isLocked: false
+        };
+      }
+    });
+
+    return {
+      pollName: poll.pollName,
+      className: poll.className,
+      timeLimitMinutes: poll.timeLimitMinutes,
+      students: studentData
     };
   })();
 }
@@ -1620,6 +1777,94 @@ function startPoll(pollId) {
  * Start an individual timed session
  * Each student gets a randomized question order and their own timer
  */
+function submitAnswerIndividualTimed(token, answerDetails) {
+  return withErrorHandling(() => {
+    const studentEmail = TokenManager.getStudentEmail(token);
+    if (!studentEmail) {
+      throw new Error('Invalid or expired session token.');
+    }
+
+    const { pollId, sessionId, actualQuestionIndex, answer, confidenceLevel } = answerDetails;
+
+    // Additional validation
+    if (!pollId || !sessionId || typeof actualQuestionIndex !== 'number' || typeof answer !== 'string') {
+      throw new Error('Invalid submission data');
+    }
+
+    return submitIndividualTimedAnswer(
+      pollId,
+      sessionId,
+      studentEmail,
+      actualQuestionIndex,
+      answer,
+      confidenceLevel
+    );
+  })();
+}
+
+function getIndividualTimedSessionState(token) {
+  return withErrorHandling(() => {
+    const studentEmail = TokenManager.getStudentEmail(token);
+    if (!studentEmail) {
+      throw new Error('Invalid or expired session token.');
+    }
+
+    const liveStatus = DataAccess.liveStatus.get();
+    const pollId = liveStatus[0];
+    const metadata = liveStatus.metadata || {};
+    const sessionId = metadata.sessionId;
+
+    if (!pollId || !sessionId || metadata.sessionPhase !== 'INDIVIDUAL_TIMED') {
+      return { status: 'ENDED' };
+    }
+
+    const studentState = initializeIndividualTimedStudent(pollId, sessionId, studentEmail);
+
+    if (studentState.isLocked) {
+      return {
+        status: 'LOCKED',
+        message: 'Your session has ended.',
+      };
+    }
+
+    return getIndividualTimedQuestion(pollId, sessionId, studentEmail);
+  })();
+}
+
+function endIndividualTimedSession(pollId) {
+  return withErrorHandling(() => {
+    if (Session.getActiveUser().getEmail() !== TEACHER_EMAIL) {
+      throw new Error('Unauthorized');
+    }
+
+    const liveStatus = DataAccess.liveStatus.get();
+    const activePollId = liveStatus[0];
+
+    if (activePollId !== pollId) {
+      throw new Error('This poll is not the active session.');
+    }
+
+    const previousMetadata = (liveStatus && liveStatus.metadata) ? liveStatus.metadata : {};
+    const nowIso = new Date().toISOString();
+    DataAccess.liveStatus.set("", -1, "CLOSED", {
+      ...previousMetadata,
+      reason: 'COMPLETED',
+      sessionPhase: 'ENDED',
+      endedAt: nowIso,
+      startedAt: previousMetadata.startedAt || null,
+      isCollecting: false,
+      resultsVisibility: 'HIDDEN',
+      responsesClosedAt: previousMetadata.responsesClosedAt || nowIso,
+      revealedAt: null
+    });
+
+
+    Logger.log('Individual timed session ended by teacher', { pollId });
+
+    return { success: true };
+  })();
+}
+
 function startIndividualTimedSession(pollId) {
   return withErrorHandling(() => {
     if (!pollId) throw new Error('Poll ID is required');
@@ -1676,7 +1921,6 @@ function startIndividualTimedSession(pollId) {
  * Randomizes question order on first access
  */
 function initializeIndividualTimedStudent(pollId, sessionId, studentEmail) {
-  return withErrorHandling(() => {
     const poll = DataAccess.polls.getById(pollId);
     if (!poll) throw new Error('Poll not found');
 
@@ -1717,7 +1961,6 @@ function initializeIndividualTimedStudent(pollId, sessionId, studentEmail) {
     }
 
     return studentState;
-  })();
 }
 
 /**
@@ -1738,6 +1981,28 @@ function getIndividualTimedQuestion(pollId, sessionId, studentEmail) {
         totalQuestions: poll.questions.length
       };
     }
+
+function buildInitialAnswerOrderMap_(poll) {
+  const answerOrders = {};
+  if (poll && Array.isArray(poll.questions)) {
+    poll.questions.forEach((q, idx) => {
+      const optionCount = Array.isArray(q.options) ? q.options.length : 0;
+      if (optionCount > 0) {
+        answerOrders[idx] = shuffleArray_(q.options.map((_, i) => i));
+      }
+    });
+  }
+  return answerOrders;
+}
+
+function shuffleArray_(array) {
+  const shuffled = array.slice();
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
 
     // Check if completed all questions
     if (studentState.currentQuestionIndex >= poll.questions.length) {
@@ -4839,7 +5104,6 @@ function getStudentPollStatus(token, context) {
 
 
 function submitIndividualTimedAnswer(pollId, sessionId, studentEmail, actualQuestionIndex, answer, confidenceLevel) {
-  return withErrorHandling(() => {
     const poll = DataAccess.polls.getById(pollId);
     if (!poll) throw new Error('Poll not found');
 
@@ -4930,7 +5194,6 @@ function submitIndividualTimedAnswer(pollId, sessionId, studentEmail, actualQues
       nextProgressIndex: nextProgressIndex,
       totalQuestions: poll.questions.length
     };
-  })();
 }
 
 function submitLivePollAnswer(pollId, questionIndex, answerText, token, confidenceLevel = null) {

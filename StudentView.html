@@ -1043,11 +1043,140 @@
           <ul id="options-list" class="student-choices"></ul>
         </div>
       </section>
+
+      <!-- Individual Timed Session View -->
+      <section id="individual-timed-session" class="student-card animate-fade-in" style="display: none;">
+        <div class="student-card-header flex justify-between items-center">
+          <p id="individual-question-number" class="student-question-number">Question 1 / 10</p>
+          <div class="flex items-center gap-2 text-veritas-navy font-semibold">
+            <span class="material-symbols-outlined">timer</span>
+            <span id="individual-timer">00:00</span>
+          </div>
+        </div>
+        <div id="individual-question-content" class="student-card-body">
+          <div class="student-card-body-content">
+            <h2 id="individual-question-text" class="student-stem"></h2>
+          </div>
+          <img id="individual-question-image" src="" alt="Question" class="student-question-image" referrerpolicy="no-referrer" onerror="this.style.display='none';" style="display: none;" />
+        </div>
+        <div class="student-card-options">
+          <ul id="individual-options-list" class="student-choices"></ul>
+        </div>
+      </section>
+
     </div>
   </main>
 
   <script>
     (function() {
+        var individualSessionContainer = document.getElementById('individual-timed-session');
+        var individualQuestionNumber = document.getElementById('individual-question-number');
+        var individualTimerDisplay = document.getElementById('individual-timer');
+        var individualQuestionText = document.getElementById('individual-question-text');
+        var individualQuestionImage = document.getElementById('individual-question-image');
+        var individualOptionsList = document.getElementById('individual-options-list');
+        var individualSessionTimerInterval = null;
+
+        function formatTime(seconds) {
+            var minutes = Math.floor(seconds / 60);
+            var remainingSeconds = seconds % 60;
+            return ('0' + minutes).slice(-2) + ':' + ('0' + remainingSeconds).slice(-2);
+        }
+
+        function showIndividualTimedView(state) {
+            studentContainer.style.display = 'block';
+            entryScreen.style.display = 'none';
+            questionContainer.style.display = 'none';
+            statusContainer.style.display = 'none';
+            preLiveCard.style.display = 'none';
+            individualSessionContainer.style.display = 'block';
+
+            renderIndividualQuestion(state);
+            startIndividualTimer(state.timeRemainingSeconds);
+        }
+
+        function renderIndividualQuestion(state) {
+            individualQuestionNumber.textContent = `Question ${state.progressIndex + 1} / ${state.totalQuestions}`;
+            individualQuestionText.textContent = state.question.questionText;
+
+            if (state.question.questionImageURL) {
+                individualQuestionImage.src = state.question.questionImageURL;
+                individualQuestionImage.style.display = 'block';
+            } else {
+                individualQuestionImage.style.display = 'none';
+            }
+
+            individualOptionsList.innerHTML = '';
+            var letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+            state.question.options.forEach((option, index) => {
+                var btn = createOptionButton(option, letters[index], state.pollId, state.progressIndex);
+                btn.onclick = function() {
+                    submitIndividualAnswer(state, option.text);
+                };
+                var li = document.createElement('li');
+                li.appendChild(btn);
+                individualOptionsList.appendChild(li);
+            });
+        }
+
+        function submitIndividualAnswer(state, answerText) {
+             var answerDetails = {
+                pollId: state.pollId,
+                sessionId: state.sessionId,
+                actualQuestionIndex: state.actualQuestionIndex,
+                answer: answerText,
+                confidenceLevel: null // Not yet implemented for individual timed
+            };
+
+            google.script.run
+                .withSuccessHandler(function(response) {
+                    if (response.success) {
+                        // Success - next state will be fetched by polling
+                        console.log('Individual answer submitted successfully.');
+                    } else {
+                        handleError(response.error || 'Failed to submit answer.');
+                    }
+                })
+                .withFailureHandler(handleError)
+                .submitAnswerIndividualTimed(SESSION_TOKEN, answerDetails);
+        }
+
+        function startIndividualTimer(timeRemainingSeconds) {
+            if (individualSessionTimerInterval) {
+                clearInterval(individualSessionTimerInterval);
+            }
+            var remaining = timeRemainingSeconds;
+            individualTimerDisplay.textContent = formatTime(remaining);
+
+            individualSessionTimerInterval = setInterval(() => {
+                remaining--;
+                if (remaining >= 0) {
+                    individualTimerDisplay.textContent = formatTime(remaining);
+                } else {
+                    clearInterval(individualSessionTimerInterval);
+                }
+            }, 1000);
+        }
+
+        function pollForIndividualSessionState() {
+            google.script.run
+                .withSuccessHandler(function(state) {
+                    if (state.sessionType === 'INDIVIDUAL_TIMED') {
+                        if (state.status === 'ACTIVE') {
+                            showIndividualTimedView(state);
+                        } else if (state.status === 'COMPLETED') {
+                            individualSessionContainer.style.display = 'none';
+                            statusContainer.style.display = 'block';
+                            statusMessage.textContent = "You have completed the assessment.";
+                        }
+                    } else {
+                        updateStudentView(state);
+                    }
+                })
+                .withFailureHandler(handleError)
+                .getIndividualTimedSessionState(SESSION_TOKEN);
+        }
+
         console.log('Student poll script initializing...');
         var studentLoader = document.getElementById('student-loader');
         var preLiveCard = document.getElementById('pre-live-card');
@@ -1834,6 +1963,10 @@
 
         function updateStudentView(data) {
             data = data || {};
+            if (data.sessionType === 'INDIVIDUAL_TIMED') {
+                pollForIndividualSessionState();
+                return;
+            }
             console.log('Status update:', data.status);
             if (studentLoader) studentLoader.style.display = 'none';
 

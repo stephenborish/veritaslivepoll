@@ -8499,7 +8499,7 @@
       var approveButton = '';
       if (student.proctorStatus === 'LOCKED') {
         approveButton = '<button class="mt-2 w-full px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded" ' +
-          'onclick="teacherApproveUnlock(\'' + student.email + '\', \'' + view.pollId + '\', ' + student.lockVersion + ')">' +
+          'onclick="approveStudentUnlock(\'' + student.email + '\', \'' + view.pollId + '\', ' + student.lockVersion + ', this)">' +
           'Approve</button>';
       }
 

@@ -1632,137 +1632,6 @@
       transform: translateX(-50%) translateY(-4px);
     }
 
-    /* ENHANCED POLL CARD STYLES */
-    .poll-card {
-      background: white;
-      border-radius: 12px;
-      border: 2px solid rgba(18, 56, 93, 0.12);
-      padding: 20px;
-      transition: all 0.3s ease;
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .poll-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 24px rgba(18, 56, 93, 0.15);
-      border-color: rgba(18, 56, 93, 0.25);
-    }
-
-    .poll-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 4px;
-      background: linear-gradient(90deg, #12385d, #c5a05a);
-    }
-
-    .poll-card-header {
-      margin-bottom: 16px;
-    }
-
-    .poll-card-title {
-      font-size: 18px;
-      font-weight: 700;
-      color: #12385d;
-      margin-bottom: 6px;
-      line-height: 1.3;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-
-    .poll-card-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-
-    .poll-card-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 10px;
-      border-radius: 9999px;
-      font-size: 12px;
-      font-weight: 600;
-      background: rgba(18, 56, 93, 0.08);
-      color: #12385d;
-    }
-
-    .poll-card-badge.class-badge {
-      background: rgba(197, 160, 90, 0.15);
-      color: #8b6914;
-    }
-
-    .poll-card-stats {
-      display: flex;
-      gap: 16px;
-      padding: 12px 0;
-      border-top: 1px solid rgba(18, 56, 93, 0.1);
-      margin-bottom: 12px;
-    }
-
-    .poll-card-stat {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      color: #6b7280;
-      font-size: 13px;
-    }
-
-    .poll-card-actions {
-      display: flex;
-      gap: 8px;
-    }
-
-    .poll-card-btn {
-      flex: 1;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: 600;
-      transition: all 0.2s ease;
-      border: none;
-      cursor: pointer;
-    }
-
-    .poll-card-btn.primary {
-      background: #12385d;
-      color: white;
-    }
-
-    .poll-card-btn.primary:hover {
-      background: #0f2d4a;
-      transform: scale(1.02);
-    }
-
-    .poll-card-btn.secondary {
-      background: rgba(18, 56, 93, 0.08);
-      color: #12385d;
-    }
-
-    .poll-card-btn.secondary:hover {
-      background: rgba(18, 56, 93, 0.15);
-    }
-
-    .poll-card-btn.danger {
-      background: rgba(239, 68, 68, 0.1);
-      color: #dc2626;
-    }
-
-    .poll-card-btn.danger:hover {
-      background: rgba(239, 68, 68, 0.2);
-    }
 
     /* === RESPONSIVE ENHANCEMENTS === */
     @media (max-width: 1024px) {
@@ -2390,137 +2259,6 @@
       }
     }
 
-    /* ENHANCED POLL CARD STYLES */
-    .poll-card {
-      background: white;
-      border-radius: 12px;
-      border: 2px solid rgba(18, 56, 93, 0.12);
-      padding: 20px;
-      transition: all 0.3s ease;
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .poll-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 24px rgba(18, 56, 93, 0.15);
-      border-color: rgba(18, 56, 93, 0.25);
-    }
-
-    .poll-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 4px;
-      background: linear-gradient(90deg, #12385d, #c5a05a);
-    }
-
-    .poll-card-header {
-      margin-bottom: 16px;
-    }
-
-    .poll-card-title {
-      font-size: 18px;
-      font-weight: 700;
-      color: #12385d;
-      margin-bottom: 6px;
-      line-height: 1.3;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-
-    .poll-card-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-
-    .poll-card-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 10px;
-      border-radius: 9999px;
-      font-size: 12px;
-      font-weight: 600;
-      background: rgba(18, 56, 93, 0.08);
-      color: #12385d;
-    }
-
-    .poll-card-badge.class-badge {
-      background: rgba(197, 160, 90, 0.15);
-      color: #8b6914;
-    }
-
-    .poll-card-stats {
-      display: flex;
-      gap: 16px;
-      padding: 12px 0;
-      border-top: 1px solid rgba(18, 56, 93, 0.1);
-      margin-bottom: 12px;
-    }
-
-    .poll-card-stat {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      color: #6b7280;
-      font-size: 13px;
-    }
-
-    .poll-card-actions {
-      display: flex;
-      gap: 8px;
-    }
-
-    .poll-card-btn {
-      flex: 1;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: 600;
-      transition: all 0.2s ease;
-      border: none;
-      cursor: pointer;
-    }
-
-    .poll-card-btn.primary {
-      background: #12385d;
-      color: white;
-    }
-
-    .poll-card-btn.primary:hover {
-      background: #0f2d4a;
-      transform: scale(1.02);
-    }
-
-    .poll-card-btn.secondary {
-      background: rgba(18, 56, 93, 0.08);
-      color: #12385d;
-    }
-
-    .poll-card-btn.secondary:hover {
-      background: rgba(18, 56, 93, 0.15);
-    }
-
-    .poll-card-btn.danger {
-      background: rgba(239, 68, 68, 0.1);
-      color: #dc2626;
-    }
-
-    .poll-card-btn.danger:hover {
-      background: rgba(239, 68, 68, 0.2);
-    }
 
     /* View Toggle Button States */
     #view-cards-btn.active {
@@ -2631,53 +2369,43 @@
               <span class="material-symbols-outlined text-2xl">refresh</span>
             </button>
           </div>
-          <div class="flex items-center gap-2">
-            <p id="timer-status-message" class="text-xs text-brand-white/70 uppercase tracking-wide font-semibold">Individually Timed</p>
-            <span class="text-brand-white/40">•</span>
-            <div class="flex gap-1">
-              <button id="add-30s-btn" class="px-3 py-1 text-xs bg-brand-white/10 hover:bg-brand-white/20 text-brand-white/90 rounded-md transition-colors font-semibold" title="Add 30 seconds">+30s</button>
-              <button id="add-60s-btn" class="px-3 py-1 text-xs bg-brand-white/10 hover:bg-brand-white/20 text-brand-white/90 rounded-md transition-colors font-semibold" title="Add 60 seconds">+1m</button>
-            </div>
-          </div>
         </div>
 
-        <!-- RIGHT SECTION: Action Cluster -->
+        <!-- RIGHT SECTION: Action Cluster (REDESIGNED FOR CONSISTENCY & CLARITY) -->
         <div class="flex items-center justify-end gap-2 flex-wrap">
-          <!-- Primary Action - ENHANCED with Larger Size and Prominence -->
-          <button id="header-next-btn" class="flex items-center gap-2 h-12 px-6 rounded-lg bg-veritas-gold text-white text-base font-bold hover:bg-veritas-gold/90 transition-all shadow-lg hover:shadow-xl transform hover:scale-105" title="Advance to next question (→ arrow key)">
-            <span>Next Question</span>
-            <span class="material-symbols-outlined text-xl">arrow_forward</span>
-            <span class="kbd-hint">→</span>
-          </button>
-          <button id="header-end-show-btn" class="hidden items-center gap-2 h-12 px-6 rounded-lg bg-emerald-600 text-white text-base font-bold hover:bg-emerald-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105" title="Close responses and reveal answer to students (E key)">
-            <span class="material-symbols-outlined text-xl">check_circle</span>
-            <span>End &amp; Reveal</span>
-          </button>
+            <!-- Primary Action Buttons -->
+            <button id="header-next-btn" class="flex items-center gap-2 h-12 px-6 rounded-lg bg-veritas-gold text-white text-sm font-bold hover:bg-veritas-gold/90 transition-all shadow-lg hover:shadow-xl transform hover:scale-105" title="Advance to next question (→ / N)">
+                <span>Next Question</span>
+                <span class="material-symbols-outlined text-lg">arrow_forward</span>
+            </button>
+            <button id="header-end-show-btn" class="hidden items-center gap-2 h-12 px-6 rounded-lg bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105" title="Close responses and reveal answer to students (E)">
+                <span class="material-symbols-outlined text-lg">check_circle</span>
+                <span>End & Reveal</span>
+            </button>
 
-          <!-- Secondary Actions -->
-          <button id="header-reset-question-btn" class="flex items-center gap-2 h-10 px-4 rounded-lg border-2 border-brand-white/30 bg-transparent text-brand-white text-sm font-semibold hover:bg-brand-white/10 transition-colors" title="Reset Question (R key)">
-            <span class="material-symbols-outlined text-base">replay</span>
-            <span class="hidden xl:inline">Reset Question</span>
-          </button>
-          <button id="header-send-link-btn" class="flex items-center gap-1.5 h-10 px-4 rounded-lg bg-brand-white/10 text-brand-white text-sm font-semibold hover:bg-brand-white/20 transition-colors">
-            <span class="material-symbols-outlined text-base">mail</span>
-            <span class="hidden xl:inline">Send Links</span>
-          </button>
-          <button id="header-view-links-btn" class="flex items-center gap-1.5 h-10 px-4 rounded-lg bg-brand-white/10 text-brand-white text-sm font-semibold hover:bg-brand-white/20 transition-colors">
-            <span class="material-symbols-outlined text-base">visibility</span>
-            <span class="hidden xl:inline">View Links</span>
-          </button>
-          <button id="header-back-btn" class="flex items-center gap-1.5 h-10 px-4 rounded-lg bg-brand-white/10 text-brand-white text-sm font-semibold hover:bg-brand-white/20 transition-colors" title="Previous Question (← arrow key)">
-            <span class="material-symbols-outlined text-base">arrow_back</span>
-            <span class="hidden xl:inline">Back</span>
-          </button>
+            <!-- Secondary Action Buttons (Standardized Size & Style) -->
+            <div class="h-8 w-px bg-white/20 mx-1"></div>
 
-          <!-- Danger Action (Isolated) -->
-          <div class="w-px h-8 bg-brand-white/30 mx-1"></div>
-          <button id="header-stop-btn" class="flex items-center gap-2 h-10 px-4 rounded-lg bg-rose-600 text-brand-white text-sm font-bold hover:bg-rose-700 transition-colors shadow-sm" title="End the entire session">
-            <span class="material-symbols-outlined text-base">stop</span>
-            <span>Finish Session</span>
-          </button>
+            <button id="header-back-btn" class="flex items-center justify-center h-9 w-9 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors" title="Previous Question (← / B)">
+                <span class="material-symbols-outlined text-xl">arrow_back</span>
+            </button>
+            <button id="header-reset-question-btn" class="flex items-center justify-center h-9 w-9 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors" title="Reset Question (R)">
+                <span class="material-symbols-outlined text-xl">replay</span>
+            </button>
+            <button id="header-send-link-btn" class="flex items-center justify-center h-9 w-9 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors" title="Send Links to Students">
+                <span class="material-symbols-outlined text-xl">mail</span>
+            </button>
+            <button id="header-view-links-btn" class="flex items-center justify-center h-9 w-9 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors" title="View Student Links">
+                <span class="material-symbols-outlined text-xl">visibility</span>
+            </button>
+
+            <!-- Danger Action (Isolated) -->
+            <div class="h-8 w-px bg-white/20 mx-1"></div>
+
+            <button id="header-stop-btn" class="flex items-center gap-2 h-9 px-4 rounded-lg bg-rose-600/90 text-white text-sm font-bold hover:bg-rose-600 transition-colors" title="End the entire session">
+                <span class="material-symbols-outlined text-base">stop</span>
+                <span class="hidden md:inline">Finish</span>
+            </button>
         </div>
       </div>
 
@@ -2816,16 +2544,16 @@
           <!-- 🚨 ATTENTION ZONE - Appears only when teacher action needed -->
           <div id="attention-banner-container" class="flex-shrink-0">
             <!-- Lockout Alert (ENHANCED - High Visibility!) -->
-            <div id="lockout-alert-banner" class="hidden bg-gradient-to-r from-red-600 to-red-700 border-b-4 border-red-800 px-6 py-4 shadow-lg animate-fade-up">
+            <div id="lockout-alert-banner" class="hidden bg-gradient-to-r from-red-600 to-red-700 border-b-4 border-red-800 px-6 py-4 shadow-lg animate-fade-up" role="alert" aria-live="assertive" aria-hidden="true">
               <div class="flex items-center justify-between gap-4">
-                <div class="flex items-center gap-4 flex-1 min-w-0">
-                  <span class="material-symbols-outlined text-white text-4xl flex-shrink-0 animate-pulse">lock_person</span>
+                <div class="flex items-center gap-6 flex-1 min-w-0">
+                  <span class="material-symbols-outlined text-white text-5xl flex-shrink-0 animate-pulse">lock_person</span>
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-3 mb-1">
-                      <h3 class="text-white text-xl font-bold">🔒 Students Locked Out</h3>
-                      <span class="px-2 py-0.5 bg-white/20 rounded-full text-white text-xs font-bold uppercase tracking-wide">Action Required</span>
+                      <h3 class="text-white text-2xl font-bold">🔒 Students Locked Out</h3>
+                      <span class="px-3 py-1 bg-white/25 rounded-full text-white text-sm font-bold uppercase tracking-wide">Action Required</span>
                     </div>
-                    <p id="lockout-student-names" class="text-white/95 text-base mb-3 font-semibold">Loading...</p>
+                    <p id="lockout-student-names" class="text-white/95 text-lg mb-3 font-semibold">Loading...</p>
                     <div id="lockout-actions" class="flex flex-wrap gap-2.5">
                       <!-- Individual unlock buttons will be populated here with larger touch targets -->
                     </div>
@@ -2834,24 +2562,6 @@
               </div>
             </div>
 
-            <!-- All Responded Alert (ENHANCED - More Celebratory!) -->
-            <div id="all-responded-banner" class="hidden bg-gradient-to-r from-green-600 to-green-700 border-b-4 border-green-800 px-6 py-4 animate-fade-up">
-              <div class="flex items-center justify-between gap-4">
-                <div class="flex items-center gap-4">
-                  <span class="material-symbols-outlined text-white text-4xl animate-pulse-glow">check_circle</span>
-                  <div>
-                    <p id="all-responded-title" class="text-white text-xl font-bold mb-1">✅ Everyone Responded!</p>
-                    <p id="all-responded-subtitle" class="text-white/90 text-sm font-medium">All students have submitted their answers. Ready to reveal and advance.</p>
-                  </div>
-                </div>
-                <div class="flex items-center gap-2">
-                  <span id="time-saved-badge" class="hidden px-3 py-1.5 bg-white/20 rounded-lg text-white text-sm font-bold">
-                    <span class="material-symbols-outlined text-base align-middle">schedule</span>
-                    Saved <span id="time-saved-amount">0</span>s
-                  </span>
-                </div>
-              </div>
-            </div>
 
             <!-- Exited Students Panel (moved to top for visibility) -->
             <div id="exited-students-panel" class="hidden bg-gradient-to-r from-orange-500 to-orange-600 border-b-4 border-orange-700 px-6 py-4">
@@ -2955,150 +2665,129 @@
             </div>
           </div>
 
-          <!-- ULTRA-COMPACT QUESTION HEADER (Single Line) -->
-          <div class="flex-shrink-0 bg-veritas-navy border-b-2 border-veritas-gold px-6 py-2">
-            <div class="flex items-center gap-4">
-              <!-- Question Info (Left) -->
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-3">
-                  <span id="live-question-info" class="text-brand-white text-sm font-bold whitespace-nowrap">Q1/10</span>
-                  <h2 id="live-question-text-compact" class="text-brand-white text-base font-semibold">Question text will appear here...</h2>
-                </div>
-              </div>
+          <!-- Main Content Wrapper (Scrollable) -->
+          <div class="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-800 p-6">
 
-              <!-- Timer & Status (Center) - ENHANCED with Color Feedback (REMOVED per user request) -->
-              <div class="flex items-center gap-4 flex-shrink-0" style="display: none;">
-                <div id="timer-compact-container" class="flex items-center gap-2 px-3 py-1.5 bg-brand-white/15 rounded-lg transition-all duration-300">
-                  <span class="material-symbols-outlined text-brand-white text-lg">timer</span>
-                  <input type="text" id="timer-display-compact" class="w-20 bg-transparent text-center text-xl font-bold text-brand-white focus:outline-none" value="--:--" readonly>
-                </div>
-                <div class="h-6 w-px bg-brand-white/30"></div>
-                <div class="flex items-center gap-2 px-3 py-1.5 bg-brand-white/15 rounded-lg">
-                  <span id="response-count-compact" class="text-brand-white text-base font-bold whitespace-nowrap">0/0</span>
-                  <div class="w-40 h-2.5 bg-brand-white/20 rounded-full overflow-hidden">
-                    <div id="live-overview-response-progress-compact" class="h-full bg-brand-white transition-all duration-500" style="width: 0%;"></div>
-                  </div>
-                  <span id="response-percent-compact" class="text-brand-white/90 text-base font-bold">0%</span>
-                </div>
+            <!-- Question Display Area -->
+            <div class="mb-6 bg-white dark:bg-brand-dark-gray/30 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+              <div class="flex items-center justify-between gap-4 mb-3">
+                <span id="live-question-info" class="text-sm font-bold text-veritas-navy dark:text-veritas-gold uppercase tracking-wider">Q1 / 10</span>
+                <!-- Future placeholder for question-specific actions like "flag question" -->
               </div>
-
-              <!-- Quick Actions (Right) -->
-              <div class="flex items-center gap-2 flex-shrink-0">
-                <button id="expand-question-btn" class="p-1.5 rounded-lg bg-brand-white/10 hover:bg-brand-white/20 text-brand-white transition-colors" title="Expand question details">
-                  <span class="material-symbols-outlined text-lg">unfold_more</span>
-                </button>
+              <h2 id="live-question-text-compact" class="hidden"></h2> <!-- Keep for JS compatibility but hide -->
+              <h2 id="live-question-text" class="text-3xl font-bold text-brand-dark-gray dark:text-brand-white">Question text will appear here...</h2>
+              <div id="question-image-container" class="mt-4" style="display: none;">
+                  <img id="live-question-image" alt="Question" src="" class="max-w-full max-h-96 rounded-lg border border-gray-200 dark:border-gray-700">
               </div>
             </div>
-          </div>
 
-          <!-- MAIN SPLIT VIEW: Results (60%) + Students (40%) -->
-          <div class="flex-1 overflow-hidden flex">
+            <!-- MAIN SPLIT VIEW: Results (60%) + Students (40%) -->
+            <div class="flex flex-col lg:flex-row gap-6">
 
-            <!-- LEFT PANEL: RESULTS (60%) -->
-            <div class="w-[60%] border-r border-gray-200 dark:border-gray-700 flex flex-col">
+              <!-- LEFT PANEL: RESULTS (60%) -->
+              <div class="w-full lg:w-[60%] flex flex-col rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
 
-              <!-- Results Header -->
-              <div class="flex-shrink-0 bg-white dark:bg-brand-dark-gray/30 border-b border-gray-200 dark:border-gray-700 px-6 py-3.5">
-                <div class="flex items-center justify-between">
-                  <h3 class="text-brand-dark-gray dark:text-brand-white text-lg font-bold">Live Results</h3>
-                  <div class="flex items-center gap-3">
-                    <span id="response-count-header" class="text-sm font-semibold text-gray-600 dark:text-gray-400">0 / 0 answered</span>
+                <!-- Results Header -->
+                <div class="flex-shrink-0 bg-white dark:bg-brand-dark-gray/30 border-b border-gray-200 dark:border-gray-700 px-6 py-3.5">
+                  <div class="flex items-center justify-between">
+                    <h3 class="text-brand-dark-gray dark:text-brand-white text-lg font-bold">Live Results</h3>
+                    <div class="flex items-center gap-3">
+                      <span id="response-count-header" class="text-sm font-semibold text-gray-600 dark:text-gray-400">0 / 0 answered</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <!-- Results Content (Scrollable) -->
-              <div class="flex-1 overflow-y-auto bg-white dark:bg-brand-dark-gray/30 px-6 py-4">
-                <div id="results-bars" class="flex flex-col gap-2">
-                  <!-- Results will be populated dynamically with condensed names -->
-                </div>
+                <!-- Results Content (Scrollable) -->
+                <div class="flex-1 overflow-y-auto bg-white dark:bg-brand-dark-gray/30 px-6 py-4">
+                  <div id="results-bars" class="flex flex-col gap-2" aria-live="polite">
+                    <!-- Results will be populated dynamically with condensed names -->
+                  </div>
 
-                <!-- Metacognition Card -->
-                <div id="live-metacognition-card" class="mt-3 hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-brand-dark-gray/50 p-4"></div>
 
-                <!-- Results Reveal Strip -->
-                <div id="results-reveal-strip" class="mt-6 hidden">
-                  <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-green-600/20 bg-green-600/5 px-4 py-3">
-                    <div class="min-w-[200px]">
-                      <p class="text-sm font-semibold text-green-700 dark:text-green-400">Answer revealed to students</p>
-                      <p id="results-strip-status" class="text-xs text-green-700/70">Students can now see the correct answer.</p>
-                    </div>
-                    <div class="flex flex-wrap items-center gap-2">
-                      <button id="hide-results-btn" class="flex items-center gap-2 rounded-lg bg-gray-200 text-gray-700 px-4 py-2 text-sm font-semibold hover:bg-gray-300 transition-colors" type="button">
-                        <span class="material-symbols-outlined text-base">visibility_off</span>
-                        <span>Hide</span>
-                      </button>
-                      <button id="strip-next-btn" class="flex items-center gap-2 rounded-lg bg-veritas-navy text-white px-4 py-2 text-sm font-semibold hover:bg-veritas-navy/90 transition-colors" type="button">
-                        <span>Next</span>
-                        <span class="material-symbols-outlined text-base">arrow_forward</span>
-                      </button>
+                  <!-- Results Reveal Strip -->
+                  <div id="results-reveal-strip" class="mt-6 hidden">
+                    <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-green-600/20 bg-green-600/5 px-4 py-3">
+                      <div class="min-w-[200px]">
+                        <p class="text-sm font-semibold text-green-700 dark:text-green-400">Answer revealed to students</p>
+                        <p id="results-strip-status" class="text-xs text-green-700/70">Students can now see the correct answer.</p>
+                      </div>
+                      <div class="flex flex-wrap items-center gap-2">
+                        <button id="hide-results-btn" class="flex items-center gap-2 rounded-lg bg-gray-200 text-gray-700 px-4 py-2 text-sm font-semibold hover:bg-gray-300 transition-colors" type="button">
+                          <span class="material-symbols-outlined text-base">visibility_off</span>
+                          <span>Hide</span>
+                        </button>
+                        <button id="strip-next-btn" class="flex items-center gap-2 rounded-lg bg-veritas-navy text-white px-4 py-2 text-sm font-semibold hover:bg-veritas-navy/90 transition-colors" type="button">
+                          <span>Next</span>
+                          <span class="material-symbols-outlined text-base">arrow_forward</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <!-- RIGHT PANEL: STUDENTS (40%) -->
-            <div class="w-[40%] flex flex-col bg-white dark:bg-brand-dark-gray/30">
+              <!-- RIGHT PANEL: STUDENTS (40%) -->
+              <div class="w-full lg:w-[40%] flex flex-col bg-white dark:bg-brand-dark-gray/30 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
 
-              <!-- Student Header with Status Summary -->
-              <div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 px-5 py-3.5">
-                <div class="flex items-center justify-between mb-3">
-                  <h3 class="text-brand-dark-gray dark:text-brand-white text-lg font-bold">Students</h3>
-                  <div class="flex items-center gap-1.5">
-                    <button id="filter-locked-only-btn" class="h-7 w-7 flex items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200 transition-colors" title="Show locked only">
-                      <span class="material-symbols-outlined text-base">lock</span>
-                    </button>
-                    <button id="filter-all-btn" class="h-7 w-7 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-400 hover:bg-gray-200 transition-colors" title="Show all">
-                      <span class="material-symbols-outlined text-base">group</span>
+                <!-- Student Header with Status Summary -->
+                <div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 px-5 py-3.5">
+                  <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-brand-dark-gray dark:text-brand-white text-lg font-bold">Students</h3>
+                    <div class="flex items-center gap-1.5">
+                      <button id="filter-locked-only-btn" class="h-7 w-7 flex items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200 transition-colors" title="Show locked only">
+                        <span class="material-symbols-outlined text-base">lock</span>
+                      </button>
+                      <button id="filter-all-btn" class="h-7 w-7 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-400 hover:bg-gray-200 transition-colors" title="Show all">
+                        <span class="material-symbols-outlined text-base">group</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Status Pills (Always Visible) -->
+                  <div class="flex flex-wrap gap-1.5 mb-3">
+                    <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-xs font-semibold text-green-700 dark:text-green-400">
+                      <div class="w-1.5 h-1.5 rounded-full bg-green-600"></div>
+                      <span>✓ <span id="correct-count">0</span></span>
+                    </div>
+                    <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-red-100 dark:bg-red-900/30 text-xs font-semibold text-red-700 dark:text-red-400">
+                      <div class="w-1.5 h-1.5 rounded-full bg-red-600"></div>
+                      <span>🔒 <span id="locked-count">0</span></span>
+                    </div>
+                    <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-xs font-semibold text-amber-700 dark:text-amber-400">
+                      <div class="w-1.5 h-1.5 rounded-full bg-amber-600"></div>
+                      <span>⚠ <span id="blocked-count">0</span></span>
+                    </div>
+                    <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-900/30 text-xs font-semibold text-gray-700 dark:text-gray-400">
+                      <div class="w-1.5 h-1.5 rounded-full bg-gray-500"></div>
+                      <span>⏳ <span id="waiting-count">0</span></span>
+                    </div>
+                  </div>
+
+                  <!-- Search & Sort -->
+                  <div class="flex items-center gap-2">
+                    <div class="relative flex-1">
+                      <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">search</span>
+                      <input type="text" id="student-search-input" placeholder="Search..." class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 pl-8 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-veritas-navy/50 focus:border-transparent">
+                    </div>
+                    <select id="student-sort-select" class="text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-2 focus:outline-none focus:ring-2 focus:ring-veritas-navy/50">
+                      <option value="name">Name</option>
+                      <option value="status">Status</option>
+                      <option value="answer">Answer</option>
+                    </select>
+                    <button id="student-sort-direction-btn" class="h-8 w-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" title="Sort direction">
+                      <span class="material-symbols-outlined text-base">south</span>
                     </button>
                   </div>
                 </div>
 
-                <!-- Status Pills (Always Visible) -->
-                <div class="flex flex-wrap gap-1.5 mb-3">
-                  <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-xs font-semibold text-green-700 dark:text-green-400">
-                    <div class="w-1.5 h-1.5 rounded-full bg-green-600"></div>
-                    <span>✓ <span id="correct-count">0</span></span>
-                  </div>
-                  <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-red-100 dark:bg-red-900/30 text-xs font-semibold text-red-700 dark:text-red-400">
-                    <div class="w-1.5 h-1.5 rounded-full bg-red-600"></div>
-                    <span>🔒 <span id="locked-count">0</span></span>
-                  </div>
-                  <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-xs font-semibold text-amber-700 dark:text-amber-400">
-                    <div class="w-1.5 h-1.5 rounded-full bg-amber-600"></div>
-                    <span>⚠ <span id="blocked-count">0</span></span>
-                  </div>
-                  <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-900/30 text-xs font-semibold text-gray-700 dark:text-gray-400">
-                    <div class="w-1.5 h-1.5 rounded-full bg-gray-500"></div>
-                    <span>⏳ <span id="waiting-count">0</span></span>
-                  </div>
-                </div>
-
-                <!-- Search & Sort -->
-                <div class="flex items-center gap-2">
-                  <div class="relative flex-1">
-                    <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">search</span>
-                    <input type="text" id="student-search-input" placeholder="Search..." class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 pl-8 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-veritas-navy/50 focus:border-transparent">
-                  </div>
-                  <select id="student-sort-select" class="text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-2 focus:outline-none focus:ring-2 focus:ring-veritas-navy/50">
-                    <option value="name">Name</option>
-                    <option value="status">Status</option>
-                    <option value="answer">Answer</option>
-                  </select>
-                  <button id="student-sort-direction-btn" class="h-8 w-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" title="Sort direction">
-                    <span class="material-symbols-outlined text-base">south</span>
-                  </button>
+                <!-- Student List (Scrollable, Full Names) -->
+                <div id="student-status-grid" class="flex-1 overflow-y-auto px-5 py-2 space-y-1" aria-live="polite">
+                  <!-- Students will be populated with full names, inline status, hover actions -->
                 </div>
               </div>
 
-              <!-- Student List (Scrollable, Full Names) -->
-              <div id="student-status-grid" class="flex-1 overflow-y-auto px-5 py-2 space-y-1">
-                <!-- Students will be populated with full names, inline status, hover actions -->
-              </div>
-            </div>
-
-          </div>
+            </div> <!-- Closes the new .flex.gap-6 -->
+          </div> <!-- Closes the new .flex-1.overflow-y-auto -->
 
           <!-- Hidden elements for compatibility -->
           <div class="hidden">
@@ -3113,10 +2802,6 @@
               <p id="live-overview-waiting">0</p>
               <p id="live-overview-waiting-caption"></p>
               <button id="focus-lockouts-btn" type="button" disabled></button>
-            </div>
-            <h2 id="live-question-text">Question text</h2>
-            <div id="question-image-container" style="display: none;">
-              <img id="live-question-image" alt="Question" src="">
             </div>
             <div id="response-count">0 / 0</div>
             <div id="violations-alert-panel"></div>
@@ -3604,19 +3289,6 @@
             </select>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div>
-              <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white" for="session-type-select">Session Type</label>
-              <select id="session-type-select" class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
-                <option value="LIVE_POLL">Live Session (Teacher-Paced)</option>
-                <option value="INDIVIDUAL_TIMED">Individual Timed Session (Student-Paced)</option>
-              </select>
-            </div>
-            <div id="time-limit-container" style="display: none;">
-              <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white" for="time-limit-input">Time Limit (minutes)</label>
-              <input type="number" id="time-limit-input" min="1" max="180" placeholder="e.g., 45" class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
-            </div>
-          </div>
 
           <div id="question-builder-workspace">
             <!-- Question editing workspace will be populated dynamically -->
@@ -3954,6 +3626,7 @@
       setTimeout(() => toast.remove(), 300);
     }, duration);
   }
+  window.showToast = showToast;
 
   // === Floating Action Button (FAB) System ===
   let fabMenuOpen = false;
@@ -4594,15 +4267,6 @@
 
     // Initialize Keyboard Shortcuts
     initializeKeyboardShortcuts();
-
-    // Individual Timed Session UI logic in Poll Creator
-    var sessionTypeSelect = document.getElementById('session-type-select');
-    var timeLimitContainer = document.getElementById('time-limit-container');
-    if (sessionTypeSelect && timeLimitContainer) {
-        sessionTypeSelect.addEventListener('change', function() {
-            timeLimitContainer.style.display = this.value === 'individual' ? 'block' : 'none';
-        });
-    }
 
     console.log('✨ Enhanced UI systems initialized (Phase 3)');
   });
@@ -5758,6 +5422,9 @@
     headerLive.style.display='none';
     setMainSection('dashboard');
 
+    // Ensure sidebar is visible on dashboard
+    setDashboardSidebarVisibility(true);
+
     // Load dashboard summary data (non-blocking)
     setTimeout(function() {
       if (!dashboardSummary) {
@@ -6290,8 +5957,10 @@
 
       // Actions
       htmlParts.push('<div class="poll-card-actions">');
-      htmlParts.push('<button type="button" class="poll-card-btn secondary poll-edit-btn" data-poll-id="' + (poll && poll.pollId ? poll.pollId : '') + '" aria-label="Edit ' + safeName + '"><span class="material-symbols-outlined text-base">edit</span>Edit</button>');
-      htmlParts.push('<button type="button" class="poll-card-btn danger poll-delete-btn" data-poll-id="' + (poll && poll.pollId ? poll.pollId : '') + '" aria-label="Delete ' + safeName + '"><span class="material-symbols-outlined text-base">delete</span>Delete</button>');
+      htmlParts.push('<button type="button" class="poll-card-btn primary poll-preview-btn" data-poll-id="' + (poll && poll.pollId ? poll.pollId : '') + '" aria-label="Preview ' + safeName + '"><span class="material-symbols-outlined text-base">visibility</span>Preview</button>');
+      htmlParts.push('<button type="button" class="poll-card-btn secondary poll-edit-btn" data-poll-id="' + (poll && poll.pollId ? poll.pollId : '') + '" aria-label="Edit ' + safeName + '"><span class="material-symbols-outlined text-base">edit</span></button>');
+      htmlParts.push('<button type="button" class="poll-card-btn info poll-copy-btn" data-poll-id="' + (poll && poll.pollId ? poll.pollId : '') + '" aria-label="Duplicate ' + safeName + '"><span class="material-symbols-outlined text-base">content_copy</span></button>');
+      htmlParts.push('<button type="button" class="poll-card-btn danger poll-delete-btn" data-poll-id="' + (poll && poll.pollId ? poll.pollId : '') + '" aria-label="Delete ' + safeName + '"><span class="material-symbols-outlined text-base">delete</span></button>');
       htmlParts.push('</div>');
 
       card.innerHTML = htmlParts.join('');
@@ -6445,6 +6114,12 @@
     root.querySelectorAll('.poll-edit-btn').forEach(function(btn){
       btn.onclick=function(){
         startEditPoll(this.dataset.pollId,this);
+      };
+    });
+
+    root.querySelectorAll('.poll-preview-btn').forEach(function(btn){
+      btn.onclick=function(){
+        openPollPreview(this.dataset.pollId);
       };
     });
 
@@ -8056,39 +7731,17 @@
       return;
     }
 
-    if (selectedPoll.sessionType === 'INDIVIDUAL_TIMED') {
-      google.script.run
-        .withSuccessHandler(async function(data) {
-          setButtonLoading(startPollBtn, false);
-          if (data && data.success) {
-            await veritasAlert(
-              `Individual Timed Session started successfully for ${selectedPoll.className}. The session will run for ${data.timeLimitMinutes} minutes. Students can now begin using their personalized links.`,
-              { title: 'Session Started' }
-            );
-            // Stay on the dashboard to monitor, maybe refresh data in future.
-            showDashboard();
-          } else {
-            handleError(new Error((data && data.error) || 'Failed to start individual session.'));
-          }
-        })
-        .withFailureHandler(function(error) {
-          setButtonLoading(startPollBtn, false);
-          handleError(error);
-        })
-        .startIndividualTimedSession(pollId);
-    } else {
-      // Default to live session
-      google.script.run
-        .withSuccessHandler(function(data) {
-          setButtonLoading(startPollBtn, false);
-          updateLiveView(data);
-        })
-        .withFailureHandler(function(error) {
-          setButtonLoading(startPollBtn, false);
-          handleError(error);
-        })
-        .startPoll(pollId);
-    }
+    // Default to live session
+    google.script.run
+      .withSuccessHandler(function(data) {
+        setButtonLoading(startPollBtn, false);
+        updateLiveView(data);
+      })
+      .withFailureHandler(function(error) {
+        setButtonLoading(startPollBtn, false);
+        handleError(error);
+      })
+      .startPoll(pollId);
   }
 
   function onResumePoll(){
@@ -8338,9 +7991,6 @@
     var responsesEl=document.getElementById('live-overview-responses');
     var progressEl=document.getElementById('live-overview-response-progress');
     var responseCaption=document.getElementById('live-overview-response-caption');
-    var allRespondedBanner=document.getElementById('all-responded-banner');
-    var bannerTitle=document.getElementById('all-responded-title');
-    var bannerSubtitle=document.getElementById('all-responded-subtitle');
     var hudResponseCount=document.getElementById('hud-response-count');
     var hudResponseCaption=document.getElementById('hud-response-caption');
     var hudResponseTrend=document.getElementById('hud-response-trend');
@@ -8397,35 +8047,17 @@
     addSparklineDataPoint('responses', completionPct);
 
     var allResponded=totalStudents>0&&totalResponses===totalStudents;
-    if(allRespondedBanner){
-      if(allResponded){
-        allRespondedBanner.classList.remove('hidden');
+    if(allResponded){
         if(!sessionHudState.allRespondedCelebrated){
-          triggerCelebration(allRespondedBanner, 'all-responded');
-          // Track activity
-          trackAllResponded();
+          showToast('success', 'All Students Responded!', 'You can now move to the next question.');
           sessionHudState.allRespondedCelebrated=true;
         }
-        if(bannerTitle){
-          bannerTitle.textContent='✅ Everyone Responded!';
-        }
-        if(bannerSubtitle){
-          if(totalStudents===1){
-            bannerSubtitle.textContent='The lone student has submitted their answer. Ready to reveal and advance.';
-        }else{
-          bannerSubtitle.textContent='All '+totalStudents+' students have submitted their answers. Ready to reveal and advance.';
-        }
-      }
-      }else{
-        allRespondedBanner.classList.add('hidden');
-        allRespondedBanner.classList.remove('celebrate');
+    }else{
         sessionHudState.allRespondedCelebrated=false;
-      }
     }
 
-    var remainingSeconds=typeof totalSeconds==='number'?totalSeconds:(typeof timerRemainingSeconds==='number'?timerRemainingSeconds:0);
     if(typeof window.checkAllRespondedState==='function'){
-      window.checkAllRespondedState(allResponded?remainingSeconds:0);
+      window.checkAllRespondedState(allResponded);
     }
 
     var rawResults=data&&data.results;
@@ -8652,10 +8284,11 @@
 
     var questionChanged=previousQuestionIndex===null||data.questionIndex!==previousQuestionIndex;
 
-    // Show live view
+    // Show live view and hide sidebar
     setMainSection('live');
     headerDefault.style.display='none';
     headerLive.style.display='flex';
+    setDashboardSidebarVisibility(false);
 
     // Update header
     document.getElementById('header-poll-name').textContent=data.pollName;
@@ -8934,90 +8567,84 @@
     });
   }
 
-  function renderLiveMetacognition(metacognition){
-    console.log('=== RENDER LIVE METACOGNITION CALLED ===');
-    console.log('metacognition:', metacognition);
+  function renderLiveMetacognition(metacognition) {
+    var container = document.getElementById('results-bars');
+    if (!container) return;
 
-    var card=document.getElementById('live-metacognition-card');
-    if(!card){
-      console.log('live-metacognition-card element not found');
+    // Remove existing card if it exists
+    var existingCard = document.getElementById('live-metacognition-card');
+    if (existingCard) {
+      existingCard.remove();
+    }
+
+    if (!metacognition || !metacognition.enabled) {
       return;
     }
 
-    if(!metacognition||!metacognition.enabled){
-      console.log('Metacognition not enabled or data missing - hiding card');
-      card.classList.add('hidden');
-      card.innerHTML='';
-      return;
+    var card = document.createElement('div');
+    card.id = 'live-metacognition-card';
+    card.className = 'bg-white dark:bg-brand-dark-gray/30 p-4 rounded-xl border border-purple-200 dark:border-purple-700 shadow-sm mt-4';
+
+    var html = '<div class="flex flex-wrap items-center justify-between gap-3 mb-3">';
+    html += '<div class="flex items-center gap-2">';
+    html += '<span class="material-symbols-outlined text-purple-600 dark:text-purple-300">psychology</span>';
+    html += '<h4 class="text-brand-dark-gray dark:text-brand-white font-semibold text-base">Confidence Pulse</h4>';
+    html += '</div>';
+    html += '<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">';
+    if (metacognition.totalResponses > 0) {
+      html += escapeHtml(metacognition.totalResponses + ' responses • ' + metacognition.responseRate + '% of class');
+    } else {
+      html += 'Waiting for students...';
+    }
+    html += '</div>';
+    html += '</div>';
+
+    if (!metacognition.totalResponses) {
+      html += '<p class="text-xs text-brand-dark-gray/70 dark:text-brand-white/70">Students will report their confidence level. Responses appear here instantly.</p>';
+    } else {
+        var matrixDefs=[
+          {key:'confidentCorrect',emoji:'💯',label:'Confident & Correct',bgClass:'bg-green-500/10',borderClass:'border-green-500/30',textClass:'text-green-700 dark:text-green-300'},
+          {key:'confidentIncorrect',emoji:'⚠️',label:'Confident & Wrong',bgClass:'bg-red-500/10',borderClass:'border-red-500/30',textClass:'text-red-700 dark:text-red-300'},
+          {key:'uncertainCorrect',emoji:'🤔',label:'Unsure but Correct',bgClass:'bg-amber-500/10',borderClass:'border-amber-500/30',textClass:'text-amber-700 dark:text-amber-300'},
+          {key:'uncertainIncorrect',emoji:'🤷',label:'Unsure & Wrong',bgClass:'bg-blue-500/10',borderClass:'border-blue-500/30',textClass:'text-blue-700 dark:text-blue-300'}
+        ];
+
+        html+='<div class="grid grid-cols-2 gap-2 mb-3">';
+        matrixDefs.forEach(function(def){
+          var pct=metacognition.matrixPercentages&&typeof metacognition.matrixPercentages[def.key]==='number'?metacognition.matrixPercentages[def.key]:0;
+          var count=metacognition.matrixCounts&&typeof metacognition.matrixCounts[def.key]==='number'?metacognition.matrixCounts[def.key]:0;
+          html+='<div class="rounded-lg border '+def.borderClass+' '+def.bgClass+' p-2">';
+          html+='<div class="flex items-center gap-1.5 mb-1">';
+          html+='<span class="text-base">'+def.emoji+'</span>';
+          html+='<span class="text-xs font-medium '+def.textClass+'">'+def.label+'</span>';
+          html+='</div>';
+          html+='<div class="flex items-baseline gap-1">';
+          html+='<span class="text-xl font-bold '+def.textClass+'">'+pct+'%</span>';
+          html+='<span class="text-[10px] '+def.textClass+' opacity-70">('+count+')</span>';
+          html+='</div>';
+          html+='</div>';
+        });
+        html+='</div>';
+
+        var flagged=Array.isArray(metacognition.flaggedStudents)?metacognition.flaggedStudents:[];
+        if(flagged.length>0){
+          html+='<div class="rounded-lg border border-red-500/40 bg-red-500/10 p-2">';
+          html+='<div class="flex items-center gap-1.5 mb-1.5">';
+          html+='<span class="material-symbols-outlined text-sm text-red-600 dark:text-red-300">report</span>';
+          html+='<span class="text-xs font-semibold text-red-700 dark:text-red-200">⚠️ Urgent: '+flagged.length+' Confidently Incorrect</span>';
+          html+='</div>';
+          html+='<div class="flex flex-wrap gap-1.5">';
+          flagged.forEach(function(student){
+            var display=escapeHtml(student.name||student.email||'Student');
+            html+='<span class="px-2 py-0.5 rounded bg-red-600/20 text-xs font-medium text-red-700 dark:text-red-200">'+display+'</span>';
+          });
+          html+='</div>';
+          html+='</div>';
+        }
     }
 
-    console.log('Metacognition is enabled - rendering card');
-
-    var html='<div class="flex flex-wrap items-center justify-between gap-3 mb-3">';
-    html+='<div class="flex items-center gap-2">';
-    html+='<span class="material-symbols-outlined text-purple-600 dark:text-purple-300">psychology</span>';
-    html+='<h4 class="text-brand-dark-gray dark:text-brand-white font-semibold text-base">Confidence Pulse</h4>';
-    html+='</div>';
-    html+='<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">';
-    if(metacognition.totalResponses>0){
-      html+=escapeHtml(metacognition.totalResponses+' responses • '+metacognition.responseRate+'% of class');
-    }else{
-      html+='Waiting for students...';
-    }
-    html+='</div>';
-    html+='</div>';
-
-    if(!metacognition.totalResponses){
-      html+='<p class="text-xs text-brand-dark-gray/70 dark:text-brand-white/70">Students will report their confidence level. Responses appear here instantly.</p>';
-      card.innerHTML=html;
-      card.classList.remove('hidden');
-      return;
-    }
-
-    // Compact 4-quadrant display - single row
-    var matrixDefs=[
-      {key:'confidentCorrect',emoji:'💯',label:'Confident & Correct',bgClass:'bg-green-500/10',borderClass:'border-green-500/30',textClass:'text-green-700 dark:text-green-300'},
-      {key:'confidentIncorrect',emoji:'⚠️',label:'Confident & Wrong',bgClass:'bg-red-500/10',borderClass:'border-red-500/30',textClass:'text-red-700 dark:text-red-300'},
-      {key:'uncertainCorrect',emoji:'🤔',label:'Unsure but Correct',bgClass:'bg-amber-500/10',borderClass:'border-amber-500/30',textClass:'text-amber-700 dark:text-amber-300'},
-      {key:'uncertainIncorrect',emoji:'🤷',label:'Unsure & Wrong',bgClass:'bg-blue-500/10',borderClass:'border-blue-500/30',textClass:'text-blue-700 dark:text-blue-300'}
-    ];
-
-    html+='<div class="grid grid-cols-2 gap-2 mb-3">';
-    matrixDefs.forEach(function(def){
-      var pct=metacognition.matrixPercentages&&typeof metacognition.matrixPercentages[def.key]==='number'?metacognition.matrixPercentages[def.key]:0;
-      var count=metacognition.matrixCounts&&typeof metacognition.matrixCounts[def.key]==='number'?metacognition.matrixCounts[def.key]:0;
-      html+='<div class="rounded-lg border '+def.borderClass+' '+def.bgClass+' p-2">';
-      html+='<div class="flex items-center gap-1.5 mb-1">';
-      html+='<span class="text-base">'+def.emoji+'</span>';
-      html+='<span class="text-xs font-medium '+def.textClass+'">'+def.label+'</span>';
-      html+='</div>';
-      html+='<div class="flex items-baseline gap-1">';
-      html+='<span class="text-xl font-bold '+def.textClass+'">'+pct+'%</span>';
-      html+='<span class="text-[10px] '+def.textClass+' opacity-70">('+count+')</span>';
-      html+='</div>';
-      html+='</div>';
-    });
-    html+='</div>';
-
-    // Show flagged students prominently but compact
-    var flagged=Array.isArray(metacognition.flaggedStudents)?metacognition.flaggedStudents:[];
-    if(flagged.length>0){
-      html+='<div class="rounded-lg border border-red-500/40 bg-red-500/10 p-2">';
-      html+='<div class="flex items-center gap-1.5 mb-1.5">';
-      html+='<span class="material-symbols-outlined text-sm text-red-600 dark:text-red-300">report</span>';
-      html+='<span class="text-xs font-semibold text-red-700 dark:text-red-200">⚠️ Urgent: '+flagged.length+' Confidently Incorrect</span>';
-      html+='</div>';
-      html+='<div class="flex flex-wrap gap-1.5">';
-      flagged.forEach(function(student){
-        var display=escapeHtml(student.name||student.email||'Student');
-        html+='<span class="px-2 py-0.5 rounded bg-red-600/20 text-xs font-medium text-red-700 dark:text-red-200">'+display+'</span>';
-      });
-      html+='</div>';
-      html+='</div>';
-    }
-
-    card.innerHTML=html;
-    card.classList.remove('hidden');
+    card.innerHTML = html;
+    container.appendChild(card);
   }
 
   // Global filters for student status panel
@@ -10128,23 +9755,18 @@
     }
 
     // Apply color feedback classes
-    if (timerMainContainer && timerCompactContainer) {
-      // Remove all timer state classes
-      timerMainContainer.classList.remove('timer-warning', 'timer-critical');
-      timerCompactContainer.classList.remove('timer-warning', 'timer-critical');
+    if (timerMainContainer) {
+        // Remove all timer state classes
+        timerMainContainer.classList.remove('timer-warning', 'timer-critical');
 
-      if (isRunning) {
-        // Critical: less than 15 seconds (red, pulsing)
-        if (totalSeconds > 0 && totalSeconds <= 15) {
-          timerMainContainer.classList.add('timer-critical');
-          timerCompactContainer.classList.add('timer-critical');
+        // Apply new state class
+        if (isRunning && totalSeconds > 0) {
+            if (totalSeconds <= 15) {
+                timerMainContainer.classList.add('timer-critical');
+            } else if (totalSeconds <= 30) {
+                timerMainContainer.classList.add('timer-warning');
+            }
         }
-        // Warning: less than 30 seconds (yellow)
-        else if (totalSeconds > 15 && totalSeconds <= 30) {
-          timerMainContainer.classList.add('timer-warning');
-          timerCompactContainer.classList.add('timer-warning');
-        }
-      }
     }
 
     updateHudTimer();
@@ -10162,6 +9784,8 @@
     var add10sBtn = document.getElementById('add-10s-btn');
     var subtract10sBtn = document.getElementById('subtract-10s-btn');
     var timerDisplay = document.getElementById('timer-display');
+    var add30sPresetBtn = document.getElementById('add-30s-btn-preset');
+    var add60sPresetBtn = document.getElementById('add-60s-btn-preset');
 
     // Toggle Start/Pause buttons
     if (startBtn) startBtn.classList.toggle('hidden', running);
@@ -10171,6 +9795,8 @@
     if (add10sBtn) add10sBtn.disabled = running;
     if (subtract10sBtn) subtract10sBtn.disabled = running;
     if (timerDisplay) timerDisplay.disabled = running;
+    if (add30sPresetBtn) add30sPresetBtn.disabled = running;
+    if (add60sPresetBtn) add60sPresetBtn.disabled = running;
 
     updateHudTimer();
   }
@@ -11635,9 +11261,6 @@
 
     var pollName=document.getElementById('new-poll-name').value.trim();
     var className=(classSelect.value||'').trim();
-    var sessionType = document.getElementById('session-type-select').value;
-    var timeLimitMinutes = document.getElementById('time-limit-input').value;
-
 
     if(!pollName||!className){
       await veritasAlert('Please enter a poll name and select a class.',{title:'Save poll'});
@@ -11862,13 +11485,9 @@
         });
 
       if(editingPollId){
-        request.updatePoll(editingPollId, pollName, className, payloadQuestions,
-         sessionType, timeLimitMinutes
-        );
+      request.updatePoll(editingPollId, pollName, className, payloadQuestions);
       } else {
-        request.createNewPoll(pollName, className, payloadQuestions,
-         sessionType, timeLimitMinutes
-        );
+      request.createNewPoll(pollName, className, payloadQuestions);
       }
     } catch(err){
       console.error('Upload/save error:',err);
@@ -12133,18 +11752,18 @@
   // ==========================================================================
 
   // Quick Time Preset Buttons (+30s, +1m)
-  var add30sBtn = document.getElementById('add-30s-btn');
-  if (add30sBtn) {
-    add30sBtn.addEventListener('click', function() {
+  var add30sPresetBtn = document.getElementById('add-30s-btn-preset');
+  if (add30sPresetBtn) {
+    add30sPresetBtn.addEventListener('click', function() {
       if (!isRunning) {
         editTime(30);
       }
     });
   }
 
-  var add60sBtn = document.getElementById('add-60s-btn');
-  if (add60sBtn) {
-    add60sBtn.addEventListener('click', function() {
+  var add60sPresetBtn = document.getElementById('add-60s-btn-preset');
+  if (add60sPresetBtn) {
+    add60sPresetBtn.addEventListener('click', function() {
       if (!isRunning) {
         editTime(60);
       }
@@ -12349,40 +11968,16 @@
   });
 
   // Auto-Pulse "Next Question" Button When All Responded
-  // This is called from renderStudentStatus when all students have answered
-  window.checkAllRespondedState = function(remainingSeconds) {
+  // This is called from updateLiveOverviewFromData
+  window.checkAllRespondedState = function(allHaveResponded) {
     if (!isLiveSession) return;
-
     var nextBtn = document.getElementById('header-next-btn');
-    var allRespondedBanner = document.getElementById('all-responded-banner');
-
     if (!nextBtn) return;
 
-    // Check if all-responded banner is visible
-    if (allRespondedBanner && !allRespondedBanner.classList.contains('hidden')) {
-      // Add pulsing effect to Next button
+    if (allHaveResponded) {
       nextBtn.classList.add('pulse-ready');
-
-      var timeSavedBadge = document.getElementById('time-saved-badge');
-      var timeSavedAmount = document.getElementById('time-saved-amount');
-      if (timeSavedBadge && timeSavedAmount) {
-        var safeRemaining = typeof remainingSeconds === 'number' ? Math.max(0, Math.round(remainingSeconds)) : 0;
-        if (safeRemaining > 0) {
-          timeSavedAmount.textContent = safeRemaining;
-          timeSavedBadge.classList.remove('hidden');
-        } else {
-          timeSavedBadge.classList.add('hidden');
-        }
-      }
     } else {
-      // Remove pulsing effect
       nextBtn.classList.remove('pulse-ready');
-
-      // Hide time saved badge
-      var timeSavedBadge = document.getElementById('time-saved-badge');
-      if (timeSavedBadge) {
-        timeSavedBadge.classList.add('hidden');
-      }
     }
   };
 

@@ -1845,6 +1845,18 @@ function endIndividualTimedSession(pollId) {
     }
 
     const previousMetadata = (liveStatus && liveStatus.metadata) ? liveStatus.metadata : {};
+    const sessionId = previousMetadata.sessionId || '';
+
+    // Lock all unlocked students in this session
+    if (sessionId) {
+      const allStudents = DataAccess.individualSessionState.getAllForSession(pollId, sessionId);
+      allStudents.forEach(student => {
+        if (!student.isLocked) {
+          DataAccess.individualSessionState.lockStudent(pollId, sessionId, student.studentEmail);
+        }
+      });
+    }
+
     const nowIso = new Date().toISOString();
     DataAccess.liveStatus.set("", -1, "CLOSED", {
       ...previousMetadata,
@@ -1859,9 +1871,98 @@ function endIndividualTimedSession(pollId) {
     });
 
 
-    Logger.log('Individual timed session ended by teacher', { pollId });
+    Logger.log('Individual timed session ended by teacher', { pollId, sessionId });
 
-    return { success: true };
+    return { success: true, sessionId: sessionId };
+  })();
+}
+
+/**
+ * Get teacher view for monitoring individual timed session
+ * Returns real-time progress and proctoring data for all students
+ */
+function getIndividualTimedSessionTeacherView(pollId, sessionId) {
+  return withErrorHandling(() => {
+    // Verify teacher authorization
+    const currentUser = Session.getActiveUser().getEmail();
+    if (currentUser !== TEACHER_EMAIL && !isAdditionalTeacher_(currentUser)) {
+      throw new Error('Unauthorized');
+    }
+
+    // Get poll data
+    const poll = DataAccess.polls.getById(pollId);
+    if (!poll) {
+      throw new Error('Poll not found');
+    }
+
+    // Get roster
+    const roster = DataAccess.roster.getByClass(poll.className);
+    if (!roster || roster.length === 0) {
+      throw new Error('No students found in roster for class: ' + poll.className);
+    }
+
+    // Get all student states for this session
+    const allStudentStates = DataAccess.individualSessionState.getAllForSession(pollId, sessionId);
+    const studentStateMap = new Map();
+    allStudentStates.forEach(state => {
+      studentStateMap.set(state.studentEmail, state);
+    });
+
+    // Get all proctor states in batch
+    const studentEmails = roster.map(s => s.email);
+    const proctorStates = ProctorAccess.getStatesBatch(pollId, studentEmails, sessionId);
+
+    // Build student view data
+    const timeLimitMinutes = poll.timeLimitMinutes || 0;
+    const totalQuestions = poll.questions.length;
+    const now = Date.now();
+
+    const students = roster.map(student => {
+      const email = student.email;
+      const state = studentStateMap.get(email);
+      const proctorState = proctorStates.get(email) || { status: 'OK', lockVersion: 0 };
+
+      let status = 'Not Started';
+      let progress = 0;
+      let timeRemainingSeconds = timeLimitMinutes * 60;
+
+      if (state) {
+        progress = state.currentQuestionIndex || 0;
+        const startTime = new Date(state.startTime).getTime();
+        const elapsedMinutes = (now - startTime) / (1000 * 60);
+        const remainingMinutes = Math.max(0, timeLimitMinutes - elapsedMinutes);
+        timeRemainingSeconds = Math.floor(remainingMinutes * 60);
+
+        if (state.isLocked && state.endTime) {
+          status = elapsedMinutes >= timeLimitMinutes ? 'Timed Out' : 'Finished';
+        } else if (state.isLocked) {
+          status = 'Timed Out';
+        } else {
+          status = 'In Progress';
+        }
+      }
+
+      return {
+        name: student.name,
+        email: email,
+        status: status,
+        progress: progress,
+        totalQuestions: totalQuestions,
+        timeRemainingSeconds: timeRemainingSeconds,
+        proctorStatus: proctorState.status || 'OK',
+        lockVersion: proctorState.lockVersion || 0
+      };
+    });
+
+    return {
+      pollId: pollId,
+      sessionId: sessionId,
+      pollName: poll.pollName,
+      className: poll.className,
+      timeLimitMinutes: timeLimitMinutes,
+      totalQuestions: totalQuestions,
+      students: students
+    };
   })();
 }
 
@@ -4833,6 +4934,12 @@ function getStudentPollStatus(token, context) {
     const questionIndex = statusValues[1];
     const pollStatus = statusValues[2];
     const sessionPhaseFromMetadata = metadata && metadata.sessionPhase ? metadata.sessionPhase : null;
+
+    // ROUTING: Check if this is an Individual Timed Session
+    if (sessionPhaseFromMetadata === 'INDIVIDUAL_TIMED') {
+      Logger.log('Routing student to Individual Timed Session.');
+      return getIndividualTimedSessionState(token);
+    }
 
     const endedAtMetadata = metadata && Object.prototype.hasOwnProperty.call(metadata, 'endedAt') ? metadata.endedAt : null;
     const sessionEnded = sessionPhaseFromMetadata === 'ENDED' || (!!endedAtMetadata && endedAtMetadata !== null && endedAtMetadata !== '');

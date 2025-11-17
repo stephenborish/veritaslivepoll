@@ -7857,15 +7857,32 @@
     }
 
     // Check session type and call appropriate function
-    if (selectedPoll.sessionType === 'individual') {
-      onStartIndividualTimed();
+    if (selectedPoll.sessionType === 'INDIVIDUAL_TIMED') {
+      setButtonLoading(startPollBtn, true, 'Starting...');
+
+      if (PREVIEW_MODE) {
+        setButtonLoading(startPollBtn, false);
+        await previewOnlyNotice('start a session');
+        return;
+      }
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          setButtonLoading(startPollBtn, false);
+          showIndividualTimedDashboard(result);
+        })
+        .withFailureHandler(function(error) {
+          setButtonLoading(startPollBtn, false);
+          handleError(error);
+        })
+        .startIndividualTimedSession(pollId);
       return;
     }
 
     setButtonLoading(startPollBtn, true, 'Starting...');
     clearLiveIntervals();
     isPaused = false;
-    isLiveSession = true; // This flag might need adjustment based on session type
+    isLiveSession = true;
 
     if (PREVIEW_MODE) {
       setButtonLoading(startPollBtn, false);
@@ -8396,6 +8413,132 @@
         waitingCaption.textContent=waitingCount+' students still working';
       }
     }
+  }
+
+  // --- Individual Timed Session Monitoring ---
+  function showIndividualTimedDashboard(result) {
+    // Store session data
+    CURRENT_POLL_DATA.pollId = result.pollId;
+    CURRENT_POLL_DATA.sessionId = result.sessionId;
+    CURRENT_POLL_DATA.pollName = result.pollName;
+    CURRENT_POLL_DATA.className = result.className;
+    CURRENT_POLL_DATA.timeLimitMinutes = result.timeLimitMinutes;
+    CURRENT_POLL_DATA.questionCount = result.questionCount;
+
+    // Set view to individual-timed
+    setMainSection('individual-timed');
+    mainLoader.style.display = 'none';
+
+    // Update header info
+    document.getElementById('individual-session-poll-name').textContent = result.pollName + ' - ' + result.className;
+    document.getElementById('individual-session-meta').textContent =
+      result.questionCount + ' questions • ' + result.timeLimitMinutes + ' minutes';
+
+    // Start polling for updates
+    pollIndividualSessionState();
+    if (individualPollInterval) {
+      clearInterval(individualPollInterval);
+    }
+    individualPollInterval = setInterval(pollIndividualSessionState, 3000);
+  }
+
+  function pollIndividualSessionState() {
+    if (!CURRENT_POLL_DATA.pollId || !CURRENT_POLL_DATA.sessionId) {
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(renderIndividualStudentCards)
+      .withFailureHandler(handleError)
+      .getIndividualTimedSessionTeacherView(CURRENT_POLL_DATA.pollId, CURRENT_POLL_DATA.sessionId);
+  }
+
+  function renderIndividualStudentCards(view) {
+    var container = document.getElementById('individual-session-students-grid');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    view.students.forEach(function(student) {
+      var card = document.createElement('div');
+      card.className = 'bg-white dark:bg-brand-dark-gray/30 rounded-lg border p-4 shadow-sm';
+
+      // Status badge color
+      var statusColor = 'bg-gray-200 text-gray-700';
+      if (student.status === 'In Progress') {
+        statusColor = 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200';
+      } else if (student.status === 'Finished') {
+        statusColor = 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200';
+      } else if (student.status === 'Timed Out') {
+        statusColor = 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200';
+      }
+
+      // Proctor status handling
+      var proctorBadge = '';
+      var cardStyle = '';
+      if (student.proctorStatus === 'LOCKED') {
+        cardStyle = 'border-red-500 border-2';
+        proctorBadge = '<span class="inline-block px-2 py-1 text-xs font-bold bg-red-500 text-white rounded">LOCKED</span>';
+      } else if (student.proctorStatus === 'AWAITING_FULLSCREEN') {
+        cardStyle = 'border-blue-500 border-2';
+        proctorBadge = '<span class="inline-block px-2 py-1 text-xs font-bold bg-blue-500 text-white rounded">AWAITING RE-ENTRY</span>';
+      }
+
+      if (cardStyle) {
+        card.className += ' ' + cardStyle;
+      }
+
+      // Format time remaining
+      var timeDisplay = '--:--';
+      if (student.status === 'In Progress') {
+        var mins = Math.floor(student.timeRemainingSeconds / 60);
+        var secs = student.timeRemainingSeconds % 60;
+        timeDisplay = (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs;
+      }
+
+      var approveButton = '';
+      if (student.proctorStatus === 'LOCKED') {
+        approveButton = '<button class="mt-2 w-full px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded" ' +
+          'onclick="teacherApproveUnlock(\'' + student.email + '\', \'' + view.pollId + '\', ' + student.lockVersion + ')">' +
+          'Approve</button>';
+      }
+
+      card.innerHTML =
+        '<div class="flex items-start justify-between mb-2">' +
+          '<h3 class="font-bold text-brand-dark-gray dark:text-brand-white">' + student.name + '</h3>' +
+          proctorBadge +
+        '</div>' +
+        '<div class="flex items-center justify-between mb-1">' +
+          '<span class="inline-block px-2 py-1 text-xs font-semibold rounded ' + statusColor + '">' + student.status + '</span>' +
+          '<span class="text-sm text-gray-600 dark:text-gray-400">' + timeDisplay + '</span>' +
+        '</div>' +
+        '<p class="text-sm text-gray-600 dark:text-gray-400">Progress: ' + student.progress + ' / ' + student.totalQuestions + '</p>' +
+        approveButton;
+
+      container.appendChild(card);
+    });
+  }
+
+  async function onEndIndividualSession() {
+    var confirmed = await veritasConfirm('Are you sure you want to end this session for all students?', {
+      title: 'End Session',
+      confirmText: 'End Session',
+      cancelText: 'Cancel'
+    });
+
+    if (!confirmed) return;
+
+    if (individualPollInterval) {
+      clearInterval(individualPollInterval);
+      individualPollInterval = null;
+    }
+
+    google.script.run
+      .withSuccessHandler(function() {
+        showDashboard();
+      })
+      .withFailureHandler(handleError)
+      .endIndividualTimedSession(CURRENT_POLL_DATA.pollId);
   }
 
   function updateLiveView(data){
@@ -12228,16 +12371,7 @@
       .getIndividualTimedSessionTeacherView(pollId);
   }
 
-  bindClick('end-individual-session-btn', function() {
-    var pollId = CURRENT_POLL_DATA.pollId;
-    if (!pollId) return;
-    google.script.run
-      .withSuccessHandler(function() {
-        showDashboard();
-      })
-      .withFailureHandler(handleError)
-      .endIndividualTimedSession(pollId);
-  });
+  bindClick('end-individual-session-btn', onEndIndividualSession);
 
 
 })();

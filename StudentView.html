@@ -1120,7 +1120,14 @@
         }
 
         function submitIndividualAnswer(state, answerText) {
-             var answerDetails = {
+            // Disable all answer buttons to prevent double submission
+            var buttons = individualOptionsList.querySelectorAll('button');
+            buttons.forEach(function(btn) {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+            });
+
+            var answerDetails = {
                 pollId: state.pollId,
                 sessionId: state.sessionId,
                 actualQuestionIndex: state.actualQuestionIndex,
@@ -1131,13 +1138,36 @@
             google.script.run
                 .withSuccessHandler(function(response) {
                     if (response.success) {
-                        // Success - next state will be fetched by polling
                         console.log('Individual answer submitted successfully.');
+                        // Auto-advance: Check if complete or load next question
+                        if (response.isComplete) {
+                            individualSessionContainer.style.display = 'none';
+                            statusContainer.style.display = 'block';
+                            statusMessage.textContent = "You have completed the assessment. Great work!";
+                            if (individualSessionTimerInterval) {
+                                clearInterval(individualSessionTimerInterval);
+                            }
+                        } else {
+                            // Load next question immediately
+                            pollForIndividualSessionState();
+                        }
                     } else {
+                        // Re-enable buttons on error
+                        buttons.forEach(function(btn) {
+                            btn.disabled = false;
+                            btn.style.opacity = '1';
+                        });
                         handleError(response.error || 'Failed to submit answer.');
                     }
                 })
-                .withFailureHandler(handleError)
+                .withFailureHandler(function(error) {
+                    // Re-enable buttons on error
+                    buttons.forEach(function(btn) {
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                    });
+                    handleError(error);
+                })
                 .submitAnswerIndividualTimed(SESSION_TOKEN, answerDetails);
         }
 
@@ -1148,12 +1178,33 @@
             var remaining = timeRemainingSeconds;
             individualTimerDisplay.textContent = formatTime(remaining);
 
+            // Add color coding based on time remaining
+            function updateTimerColor(seconds) {
+                if (seconds <= 10) {
+                    individualTimerDisplay.className = 'text-red-600 font-bold animate-pulse';
+                } else if (seconds <= 60) {
+                    individualTimerDisplay.className = 'text-red-600 font-bold';
+                } else if (seconds <= 300) {
+                    individualTimerDisplay.className = 'text-yellow-600 font-bold';
+                } else {
+                    individualTimerDisplay.className = 'text-veritas-navy font-bold';
+                }
+            }
+
+            updateTimerColor(remaining);
+
             individualSessionTimerInterval = setInterval(() => {
                 remaining--;
                 if (remaining >= 0) {
                     individualTimerDisplay.textContent = formatTime(remaining);
+                    updateTimerColor(remaining);
                 } else {
                     clearInterval(individualSessionTimerInterval);
+                    individualTimerDisplay.textContent = '00:00';
+                    // Show timeout message
+                    individualSessionContainer.style.display = 'none';
+                    statusContainer.style.display = 'block';
+                    statusMessage.textContent = "Time's up! The assessment has ended.";
                 }
             }, 1000);
         }
@@ -1162,12 +1213,28 @@
             google.script.run
                 .withSuccessHandler(function(state) {
                     if (state.sessionType === 'INDIVIDUAL_TIMED') {
-                        if (state.status === 'ACTIVE') {
-                            showIndividualTimedView(state);
-                        } else if (state.status === 'COMPLETED') {
+                        if (state.locked || state.status === 'LOCKED') {
+                            // Student is locked out (time expired or session ended)
                             individualSessionContainer.style.display = 'none';
                             statusContainer.style.display = 'block';
-                            statusMessage.textContent = "You have completed the assessment.";
+                            statusMessage.textContent = state.message || "Time's up! The assessment has ended.";
+                            if (individualSessionTimerInterval) {
+                                clearInterval(individualSessionTimerInterval);
+                            }
+                        } else if (state.completed || state.status === 'COMPLETED') {
+                            // Student completed all questions
+                            individualSessionContainer.style.display = 'none';
+                            statusContainer.style.display = 'block';
+                            statusMessage.textContent = state.message || "You have completed the assessment. Great work!";
+                            if (individualSessionTimerInterval) {
+                                clearInterval(individualSessionTimerInterval);
+                            }
+                        } else if (state.question && state.status === 'ACTIVE') {
+                            // Show the current question
+                            showIndividualTimedView(state);
+                        } else {
+                            // Fallback for any other state
+                            console.log('Individual timed session state:', state);
                         }
                     } else {
                         updateStudentView(state);

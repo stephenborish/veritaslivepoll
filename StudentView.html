@@ -1212,7 +1212,7 @@
         function pollForIndividualSessionState() {
             google.script.run
                 .withSuccessHandler(function(state) {
-                    if (state.sessionType === 'INDIVIDUAL_TIMED') {
+                    if (state.sessionType === 'INDIVIDUAL_TIMED' || state.sessionType === 'SECURE_ASSESSMENT') {
                         if (state.locked || state.status === 'LOCKED') {
                             // Student is locked out (time expired or session ended)
                             individualSessionContainer.style.display = 'none';
@@ -2030,7 +2030,7 @@
 
         function updateStudentView(data) {
             data = data || {};
-            if (data.sessionType === 'INDIVIDUAL_TIMED') {
+            if (data.sessionType === 'INDIVIDUAL_TIMED' || data.sessionType === 'SECURE_ASSESSMENT') {
                 pollForIndividualSessionState();
                 return;
             }

@@ -5727,7 +5727,11 @@
       // Refresh in background to update cache
       google.script.run
         .withSuccessHandler(function(data){
-          LocalCache.set('dashboardData',data,300000); // Cache for 5 minutes
+          try{
+            LocalCache.set('dashboardData',data,300000); // Cache for 5 minutes
+          }catch(e){
+            console.warn('Failed to cache dashboard data:',e);
+          }
           onDashboardDataLoaded(data);
         })
         .withFailureHandler(handleError)
@@ -5735,7 +5739,11 @@
     }else{
       google.script.run
         .withSuccessHandler(function(data){
-          LocalCache.set('dashboardData',data,300000); // Cache for 5 minutes
+          try{
+            LocalCache.set('dashboardData',data,300000); // Cache for 5 minutes
+          }catch(e){
+            console.warn('Failed to cache dashboard data:',e);
+          }
           onDashboardDataLoaded(data);
         })
         .withFailureHandler(handleError)
@@ -5745,19 +5753,24 @@
 
   function onDashboardDataLoaded(data){
     mainLoader.style.display='none';
-    ALL_POLLS=data.polls||[];
-    refreshClassOptions(data.classes||[]);
-    refreshPollViews();
+    try{
+      ALL_POLLS=data.polls||[];
+      refreshClassOptions(data.classes||[]);
+      refreshPollViews();
 
-    // Show dashboard on initial load
-    setMainSection('dashboard');
+      // Show dashboard on initial load
+      setMainSection('dashboard');
 
-    // Load dashboard summary after a short delay
-    setTimeout(function() {
-      if (!dashboardSummary) {
-        loadDashboardSummary();
-      }
-    }, 100);
+      // Load dashboard summary after a short delay
+      setTimeout(function() {
+        if (!dashboardSummary) {
+          loadDashboardSummary();
+        }
+      }, 100);
+    }catch(e){
+      console.error('Error loading dashboard:',e);
+      handleError(e);
+    }
   }
 
   function updatePollDropdown(polls){

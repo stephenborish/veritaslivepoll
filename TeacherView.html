@@ -4382,8 +4382,12 @@
   var googleChartsLoading=false;
   var googleChartsBootstrapTimer=null;
 
-  var appsScriptAvailable=!!(window.google&&window.google.script&&window.google.script.run);
-  var PREVIEW_MODE=!appsScriptAvailable;
+  function hasAppsScriptRuntime(){
+    return !!(window.google&&window.google.script&&window.google.script.run&&typeof window.google.script.run.withSuccessHandler==='function');
+  }
+
+  var PREVIEW_MODE=false;
+  var previewBootstrapped=false;
 
   function deepClone(value){
     try{
@@ -4394,7 +4398,7 @@
     }
   }
 
-  var PREVIEW_PAYLOAD=PREVIEW_MODE?{
+  var PREVIEW_PAYLOAD={
     classes:['AP Biology – Period 5','Chemistry – Period 2','World History – Period 7'],
     polls:[
       {
@@ -4583,7 +4587,61 @@
         }
       }
     }
-  }:null;
+  };
+
+  var runtimeWatchTimer=null;
+  var runtimeFallbackTimer=null;
+  var RUNTIME_MAX_WAIT_MS=4000;
+  var RUNTIME_POLL_INTERVAL=200;
+
+  function bootstrapAppsScriptRuntime(){
+    if(hasAppsScriptRuntime()){
+      PREVIEW_MODE=false;
+      loadInitialData();
+      return;
+    }
+
+    if(runtimeWatchTimer){
+      clearInterval(runtimeWatchTimer);
+    }
+    runtimeWatchTimer=setInterval(function(){
+      if(!hasAppsScriptRuntime()){
+        return;
+      }
+      clearInterval(runtimeWatchTimer);
+      runtimeWatchTimer=null;
+      if(runtimeFallbackTimer){
+        clearTimeout(runtimeFallbackTimer);
+        runtimeFallbackTimer=null;
+      }
+      if(previewBootstrapped){
+        PREVIEW_MODE=false;
+        previewBootstrapped=false;
+        try{
+          LocalCache.invalidate('dashboardData');
+        }catch(err){
+          console.warn('Unable to clear cached dashboard payload after reconnect:',err);
+        }
+        showToast('info','Connected','Live data connection restored. Loading polls…',3500);
+      }
+      loadInitialData();
+    },RUNTIME_POLL_INTERVAL);
+
+    if(runtimeFallbackTimer){
+      clearTimeout(runtimeFallbackTimer);
+    }
+    runtimeFallbackTimer=setTimeout(function(){
+      runtimeFallbackTimer=null;
+      if(hasAppsScriptRuntime()){
+        return;
+      }
+      console.warn('Apps Script runtime not detected after '+RUNTIME_MAX_WAIT_MS+'ms – showing cached preview data.');
+      PREVIEW_MODE=true;
+      previewBootstrapped=true;
+      loadInitialData();
+      showToast('warning','Offline preview','Live backend unavailable. Displaying cached sample data.',5000);
+    },RUNTIME_MAX_WAIT_MS);
+  }
 
   function previewOnlyNotice(actionLabel){
     var actionText=actionLabel||'complete this action';
@@ -5129,7 +5187,7 @@
   storeButtonDefaultHtml(viewLinksBtn);
 
   // --- Initialization ---
-  loadInitialData();
+  bootstrapAppsScriptRuntime();
 
   if(window.google&&google.charts&&typeof google.charts.load==='function'){
     bootstrapGoogleCharts();
@@ -5709,6 +5767,7 @@
   // --- Initial Data Load ---
   function loadInitialData(){
     if(PREVIEW_MODE&&PREVIEW_PAYLOAD){
+      previewBootstrapped=true;
       console.info('Apps Script runtime not detected – rendering preview data.');
       setTimeout(function(){
         onDashboardDataLoaded({

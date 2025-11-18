@@ -16,6 +16,90 @@ const PROCTOR_VIOLATION_CODES = {
 const PROCTOR_VIOLATION_VALUES = Object.values(PROCTOR_VIOLATION_CODES);
 const PROCTOR_STATUS_VALUES = ['OK', 'LOCKED', 'AWAITING_FULLSCREEN', 'BLOCKED'];
 
+const SESSION_TYPES = {
+  LIVE: 'LIVE_POLL',
+  SECURE: 'SECURE_ASSESSMENT',
+  LEGACY_SECURE: 'INDIVIDUAL_TIMED'
+};
+
+const SECURE_SESSION_PHASE = 'SECURE_ASSESSMENT';
+
+function normalizeSessionTypeValue_(value) {
+  if (!value) return SESSION_TYPES.LIVE;
+  const normalized = value.toString().toUpperCase();
+  if (normalized === 'LIVE' || normalized === SESSION_TYPES.LIVE) {
+    return SESSION_TYPES.LIVE;
+  }
+  if (normalized === SESSION_TYPES.SECURE || normalized === SESSION_TYPES.LEGACY_SECURE || normalized === 'SECURE') {
+    return SESSION_TYPES.SECURE;
+  }
+  return SESSION_TYPES.LIVE;
+}
+
+function isSecureSessionType_(value) {
+  return normalizeSessionTypeValue_(value) === SESSION_TYPES.SECURE;
+}
+
+function isSecureSessionPhase_(value) {
+  if (!value) return false;
+  const normalized = value.toString().toUpperCase();
+  return normalized === SECURE_SESSION_PHASE || normalized === SESSION_TYPES.LEGACY_SECURE;
+}
+
+function normalizeSecureMetadata_(metadata) {
+  const incoming = metadata || {};
+  const sessionType = normalizeSessionTypeValue_(incoming.sessionType);
+  const timeLimitRaw = incoming.timeLimitMinutes;
+  const timeLimit = Number(timeLimitRaw);
+  const validTimeLimit = isSecureSessionType_(sessionType) && !isNaN(timeLimit) && timeLimit > 0
+    ? Math.round(timeLimit)
+    : null;
+
+  const accessCode = incoming.accessCode ? String(incoming.accessCode).trim() : '';
+  const availableFrom = incoming.availableFrom || '';
+  const dueBy = incoming.dueBy || '';
+  const missionControlState = incoming.missionControlState || '';
+  let secureSettings = {};
+  if (incoming.secureSettings && typeof incoming.secureSettings === 'object') {
+    try {
+      secureSettings = JSON.parse(JSON.stringify(incoming.secureSettings));
+    } catch (err) {
+      Logger.error('Failed to clone secure settings metadata', err);
+      secureSettings = { ...incoming.secureSettings };
+    }
+  }
+
+  if (validTimeLimit && !secureSettings.timeLimitMinutes) {
+    secureSettings.timeLimitMinutes = validTimeLimit;
+  }
+  if (accessCode && !secureSettings.accessCode) {
+    secureSettings.accessCode = accessCode;
+  }
+  if (availableFrom && !secureSettings.availableFrom) {
+    secureSettings.availableFrom = availableFrom;
+  }
+  if (dueBy && !secureSettings.dueBy) {
+    secureSettings.dueBy = dueBy;
+  }
+  if (isSecureSessionType_(sessionType) && !secureSettings.proctoringRules) {
+    secureSettings.proctoringRules = [
+      'Fullscreen required',
+      'No tab switching',
+      'Session monitored by Mission Control'
+    ];
+  }
+
+  return {
+    sessionType: sessionType,
+    timeLimitMinutes: validTimeLimit,
+    accessCode: accessCode,
+    availableFrom: availableFrom,
+    dueBy: dueBy,
+    missionControlState: missionControlState,
+    secureSettings: secureSettings
+  };
+}
+
 
 // --- ENHANCED LOGGING (2025 Standard) ---
 const Logger = {
@@ -1059,6 +1143,7 @@ function safeUiAlert(message, title) {
 // ONE-TIME SETUP
 // =============================================================================
 
+
 function setupSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) {
@@ -1067,53 +1152,97 @@ function setupSheet() {
     }
     return;
   }
-  
-  const sheetNames = ["Classes", "Rosters", "Polls", "LiveStatus", "Responses", "IndividualSessionState"];
-  sheetNames.forEach(name => {
-    if (!ss.getSheetByName(name)) {
-      ss.insertSheet(name);
+
+  const headerConfigs = [
+    { name: 'Classes', headers: ['ClassName', 'Description'] },
+    { name: 'Rosters', headers: ['ClassName', 'StudentName', 'StudentEmail'] },
+    {
+      name: 'Polls',
+      headers: [
+        'PollID', 'PollName', 'ClassName', 'QuestionIndex', 'QuestionDataJSON', 'CreatedAt', 'UpdatedAt',
+        'SessionType', 'TimeLimitMinutes', 'AccessCode', 'AvailableFrom', 'DueBy', 'MissionControlState', 'SecureSettingsJSON'
+      ]
+    },
+    { name: 'LiveStatus', headers: ['ActivePollID', 'ActiveQuestionIndex', 'PollStatus'] },
+    {
+      name: 'Responses',
+      headers: ['ResponseID', 'Timestamp', 'PollID', 'QuestionIndex', 'StudentEmail', 'Answer', 'IsCorrect', 'ConfidenceLevel']
+    },
+    {
+      name: 'IndividualSessionState',
+      headers: [
+        'PollID', 'SessionID', 'StudentEmail', 'StudentDisplayName', 'StartTime', 'EndTime', 'QuestionOrder',
+        'QuestionOrderSeed', 'CurrentQuestionIndex', 'IsLocked', 'ViolationCode', 'AnswerOrders', 'AnswerChoiceMap',
+        'TimeAdjustmentMinutes', 'PauseDurationMs', 'LastHeartbeatMs', 'ConnectionHealth', 'ProctorStatus', 'AdditionalMetadataJSON'
+      ]
+    },
+    {
+      name: 'AssessmentEvents',
+      headers: ['EventID', 'Timestamp', 'PollID', 'SessionID', 'StudentEmail', 'EventType', 'EventPayloadJSON']
+    },
+    {
+      name: 'AssessmentAnalytics',
+      headers: ['PollID', 'ComputedAt', 'MetricType', 'MetricName', 'MetricValue', 'DetailsJSON']
     }
+  ];
+
+  headerConfigs.forEach(config => {
+    const sheet = ensureSheet_(ss, config.name);
+    ensureHeaders_(sheet, config.headers);
   });
 
-  // Set up headers
-  const classesSheet = ss.getSheetByName("Classes");
-  classesSheet.getRange("A1:B1").setValues([["ClassName", "Description"]])
-    .setFontWeight("bold").setBackground("#4285f4").setFontColor("#ffffff");
-
-  const rostersSheet = ss.getSheetByName("Rosters");
-  rostersSheet.getRange("A1:C1").setValues([["ClassName", "StudentName", "StudentEmail"]])
-    .setFontWeight("bold").setBackground("#4285f4").setFontColor("#ffffff");
-
-  const pollsSheet = ss.getSheetByName("Polls");
-  pollsSheet.getRange("A1:G1").setValues([["PollID", "PollName", "ClassName", "QuestionIndex", "QuestionDataJSON", "CreatedAt", "UpdatedAt"]])
-    .setFontWeight("bold").setBackground("#4285f4").setFontColor("#ffffff");
-  
-  const liveSheet = ss.getSheetByName("LiveStatus");
-  liveSheet.getRange("A1:C1").setValues([["ActivePollID", "ActiveQuestionIndex", "PollStatus"]])
-    .setFontWeight("bold").setBackground("#4285f4").setFontColor("#ffffff");
-  DataAccess.liveStatus.set("", -1, "CLOSED", {
+  DataAccess.liveStatus.set('', -1, 'CLOSED', {
     sessionPhase: 'PRE_LIVE',
     startedAt: null,
     endedAt: null,
     reason: 'SETUP'
   });
-  
-  const responsesSheet = ss.getSheetByName("Responses");
-  responsesSheet.getRange("A1:H1").setValues([["ResponseID", "Timestamp", "PollID", "QuestionIndex", "StudentEmail", "Answer", "IsCorrect", "ConfidenceLevel"]])
-    .setFontWeight("bold").setBackground("#4285f4").setFontColor("#ffffff");
 
-  const individualSessionStateSheet = ss.getSheetByName("IndividualSessionState");
-  individualSessionStateSheet.getRange("A1:I1").setValues([["PollID", "SessionID", "StudentEmail", "StartTime", "EndTime", "QuestionOrder", "CurrentQuestionIndex", "IsLocked", "AnswerOrders"]])
-    .setFontWeight("bold").setBackground("#4285f4").setFontColor("#ffffff");
-
-  // Freeze header rows
-  [classesSheet, rostersSheet, pollsSheet, liveSheet, responsesSheet, individualSessionStateSheet].forEach(sheet => {
-    sheet.setFrozenRows(1);
-  });
-  
   if (!safeUiAlert('Sheet setup complete! All tabs configured with headers.', 'Veritas Live Poll')) {
     Logger.log('Sheet setup complete! All tabs configured with headers.');
   }
+}
+
+function ensureSheet_(ss, name) {
+  let sheet = ss.getSheetByName(name);
+  if (!sheet) {
+    sheet = ss.insertSheet(name);
+  }
+  return sheet;
+}
+
+function ensureHeaders_(sheet, desiredHeaders) {
+  const lastCol = sheet.getLastColumn();
+  let existingHeaders = [];
+  if (lastCol > 0) {
+    existingHeaders = sheet
+      .getRange(1, 1, 1, lastCol)
+      .getValues()[0]
+      .map(value => (value || '').toString().trim());
+  }
+
+  const filteredExisting = existingHeaders.filter(value => value.length > 0);
+
+  if (filteredExisting.length === 0) {
+    sheet.getRange(1, 1, 1, desiredHeaders.length).setValues([desiredHeaders]);
+  } else {
+    const missingHeaders = desiredHeaders.filter(header => filteredExisting.indexOf(header) === -1);
+    if (missingHeaders.length > 0) {
+      const startCol = filteredExisting.length + 1;
+      sheet.getRange(1, startCol, 1, missingHeaders.length).setValues([missingHeaders]);
+      filteredExisting.push(...missingHeaders);
+    }
+  }
+
+  const headerWidth = Math.max(sheet.getLastColumn(), desiredHeaders.length);
+  if (headerWidth > 0) {
+    sheet
+      .getRange(1, 1, 1, headerWidth)
+      .setFontWeight('bold')
+      .setBackground('#4285f4')
+      .setFontColor('#ffffff');
+  }
+  sheet.setFrozenRows(1);
 }
 
 // =============================================================================
@@ -1661,7 +1790,7 @@ function deleteClassRecord(className) {
   })();
 }
 
-function createNewPoll(pollName, className, questions) {
+function createNewPoll(pollName, className, questions, metadata) {
   return withErrorHandling(() => {
     if (!pollName || !className || !Array.isArray(questions) || questions.length === 0) {
       throw new Error('Invalid poll data: name, class, and questions are required');
@@ -1673,8 +1802,13 @@ function createNewPoll(pollName, className, questions) {
 
     const pollId = "P-" + Utilities.getUuid();
     const timestamp = new Date().toISOString();
+    const normalizedMetadata = normalizeSecureMetadata_(metadata);
 
-    writePollRows_(pollId, pollName, className, questions, timestamp, timestamp);
+    if (isSecureSessionType_(normalizedMetadata.sessionType) && !normalizedMetadata.timeLimitMinutes) {
+      throw new Error('Time limit is required for Secure Assessments');
+    }
+
+    writePollRows_(pollId, pollName, className, questions, timestamp, timestamp, normalizedMetadata);
 
     CacheManager.invalidate('ALL_POLLS_DATA');
 
@@ -1698,7 +1832,7 @@ function saveDraft(pollData) {
     const pollId = "D-" + Utilities.getUuid(); // "D" for Draft
     const timestamp = new Date().toISOString();
 
-    writePollRows_(pollId, pollName, className, questions, timestamp, timestamp);
+    writePollRows_(pollId, pollName, className, questions, timestamp, timestamp, { sessionType: SESSION_TYPES.LIVE });
 
     CacheManager.invalidate('ALL_POLLS_DATA');
 
@@ -1710,7 +1844,7 @@ function saveDraft(pollData) {
 
 function savePollNew(pollData) {
   return withErrorHandling(() => {
-    const { pollName, className, questions, sessionType, timeLimitMinutes } = pollData;
+    const { pollName, className, questions } = pollData;
     if (!pollName || !className || !Array.isArray(questions) || questions.length === 0) {
       throw new Error('Invalid poll data: name, class, and questions are required');
     }
@@ -1719,21 +1853,18 @@ function savePollNew(pollData) {
       throw new Error('Maximum 50 questions per poll');
     }
 
-    // Validate session type specific requirements
-    if (sessionType === 'INDIVIDUAL_TIMED') {
-      if (!timeLimitMinutes || timeLimitMinutes <= 0) {
-        throw new Error('Time limit is required for individual timed sessions');
-      }
-    }
-
     const pollId = "P-" + Utilities.getUuid();
     const timestamp = new Date().toISOString();
+    const normalizedMetadata = normalizeSecureMetadata_(pollData);
+    if (isSecureSessionType_(normalizedMetadata.sessionType) && !normalizedMetadata.timeLimitMinutes) {
+      throw new Error('Time limit is required for Secure Assessments');
+    }
 
-    writePollRows_(pollId, pollName, className, questions, timestamp, timestamp, sessionType, timeLimitMinutes);
+    writePollRows_(pollId, pollName, className, questions, timestamp, timestamp, normalizedMetadata);
 
     CacheManager.invalidate('ALL_POLLS_DATA');
 
-    Logger.log('Poll created via new editor', { pollId: pollId, pollName: pollName, questionCount: questions.length, sessionType: sessionType || 'LIVE_POLL' });
+    Logger.log('Poll created via new editor', { pollId: pollId, pollName: pollName, questionCount: questions.length, sessionType: normalizedMetadata.sessionType });
 
     return DataAccess.polls.getAll();
   })();
@@ -1814,7 +1945,7 @@ function getIndividualTimedSessionState(token) {
     const metadata = liveStatus.metadata || {};
     const sessionId = metadata.sessionId;
 
-    if (!pollId || !sessionId || metadata.sessionPhase !== 'INDIVIDUAL_TIMED') {
+    if (!pollId || !sessionId || !isSecureSessionPhase_(metadata.sessionPhase)) {
       return { status: 'ENDED' };
     }
 
@@ -1973,12 +2104,12 @@ function startIndividualTimedSession(pollId) {
     const poll = DataAccess.polls.getById(pollId);
     if (!poll) throw new Error('Poll not found');
 
-    if (poll.sessionType !== 'INDIVIDUAL_TIMED') {
-      throw new Error('This poll is not configured as an individual timed session');
+    if (!isSecureSessionType_(poll.sessionType)) {
+      throw new Error('This poll is not configured as a Secure Assessment');
     }
 
     if (!poll.timeLimitMinutes || poll.timeLimitMinutes <= 0) {
-      throw new Error('Time limit must be set for individual timed sessions');
+      throw new Error('Time limit must be set for Secure Assessments');
     }
 
     const nowIso = new Date().toISOString();
@@ -1986,8 +2117,8 @@ function startIndividualTimedSession(pollId) {
 
     // Set live status to indicate individual timed session is running
     DataAccess.liveStatus.set(pollId, -1, "OPEN", {
-      reason: 'INDIVIDUAL_TIMED_RUNNING',
-      sessionPhase: 'INDIVIDUAL_TIMED',
+      reason: 'SECURE_ASSESSMENT_RUNNING',
+      sessionPhase: SECURE_SESSION_PHASE,
       startedAt: nowIso,
       endedAt: null,
       timeLimitMinutes: poll.timeLimitMinutes,
@@ -1999,7 +2130,7 @@ function startIndividualTimedSession(pollId) {
     // Reset proctor state for new session
     ProctorAccess.resetForNewSession(pollId, sessionId);
 
-    Logger.log('Individual timed session started', {
+    Logger.log('Secure assessment session started', {
       pollId: pollId,
       pollName: poll.pollName,
       timeLimitMinutes: poll.timeLimitMinutes
@@ -2173,7 +2304,7 @@ function shuffleArray_(array) {
  * Called periodically or on-demand
  */
 
-function updatePoll(pollId, pollName, className, questions) {
+function updatePoll(pollId, pollName, className, questions, metadata) {
   return withErrorHandling(() => {
     if (!pollId || !pollName || !className || !Array.isArray(questions) || questions.length === 0) {
       throw new Error('Invalid poll data: poll ID, name, class, and questions are required');
@@ -2189,7 +2320,12 @@ function updatePoll(pollId, pollName, className, questions) {
     const createdAt = existingPoll && existingPoll.createdAt ? existingPoll.createdAt : new Date().toISOString();
     const updatedAt = new Date().toISOString();
 
-    writePollRows_(pollId, pollName, className, questions, createdAt, updatedAt);
+    const normalizedMetadata = normalizeSecureMetadata_(metadata || existingPoll || { sessionType: SESSION_TYPES.LIVE });
+    if (isSecureSessionType_(normalizedMetadata.sessionType) && !normalizedMetadata.timeLimitMinutes) {
+      throw new Error('Time limit is required for Secure Assessments');
+    }
+
+    writePollRows_(pollId, pollName, className, questions, createdAt, updatedAt, normalizedMetadata);
 
     CacheManager.invalidate('ALL_POLLS_DATA');
 
@@ -2264,10 +2400,9 @@ function duplicateQuestion(pollId, questionIndex) {
     const existingPoll = DataAccess.polls.getById(pollId);
     const createdAt = existingPoll && existingPoll.createdAt ? existingPoll.createdAt : new Date().toISOString();
     const updatedAt = new Date().toISOString();
-    const sessionType = existingPoll ? existingPoll.sessionType : 'LIVE_POLL';
-    const timeLimitMinutes = existingPoll ? existingPoll.timeLimitMinutes : null;
+    const metadata = normalizeSecureMetadata_(existingPoll || {});
 
-    writePollRows_(pollId, poll.pollName, poll.className, newQuestions, createdAt, updatedAt, sessionType, timeLimitMinutes);
+    writePollRows_(pollId, poll.pollName, poll.className, newQuestions, createdAt, updatedAt, metadata);
 
     CacheManager.invalidate('ALL_POLLS_DATA');
 
@@ -2311,14 +2446,13 @@ function copyPoll(sourcePollId, newPollName, targetClassName) {
     const copiedQuestions = sourcePoll.questions.map(q => JSON.parse(JSON.stringify(q)));
 
     // Copy session type and time limit from source poll
-    const sessionType = sourcePoll.sessionType || 'LIVE_POLL';
-    const timeLimitMinutes = sourcePoll.timeLimitMinutes || null;
+    const metadata = normalizeSecureMetadata_(sourcePoll || {});
 
     // Create new poll with copied questions
     const newPollId = "P-" + Utilities.getUuid();
     const timestamp = new Date().toISOString();
 
-    writePollRows_(newPollId, pollName, className, copiedQuestions, timestamp, timestamp, sessionType, timeLimitMinutes);
+    writePollRows_(newPollId, pollName, className, copiedQuestions, timestamp, timestamp, metadata);
 
     CacheManager.invalidate('ALL_POLLS_DATA');
 
@@ -4936,8 +5070,8 @@ function getStudentPollStatus(token, context) {
     const sessionPhaseFromMetadata = metadata && metadata.sessionPhase ? metadata.sessionPhase : null;
 
     // ROUTING: Check if this is an Individual Timed Session
-    if (sessionPhaseFromMetadata === 'INDIVIDUAL_TIMED') {
-      Logger.log('Routing student to Individual Timed Session.');
+    if (isSecureSessionPhase_(sessionPhaseFromMetadata)) {
+      Logger.log('Routing student to Secure Assessment session.');
       return getIndividualTimedSessionState(token);
     }
 
@@ -6536,8 +6670,24 @@ function getPolls_() {
       const questionIndex = typeof row[3] === 'number' ? row[3] : parseInt(row[3], 10) || 0;
       const createdAt = row[5] || '';
       const updatedAt = row[6] || createdAt || '';
-      const sessionType = row[7] || 'LIVE_POLL';  // Default to LIVE_POLL for backward compatibility
-      const timeLimitMinutes = row[8] || null;
+      const sessionType = normalizeSessionTypeValue_(row[7] || SESSION_TYPES.LIVE);
+      const timeLimitRaw = row[8];
+      const timeLimitMinutes = typeof timeLimitRaw === 'number'
+        ? timeLimitRaw
+        : (timeLimitRaw ? Number(timeLimitRaw) : null);
+      const accessCode = row[9] || '';
+      const availableFrom = row[10] || '';
+      const dueBy = row[11] || '';
+      const missionControlState = row[12] || '';
+      let secureSettings = {};
+      if (row[13]) {
+        try {
+          secureSettings = JSON.parse(row[13]);
+        } catch (err) {
+          Logger.error('Failed to parse SecureSettingsJSON', err);
+          secureSettings = {};
+        }
+      }
       const questionData = normalizeQuestionObject_(JSON.parse(row[4] || "{}"), updatedAt);
       questionData.index = questionIndex;
 
@@ -6550,6 +6700,11 @@ function getPolls_() {
           updatedAt: updatedAt,
           sessionType: sessionType,
           timeLimitMinutes: timeLimitMinutes,
+          accessCode: accessCode,
+          availableFrom: availableFrom,
+          dueBy: dueBy,
+          missionControlState: missionControlState,
+          secureSettings: secureSettings,
           questions: []
         });
       }
@@ -6563,16 +6718,21 @@ function getPolls_() {
   }, CacheManager.CACHE_TIMES.LONG);
 }
 
-function writePollRows_(pollId, pollName, className, questions, createdAt, updatedAt, sessionType, timeLimitMinutes) {
+function writePollRows_(pollId, pollName, className, questions, createdAt, updatedAt, metadata) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const pollSheet = ss.getSheetByName('Polls');
   if (!pollSheet) {
     throw new Error('Polls sheet not found. Run setupSheet() first.');
   }
 
-  // Default to LIVE_POLL for backward compatibility
-  const finalSessionType = sessionType || 'LIVE_POLL';
-  const finalTimeLimitMinutes = (finalSessionType === 'INDIVIDUAL_TIMED' && timeLimitMinutes) ? timeLimitMinutes : null;
+  const normalizedMetadata = normalizeSecureMetadata_(metadata);
+  const finalSessionType = normalizedMetadata.sessionType;
+  const finalTimeLimitMinutes = normalizedMetadata.timeLimitMinutes;
+  const accessCode = normalizedMetadata.accessCode || '';
+  const availableFrom = normalizedMetadata.availableFrom || '';
+  const dueBy = normalizedMetadata.dueBy || '';
+  const missionControlState = normalizedMetadata.missionControlState || '';
+  const secureSettingsJson = JSON.stringify(normalizedMetadata.secureSettings || {});
 
   // DEBUG: Log what we're about to save
   Logger.log('=== SAVING POLL DATA ===');
@@ -6597,7 +6757,12 @@ function writePollRows_(pollId, pollName, className, questions, createdAt, updat
     createdAt,
     updatedAt,
     finalSessionType,
-    finalTimeLimitMinutes
+    finalTimeLimitMinutes,
+    accessCode,
+    availableFrom,
+    dueBy,
+    missionControlState,
+    secureSettingsJson
   ]);
 
   if (payload.length === 0) {

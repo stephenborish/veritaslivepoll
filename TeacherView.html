@@ -3375,6 +3375,53 @@
             </select>
           </div>
 
+          <div class="bg-brand-white dark:bg-brand-dark-gray/20 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm mb-6">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-dark-gray/60 dark:text-brand-white/60">Session Mode</p>
+                <h3 class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white mt-1">Choose how students will experience this activity</h3>
+                <p class="text-sm text-brand-dark-gray/70 dark:text-brand-white/70 mt-2">Use Live Poll for synchronous, teacher-paced checks. Secure Assessment enables timed, randomized, proctored exams.</p>
+              </div>
+              <div class="inline-flex rounded-full border border-brand-light-gray dark:border-brand-dark-gray/50 overflow-hidden">
+                <button type="button" id="builder-mode-live" data-session-type="LIVE_POLL" class="builder-session-toggle px-4 py-2 text-sm font-semibold transition-colors focus:outline-none">Live Poll</button>
+                <button type="button" id="builder-mode-secure" data-session-type="SECURE_ASSESSMENT" class="builder-session-toggle px-4 py-2 text-sm font-semibold transition-colors focus:outline-none">Secure Assessment</button>
+              </div>
+            </div>
+
+            <div id="secure-assessment-settings" class="mt-5 hidden">
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div>
+                  <label for="secure-time-limit-input" class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Time Limit (minutes)</label>
+                  <input id="secure-time-limit-input" type="number" min="5" step="5" placeholder="60" class="mt-2 w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                  <p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-2">Required for Secure Assessments. Each student receives a personal countdown.</p>
+                </div>
+                <div>
+                  <label for="secure-access-code-input" class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Access Code (optional)</label>
+                  <input id="secure-access-code-input" type="text" maxlength="24" placeholder="BIO101" class="mt-2 w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 uppercase tracking-[0.2em]" />
+                  <p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-2">Students must enter this code before the exam begins.</p>
+                </div>
+                <div>
+                  <label for="secure-available-input" class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Available From</label>
+                  <input id="secure-available-input" type="datetime-local" class="mt-2 w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                  <p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-2">Students cannot start before this window opens.</p>
+                </div>
+                <div>
+                  <label for="secure-due-input" class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Due By</label>
+                  <input id="secure-due-input" type="datetime-local" class="mt-2 w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                  <p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-2">Sessions end automatically after this deadline.</p>
+                </div>
+              </div>
+
+              <div class="mt-5 flex items-start gap-3 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
+                <span class="material-symbols-outlined text-blue-600 dark:text-blue-300">shield_lock</span>
+                <div>
+                  <p class="text-sm font-semibold text-blue-900 dark:text-blue-200">Secure Assessment requirements</p>
+                  <p class="text-sm text-blue-900/80 dark:text-blue-100/70 mt-1">Students must stay in fullscreen, avoid tab switching, and will appear in Mission Control for live monitoring.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
 
           <div id="question-builder-workspace">
             <!-- Question editing workspace will be populated dynamically -->
@@ -4367,6 +4414,13 @@
   var selectedQuestionIndex=0;
   var editingPollId=null;
   var isPollDirty=false;
+  var pollSessionType='LIVE_POLL';
+  var secureAssessmentConfig={
+    timeLimitMinutes:60,
+    accessCode:'',
+    availableFrom:'',
+    dueBy:''
+  };
   var pollSortMode='updated_desc';
   var pollClassFilter='all';
   var rosterData={};
@@ -5157,6 +5211,12 @@
   var pollsTableBody=document.getElementById('polls-table-body');
   var pollsEmptyState=document.getElementById('polls-empty-state');
   var classSelect=document.getElementById('class-select');
+  var sessionToggleButtons=document.querySelectorAll('.builder-session-toggle');
+  var secureSettingsPanel=document.getElementById('secure-assessment-settings');
+  var secureTimeLimitInput=document.getElementById('secure-time-limit-input');
+  var secureAccessCodeInput=document.getElementById('secure-access-code-input');
+  var secureAvailableInput=document.getElementById('secure-available-input');
+  var secureDueInput=document.getElementById('secure-due-input');
   var questionSortResetBtn=document.getElementById('question-sort-reset-btn');
   var questionSortHelp=document.getElementById('question-sort-help');
   var questionNavigatorContainer=document.getElementById('question-navigator');
@@ -5225,6 +5285,48 @@
   bindClick('save-poll-btn',savePoll);
   bindInput('new-poll-name','input',markPollDirty);
   bindChange(classSelect,markPollDirty,'class-select');
+
+  if(sessionToggleButtons&&sessionToggleButtons.length){
+    sessionToggleButtons.forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var targetType=this.dataset.sessionType;
+        setPollSessionType(targetType);
+      });
+    });
+  }
+
+  if(secureTimeLimitInput){
+    secureTimeLimitInput.addEventListener('input',function(){
+      readSecureSettingsFromInputs();
+      markPollDirty();
+    });
+  }
+
+  if(secureAccessCodeInput){
+    secureAccessCodeInput.addEventListener('input',function(){
+      this.value=(this.value||'').toUpperCase();
+      readSecureSettingsFromInputs();
+      markPollDirty();
+    });
+  }
+
+  if(secureAvailableInput){
+    secureAvailableInput.addEventListener('change',function(){
+      readSecureSettingsFromInputs();
+      markPollDirty();
+    });
+  }
+
+  if(secureDueInput){
+    secureDueInput.addEventListener('change',function(){
+      readSecureSettingsFromInputs();
+      markPollDirty();
+    });
+  }
+
+  syncSessionTypeToggleUI();
+  updateSecureSettingsVisibility();
+  populateSecureSettingsInputs();
 
   if(pollSearchInput){
     pollSearchInput.addEventListener('input',function(){
@@ -6112,7 +6214,7 @@
       var className = escapeHtml(poll && poll.className ? poll.className : 'Unassigned');
       var questionCount = Array.isArray(poll && poll.questions) ? poll.questions.length : 0;
       var lastEdited = formatDateTime(poll.updatedAt || poll.lastRunAt || poll.createdAt);
-      var sessionType = poll.sessionType || 'live'; // Default to 'live'
+      var sessionType = normalizeSessionTypeClient(poll.sessionType);
 
       var htmlParts = [];
 
@@ -6184,21 +6286,19 @@
   }
 
   function getSessionTypeInfo(sessionType) {
-    switch (sessionType) {
-      case 'individual':
-        return {
-          label: 'Individual Timed',
-          icon: 'timer',
-          badgeClass: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-        };
-      case 'live':
-      default:
-        return {
-          label: 'Live Poll',
-          icon: 'groups',
-          badgeClass: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
-        };
+    var normalized=normalizeSessionTypeClient(sessionType);
+    if(normalized==='SECURE_ASSESSMENT'){
+      return {
+        label:'Secure Assessment',
+        icon:'lock',
+        badgeClass:'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200'
+      };
     }
+    return {
+      label:'Live Poll',
+      icon:'groups',
+      badgeClass:'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
+    };
   }
 
   function renderPollTable(polls){
@@ -7926,7 +8026,7 @@
     }
 
     // Check session type and call appropriate function
-    if (selectedPoll.sessionType === 'INDIVIDUAL_TIMED') {
+    if (isSecureSessionTypeClient(selectedPoll.sessionType)) {
       setButtonLoading(startPollBtn, true, 'Starting...');
 
       if (PREVIEW_MODE) {
@@ -10740,6 +10840,15 @@
       return;
     }
 
+    var previewMetadata={
+      sessionType:normalizeSessionTypeClient(currentPreviewPoll.sessionType),
+      timeLimitMinutes:currentPreviewPoll.timeLimitMinutes||null,
+      accessCode:currentPreviewPoll.accessCode||'',
+      availableFrom:currentPreviewPoll.availableFrom||'',
+      dueBy:currentPreviewPoll.dueBy||'',
+      secureSettings:currentPreviewPoll.secureSettings||{}
+    };
+
     google.script.run
       .withSuccessHandler(async function(polls){
         refreshPollData(polls);
@@ -10755,8 +10864,7 @@
         currentPreviewPoll.pollName,
         currentPreviewPoll.className,
         currentPreviewPoll.questions,
-        currentPreviewPoll.sessionType,
-        currentPreviewPoll.timeLimitMinutes
+        previewMetadata
       );
   }
 
@@ -10791,6 +10899,15 @@
       return;
     }
 
+    var reorderMetadata={
+      sessionType:normalizeSessionTypeClient(currentPreviewPoll.sessionType),
+      timeLimitMinutes:currentPreviewPoll.timeLimitMinutes||null,
+      accessCode:currentPreviewPoll.accessCode||'',
+      availableFrom:currentPreviewPoll.availableFrom||'',
+      dueBy:currentPreviewPoll.dueBy||'',
+      secureSettings:currentPreviewPoll.secureSettings||{}
+    };
+
     google.script.run
       .withSuccessHandler(async function(polls){
         refreshPollData(polls);
@@ -10804,8 +10921,7 @@
         currentPreviewPoll.pollName,
         currentPreviewPoll.className,
         currentPreviewPoll.questions,
-        currentPreviewPoll.sessionType,
-        currentPreviewPoll.timeLimitMinutes
+        reorderMetadata
       );
   }
 
@@ -11078,6 +11194,135 @@
     setSaveStatus(message||'All changes saved');
   }
 
+  function normalizeSessionTypeClient(value){
+    if(!value)return 'LIVE_POLL';
+    var normalized=value.toString().toUpperCase();
+    if(normalized==='LIVE'||normalized==='LIVE_POLL')return 'LIVE_POLL';
+    if(normalized==='SECURE_ASSESSMENT'||normalized==='SECURE'||normalized==='INDIVIDUAL_TIMED')return 'SECURE_ASSESSMENT';
+    return 'LIVE_POLL';
+  }
+
+  function isSecureSessionTypeClient(value){
+    return normalizeSessionTypeClient(value)==='SECURE_ASSESSMENT';
+  }
+
+  function syncSessionTypeToggleUI(){
+    if(!sessionToggleButtons)return;
+    sessionToggleButtons.forEach(function(btn){
+      var isActive=normalizeSessionTypeClient(btn.dataset.sessionType)===normalizeSessionTypeClient(pollSessionType);
+      if(isActive){
+        btn.classList.add('bg-primary','text-brand-white');
+        btn.classList.remove('text-brand-dark-gray','dark:text-brand-white/70');
+      }else{
+        btn.classList.remove('bg-primary','text-brand-white');
+        btn.classList.add('text-brand-dark-gray','dark:text-brand-white/70');
+      }
+    });
+  }
+
+  function updateSecureSettingsVisibility(){
+    if(!secureSettingsPanel)return;
+    if(isSecureSessionTypeClient(pollSessionType)){
+      secureSettingsPanel.classList.remove('hidden');
+    }else{
+      secureSettingsPanel.classList.add('hidden');
+    }
+  }
+
+  function isoToLocalInput(isoValue){
+    if(!isoValue)return '';
+    var date=new Date(isoValue);
+    if(isNaN(date.getTime()))return '';
+    var year=date.getFullYear();
+    var month=String(date.getMonth()+1).padStart(2,'0');
+    var day=String(date.getDate()).padStart(2,'0');
+    var hours=String(date.getHours()).padStart(2,'0');
+    var minutes=String(date.getMinutes()).padStart(2,'0');
+    return year+'-'+month+'-'+day+'T'+hours+':'+minutes;
+  }
+
+  function localInputToIso(localValue){
+    if(!localValue)return '';
+    var date=new Date(localValue);
+    if(isNaN(date.getTime()))return '';
+    return date.toISOString();
+  }
+
+  function populateSecureSettingsInputs(){
+    if(secureTimeLimitInput){
+      secureTimeLimitInput.value=typeof secureAssessmentConfig.timeLimitMinutes==='number'?secureAssessmentConfig.timeLimitMinutes:'';
+    }
+    if(secureAccessCodeInput){
+      secureAccessCodeInput.value=secureAssessmentConfig.accessCode||'';
+    }
+    if(secureAvailableInput){
+      secureAvailableInput.value=isoToLocalInput(secureAssessmentConfig.availableFrom);
+    }
+    if(secureDueInput){
+      secureDueInput.value=isoToLocalInput(secureAssessmentConfig.dueBy);
+    }
+  }
+
+  function readSecureSettingsFromInputs(){
+    if(secureTimeLimitInput){
+      var parsed=parseInt(secureTimeLimitInput.value,10);
+      secureAssessmentConfig.timeLimitMinutes=isNaN(parsed)?'':parsed;
+    }
+    if(secureAccessCodeInput){
+      secureAssessmentConfig.accessCode=(secureAccessCodeInput.value||'').trim().toUpperCase();
+    }
+    if(secureAvailableInput){
+      secureAssessmentConfig.availableFrom=localInputToIso(secureAvailableInput.value);
+    }
+    if(secureDueInput){
+      secureAssessmentConfig.dueBy=localInputToIso(secureDueInput.value);
+    }
+    return {
+      timeLimitMinutes:typeof secureAssessmentConfig.timeLimitMinutes==='number'?secureAssessmentConfig.timeLimitMinutes:null,
+      accessCode:secureAssessmentConfig.accessCode||'',
+      availableFrom:secureAssessmentConfig.availableFrom||'',
+      dueBy:secureAssessmentConfig.dueBy||''
+    };
+  }
+
+  function resetSecureAssessmentState(){
+    secureAssessmentConfig={
+      timeLimitMinutes:60,
+      accessCode:'',
+      availableFrom:'',
+      dueBy:''
+    };
+    populateSecureSettingsInputs();
+  }
+
+  function setPollSessionType(newType,suppressDirty){
+    pollSessionType=normalizeSessionTypeClient(newType);
+    syncSessionTypeToggleUI();
+    updateSecureSettingsVisibility();
+    if(!suppressDirty){
+      markPollDirty();
+    }
+  }
+
+  function buildSecureAssessmentPayload(){
+    var current=readSecureSettingsFromInputs();
+    return {
+      sessionType:pollSessionType,
+      timeLimitMinutes:current.timeLimitMinutes,
+      accessCode:current.accessCode,
+      availableFrom:current.availableFrom,
+      dueBy:current.dueBy,
+      secureSettings:{
+        timeLimitMinutes:current.timeLimitMinutes,
+        accessCode:current.accessCode,
+        availableFrom:current.availableFrom,
+        dueBy:current.dueBy,
+        fullscreenRequired:isSecureSessionTypeClient(pollSessionType),
+        proctoringRules:['Fullscreen required','No tab switching','Mission Control monitoring']
+      }
+    };
+  }
+
   // --- Poll Creator Modal ---
   function openPollCreator(existingPoll){
     var saveButton=document.getElementById('save-poll-btn');
@@ -11098,6 +11343,22 @@
         refreshClassOptions(BASE_CLASSES.concat([existingPoll.className]));
       }
       classSelect.value=existingPoll.className||'';
+
+      var existingSessionType=normalizeSessionTypeClient(existingPoll.sessionType);
+      secureAssessmentConfig={
+        timeLimitMinutes:typeof existingPoll.timeLimitMinutes==='number'?existingPoll.timeLimitMinutes:
+          (existingPoll.secureSettings&&typeof existingPoll.secureSettings.timeLimitMinutes==='number'
+            ?existingPoll.secureSettings.timeLimitMinutes:''),
+        accessCode:(existingPoll.accessCode|| (existingPoll.secureSettings&&existingPoll.secureSettings.accessCode)||'').toString().toUpperCase(),
+        availableFrom:existingPoll.availableFrom|| (existingPoll.secureSettings&&existingPoll.secureSettings.availableFrom)||'',
+        dueBy:existingPoll.dueBy|| (existingPoll.secureSettings&&existingPoll.secureSettings.dueBy)||''
+      };
+      if(secureAssessmentConfig.timeLimitMinutes===''){
+        secureAssessmentConfig.timeLimitMinutes=60;
+      }
+      populateSecureSettingsInputs();
+      setPollSessionType(existingSessionType,true);
+      updateSecureSettingsVisibility();
 
       questions=existingPoll.questions.map(function(question){
         var answers=(question.options||[]).map(function(opt){
@@ -11139,6 +11400,9 @@
       editingPollId=null;
       document.getElementById('new-poll-name').value='';
       classSelect.value='';
+      resetSecureAssessmentState();
+      setPollSessionType('LIVE_POLL',true);
+      updateSecureSettingsVisibility();
 
       addQuestion(true);
       saveButton.innerHTML='<span class="truncate">Publish Poll</span>';
@@ -11166,6 +11430,9 @@
     questionIdCounter=0;
     draggedQuestionId=null;
     setQuestionReorderHelp();
+    resetSecureAssessmentState();
+    setPollSessionType('LIVE_POLL',true);
+    updateSecureSettingsVisibility();
   }
 
   function addQuestion(suppressDirty){
@@ -11627,12 +11894,24 @@
 
     var pollName=document.getElementById('new-poll-name').value.trim();
     var className=(classSelect.value||'').trim();
+    var currentSessionType=normalizeSessionTypeClient(pollSessionType);
+    var securePayload=buildSecureAssessmentPayload();
+    securePayload.sessionType=currentSessionType;
 
     if(!pollName||!className){
       await veritasAlert('Please enter a poll name and select a class.',{title:'Save poll'});
       savePollBtn.disabled=false;
       savePollBtn.innerHTML=defaultLabel;
       return;
+    }
+
+    if(isSecureSessionTypeClient(currentSessionType)){
+      if(!securePayload.timeLimitMinutes||securePayload.timeLimitMinutes<=0){
+        await veritasAlert('Secure Assessments require a positive time limit.',{title:'Save poll'});
+        savePollBtn.disabled=false;
+        savePollBtn.innerHTML=defaultLabel;
+        return;
+      }
     }
 
     if(questions.length===0){
@@ -11783,7 +12062,7 @@
       console.log('Saving poll with '+questionCount+' questions');
 
       if(PREVIEW_MODE){
-        var newPollRecord={
+      var newPollRecord={
           pollId:editingPollId||('preview-poll-'+Date.now()),
           pollName:pollName,
           className:className,
@@ -11798,7 +12077,13 @@
           }),
           updatedAt:new Date().toISOString(),
           lastRunAt:null,
-          createdAt:new Date().toISOString()
+          createdAt:new Date().toISOString(),
+          sessionType:currentSessionType,
+          timeLimitMinutes:securePayload.timeLimitMinutes,
+          accessCode:securePayload.accessCode,
+          availableFrom:securePayload.availableFrom,
+          dueBy:securePayload.dueBy,
+          secureSettings:securePayload.secureSettings
         };
         if(editingPollId){
           var existingIndex=ALL_POLLS.findIndex(function(p){return p.pollId===editingPollId;});
@@ -11850,10 +12135,19 @@
           savePollBtn.innerHTML=defaultLabel;
         });
 
+      var pollMetadata={
+        sessionType:currentSessionType,
+        timeLimitMinutes:securePayload.timeLimitMinutes,
+        accessCode:securePayload.accessCode,
+        availableFrom:securePayload.availableFrom,
+        dueBy:securePayload.dueBy,
+        secureSettings:securePayload.secureSettings
+      };
+
       if(editingPollId){
-      request.updatePoll(editingPollId, pollName, className, payloadQuestions);
+      request.updatePoll(editingPollId, pollName, className, payloadQuestions, pollMetadata);
       } else {
-      request.createNewPoll(pollName, className, payloadQuestions);
+      request.createNewPoll(pollName, className, payloadQuestions, pollMetadata);
       }
     } catch(err){
       console.error('Upload/save error:',err);

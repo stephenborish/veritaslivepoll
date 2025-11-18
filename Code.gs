@@ -1059,6 +1059,7 @@ function safeUiAlert(message, title) {
 // ONE-TIME SETUP
 // =============================================================================
 
+
 function setupSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) {
@@ -1067,53 +1068,97 @@ function setupSheet() {
     }
     return;
   }
-  
-  const sheetNames = ["Classes", "Rosters", "Polls", "LiveStatus", "Responses", "IndividualSessionState"];
-  sheetNames.forEach(name => {
-    if (!ss.getSheetByName(name)) {
-      ss.insertSheet(name);
+
+  const headerConfigs = [
+    { name: 'Classes', headers: ['ClassName', 'Description'] },
+    { name: 'Rosters', headers: ['ClassName', 'StudentName', 'StudentEmail'] },
+    {
+      name: 'Polls',
+      headers: [
+        'PollID', 'PollName', 'ClassName', 'QuestionIndex', 'QuestionDataJSON', 'CreatedAt', 'UpdatedAt',
+        'SessionType', 'TimeLimitMinutes', 'AccessCode', 'AvailableFrom', 'DueBy', 'MissionControlState', 'SecureSettingsJSON'
+      ]
+    },
+    { name: 'LiveStatus', headers: ['ActivePollID', 'ActiveQuestionIndex', 'PollStatus'] },
+    {
+      name: 'Responses',
+      headers: ['ResponseID', 'Timestamp', 'PollID', 'QuestionIndex', 'StudentEmail', 'Answer', 'IsCorrect', 'ConfidenceLevel']
+    },
+    {
+      name: 'IndividualSessionState',
+      headers: [
+        'PollID', 'SessionID', 'StudentEmail', 'StudentDisplayName', 'StartTime', 'EndTime', 'QuestionOrder',
+        'QuestionOrderSeed', 'CurrentQuestionIndex', 'IsLocked', 'ViolationCode', 'AnswerOrders', 'AnswerChoiceMap',
+        'TimeAdjustmentMinutes', 'PauseDurationMs', 'LastHeartbeatMs', 'ConnectionHealth', 'ProctorStatus', 'AdditionalMetadataJSON'
+      ]
+    },
+    {
+      name: 'AssessmentEvents',
+      headers: ['EventID', 'Timestamp', 'PollID', 'SessionID', 'StudentEmail', 'EventType', 'EventPayloadJSON']
+    },
+    {
+      name: 'AssessmentAnalytics',
+      headers: ['PollID', 'ComputedAt', 'MetricType', 'MetricName', 'MetricValue', 'DetailsJSON']
     }
+  ];
+
+  headerConfigs.forEach(config => {
+    const sheet = ensureSheet_(ss, config.name);
+    ensureHeaders_(sheet, config.headers);
   });
 
-  // Set up headers
-  const classesSheet = ss.getSheetByName("Classes");
-  classesSheet.getRange("A1:B1").setValues([["ClassName", "Description"]])
-    .setFontWeight("bold").setBackground("#4285f4").setFontColor("#ffffff");
-
-  const rostersSheet = ss.getSheetByName("Rosters");
-  rostersSheet.getRange("A1:C1").setValues([["ClassName", "StudentName", "StudentEmail"]])
-    .setFontWeight("bold").setBackground("#4285f4").setFontColor("#ffffff");
-
-  const pollsSheet = ss.getSheetByName("Polls");
-  pollsSheet.getRange("A1:G1").setValues([["PollID", "PollName", "ClassName", "QuestionIndex", "QuestionDataJSON", "CreatedAt", "UpdatedAt"]])
-    .setFontWeight("bold").setBackground("#4285f4").setFontColor("#ffffff");
-  
-  const liveSheet = ss.getSheetByName("LiveStatus");
-  liveSheet.getRange("A1:C1").setValues([["ActivePollID", "ActiveQuestionIndex", "PollStatus"]])
-    .setFontWeight("bold").setBackground("#4285f4").setFontColor("#ffffff");
-  DataAccess.liveStatus.set("", -1, "CLOSED", {
+  DataAccess.liveStatus.set('', -1, 'CLOSED', {
     sessionPhase: 'PRE_LIVE',
     startedAt: null,
     endedAt: null,
     reason: 'SETUP'
   });
-  
-  const responsesSheet = ss.getSheetByName("Responses");
-  responsesSheet.getRange("A1:H1").setValues([["ResponseID", "Timestamp", "PollID", "QuestionIndex", "StudentEmail", "Answer", "IsCorrect", "ConfidenceLevel"]])
-    .setFontWeight("bold").setBackground("#4285f4").setFontColor("#ffffff");
 
-  const individualSessionStateSheet = ss.getSheetByName("IndividualSessionState");
-  individualSessionStateSheet.getRange("A1:I1").setValues([["PollID", "SessionID", "StudentEmail", "StartTime", "EndTime", "QuestionOrder", "CurrentQuestionIndex", "IsLocked", "AnswerOrders"]])
-    .setFontWeight("bold").setBackground("#4285f4").setFontColor("#ffffff");
-
-  // Freeze header rows
-  [classesSheet, rostersSheet, pollsSheet, liveSheet, responsesSheet, individualSessionStateSheet].forEach(sheet => {
-    sheet.setFrozenRows(1);
-  });
-  
   if (!safeUiAlert('Sheet setup complete! All tabs configured with headers.', 'Veritas Live Poll')) {
     Logger.log('Sheet setup complete! All tabs configured with headers.');
   }
+}
+
+function ensureSheet_(ss, name) {
+  let sheet = ss.getSheetByName(name);
+  if (!sheet) {
+    sheet = ss.insertSheet(name);
+  }
+  return sheet;
+}
+
+function ensureHeaders_(sheet, desiredHeaders) {
+  const lastCol = sheet.getLastColumn();
+  let existingHeaders = [];
+  if (lastCol > 0) {
+    existingHeaders = sheet
+      .getRange(1, 1, 1, lastCol)
+      .getValues()[0]
+      .map(value => (value || '').toString().trim());
+  }
+
+  const filteredExisting = existingHeaders.filter(value => value.length > 0);
+
+  if (filteredExisting.length === 0) {
+    sheet.getRange(1, 1, 1, desiredHeaders.length).setValues([desiredHeaders]);
+  } else {
+    const missingHeaders = desiredHeaders.filter(header => filteredExisting.indexOf(header) === -1);
+    if (missingHeaders.length > 0) {
+      const startCol = filteredExisting.length + 1;
+      sheet.getRange(1, startCol, 1, missingHeaders.length).setValues([missingHeaders]);
+      filteredExisting.push(...missingHeaders);
+    }
+  }
+
+  const headerWidth = Math.max(sheet.getLastColumn(), desiredHeaders.length);
+  if (headerWidth > 0) {
+    sheet
+      .getRange(1, 1, 1, headerWidth)
+      .setFontWeight('bold')
+      .setBackground('#4285f4')
+      .setFontColor('#ffffff');
+  }
+  sheet.setFrozenRows(1);
 }
 
 // =============================================================================

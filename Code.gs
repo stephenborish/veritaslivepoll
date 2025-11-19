@@ -1057,6 +1057,81 @@ const DataAccess = {
       if (connectionMeta && connectionMeta.status) {
         sheet.getRange(state.rowIndex, INDIVIDUAL_SESSION_COLUMNS.CONNECTION_HEALTH).setValue(connectionMeta.status);
       }
+    },
+
+    updateFields: function(pollId, sessionId, studentEmail, updates) {
+      if (!updates || typeof updates !== 'object') {
+        throw new Error('Updates object required');
+      }
+
+      const state = this.getByStudent(pollId, sessionId, studentEmail);
+      if (!state) {
+        throw new Error('Student session not initialized');
+      }
+
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const sheet = ss.getSheetByName('IndividualSessionState');
+      const rowIndex = state.rowIndex;
+
+      const columns = INDIVIDUAL_SESSION_COLUMNS;
+
+      const setColumnValue = (column, value) => {
+        sheet.getRange(rowIndex, column).setValue(value);
+      };
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'timeAdjustmentMinutes')) {
+        setColumnValue(columns.TIME_ADJUSTMENT_MINUTES, updates.timeAdjustmentMinutes);
+        state.timeAdjustmentMinutes = updates.timeAdjustmentMinutes;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'pauseDurationMs')) {
+        setColumnValue(columns.PAUSE_DURATION_MS, updates.pauseDurationMs);
+        state.pauseDurationMs = updates.pauseDurationMs;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'currentQuestionIndex')) {
+        setColumnValue(columns.CURRENT_QUESTION_INDEX, updates.currentQuestionIndex);
+        state.currentQuestionIndex = updates.currentQuestionIndex;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'isLocked')) {
+        setColumnValue(columns.IS_LOCKED, updates.isLocked);
+        state.isLocked = updates.isLocked;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'endTime')) {
+        setColumnValue(columns.END_TIME, updates.endTime || '');
+        state.endTime = updates.endTime;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'proctorStatus')) {
+        setColumnValue(columns.PROCTOR_STATUS, updates.proctorStatus || '');
+        state.proctorStatus = updates.proctorStatus;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'violationCode')) {
+        setColumnValue(columns.VIOLATION_CODE, updates.violationCode || '');
+        state.violationCode = updates.violationCode || '';
+      }
+
+      let metadataChanged = false;
+      let nextMetadata = { ...(state.additionalMetadata || {}) };
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'additionalMetadata')) {
+        nextMetadata = updates.additionalMetadata || {};
+        metadataChanged = true;
+      } else if (Object.prototype.hasOwnProperty.call(updates, 'mergeAdditionalMetadata')) {
+        nextMetadata = { ...nextMetadata, ...(updates.mergeAdditionalMetadata || {}) };
+        metadataChanged = true;
+      }
+
+      if (metadataChanged) {
+        const serialized = Object.keys(nextMetadata).length > 0 ? JSON.stringify(nextMetadata) : '';
+        setColumnValue(columns.ADDITIONAL_METADATA_JSON, serialized);
+        state.additionalMetadata = nextMetadata;
+      }
+
+      return state;
     }
   }
 };
@@ -1483,6 +1558,29 @@ function ensureHeaders_(sheet, desiredHeaders) {
       .setFontColor('#ffffff');
   }
   sheet.setFrozenRows(1);
+}
+
+function logAssessmentEvent_(pollId, sessionId, studentEmail, eventType, payload) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) return;
+    const sheet = ss.getSheetByName('AssessmentEvents');
+    if (!sheet) return;
+
+    const row = [
+      'AE-' + Utilities.getUuid(),
+      new Date().toISOString(),
+      pollId || '',
+      sessionId || '',
+      studentEmail || '',
+      eventType || '',
+      payload ? JSON.stringify(payload) : ''
+    ];
+
+    sheet.appendRow(row);
+  } catch (err) {
+    Logger.error('Failed to log assessment event', err);
+  }
 }
 
 // =============================================================================
@@ -2285,6 +2383,14 @@ function getIndividualTimedSessionTeacherView(pollId, sessionId) {
       throw new Error('Poll not found');
     }
 
+    const liveStatus = DataAccess.liveStatus.get();
+    const liveMetadata = (liveStatus && liveStatus.metadata) ? liveStatus.metadata : {};
+    const effectiveSessionId = sessionId || liveMetadata.sessionId || '';
+
+    if (!effectiveSessionId) {
+      throw new Error('Secure assessment session not found.');
+    }
+
     // Get roster
     const roster = DataAccess.roster.getByClass(poll.className);
     if (!roster || roster.length === 0) {
@@ -2292,7 +2398,7 @@ function getIndividualTimedSessionTeacherView(pollId, sessionId) {
     }
 
     // Get all student states for this session
-    const allStudentStates = DataAccess.individualSessionState.getAllForSession(pollId, sessionId);
+    const allStudentStates = DataAccess.individualSessionState.getAllForSession(pollId, effectiveSessionId);
     const studentStateMap = new Map();
     allStudentStates.forEach(state => {
       studentStateMap.set(state.studentEmail, state);
@@ -2300,12 +2406,21 @@ function getIndividualTimedSessionTeacherView(pollId, sessionId) {
 
     // Get all proctor states in batch
     const studentEmails = roster.map(s => s.email);
-    const proctorStates = ProctorAccess.getStatesBatch(pollId, studentEmails, sessionId);
+    const proctorStates = ProctorAccess.getStatesBatch(pollId, studentEmails, effectiveSessionId);
 
     // Build student view data
     const timeLimitMinutes = poll.timeLimitMinutes || 0;
     const totalQuestions = poll.questions.length;
     const now = Date.now();
+
+    const summary = {
+      total: roster.length,
+      notStarted: 0,
+      inProgress: 0,
+      locked: 0,
+      completed: 0,
+      paused: 0
+    };
 
     const students = roster.map(student => {
       const email = student.email;
@@ -2313,45 +2428,91 @@ function getIndividualTimedSessionTeacherView(pollId, sessionId) {
       const proctorState = proctorStates.get(email) || { status: 'OK', lockVersion: 0 };
 
       let status = 'Not Started';
+      let statusTone = 'idle';
       let progress = 0;
+      let answered = 0;
       let timeRemainingSeconds = timeLimitMinutes * 60;
+      let pauseActive = false;
+      let connectionMeta = { status: 'GRAY', heartbeatLagMs: null, lastHeartbeatAt: null };
 
       if (state) {
-        progress = state.currentQuestionIndex || 0;
-        const startTime = new Date(state.startTime).getTime();
-        const elapsedMinutes = (now - startTime) / (1000 * 60);
-        const remainingMinutes = Math.max(0, timeLimitMinutes - elapsedMinutes);
-        timeRemainingSeconds = Math.floor(remainingMinutes * 60);
+        progress = Math.max(0, state.currentQuestionIndex || 0);
+        answered = progress;
+        const timingState = computeSecureTimingState_(state, poll, liveMetadata);
+        if (timingState && typeof timingState.remainingMs === 'number') {
+          timeRemainingSeconds = Math.max(0, Math.floor(timingState.remainingMs / 1000));
+        }
 
-        if (state.isLocked && state.endTime) {
-          status = elapsedMinutes >= timeLimitMinutes ? 'Timed Out' : 'Finished';
+        pauseActive = !!(state.additionalMetadata && state.additionalMetadata.pauseActive);
+
+        if (pauseActive) {
+          status = 'Paused';
+          statusTone = 'warning';
+          summary.paused++;
+        } else if (state.isLocked && state.endTime) {
+          status = 'Submitted';
+          statusTone = 'success';
+          summary.completed++;
         } else if (state.isLocked) {
-          status = 'Timed Out';
+          status = 'Locked';
+          statusTone = 'critical';
+          summary.locked++;
         } else {
           status = 'In Progress';
+          statusTone = 'active';
+          summary.inProgress++;
         }
+
+        const lastHeartbeatMs = Number(state.lastHeartbeatMs || 0);
+        if (lastHeartbeatMs) {
+          connectionMeta = deriveSecureConnectionMeta_({
+            deltaMs: now - lastHeartbeatMs,
+            lastSeen: new Date(lastHeartbeatMs).toISOString()
+          });
+        }
+      } else {
+        summary.notStarted++;
       }
+
+      const progressPct = totalQuestions > 0
+        ? Math.min(100, Math.round((answered / totalQuestions) * 100))
+        : 0;
 
       return {
         name: student.name,
         email: email,
         status: status,
-        progress: progress,
+        statusTone: statusTone,
+        progress: answered,
         totalQuestions: totalQuestions,
+        progressPct: progressPct,
         timeRemainingSeconds: timeRemainingSeconds,
+        pauseActive: pauseActive,
+        connection: connectionMeta,
         proctorStatus: proctorState.status || 'OK',
-        lockVersion: proctorState.lockVersion || 0
+        lockVersion: proctorState.lockVersion || 0,
+        isLocked: !!(state && state.isLocked),
+        hasSubmitted: !!(state && state.endTime),
+        timeAdjustmentMinutes: state ? state.timeAdjustmentMinutes || 0 : 0,
+        additionalMetadata: state ? state.additionalMetadata || {} : {},
+        lastHeartbeatMs: state ? state.lastHeartbeatMs || 0 : 0,
+        startTime: state ? state.startTime : null,
+        endTime: state ? state.endTime : null,
+        violationCode: state ? state.violationCode || '' : '',
+        questionIndex: state ? state.currentQuestionIndex || 0 : 0
       };
     });
 
     return {
       pollId: pollId,
-      sessionId: sessionId,
+      sessionId: effectiveSessionId,
       pollName: poll.pollName,
       className: poll.className,
       timeLimitMinutes: timeLimitMinutes,
       totalQuestions: totalQuestions,
-      students: students
+      students: students,
+      summary: summary,
+      generatedAt: new Date().toISOString()
     };
   })();
 }
@@ -2404,6 +2565,169 @@ function startIndividualTimedSession(pollId) {
       timeLimitMinutes: poll.timeLimitMinutes,
       questionCount: poll.questions.length
     };
+  })();
+}
+
+function adjustSecureAssessmentTime(pollId, sessionId, studentEmail, deltaMinutes) {
+  return withErrorHandling(() => {
+    if (!pollId || !sessionId || !studentEmail) {
+      throw new Error('Poll, session, and student are required');
+    }
+
+    const teacherEmail = Session.getActiveUser().getEmail();
+    if (teacherEmail !== TEACHER_EMAIL && !isAdditionalTeacher_(teacherEmail)) {
+      throw new Error('Unauthorized');
+    }
+
+    const numericDelta = Number(deltaMinutes);
+    if (isNaN(numericDelta) || numericDelta === 0) {
+      throw new Error('A non-zero time adjustment is required');
+    }
+
+    const studentState = DataAccess.individualSessionState.getByStudent(pollId, sessionId, studentEmail);
+    if (!studentState) {
+      throw new Error('Student session not initialized');
+    }
+
+    const currentAdjustment = Number(studentState.timeAdjustmentMinutes || 0);
+    const nextAdjustment = Math.max(0, currentAdjustment + numericDelta);
+
+    DataAccess.individualSessionState.updateFields(pollId, sessionId, studentEmail, {
+      timeAdjustmentMinutes: nextAdjustment
+    });
+
+    logAssessmentEvent_(pollId, sessionId, studentEmail, 'TIME_ADJUSTED', {
+      deltaMinutes: numericDelta,
+      totalAdjustmentMinutes: nextAdjustment,
+      actor: teacherEmail
+    });
+
+    return { success: true, timeAdjustmentMinutes: nextAdjustment };
+  })();
+}
+
+function pauseSecureAssessmentStudent(pollId, sessionId, studentEmail) {
+  return withErrorHandling(() => {
+    if (!pollId || !sessionId || !studentEmail) {
+      throw new Error('Poll, session, and student are required');
+    }
+
+    const teacherEmail = Session.getActiveUser().getEmail();
+    if (teacherEmail !== TEACHER_EMAIL && !isAdditionalTeacher_(teacherEmail)) {
+      throw new Error('Unauthorized');
+    }
+
+    const studentState = DataAccess.individualSessionState.getByStudent(pollId, sessionId, studentEmail);
+    if (!studentState) {
+      throw new Error('Student session not initialized');
+    }
+
+    const metadata = { ...(studentState.additionalMetadata || {}) };
+    if (metadata.pauseActive) {
+      return { success: true, pauseActive: true };
+    }
+
+    metadata.pauseActive = true;
+    metadata.pauseStartedAt = new Date().toISOString();
+
+    DataAccess.individualSessionState.updateFields(pollId, sessionId, studentEmail, {
+      additionalMetadata: metadata
+    });
+
+    logAssessmentEvent_(pollId, sessionId, studentEmail, 'PAUSED', {
+      actor: teacherEmail
+    });
+
+    return { success: true, pauseActive: true };
+  })();
+}
+
+function resumeSecureAssessmentStudent(pollId, sessionId, studentEmail) {
+  return withErrorHandling(() => {
+    if (!pollId || !sessionId || !studentEmail) {
+      throw new Error('Poll, session, and student are required');
+    }
+
+    const teacherEmail = Session.getActiveUser().getEmail();
+    if (teacherEmail !== TEACHER_EMAIL && !isAdditionalTeacher_(teacherEmail)) {
+      throw new Error('Unauthorized');
+    }
+
+    const studentState = DataAccess.individualSessionState.getByStudent(pollId, sessionId, studentEmail);
+    if (!studentState) {
+      throw new Error('Student session not initialized');
+    }
+
+    const metadata = { ...(studentState.additionalMetadata || {}) };
+    const pauseStartedAt = metadata.pauseStartedAt ? Date.parse(metadata.pauseStartedAt) : null;
+    if (!metadata.pauseActive || !pauseStartedAt) {
+      metadata.pauseActive = false;
+      metadata.pauseStartedAt = null;
+      DataAccess.individualSessionState.updateFields(pollId, sessionId, studentEmail, {
+        additionalMetadata: metadata
+      });
+      return { success: true, pauseActive: false };
+    }
+
+    const elapsedMs = Math.max(0, Date.now() - pauseStartedAt);
+    const nextPauseDuration = Number(studentState.pauseDurationMs || 0) + elapsedMs;
+
+    metadata.pauseActive = false;
+    metadata.pauseStartedAt = null;
+
+    DataAccess.individualSessionState.updateFields(pollId, sessionId, studentEmail, {
+      pauseDurationMs: nextPauseDuration,
+      additionalMetadata: metadata
+    });
+
+    logAssessmentEvent_(pollId, sessionId, studentEmail, 'RESUMED', {
+      actor: teacherEmail,
+      addedPauseMs: elapsedMs
+    });
+
+    return { success: true, pauseActive: false };
+  })();
+}
+
+function forceSubmitSecureAssessmentStudent(pollId, sessionId, studentEmail) {
+  return withErrorHandling(() => {
+    if (!pollId || !sessionId || !studentEmail) {
+      throw new Error('Poll, session, and student are required');
+    }
+
+    const teacherEmail = Session.getActiveUser().getEmail();
+    if (teacherEmail !== TEACHER_EMAIL && !isAdditionalTeacher_(teacherEmail)) {
+      throw new Error('Unauthorized');
+    }
+
+    const studentState = DataAccess.individualSessionState.getByStudent(pollId, sessionId, studentEmail);
+    if (!studentState) {
+      throw new Error('Student session not initialized');
+    }
+
+    const nowIso = new Date().toISOString();
+    const totalQuestions = Array.isArray(studentState.questionOrder)
+      ? studentState.questionOrder.length
+      : studentState.currentQuestionIndex || 0;
+
+    DataAccess.individualSessionState.updateFields(pollId, sessionId, studentEmail, {
+      isLocked: true,
+      endTime: nowIso,
+      currentQuestionIndex: totalQuestions,
+      proctorStatus: 'FORCED_COMPLETE'
+    });
+
+    const proctorState = ProctorAccess.getState(pollId, studentEmail, sessionId);
+    proctorState.status = 'LOCKED';
+    proctorState.lockReason = 'FORCED_SUBMIT';
+    proctorState.lockedAt = nowIso;
+    ProctorAccess.setState(proctorState);
+
+    logAssessmentEvent_(pollId, sessionId, studentEmail, 'FORCED_SUBMIT', {
+      actor: teacherEmail
+    });
+
+    return { success: true };
   })();
 }
 

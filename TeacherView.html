@@ -2627,6 +2627,24 @@
                 <button id="end-individual-session-btn" class="h-10 px-5 rounded-lg bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors">End Session</button>
               </div>
             </div>
+            <div id="mission-control-summary" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+              <div class="p-4 rounded-xl border border-brand-light-gray/70 bg-slate-50 dark:bg-brand-dark-gray/20">
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Not Started</p>
+                <p id="summary-not-started" class="text-3xl font-bold text-slate-900 dark:text-white">0</p>
+              </div>
+              <div class="p-4 rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/30">
+                <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">In Progress</p>
+                <p id="summary-in-progress" class="text-3xl font-bold text-emerald-800 dark:text-emerald-100">0</p>
+              </div>
+              <div class="p-4 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20">
+                <p class="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-200">Locked / Paused</p>
+                <p id="summary-locked" class="text-3xl font-bold text-amber-800 dark:text-amber-100">0</p>
+              </div>
+              <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800/40">
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Submitted</p>
+                <p id="summary-completed" class="text-3xl font-bold text-slate-900 dark:text-white">0</p>
+              </div>
+            </div>
             <div id="individual-session-students-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               <!-- Student cards will be dynamically inserted here -->
             </div>
@@ -3347,6 +3365,75 @@
     </div>
   </div>
 
+  <!-- Student Manager Modal -->
+  <div id="student-manager-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-slate-900/60" data-student-manager-close="true"></div>
+    <div class="relative w-full max-w-2xl mx-auto my-12 bg-white dark:bg-brand-dark-gray rounded-2xl shadow-2xl border border-brand-light-gray dark:border-brand-dark-gray/40">
+      <div class="flex items-start justify-between gap-4 p-6 border-b border-slate-100 dark:border-brand-dark-gray/60">
+        <div>
+          <p class="text-xs font-semibold tracking-[0.2em] uppercase text-slate-500">Student Manager</p>
+          <h3 id="student-manager-name" class="text-2xl font-bold text-brand-dark-gray dark:text-white">Student Name</h3>
+          <p id="student-manager-status" class="text-sm font-semibold text-slate-500">Status</p>
+        </div>
+        <button id="student-manager-close" class="h-10 w-10 inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-brand-dark-gray/70 text-slate-600 dark:text-white hover:bg-slate-200">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="p-6 space-y-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="p-3 rounded-xl bg-slate-50 dark:bg-brand-dark-gray/40">
+            <p class="text-xs font-semibold uppercase text-slate-500">Question</p>
+            <p id="student-manager-progress" class="text-xl font-bold text-brand-dark-gray dark:text-white">--</p>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-50 dark:bg-brand-dark-gray/40">
+            <p class="text-xs font-semibold uppercase text-slate-500">Time Remaining</p>
+            <p id="student-manager-time" class="text-xl font-bold text-brand-dark-gray dark:text-white">--:--</p>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-50 dark:bg-brand-dark-gray/40">
+            <p class="text-xs font-semibold uppercase text-slate-500">Extra Time</p>
+            <p id="student-manager-extra" class="text-xl font-bold text-brand-dark-gray dark:text-white">+0m</p>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-50 dark:bg-brand-dark-gray/40">
+            <p class="text-xs font-semibold uppercase text-slate-500">Connection</p>
+            <div class="flex items-center gap-2">
+              <span id="student-manager-connection-dot" class="h-3 w-3 rounded-full bg-slate-300"></span>
+              <p id="student-manager-connection" class="text-sm font-semibold text-brand-dark-gray dark:text-white">Unknown</p>
+            </div>
+          </div>
+        </div>
+        <div class="rounded-2xl border border-slate-200 dark:border-brand-dark-gray/60 p-4">
+          <p class="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-3">Time Controls</p>
+          <div class="flex flex-wrap items-center gap-2">
+            <button id="student-manager-add-5" class="inline-flex items-center gap-2 rounded-full bg-emerald-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-emerald-700">
+              <span class="material-symbols-outlined text-base">add</span>
+              +5 min
+            </button>
+            <button id="student-manager-add-10" class="inline-flex items-center gap-2 rounded-full bg-emerald-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-emerald-700">
+              <span class="material-symbols-outlined text-base">add</span>
+              +10 min
+            </button>
+            <button id="student-manager-pause" class="inline-flex items-center gap-2 rounded-full bg-amber-500 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-amber-600">
+              <span class="material-symbols-outlined text-base">pause_circle</span>
+              Pause Timer
+            </button>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <button id="student-manager-unlock" class="inline-flex items-center gap-2 rounded-full bg-blue-600 text-white px-5 py-2 text-sm font-semibold shadow hover:bg-blue-700">
+            <span class="material-symbols-outlined text-base">lock_open</span>
+            Approve Unlock
+          </button>
+          <button id="student-manager-force-submit" class="inline-flex items-center gap-2 rounded-full bg-red-600 text-white px-5 py-2 text-sm font-semibold shadow hover:bg-red-700">
+            <span class="material-symbols-outlined text-base">task</span>
+            Force Submit
+          </button>
+          <p id="student-manager-message" class="text-sm text-slate-500"></p>
+        </div>
+        <div id="student-manager-loading" class="hidden text-sm text-slate-500">Working...</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Poll Creator Modal -->
   <div id="poll-creator-modal" class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
     <div class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -3648,6 +3735,10 @@
   var studentTableSort={column:'lastName',direction:'asc'};
   var pollInterval=null;
   var individualPollInterval = null;
+  var currentSecureSessionId = null;
+  var currentMissionControlPollId = null;
+  var missionControlStudents = [];
+  var currentManagedStudent = null;
   var visualTimerInterval=null;
   var isPaused=false;
   var isLiveSession=false;
@@ -5244,6 +5335,22 @@
   var secureAccessCodeInput=document.getElementById('secure-access-code-input');
   var secureAvailableInput=document.getElementById('secure-available-input');
   var secureDueInput=document.getElementById('secure-due-input');
+  var studentManagerModal=document.getElementById('student-manager-modal');
+  var studentManagerName=document.getElementById('student-manager-name');
+  var studentManagerStatus=document.getElementById('student-manager-status');
+  var studentManagerProgress=document.getElementById('student-manager-progress');
+  var studentManagerTime=document.getElementById('student-manager-time');
+  var studentManagerExtra=document.getElementById('student-manager-extra');
+  var studentManagerConnection=document.getElementById('student-manager-connection');
+  var studentManagerConnectionDot=document.getElementById('student-manager-connection-dot');
+  var studentManagerMessage=document.getElementById('student-manager-message');
+  var studentManagerLoading=document.getElementById('student-manager-loading');
+  var studentManagerAdd5=document.getElementById('student-manager-add-5');
+  var studentManagerAdd10=document.getElementById('student-manager-add-10');
+  var studentManagerPause=document.getElementById('student-manager-pause');
+  var studentManagerUnlock=document.getElementById('student-manager-unlock');
+  var studentManagerForceSubmit=document.getElementById('student-manager-force-submit');
+  var studentManagerClose=document.getElementById('student-manager-close');
   var questionSortResetBtn=document.getElementById('question-sort-reset-btn');
   var questionSortHelp=document.getElementById('question-sort-help');
   var questionNavigatorContainer=document.getElementById('question-navigator');
@@ -8822,106 +8929,7 @@
 
   // --- Individual Timed Session Monitoring ---
   function showIndividualTimedDashboard(result) {
-    // Store session data
-    CURRENT_POLL_DATA.pollId = result.pollId;
-    CURRENT_POLL_DATA.sessionId = result.sessionId;
-    CURRENT_POLL_DATA.pollName = result.pollName;
-    CURRENT_POLL_DATA.className = result.className;
-    CURRENT_POLL_DATA.timeLimitMinutes = result.timeLimitMinutes;
-    CURRENT_POLL_DATA.questionCount = result.questionCount;
-
-    // Set view to individual-timed
-    setMainSection('individual-timed');
-    mainLoader.style.display = 'none';
-
-    // Update header info
-    document.getElementById('individual-session-poll-name').textContent = result.pollName + ' - ' + result.className;
-    document.getElementById('individual-session-meta').textContent =
-      result.questionCount + ' questions • ' + result.timeLimitMinutes + ' minutes';
-
-    // Start polling for updates
-    pollIndividualSessionState();
-    if (individualPollInterval) {
-      clearInterval(individualPollInterval);
-    }
-    individualPollInterval = setInterval(pollIndividualSessionState, 3000);
-  }
-
-  function pollIndividualSessionState() {
-    if (!CURRENT_POLL_DATA.pollId || !CURRENT_POLL_DATA.sessionId) {
-      return;
-    }
-
-    google.script.run
-      .withSuccessHandler(renderIndividualStudentCards)
-      .withFailureHandler(handleError)
-      .getIndividualTimedSessionTeacherView(CURRENT_POLL_DATA.pollId, CURRENT_POLL_DATA.sessionId);
-  }
-
-  function renderIndividualStudentCards(view) {
-    var container = document.getElementById('individual-session-students-grid');
-    if (!container) return;
-
-    container.innerHTML = '';
-
-    view.students.forEach(function(student) {
-      var card = document.createElement('div');
-      card.className = 'bg-white dark:bg-brand-dark-gray/30 rounded-lg border p-4 shadow-sm';
-
-      // Status badge color
-      var statusColor = 'bg-gray-200 text-gray-700';
-      if (student.status === 'In Progress') {
-        statusColor = 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200';
-      } else if (student.status === 'Finished') {
-        statusColor = 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200';
-      } else if (student.status === 'Timed Out') {
-        statusColor = 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200';
-      }
-
-      // Proctor status handling
-      var proctorBadge = '';
-      var cardStyle = '';
-      if (student.proctorStatus === 'LOCKED') {
-        cardStyle = 'border-red-500 border-2';
-        proctorBadge = '<span class="inline-block px-2 py-1 text-xs font-bold bg-red-500 text-white rounded">LOCKED</span>';
-      } else if (student.proctorStatus === 'AWAITING_FULLSCREEN') {
-        cardStyle = 'border-blue-500 border-2';
-        proctorBadge = '<span class="inline-block px-2 py-1 text-xs font-bold bg-blue-500 text-white rounded">AWAITING RE-ENTRY</span>';
-      }
-
-      if (cardStyle) {
-        card.className += ' ' + cardStyle;
-      }
-
-      // Format time remaining
-      var timeDisplay = '--:--';
-      if (student.status === 'In Progress') {
-        var mins = Math.floor(student.timeRemainingSeconds / 60);
-        var secs = student.timeRemainingSeconds % 60;
-        timeDisplay = (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs;
-      }
-
-      var approveButton = '';
-      if (student.proctorStatus === 'LOCKED') {
-        approveButton = '<button class="mt-2 w-full px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded" ' +
-          'onclick="approveStudentUnlock(\'' + student.email + '\', \'' + view.pollId + '\', ' + student.lockVersion + ', this)">' +
-          'Approve</button>';
-      }
-
-      card.innerHTML =
-        '<div class="flex items-start justify-between mb-2">' +
-          '<h3 class="font-bold text-brand-dark-gray dark:text-brand-white">' + student.name + '</h3>' +
-          proctorBadge +
-        '</div>' +
-        '<div class="flex items-center justify-between mb-1">' +
-          '<span class="inline-block px-2 py-1 text-xs font-semibold rounded ' + statusColor + '">' + student.status + '</span>' +
-          '<span class="text-sm text-gray-600 dark:text-gray-400">' + timeDisplay + '</span>' +
-        '</div>' +
-        '<p class="text-sm text-gray-600 dark:text-gray-400">Progress: ' + student.progress + ' / ' + student.totalQuestions + '</p>' +
-        approveButton;
-
-      container.appendChild(card);
-    });
+    showIndividualTimedView(result);
   }
 
   async function onEndIndividualSession() {
@@ -8938,12 +8946,17 @@
       individualPollInterval = null;
     }
 
+    var pollId = currentMissionControlPollId || (CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId);
+    if (!pollId) {
+      return;
+    }
+
     google.script.run
       .withSuccessHandler(function() {
         showDashboard();
       })
       .withFailureHandler(handleError)
-      .endIndividualTimedSession(CURRENT_POLL_DATA.pollId);
+      .endIndividualTimedSession(pollId);
   }
 
   function updateLiveView(data){
@@ -12823,9 +12836,27 @@
   }
 
   function showIndividualTimedView(view) {
+    if (!view) return;
     setMainSection('individual-timed');
-    document.getElementById('individual-session-poll-name').textContent = view.pollName;
-    renderIndividualStudentCards(view.students);
+    currentMissionControlPollId = view.pollId;
+    currentSecureSessionId = view.sessionId;
+    CURRENT_POLL_DATA.pollId = view.pollId;
+    CURRENT_POLL_DATA.sessionId = view.sessionId;
+    CURRENT_POLL_DATA.pollName = view.pollName;
+    CURRENT_POLL_DATA.className = view.className;
+    CURRENT_POLL_DATA.timeLimitMinutes = view.timeLimitMinutes || 0;
+    CURRENT_POLL_DATA.questionCount = view.totalQuestions || view.questionCount || 0;
+    var pollNameEl = document.getElementById('individual-session-poll-name');
+    if (pollNameEl) {
+      pollNameEl.textContent = view.pollName + ' – ' + (view.className || '');
+    }
+    var metaEl = document.getElementById('individual-session-meta');
+    if (metaEl) {
+      var limitLabel = view.timeLimitMinutes ? view.timeLimitMinutes + ' min limit' : 'Untimed';
+      metaEl.textContent = limitLabel + ' • ' + (view.students ? view.students.length : 0) + ' learners';
+    }
+    renderIndividualStudentCards(view);
+    pollIndividualSessionState();
 
     if (individualPollInterval) {
       clearInterval(individualPollInterval);
@@ -12834,44 +12865,267 @@
   }
   window.showIndividualTimedView = showIndividualTimedView; // Expose for testing
 
-  function renderIndividualStudentCards(students) {
+  function renderIndividualStudentCards(view) {
     var grid = document.getElementById('individual-session-students-grid');
+    if (!grid) return;
+    var students = (view && view.students) ? view.students : [];
+    missionControlStudents = students.slice();
     grid.innerHTML = '';
-    var pollId = pollSelect.value;
-    var poll = ALL_POLLS.find(function(p) { return p.pollId === pollId; });
-    var totalQuestions = (poll && poll.questions) ? poll.questions.length : 1;
-    students.forEach(function(student) {
-      var card = document.createElement('div');
-      card.className = 'bg-gray-100 dark:bg-gray-700 p-4 rounded-lg shadow';
-      var progressCount = student.progress || 0;
-      var progressPercentage = totalQuestions > 0 ? (progressCount / totalQuestions) * 100 : 0;
-      card.innerHTML = `
-        <div class="flex items-center justify-between mb-2">
-          <h4 class="font-bold">${escapeHtml(student.name)}</h4>
-          <span class="text-xs font-semibold">${Math.round(progressPercentage)}% Complete</span>
-        </div>
-        <div class="w-full bg-gray-300 rounded-full h-2.5 dark:bg-gray-600">
-          <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${progressPercentage}%"></div>
-        </div>
-        <div class="text-xs mt-2">Time Remaining: ${formatTime(student.timeRemainingSeconds)}</div>
-      `;
-      grid.appendChild(card);
-    });
+
+    if (students.length === 0) {
+      var empty = document.createElement('div');
+      empty.className = 'col-span-full text-center py-10 text-slate-500';
+      empty.textContent = 'Students will appear here as they join the assessment.';
+      grid.appendChild(empty);
+    } else {
+      students.forEach(function(student) {
+        var statusClass = 'bg-slate-100 text-slate-700';
+        if (student.status === 'In Progress') {
+          statusClass = 'bg-emerald-50 text-emerald-700';
+        } else if (student.status === 'Locked') {
+          statusClass = 'bg-red-50 text-red-700';
+        } else if (student.status === 'Paused') {
+          statusClass = 'bg-amber-50 text-amber-700';
+        } else if (student.status === 'Submitted') {
+          statusClass = 'bg-slate-200 text-slate-700';
+        }
+
+        var connectionClass = 'bg-slate-300';
+        var connectionLabel = 'No data';
+        var connectionStatus = student.connection ? student.connection.status : 'GRAY';
+        if (connectionStatus === 'GREEN') {
+          connectionClass = 'bg-emerald-400';
+          connectionLabel = 'Synced';
+        } else if (connectionStatus === 'YELLOW') {
+          connectionClass = 'bg-amber-400';
+          connectionLabel = 'Reconnecting';
+        } else if (connectionStatus === 'RED') {
+          connectionClass = 'bg-red-500';
+          connectionLabel = 'Offline';
+        }
+
+        var timeLabel = student.timeRemainingSeconds != null
+          ? formatTime(student.timeRemainingSeconds)
+          : '--:--';
+        var progressPct = student.progressPct != null ? student.progressPct : 0;
+        var progressDisplay = `Q ${student.progress || 0} / ${student.totalQuestions || 0}`;
+        var manageDisabled = student.status === 'Not Started';
+
+        var card = document.createElement('div');
+        card.className = 'rounded-2xl border border-slate-200 dark:border-brand-dark-gray/60 bg-white dark:bg-brand-dark-gray/30 p-4 shadow-sm flex flex-col gap-3';
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="text-base font-semibold text-brand-dark-gray dark:text-white">${escapeHtml(student.name)}</p>
+              <span class="inline-flex mt-1 px-2.5 py-1 text-xs font-semibold rounded-full ${statusClass}">${student.status}</span>
+            </div>
+            <div class="flex items-center gap-2 text-xs text-slate-500">
+              <span class="h-2.5 w-2.5 rounded-full ${connectionClass}"></span>
+              <span>${connectionLabel}</span>
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between text-xs text-slate-500 mb-1">
+              <span>${progressDisplay}</span>
+              <span>Remaining ${timeLabel}</span>
+            </div>
+            <div class="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800">
+              <div class="h-2 rounded-full ${student.status === 'Locked' ? 'bg-red-500' : 'bg-emerald-500'}" style="width: ${progressPct}%"></div>
+            </div>
+          </div>
+          <button class="mission-manage-btn inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 dark:border-slate-600 px-4 py-2 text-sm font-semibold text-brand-dark-gray dark:text-white hover:bg-slate-50 disabled:opacity-60" data-action="manage-student" data-email="${student.email}" ${manageDisabled ? 'disabled' : ''}>
+            <span class="material-symbols-outlined text-base">tune</span>
+            Manage
+          </button>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    updateMissionControlSummary(view && view.summary ? view.summary : {});
+    attachManageHandlers();
+    syncManagedStudentState();
   }
 
   function pollIndividualSessionState() {
-    var pollId = CURRENT_POLL_DATA.pollId; // Assuming this is set
-    if (!isLiveSession || !pollId) return;
+    if (!currentMissionControlPollId || !currentSecureSessionId) {
+      return;
+    }
 
     google.script.run
       .withSuccessHandler(function(view) {
-        renderIndividualStudentCards(view.students);
+        renderIndividualStudentCards(view);
       })
       .withFailureHandler(handleError)
-      .getIndividualTimedSessionTeacherView(pollId);
+      .getIndividualTimedSessionTeacherView(currentMissionControlPollId, currentSecureSessionId);
+  }
+
+  function updateMissionControlSummary(summary) {
+    var readyEl=document.getElementById('summary-not-started');
+    var inProgressEl=document.getElementById('summary-in-progress');
+    var lockedEl=document.getElementById('summary-locked');
+    var completedEl=document.getElementById('summary-completed');
+    if(readyEl){readyEl.textContent=summary.notStarted||0;}
+    if(inProgressEl){inProgressEl.textContent=summary.inProgress||0;}
+    var flagged=(summary.locked||0)+(summary.paused||0);
+    if(lockedEl){lockedEl.textContent=flagged;}
+    if(completedEl){completedEl.textContent=summary.completed||0;}
+  }
+
+  function attachManageHandlers(){
+    var buttons=document.querySelectorAll('#individual-session-students-grid [data-action="manage-student"]');
+    buttons.forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var email=btn.dataset.email;
+        var target=missionControlStudents.find(function(student){return student.email===email;});
+        if(target){
+          openStudentManager(target);
+        }
+      });
+    });
+  }
+
+  function openStudentManager(student){
+    if(!studentManagerModal||!student){return;}
+    currentManagedStudent=student;
+    updateStudentManagerUi(student);
+    studentManagerModal.classList.remove('hidden');
+  }
+
+  function closeStudentManager(){
+    if(!studentManagerModal){return;}
+    studentManagerModal.classList.add('hidden');
+    currentManagedStudent=null;
+    setStudentManagerLoading(false);
+  }
+
+  function syncManagedStudentState(){
+    if(!currentManagedStudent||!missionControlStudents.length||!studentManagerModal||studentManagerModal.classList.contains('hidden')){
+      return;
+    }
+    var updated=missionControlStudents.find(function(student){return student.email===currentManagedStudent.email;});
+    if(updated){
+      currentManagedStudent=updated;
+      updateStudentManagerUi(updated);
+    }
+  }
+
+  function updateStudentManagerUi(student){
+    if(!student){return;}
+    if(studentManagerName){studentManagerName.textContent=student.name;}
+    if(studentManagerStatus){studentManagerStatus.textContent=student.status;}
+    if(studentManagerProgress){studentManagerProgress.textContent='Q '+(student.progress||0)+' / '+(student.totalQuestions||0);}
+    if(studentManagerTime){studentManagerTime.textContent=student.timeRemainingSeconds!=null?formatTime(student.timeRemainingSeconds):'--:--';}
+    if(studentManagerExtra){
+      var extraMinutes=student.timeAdjustmentMinutes||0;
+      studentManagerExtra.textContent=(extraMinutes>=0?'+':'')+extraMinutes+'m';
+    }
+    if(studentManagerConnection){
+      var label='No signal';
+      var status=student.connection?student.connection.status:'';
+      if(status==='GREEN'){label='Synced';}
+      else if(status==='YELLOW'){label='Reconnecting';}
+      else if(status==='RED'){label='Offline';}
+      studentManagerConnection.textContent=label;
+    }
+    if(studentManagerConnectionDot){
+      studentManagerConnectionDot.classList.remove('bg-emerald-400','bg-amber-400','bg-red-500','bg-slate-300');
+      var dotClass='bg-slate-300';
+      var statusColor=student.connection?student.connection.status:'';
+      if(statusColor==='GREEN'){dotClass='bg-emerald-400';}
+      else if(statusColor==='YELLOW'){dotClass='bg-amber-400';}
+      else if(statusColor==='RED'){dotClass='bg-red-500';}
+      studentManagerConnectionDot.classList.add(dotClass);
+    }
+    if(studentManagerMessage){
+      if(student.lastHeartbeatMs){
+        studentManagerMessage.textContent='Last heartbeat '+getTimeAgo(new Date(student.lastHeartbeatMs))+'.';
+      }else{
+        studentManagerMessage.textContent='';
+      }
+    }
+    if(studentManagerPause){
+      studentManagerPause.innerHTML='<span class="material-symbols-outlined text-base">'+(student.pauseActive?'play_arrow':'pause_circle')+'</span><span>'+(student.pauseActive?' Resume Timer':' Pause Timer')+'</span>';
+    }
+    if(studentManagerUnlock){
+      var lockedState=student.proctorStatus==='LOCKED'||student.isLocked;
+      studentManagerUnlock.disabled=!lockedState;
+      studentManagerUnlock.classList.toggle('opacity-60',!lockedState);
+    }
+  }
+
+  function setStudentManagerLoading(isLoading){
+    if(studentManagerLoading){
+      studentManagerLoading.classList.toggle('hidden',!isLoading);
+    }
+    [studentManagerAdd5,studentManagerAdd10,studentManagerPause,studentManagerUnlock,studentManagerForceSubmit].forEach(function(btn){
+      if(btn){btn.disabled=!!isLoading;}
+    });
+  }
+
+  function runMissionControlAction(fnName,args){
+    if(PREVIEW_MODE){
+      previewOnlyNotice('manage secure assessments');
+      return;
+    }
+    if(!currentMissionControlPollId||!currentSecureSessionId||!currentManagedStudent){return;}
+    setStudentManagerLoading(true);
+    var runner=google.script.run
+      .withSuccessHandler(function(){
+        setStudentManagerLoading(false);
+        pollIndividualSessionState();
+      })
+      .withFailureHandler(function(error){
+        setStudentManagerLoading(false);
+        handleError(error);
+      });
+    runner[fnName].apply(runner,args);
+  }
+
+  function handleAdjustStudentTime(deltaMinutes){
+    if(!currentManagedStudent){return;}
+    runMissionControlAction('adjustSecureAssessmentTime',[currentMissionControlPollId,currentSecureSessionId,currentManagedStudent.email,deltaMinutes]);
+  }
+
+  function handlePauseToggle(){
+    if(!currentManagedStudent){return;}
+    var fn=currentManagedStudent.pauseActive?'resumeSecureAssessmentStudent':'pauseSecureAssessmentStudent';
+    runMissionControlAction(fn,[currentMissionControlPollId,currentSecureSessionId,currentManagedStudent.email]);
+  }
+
+  async function handleForceSubmitAction(){
+    if(!currentManagedStudent){return;}
+    var confirmed=await veritasConfirm('Force submit and lock '+currentManagedStudent.name+'?',{title:'Force submit',destructive:true,confirmText:'Force Submit'});
+    if(!confirmed){return;}
+    runMissionControlAction('forceSubmitSecureAssessmentStudent',[currentMissionControlPollId,currentSecureSessionId,currentManagedStudent.email]);
   }
 
   bindClick('end-individual-session-btn', onEndIndividualSession);
+
+  if(studentManagerClose){
+    studentManagerClose.addEventListener('click',closeStudentManager);
+  }
+  document.querySelectorAll('[data-student-manager-close="true"]').forEach(function(el){
+    el.addEventListener('click',closeStudentManager);
+  });
+  if(studentManagerAdd5){
+    studentManagerAdd5.addEventListener('click',function(){handleAdjustStudentTime(5);});
+  }
+  if(studentManagerAdd10){
+    studentManagerAdd10.addEventListener('click',function(){handleAdjustStudentTime(10);});
+  }
+  if(studentManagerPause){
+    studentManagerPause.addEventListener('click',handlePauseToggle);
+  }
+  if(studentManagerForceSubmit){
+    studentManagerForceSubmit.addEventListener('click',function(){handleForceSubmitAction();});
+  }
+  if(studentManagerUnlock){
+    studentManagerUnlock.addEventListener('click',function(){
+      if(!currentManagedStudent||!currentMissionControlPollId){return;}
+      approveStudentUnlock(currentManagedStudent.email,currentMissionControlPollId,currentManagedStudent.lockVersion||0,studentManagerUnlock);
+    });
+  }
 
 
 })();

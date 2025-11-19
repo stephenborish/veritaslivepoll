@@ -135,7 +135,7 @@
       padding: 96px clamp(16px, 4vw, 40px) 88px;
       display: flex;
       flex-direction: column;
-      gap: 32px;
+      gap: 24px;
       min-height: 100vh;
     }
 
@@ -286,92 +286,6 @@
       padding: 0;
     }
 
-    .status-panel {
-      width: 100%;
-      display: block;
-    }
-
-    .status-card {
-      background: #ffffff;
-      color: #111827;
-      border: 1px solid #e5e7eb;
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
-      border-radius: 16px;
-      padding: 28px 32px;
-      max-width: 720px;
-      margin: 0 auto;
-      text-align: left;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .status-icon {
-      font-size: 40px;
-      color: #12385d;
-    }
-
-    .status-title {
-      font-size: 1.6rem;
-      font-weight: 700;
-      color: #111827;
-      margin: 0;
-    }
-
-    .status-subtitle {
-      color: #374151;
-      font-size: 1rem;
-      margin: 0;
-    }
-
-    .status-controls {
-      margin-top: 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .status-helper {
-      color: #4b5563;
-      margin: 0;
-      font-size: 0.98rem;
-    }
-
-    .status-primary-btn,
-    .status-secondary-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      border-radius: 12px;
-      border: 1px solid #12385d;
-      font-weight: 700;
-      padding: 12px 18px;
-      cursor: pointer;
-      transition: transform 120ms ease, box-shadow 160ms ease, background-color 160ms ease;
-    }
-
-    .status-primary-btn {
-      background: #12385d;
-      color: #ffffff;
-      box-shadow: 0 10px 24px rgba(18, 56, 93, 0.2);
-    }
-
-    .status-primary-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 12px 28px rgba(18, 56, 93, 0.25);
-    }
-
-    .status-secondary-btn {
-      background: #f9fafb;
-      color: #12385d;
-    }
-
-    .status-secondary-btn:hover {
-      background: #edf2f7;
-      transform: translateY(-1px);
-      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
-    }
-
     .student-card-body,
     .student-card-options,
     .secure-session-body {
@@ -401,7 +315,6 @@
       flex-direction: column;
       gap: 12px;
       align-items: flex-start;
-      text-align: left;
     }
 
     .student-stem {
@@ -427,7 +340,7 @@
     }
 
     .question-visual img {
-      max-height: 280px;
+      max-height: 300px;
       width: 100%;
       object-fit: contain;
       border-radius: 12px;
@@ -461,7 +374,6 @@
       gap: 12px;
       transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
       color: #000000;
-      text-align: left;
     }
 
     .answer-option:hover:not(.answer-option-disabled) {
@@ -469,25 +381,10 @@
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
     }
 
-    .answer-option .option-top {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      align-items: center;
-      gap: 12px;
-      width: 100%;
-    }
-
     .answer-option .option-body {
       display: flex;
       flex-direction: column;
       gap: 10px;
-    }
-
-    .answer-option .option-meta {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      justify-content: flex-end;
     }
 
     .answer-option .option-leading {
@@ -532,34 +429,6 @@
     .answer-option .result-ribbon,
     .answer-option .result-indicator {
       display: none;
-    }
-
-    .percentage-bubble {
-      display: none;
-      padding: 4px 10px;
-      border-radius: 999px;
-      background: #f3f4f6;
-      color: #111827;
-      font-size: 0.9rem;
-      font-weight: 600;
-      line-height: 1;
-      white-space: nowrap;
-    }
-
-    .percentage-bubble.is-visible {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .percentage-bubble.is-correct {
-      background: #e8f5ec;
-      color: #1b5e20;
-    }
-
-    .percentage-bubble.is-incorrect {
-      background: #fee2e2;
-      color: #b91c1c;
     }
 
     .answer-option.answer-option-selected {
@@ -906,10 +775,10 @@
     }
 
     .student-stem {
-      font-size: 1.6rem;
+      font-size: 1.2rem;
       line-height: 1.6;
-      font-weight: 700;
-      color: #000000;
+      font-weight: 400;
+      color: var(--text-primary);
       margin: 0;
       text-align: left;
       word-wrap: break-word;
@@ -1702,24 +1571,26 @@
       </section>
 
       <!-- Status Container -->
-      <div id="status-container" class="status-panel animate-fade-in" style="display: none;">
-        <div class="status-card">
-          <span class="material-symbols-outlined status-icon" aria-hidden="true">schedule</span>
-          <h2 id="status-message" class="status-title">Connecting to poll...</h2>
-          <p id="status-submessage" class="status-subtitle" style="display: none;"></p>
-          <div id="resume-controls" class="status-controls" style="display: none;">
-            <p class="status-helper">Click below to return to fullscreen and resume the poll.</p>
-            <button id="resume-session-btn" class="status-primary-btn">
-              <span class="material-symbols-outlined text-xl" aria-hidden="true">fullscreen</span>
+      <div id="status-container" class="text-center py-12 animate-fade-in" style="display: none;">
+        <div class="bg-black/20 backdrop-blur-lg rounded-xl border border-white/10 p-8 sm:p-12 shadow-2xl max-w-3xl mx-auto">
+          <span class="material-symbols-outlined text-6xl text-white mb-4 inline-block">schedule</span>
+          <h2 id="status-message" class="text-white text-2xl font-semibold">Connecting to poll...</h2>
+          <p id="status-submessage" class="text-white/70 text-lg mt-4" style="display: none;"></p>
+          <div id="resume-controls" class="mt-8 space-y-3" style="display: none;">
+            <p class="text-white/90 text-base leading-relaxed">
+              Click below to return to fullscreen and resume the poll.
+            </p>
+            <button id="resume-session-btn" class="mx-auto flex items-center justify-center gap-2 px-8 py-4 rounded-lg bg-green-500 text-white text-lg font-bold hover:bg-green-600 transition-transform duration-300 hover:scale-105 shadow-lg">
+              <span class="material-symbols-outlined text-xl">fullscreen</span>
               <span>Resume Poll</span>
             </button>
           </div>
-          <div id="secure-exit-controls" class="status-controls hidden">
-            <p id="secure-exit-description" class="status-helper">
+          <div id="secure-exit-controls" class="mt-10 space-y-3 hidden">
+            <p id="secure-exit-description" class="text-white/80 text-base leading-relaxed">
               When your teacher dismisses you, use the button below to close fullscreen safely.
             </p>
-            <button id="secure-exit-btn" class="status-secondary-btn">
-              <span class="material-symbols-outlined text-lg" aria-hidden="true">logout</span>
+            <button id="secure-exit-btn" class="mx-auto flex items-center justify-center gap-2 px-8 py-3 rounded-lg border border-white/30 bg-white/10 text-white text-base font-semibold hover:bg-white/20 transition-colors">
+              <span class="material-symbols-outlined text-lg">logout</span>
               <span id="secure-exit-label">Exit Secure Session</span>
             </button>
           </div>
@@ -1938,26 +1809,37 @@
             if (questionProgressEl) {
                 questionProgressEl.textContent = `QUESTION ${state.progressIndex + 1} OF ${state.totalQuestions}`;
             }
-            var letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-            var options = Array.isArray(state.question.options) ? state.question.options : [];
-            renderStandardizedLayout({
-                layoutEl: secureQuestionLayout,
-                visualEl: secureQuestionVisual,
-                imageEl: secureQuestionImage,
-                textEl: secureQuestionText,
-                sublineEl: secureQuestionSubline,
-                optionsListEl: secureOptionsList,
-                question: {
-                    text: state.question.questionText || '',
-                    subline: '',
-                    imageURL: state.question.questionImageURL
-                },
-                options: options,
-                optionBuilder: function(option, index) {
-                    return buildSecureOption(option, index, letters.charAt(index) || '#');
+            if (secureQuestionText) {
+                secureQuestionText.textContent = state.question.questionText || '';
+            }
+            if (secureQuestionSubline) {
+                secureQuestionSubline.classList.add('hidden');
+                secureQuestionSubline.textContent = '';
+            }
+            if (secureQuestionImage) {
+                if (state.question.questionImageURL) {
+                    secureQuestionImage.src = state.question.questionImageURL;
+                    secureQuestionImage.style.display = 'block';
+                } else {
+                    secureQuestionImage.style.display = 'none';
                 }
-            });
-            syncSecureOptionSelection();
+            }
+            var secureHasImage = !!state.question.questionImageURL;
+            if (secureQuestionLayout) {
+                secureQuestionLayout.classList.toggle('no-image', !secureHasImage);
+            }
+            if (secureQuestionVisual) {
+                secureQuestionVisual.style.display = secureHasImage ? 'flex' : 'none';
+            }
+            if (secureOptionsList) {
+                secureOptionsList.innerHTML = '';
+                var letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+                var options = Array.isArray(state.question.options) ? state.question.options : [];
+                options.forEach(function(option, index) {
+                    secureOptionsList.appendChild(buildSecureOption(option, index, letters.charAt(index) || '#'));
+                });
+                syncSecureOptionSelection();
+            }
             updateSecureSubmitState();
         }
 
@@ -1974,7 +1856,6 @@
             if (option && option.imageURL) {
                 content += '<img src="' + escapeHtml(option.imageURL) + '" alt="Answer ' + letter + '" class="option-image" referrerpolicy="no-referrer">';
             }
-            content += '<div class="option-top">';
             content += '<div class="option-leading">';
             content += '<div class="letter-badge" aria-hidden="true">' + letter + '</div>';
             content += '<div class="option-body">';
@@ -1985,11 +1866,7 @@
             content += '<span class="sr-only secure-selection-announcement"></span>';
             content += '</div>';
             content += '</div>';
-            content += '<div class="option-meta">';
-            content += '<span class="percentage-bubble" aria-hidden="true"></span>';
             content += '<span class="result-indicator" aria-hidden="true"></span>';
-            content += '</div>';
-            content += '</div>';
             button.innerHTML = content;
             button.addEventListener('click', function(event) {
                 if (event && event.target && event.target.closest('.option-image')) {
@@ -2438,47 +2315,6 @@
                 window.expandImage(e.target);
             }
         });
-
-        function renderStandardizedLayout(config) {
-            if (!config) return;
-            var question = config.question || {};
-            if (config.textEl) {
-                config.textEl.textContent = question.text || '';
-            }
-            if (config.sublineEl) {
-                var hasSubline = !!question.subline;
-                config.sublineEl.textContent = hasSubline ? question.subline : '';
-                config.sublineEl.classList.toggle('hidden', !hasSubline);
-            }
-
-            var hasImage = !!question.imageURL;
-            if (config.imageEl) {
-                if (hasImage) {
-                    config.imageEl.src = question.imageURL;
-                    config.imageEl.style.display = 'block';
-                } else {
-                    config.imageEl.style.display = 'none';
-                }
-            }
-            if (config.visualEl) {
-                config.visualEl.style.display = hasImage ? 'flex' : 'none';
-            }
-            if (config.layoutEl) {
-                config.layoutEl.classList.toggle('no-image', !hasImage);
-            }
-
-            if (config.optionsListEl && Array.isArray(config.options)) {
-                config.optionsListEl.innerHTML = '';
-                config.options.forEach(function(option, index) {
-                    if (typeof config.optionBuilder === 'function') {
-                        var built = config.optionBuilder(option, index);
-                        if (built) {
-                            config.optionsListEl.appendChild(built);
-                        }
-                    }
-                });
-            }
-        }
         var preLivePrimary = document.getElementById('pre-live-primary');
         var preLiveSubline = document.getElementById('pre-live-subline');
         var preLiveReconnectLine = document.getElementById('pre-live-reconnect-line');
@@ -3605,16 +3441,16 @@
                     if (preLiveSubline) {
                         preLiveSubline.textContent = 'This page will update automatically.';
                         preLiveSubline.style.display = 'block';
-                    preLiveSubline.classList.remove('hidden');
+                        preLiveSubline.classList.remove('hidden');
                     }
                 } else {
                     statusContainer.style.display = 'block';
                     statusMessage.textContent = data.message || 'Waiting for your teacher to begin the poll...';
-                    statusMessage.className = 'status-title text-veritas-navy';
+                    statusMessage.className = 'text-white text-2xl font-semibold';
                     if (statusSubMessage) {
                         statusSubMessage.textContent = 'This page will update automatically.';
                         statusSubMessage.style.display = 'block';
-                        statusSubMessage.className = 'status-subtitle';
+                        statusSubMessage.className = 'text-white/60 text-base mt-4';
                     }
                 }
                 return;
@@ -3643,38 +3479,64 @@
                     if (questionProgressEl) {
                         questionProgressEl.textContent = 'QUESTION ' + qNum + ' OF ' + qTotal;
                     }
+
+                    if (questionTextEl) {
+                        questionTextEl.textContent = data.questionText || '';
+                    }
+
+                    if (questionSublineEl) {
+                        questionSublineEl.classList.add('hidden');
+                        questionSublineEl.textContent = '';
+                    }
+
+                    var hasQuestionImage = !!data.questionImageURL;
+                    if (questionImageEl) {
+                        if (hasQuestionImage) {
+                            questionImageEl.src = data.questionImageURL;
+                            questionImageEl.style.display = 'block';
+                        } else {
+                            questionImageEl.style.display = 'none';
+                        }
+                    }
+                    if (questionLayout) {
+                        questionLayout.classList.toggle('no-image', !hasQuestionImage);
+                    }
+                    if (questionVisual) {
+                        questionVisual.style.display = hasQuestionImage ? 'flex' : 'none';
+                    }
+
                     if (noResponsesMessageEl) {
                         noResponsesMessageEl.classList.add('hidden');
                         noResponsesMessageEl.textContent = '';
                     }
 
+                    optionsList.innerHTML = "";
                     var shuffled = shuffle(data.options || []);
                     var letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+
+                    // DEBUG: Log what we received
+                    console.log('=== STUDENT RECEIVED DATA ===');
+                    console.log('questionImageURL:', data.questionImageURL);
+                    console.log('metacognitionEnabled:', data.metacognitionEnabled);
+                    console.log('currentMetacognitionEnabled will be set to:', !!data.metacognitionEnabled);
+                    console.log('options:', data.options);
+                    if (data.options && data.options.length > 0) {
+                        data.options.forEach(function(opt, idx) {
+                            console.log('  Option ' + idx + ':', 'text="' + opt.text + '", imageURL=' + opt.imageURL);
+                        });
+                    }
+
                     currentOptionLayout = [];
-                    renderStandardizedLayout({
-                        layoutEl: questionLayout,
-                        visualEl: questionVisual,
-                        imageEl: questionImageEl,
-                        textEl: questionTextEl,
-                        sublineEl: questionSublineEl,
-                        optionsListEl: optionsList,
-                        question: {
-                            text: data.questionText || '',
-                            subline: '',
-                            imageURL: data.questionImageURL
-                        },
-                        options: shuffled,
-                        optionBuilder: function(option, index) {
-                            var letter = letters[index] || (index + 1).toString();
-                            var btn = createOptionButton(option, letter, data.pollId, data.questionIndex);
-                            var listItem = document.createElement('li');
-                            listItem.appendChild(btn);
-                            currentOptionLayout.push({
-                                text: option.text || '',
-                                imageURL: option.imageURL || ''
-                            });
-                            return listItem;
-                        }
+                    shuffled.forEach(function(option, index) {
+                        var letter = letters[index] || (index + 1).toString();
+                        var btn = createOptionButton(option, letter, data.pollId, data.questionIndex);
+                        var listItem = document.createElement('li');
+                        listItem.appendChild(btn);
+                        optionsList.appendChild(listItem);
+                        currentOptionLayout.push({
+                            text: option.text || '',
+                            imageURL: option.imageURL || ''
+                        });
                     });
                 }
 
@@ -3693,16 +3555,16 @@
                     questionContainer.style.display = 'none';
                     statusContainer.style.display = 'block';
                     statusMessage.textContent = data.hasSubmitted ? (data.message || 'Answer received - nice work.') : 'Answer received - nice work.';
-                    statusMessage.className = 'status-title text-green-700';
+                    statusMessage.className = 'text-green-300 text-2xl font-semibold';
                     if (statusSubMessage) {
                         statusSubMessage.textContent = 'Your teacher will reveal the answer shortly...';
                         statusSubMessage.style.display = 'block';
-                        statusSubMessage.className = 'status-subtitle';
+                        statusSubMessage.className = 'text-white/70 text-lg mt-4';
                     }
                     var iconEl = statusContainer.querySelector('.material-symbols-outlined');
                     if (iconEl) {
                         iconEl.textContent = 'check_circle';
-                        iconEl.className = 'material-symbols-outlined status-icon text-green-700';
+                        iconEl.className = 'material-symbols-outlined text-6xl text-green-300 mb-4 inline-block';
                     }
                 } else if (pendingAnswerText === null) {
                     // Only show question if we're not waiting for confidence input
@@ -3732,24 +3594,24 @@
                 }
                 statusContainer.style.display = 'block';
                 var statusIcon = 'schedule';
-                var statusClass = 'text-veritas-navy';
-                var statusTextClass = 'status-title text-veritas-navy';
+                var statusClass = 'text-white';
+                var statusTextClass = 'text-white text-2xl font-semibold';
 
                 if (data.status === 'PRE_LIVE') {
                     hasAnsweredCurrent = false;
                     statusMessage.textContent = data.message || 'Waiting for your teacher to begin the poll...';
                     statusIcon = 'schedule';
-                    statusClass = 'text-veritas-navy';
+                    statusClass = 'text-white';
                     if (statusSubMessage) {
                         statusSubMessage.textContent = 'This page will update automatically.';
                         statusSubMessage.style.display = 'block';
-                        statusSubMessage.className = 'status-subtitle';
+                        statusSubMessage.className = 'text-white/60 text-base mt-4';
                     }
                 } else if (data.status === 'PAUSED') {
                     hasAnsweredCurrent = false;
                     statusMessage.textContent = data.message || 'Intermission! Your teacher’s cooking up the next one.';
                     statusIcon = 'hourglass_top';
-                    statusClass = 'text-veritas-navy';
+                    statusClass = 'text-white';
                     if (statusSubMessage) {
                         statusSubMessage.style.display = 'none';
                         statusSubMessage.textContent = '';
@@ -3836,27 +3698,26 @@
                 }
             } else if (data.status === 'NOT_ENROLLED') {
                 statusMessage.textContent = data.message || 'You are not enrolled.';
-                statusTextClass = 'status-title text-red-700';
+                statusTextClass = 'text-red-300 text-2xl font-bold';
                 statusIcon = 'error';
-                statusClass = 'text-red-600';
+                statusClass = 'text-red-300';
                 stopPolling();
             } else if (data.status === 'ERROR') {
                 statusMessage.textContent = data.message || 'We hit a snag. Try again soon.';
-                statusTextClass = 'status-title text-red-700';
+                statusTextClass = 'text-red-300 text-2xl font-bold';
                 statusIcon = 'error';
-                statusClass = 'text-red-600';
+                statusClass = 'text-red-300';
             } else {
                 statusMessage.textContent = data.message || 'Hang tight - your teacher is loading the next challenge.';
-                statusTextClass = 'status-title text-veritas-navy';
                 statusIcon = 'hourglass_top';
-                statusClass = 'text-veritas-navy';
+                statusClass = 'text-white';
             }
 
             statusMessage.className = statusTextClass;
             var iconEl = statusContainer.querySelector('.material-symbols-outlined');
             if (iconEl) {
                 iconEl.textContent = statusIcon;
-                iconEl.className = 'material-symbols-outlined status-icon ' + statusClass;
+                iconEl.className = 'material-symbols-outlined text-6xl mb-4 inline-block ' + statusClass;
             }
         }
 
@@ -3903,7 +3764,7 @@
             questionContainer.style.display = 'none';
 
             statusMessage.textContent = 'How confident are you in your answer?';
-            statusMessage.className = 'status-title';
+            statusMessage.className = 'text-white text-xl font-semibold mb-4';
 
             if (statusSubMessage) {
                 statusSubMessage.innerHTML = '<div class="confidence-selector mt-6 flex flex-col gap-3">' +
@@ -3921,7 +3782,7 @@
                     '</button>' +
                     '</div>';
                 statusSubMessage.style.display = 'block';
-                statusSubMessage.className = 'status-subtitle';
+                statusSubMessage.className = 'text-white/90 text-base mt-4';
 
                 var confidenceBtns = statusSubMessage.querySelectorAll('.confidence-btn');
                 for (var i = 0; i < confidenceBtns.length; i++) {
@@ -3948,7 +3809,7 @@
             hasAnsweredCurrent = true;
             pendingSubmission = true;
             statusMessage.textContent = 'Transmitting your response...';
-            statusMessage.className = 'status-title text-veritas-navy';
+            statusMessage.className = 'text-white text-2xl font-semibold';
             if (statusSubMessage) {
                 statusSubMessage.innerHTML = '';
                 statusSubMessage.style.display = 'none';
@@ -3965,7 +3826,7 @@
                         pendingSubmission = false;
                         pendingAnswerText = null;
                         statusMessage.textContent = response.error || 'We hit a hiccup. Try again?';
-                        statusMessage.className = 'status-title text-red-700';
+                        statusMessage.className = 'text-red-300 text-2xl font-semibold';
                         if (statusSubMessage) {
                             statusSubMessage.style.display = 'none';
                             statusSubMessage.textContent = '';
@@ -3984,11 +3845,11 @@
                     } else {
                         pendingAnswerText = null;
                         statusMessage.textContent = 'Answer received - nice work.';
-                        statusMessage.className = 'status-title text-green-700';
+                        statusMessage.className = 'text-green-300 text-2xl font-semibold';
                         if (statusSubMessage) {
                             statusSubMessage.textContent = 'Your teacher will reveal the answer shortly...';
                             statusSubMessage.style.display = 'block';
-                            statusSubMessage.className = 'status-subtitle';
+                            statusSubMessage.className = 'text-white/70 text-lg mt-4';
                         }
                     }
                 })
@@ -4024,7 +3885,6 @@
             if (option.imageURL) {
                 content += '<img src="' + escapeHtml(option.imageURL) + '" alt="Answer ' + letter + '" class="option-image" referrerpolicy="no-referrer">';
             }
-            content += '<div class="option-top">';
             content += '<div class="option-leading">';
             content += '<div class="letter-badge" aria-hidden="true">' + letter + '</div>';
             content += '<div class="option-body">';
@@ -4037,11 +3897,7 @@
             content += '<span class="sr-only result-announcement"></span>';
             content += '</div>';
             content += '</div>';
-            content += '<div class="option-meta">';
-            content += '<span class="percentage-bubble" aria-hidden="true"></span>';
             content += '<span class="result-indicator" aria-hidden="true"></span>';
-            content += '</div>';
-            content += '</div>';
             btn.innerHTML = content;
             btn.addEventListener('click', function(event) {
                 if (event && event.target && event.target.closest('.option-image')) {
@@ -4136,12 +3992,6 @@
                     ribbon.classList.remove('is-visible');
                 }
 
-                var bubble = btn.querySelector('.percentage-bubble');
-                if (bubble) {
-                    bubble.textContent = '';
-                    bubble.className = 'percentage-bubble';
-                }
-
                 var indicator = btn.querySelector('.result-indicator');
                 if (indicator) {
                     indicator.textContent = '';
@@ -4157,13 +4007,13 @@
                 }
 
                 var percentage = typeof percentages[answerText] === 'number' ? percentages[answerText] : 0;
-                if (bubble) {
+                if (ribbon) {
                     if (totalResponses > 0) {
-                        bubble.textContent = percentage + '%';
-                        bubble.classList.add('is-visible');
+                        ribbon.textContent = percentage + '%';
+                        ribbon.classList.add('is-visible');
                     } else {
-                        bubble.textContent = '';
-                        bubble.classList.remove('is-visible');
+                        ribbon.textContent = '';
+                        ribbon.classList.remove('is-visible');
                     }
                 }
 
@@ -4182,15 +4032,6 @@
 
                 if (isStudentChoice && (studentIsCorrect === false || !isCorrect)) {
                     btn.classList.add('result-your-choice');
-                }
-
-                if (bubble) {
-                    bubble.classList.remove('is-correct', 'is-incorrect');
-                    if (isCorrect) {
-                        bubble.classList.add('is-correct');
-                    } else if (isStudentChoice) {
-                        bubble.classList.add('is-incorrect');
-                    }
                 }
 
                 if (indicator) {
@@ -4303,13 +4144,13 @@
             if (statusContainer) statusContainer.style.display = 'block';
             if (statusMessage) {
                 statusMessage.textContent = options.message || '';
-                statusMessage.className = options.messageClass || 'status-title text-veritas-navy';
+                statusMessage.className = options.messageClass || 'text-white text-2xl font-semibold';
             }
             if (statusSubMessage) {
                 if (options.subtext) {
                     statusSubMessage.style.display = 'block';
                     statusSubMessage.textContent = options.subtext;
-                    statusSubMessage.className = options.subClass || 'status-subtitle';
+                    statusSubMessage.className = options.subClass || 'text-white/70 text-base mt-4';
                 } else {
                     statusSubMessage.style.display = 'none';
                     statusSubMessage.textContent = '';
@@ -4318,7 +4159,7 @@
             var iconEl = statusContainer ? statusContainer.querySelector('.material-symbols-outlined') : null;
             if (iconEl) {
                 iconEl.textContent = options.icon || 'info';
-                iconEl.className = 'material-symbols-outlined status-icon ' + (options.iconClass || 'text-veritas-navy');
+                iconEl.className = 'material-symbols-outlined text-6xl mb-4 inline-block ' + (options.iconClass || 'text-white');
             }
             if (resumeControls) {
                 resumeControls.style.display = options.showResume ? 'block' : 'none';

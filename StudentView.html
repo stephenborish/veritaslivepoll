@@ -2871,9 +2871,12 @@
             }
             console.log('Status update:', data.status);
 
-            if (statusSubMessage) {
+            // Only clear any existing status submessage content when
+            // we're not showing the metacognition confidence prompt.
+            if (statusSubMessage && pendingAnswerText === null) {
                 statusSubMessage.style.display = 'none';
                 statusSubMessage.textContent = '';
+                statusSubMessage.innerHTML = '';
             }
             setPreLiveReconnectMessage('');
 

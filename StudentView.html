@@ -322,7 +322,7 @@
       font-family: "Noto Serif", serif;
       font-size: 1.6rem;
       line-height: 1.6;
-      font-weight: 700;
+      font-weight: 400;
       color: #000000;
       margin: 0;
       text-align: left;
@@ -2773,9 +2773,7 @@
         }
 
         function handleSecureFullscreenChange(event) {
-            if (!secureSessionActive) {
-                return;
-            }
+            // Proctoring is now active for ALL sessions (live polls and secure assessments)
             if (event.hidden && !isInteractionBlocked && !violationLogged) {
                 reportViolationDebounced('tab-blur');
                 return;
@@ -3581,6 +3579,13 @@
                     statusContainer.style.display = hasAnsweredCurrent ? 'block' : 'none';
                     questionContainer.style.display = hasAnsweredCurrent ? 'none' : 'block';
 
+                    // Request fullscreen for live polls to enable proctoring
+                    if (secureFullscreenManager && !secureFullscreenManager.isFullscreen()) {
+                        secureFullscreenManager.request().catch(function(err) {
+                            console.log('Fullscreen request declined or not supported:', err);
+                        });
+                    }
+
                     var qNum = (data.questionIndex || 0) + 1;
                     var qTotal = data.totalQuestions || '?';
                     if (questionProgressEl) {
@@ -3662,11 +3667,11 @@
                     questionContainer.style.display = 'none';
                     statusContainer.style.display = 'block';
                     statusMessage.textContent = data.hasSubmitted ? (data.message || 'Answer received - nice work.') : 'Answer received - nice work.';
-                    statusMessage.className = 'text-green-300 text-2xl font-semibold';
+                    statusMessage.className = 'text-green-600 text-2xl font-semibold';
                     if (statusSubMessage) {
                         statusSubMessage.textContent = 'Your teacher will reveal the answer shortly...';
                         statusSubMessage.style.display = 'block';
-                        statusSubMessage.className = 'text-white/70 text-lg mt-4';
+                        statusSubMessage.className = 'text-gray-600 text-lg mt-4';
                     }
                     var iconEl = statusContainer.querySelector('.material-symbols-outlined');
                     if (iconEl) {
@@ -3871,25 +3876,25 @@
             questionContainer.style.display = 'none';
 
             statusMessage.textContent = 'How confident are you in your answer?';
-            statusMessage.className = 'text-white text-xl font-semibold mb-4';
+            statusMessage.className = 'text-gray-800 text-xl font-semibold mb-4';
 
             if (statusSubMessage) {
                 statusSubMessage.innerHTML = '<div class="confidence-selector mt-6 flex flex-col gap-3">' +
-                    '<button class="confidence-btn h-14 px-6 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-white border-2 border-red-500/40 hover:border-red-500/60 transition-all font-semibold text-lg" data-confidence="guessing">' +
+                    '<button class="confidence-btn h-14 px-6 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-gray-900 border-2 border-red-500/40 hover:border-red-500/60 transition-all font-semibold text-lg" data-confidence="guessing">' +
                     '<span class="mr-2">🤔</span> Guessing' +
                     '</button>' +
-                    '<button class="confidence-btn h-14 px-6 rounded-xl bg-yellow-500/20 hover:bg-yellow-500/30 text-white border-2 border-yellow-500/40 hover:border-yellow-500/60 transition-all font-semibold text-lg" data-confidence="somewhat-sure">' +
+                    '<button class="confidence-btn h-14 px-6 rounded-xl bg-yellow-500/20 hover:bg-yellow-500/30 text-gray-900 border-2 border-yellow-500/40 hover:border-yellow-500/60 transition-all font-semibold text-lg" data-confidence="somewhat-sure">' +
                     '<span class="mr-2">🤷</span> Somewhat Sure' +
                     '</button>' +
-                    '<button class="confidence-btn h-14 px-6 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-white border-2 border-blue-500/40 hover:border-blue-500/60 transition-all font-semibold text-lg" data-confidence="very-sure">' +
+                    '<button class="confidence-btn h-14 px-6 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-gray-900 border-2 border-blue-500/40 hover:border-blue-500/60 transition-all font-semibold text-lg" data-confidence="very-sure">' +
                     '<span class="mr-2">👍</span> Very Sure' +
                     '</button>' +
-                    '<button class="confidence-btn h-14 px-6 rounded-xl bg-green-500/20 hover:bg-green-500/30 text-white border-2 border-green-500/40 hover:border-green-500/60 transition-all font-semibold text-lg" data-confidence="certain">' +
+                    '<button class="confidence-btn h-14 px-6 rounded-xl bg-green-500/20 hover:bg-green-500/30 text-gray-900 border-2 border-green-500/40 hover:border-green-500/60 transition-all font-semibold text-lg" data-confidence="certain">' +
                     '<span class="mr-2">💯</span> Absolutely Certain' +
                     '</button>' +
                     '</div>';
                 statusSubMessage.style.display = 'block';
-                statusSubMessage.className = 'text-white/90 text-base mt-4';
+                statusSubMessage.className = 'text-gray-700 text-base mt-4';
 
                 var confidenceBtns = statusSubMessage.querySelectorAll('.confidence-btn');
                 for (var i = 0; i < confidenceBtns.length; i++) {
@@ -4125,16 +4130,6 @@
                         percentageBubble.textContent = percentage + '%';
                     } else {
                         percentageBubble.textContent = '';
-                    }
-                }
-
-                if (ribbon) {
-                    if (totalResponses > 0) {
-                        ribbon.textContent = percentage + '%';
-                        ribbon.classList.add('is-visible');
-                    } else {
-                        ribbon.textContent = '';
-                        ribbon.classList.remove('is-visible');
                     }
                 }
 

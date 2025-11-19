@@ -30,25 +30,25 @@ const DEFAULT_SECURE_PROCTORING_RULES = [
 ];
 
 function normalizeSessionTypeValue_(value) {
-  if (!value) return SESSION_TYPES.LIVE;
+  if (!value) return Veritas.Config.SESSION_TYPES.LIVE;
   const normalized = value.toString().toUpperCase();
-  if (normalized === 'LIVE' || normalized === SESSION_TYPES.LIVE) {
-    return SESSION_TYPES.LIVE;
+  if (normalized === 'LIVE' || normalized === Veritas.Config.SESSION_TYPES.LIVE) {
+    return Veritas.Config.SESSION_TYPES.LIVE;
   }
-  if (normalized === SESSION_TYPES.SECURE || normalized === SESSION_TYPES.LEGACY_SECURE || normalized === 'SECURE') {
-    return SESSION_TYPES.SECURE;
+  if (normalized === Veritas.Config.SESSION_TYPES.SECURE || normalized === Veritas.Config.SESSION_TYPES.LEGACY_SECURE || normalized === 'SECURE') {
+    return Veritas.Config.SESSION_TYPES.SECURE;
   }
-  return SESSION_TYPES.LIVE;
+  return Veritas.Config.SESSION_TYPES.LIVE;
 }
 
 function isSecureSessionType_(value) {
-  return normalizeSessionTypeValue_(value) === SESSION_TYPES.SECURE;
+  return normalizeSessionTypeValue_(value) === Veritas.Config.SESSION_TYPES.SECURE;
 }
 
 function isSecureSessionPhase_(value) {
   if (!value) return false;
   const normalized = value.toString().toUpperCase();
-  return normalized === SECURE_SESSION_PHASE || normalized === SESSION_TYPES.LEGACY_SECURE;
+  return normalized === Veritas.Config.SECURE_SESSION_PHASE || normalized === Veritas.Config.SESSION_TYPES.LEGACY_SECURE;
 }
 
 function normalizeSecureMetadata_(metadata) {
@@ -167,11 +167,11 @@ function buildSecureAssessmentLobbyState_(poll, sessionId) {
   const availability = buildSecureAvailabilityDescriptor_(poll);
   const rules = Array.isArray(poll.secureSettings && poll.secureSettings.proctoringRules)
     ? poll.secureSettings.proctoringRules.filter(rule => typeof rule === 'string' && rule.trim() !== '')
-    : DEFAULT_SECURE_PROCTORING_RULES;
+    : Veritas.Config.DEFAULT_SECURE_PROCTORING_RULES;
 
   return {
     status: 'LOBBY',
-    sessionType: SESSION_TYPES.SECURE,
+    sessionType: Veritas.Config.SESSION_TYPES.SECURE,
     pollId: poll.pollId,
     sessionId: sessionId,
     pollName: poll.pollName,
@@ -351,14 +351,14 @@ const TokenManager = {
     const props = PropertiesService.getScriptProperties();
     return {
       props: props,
-      tokenMap: JSON.parse(props.getProperty(STUDENT_TOKEN_MAP_KEY) || '{}'),
-      indexMap: JSON.parse(props.getProperty(STUDENT_TOKEN_INDEX_KEY) || '{}')
+      tokenMap: JSON.parse(props.getProperty(Veritas.Config.STUDENT_TOKEN_MAP_KEY) || '{}'),
+      indexMap: JSON.parse(props.getProperty(Veritas.Config.STUDENT_TOKEN_INDEX_KEY) || '{}')
     };
   },
 
   _saveStructures: function(struct) {
-    struct.props.setProperty(STUDENT_TOKEN_MAP_KEY, JSON.stringify(struct.tokenMap));
-    struct.props.setProperty(STUDENT_TOKEN_INDEX_KEY, JSON.stringify(struct.indexMap));
+    struct.props.setProperty(Veritas.Config.STUDENT_TOKEN_MAP_KEY, JSON.stringify(struct.tokenMap));
+    struct.props.setProperty(Veritas.Config.STUDENT_TOKEN_INDEX_KEY, JSON.stringify(struct.indexMap));
   },
 
   _studentKey: function(email, className) {
@@ -408,7 +408,7 @@ const TokenManager = {
 
     const token = Utilities.getUuid();
     const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + TOKEN_EXPIRY_DAYS);
+    expiryDate.setDate(expiryDate.getDate() + Veritas.Config.TOKEN_EXPIRY_DAYS);
 
     struct.indexMap[studentKey] = token;
     struct.tokenMap[token] = {
@@ -560,11 +560,11 @@ function getTeacherEmailSet_() {
   }
 
   const normalized = new Set();
-  normalized.add(TEACHER_EMAIL.toLowerCase());
+  normalized.add(Veritas.Config.TEACHER_EMAIL.toLowerCase());
 
   try {
     const scriptProps = PropertiesService.getScriptProperties();
-    const extrasRaw = scriptProps.getProperty(ADDITIONAL_TEACHER_PROP_KEY) || '';
+    const extrasRaw = scriptProps.getProperty(Veritas.Config.ADDITIONAL_TEACHER_PROP_KEY) || '';
     if (extrasRaw) {
       extrasRaw
         .split(',')
@@ -590,7 +590,7 @@ function getCanonicalTeacherEmail_() {
   for (const email of teacherSet) {
     return email;
   }
-  return TEACHER_EMAIL.toLowerCase();
+  return Veritas.Config.TEACHER_EMAIL.toLowerCase();
 }
 
 function escapeHtml_(value) {
@@ -716,6 +716,7 @@ function normalizeSheetBoolean_(value, defaultValue = false) {
   return defaultValue;
 }
 
+// Keep legacy reference while using Veritas.Config.INDIVIDUAL_SESSION_COLUMNS
 const INDIVIDUAL_SESSION_COLUMNS = {
   POLL_ID: 1,
   SESSION_ID: 2,
@@ -738,7 +739,7 @@ const INDIVIDUAL_SESSION_COLUMNS = {
   ADDITIONAL_METADATA_JSON: 19
 };
 
-const INDIVIDUAL_SESSION_COLUMN_COUNT = INDIVIDUAL_SESSION_COLUMNS.ADDITIONAL_METADATA_JSON;
+const Veritas.Config.INDIVIDUAL_SESSION_COLUMN_COUNT = Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.ADDITIONAL_METADATA_JSON;
 
 function parseIndividualSessionRow_(row, index) {
   const parseJson = (value, fallback) => {
@@ -752,25 +753,25 @@ function parseIndividualSessionRow_(row, index) {
   };
 
   return {
-    pollId: row[INDIVIDUAL_SESSION_COLUMNS.POLL_ID - 1] || '',
-    sessionId: row[INDIVIDUAL_SESSION_COLUMNS.SESSION_ID - 1] || '',
-    studentEmail: row[INDIVIDUAL_SESSION_COLUMNS.STUDENT_EMAIL - 1] || '',
-    studentDisplayName: row[INDIVIDUAL_SESSION_COLUMNS.STUDENT_DISPLAY_NAME - 1] || '',
-    startTime: row[INDIVIDUAL_SESSION_COLUMNS.START_TIME - 1] || null,
-    endTime: row[INDIVIDUAL_SESSION_COLUMNS.END_TIME - 1] || null,
-    questionOrder: parseJson(row[INDIVIDUAL_SESSION_COLUMNS.QUESTION_ORDER - 1], []),
-    questionOrderSeed: row[INDIVIDUAL_SESSION_COLUMNS.QUESTION_ORDER_SEED - 1] || '',
-    currentQuestionIndex: Number(row[INDIVIDUAL_SESSION_COLUMNS.CURRENT_QUESTION_INDEX - 1]) || 0,
-    isLocked: coerceBoolean_(row[INDIVIDUAL_SESSION_COLUMNS.IS_LOCKED - 1], false),
-    violationCode: row[INDIVIDUAL_SESSION_COLUMNS.VIOLATION_CODE - 1] || '',
-    answerOrders: parseJson(row[INDIVIDUAL_SESSION_COLUMNS.ANSWER_ORDERS - 1], {}),
-    answerChoiceMap: parseJson(row[INDIVIDUAL_SESSION_COLUMNS.ANSWER_CHOICE_MAP - 1], {}),
-    timeAdjustmentMinutes: Number(row[INDIVIDUAL_SESSION_COLUMNS.TIME_ADJUSTMENT_MINUTES - 1]) || 0,
-    pauseDurationMs: Number(row[INDIVIDUAL_SESSION_COLUMNS.PAUSE_DURATION_MS - 1]) || 0,
-    lastHeartbeatMs: Number(row[INDIVIDUAL_SESSION_COLUMNS.LAST_HEARTBEAT_MS - 1]) || 0,
-    connectionHealth: row[INDIVIDUAL_SESSION_COLUMNS.CONNECTION_HEALTH - 1] || 'UNKNOWN',
-    proctorStatus: row[INDIVIDUAL_SESSION_COLUMNS.PROCTOR_STATUS - 1] || '',
-    additionalMetadata: parseJson(row[INDIVIDUAL_SESSION_COLUMNS.ADDITIONAL_METADATA_JSON - 1], {}),
+    pollId: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.POLL_ID - 1] || '',
+    sessionId: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.SESSION_ID - 1] || '',
+    studentEmail: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.STUDENT_EMAIL - 1] || '',
+    studentDisplayName: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.STUDENT_DISPLAY_NAME - 1] || '',
+    startTime: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.START_TIME - 1] || null,
+    endTime: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.END_TIME - 1] || null,
+    questionOrder: parseJson(row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.QUESTION_ORDER - 1], []),
+    questionOrderSeed: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.QUESTION_ORDER_SEED - 1] || '',
+    currentQuestionIndex: Number(row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.CURRENT_QUESTION_INDEX - 1]) || 0,
+    isLocked: coerceBoolean_(row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.IS_LOCKED - 1], false),
+    violationCode: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.VIOLATION_CODE - 1] || '',
+    answerOrders: parseJson(row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.ANSWER_ORDERS - 1], {}),
+    answerChoiceMap: parseJson(row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.ANSWER_CHOICE_MAP - 1], {}),
+    timeAdjustmentMinutes: Number(row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.TIME_ADJUSTMENT_MINUTES - 1]) || 0,
+    pauseDurationMs: Number(row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.PAUSE_DURATION_MS - 1]) || 0,
+    lastHeartbeatMs: Number(row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.LAST_HEARTBEAT_MS - 1]) || 0,
+    connectionHealth: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.CONNECTION_HEALTH - 1] || 'UNKNOWN',
+    proctorStatus: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.PROCTOR_STATUS - 1] || '',
+    additionalMetadata: parseJson(row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.ADDITIONAL_METADATA_JSON - 1], {}),
     rowIndex: index + 2
   };
 }
@@ -809,7 +810,7 @@ const DataAccess = {
     
     isLocked: function(pollId, studentEmail) {
       return this.getStudentStatus(pollId, studentEmail)
-        .some(r => PROCTOR_VIOLATION_VALUES.indexOf(r[5]) !== -1);
+        .some(r => Veritas.Config.PROCTOR_VIOLATION_VALUES.indexOf(r[5]) !== -1);
     },
     
     hasAnswered: function(pollId, questionIndex, studentEmail) {
@@ -958,31 +959,31 @@ const DataAccess = {
       const ss = SpreadsheetApp.getActiveSpreadsheet();
       const sheet = ss.getSheetByName("IndividualSessionState");
       const startTime = new Date().toISOString();
-      const row = new Array(INDIVIDUAL_SESSION_COLUMN_COUNT).fill('');
+      const row = new Array(Veritas.Config.INDIVIDUAL_SESSION_COLUMN_COUNT).fill('');
       const heartbeatMs = Date.now();
       const seed = (options && options.questionOrderSeed)
         ? options.questionOrderSeed
         : questionOrder.join('-');
       const answerChoiceMap = (options && options.answerChoiceMap) || {};
-      row[INDIVIDUAL_SESSION_COLUMNS.POLL_ID - 1] = pollId;
-      row[INDIVIDUAL_SESSION_COLUMNS.SESSION_ID - 1] = sessionId;
-      row[INDIVIDUAL_SESSION_COLUMNS.STUDENT_EMAIL - 1] = studentEmail;
-      row[INDIVIDUAL_SESSION_COLUMNS.STUDENT_DISPLAY_NAME - 1] = (options && options.displayName) || '';
-      row[INDIVIDUAL_SESSION_COLUMNS.START_TIME - 1] = startTime;
-      row[INDIVIDUAL_SESSION_COLUMNS.END_TIME - 1] = null;
-      row[INDIVIDUAL_SESSION_COLUMNS.QUESTION_ORDER - 1] = JSON.stringify(questionOrder);
-      row[INDIVIDUAL_SESSION_COLUMNS.QUESTION_ORDER_SEED - 1] = seed;
-      row[INDIVIDUAL_SESSION_COLUMNS.CURRENT_QUESTION_INDEX - 1] = 0;
-      row[INDIVIDUAL_SESSION_COLUMNS.IS_LOCKED - 1] = false;
-      row[INDIVIDUAL_SESSION_COLUMNS.VIOLATION_CODE - 1] = null;
-      row[INDIVIDUAL_SESSION_COLUMNS.ANSWER_ORDERS - 1] = JSON.stringify(answerOrders);
-      row[INDIVIDUAL_SESSION_COLUMNS.ANSWER_CHOICE_MAP - 1] = JSON.stringify(answerChoiceMap);
-      row[INDIVIDUAL_SESSION_COLUMNS.TIME_ADJUSTMENT_MINUTES - 1] = (options && options.timeAdjustmentMinutes) || 0;
-      row[INDIVIDUAL_SESSION_COLUMNS.PAUSE_DURATION_MS - 1] = (options && options.pauseDurationMs) || 0;
-      row[INDIVIDUAL_SESSION_COLUMNS.LAST_HEARTBEAT_MS - 1] = heartbeatMs;
-      row[INDIVIDUAL_SESSION_COLUMNS.CONNECTION_HEALTH - 1] = 'GREEN';
-      row[INDIVIDUAL_SESSION_COLUMNS.PROCTOR_STATUS - 1] = 'ACTIVE';
-      row[INDIVIDUAL_SESSION_COLUMNS.ADDITIONAL_METADATA_JSON - 1] = (options && options.additionalMetadata)
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.POLL_ID - 1] = pollId;
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.SESSION_ID - 1] = sessionId;
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.STUDENT_EMAIL - 1] = studentEmail;
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.STUDENT_DISPLAY_NAME - 1] = (options && options.displayName) || '';
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.START_TIME - 1] = startTime;
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.END_TIME - 1] = null;
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.QUESTION_ORDER - 1] = JSON.stringify(questionOrder);
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.QUESTION_ORDER_SEED - 1] = seed;
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.CURRENT_QUESTION_INDEX - 1] = 0;
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.IS_LOCKED - 1] = false;
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.VIOLATION_CODE - 1] = null;
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.ANSWER_ORDERS - 1] = JSON.stringify(answerOrders);
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.ANSWER_CHOICE_MAP - 1] = JSON.stringify(answerChoiceMap);
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.TIME_ADJUSTMENT_MINUTES - 1] = (options && options.timeAdjustmentMinutes) || 0;
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.PAUSE_DURATION_MS - 1] = (options && options.pauseDurationMs) || 0;
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.LAST_HEARTBEAT_MS - 1] = heartbeatMs;
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.CONNECTION_HEALTH - 1] = 'GREEN';
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.PROCTOR_STATUS - 1] = 'ACTIVE';
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.ADDITIONAL_METADATA_JSON - 1] = (options && options.additionalMetadata)
         ? JSON.stringify(options.additionalMetadata)
         : '';
 
@@ -992,7 +993,7 @@ const DataAccess = {
         pollId: pollId,
         sessionId: sessionId,
         studentEmail: studentEmail,
-        studentDisplayName: row[INDIVIDUAL_SESSION_COLUMNS.STUDENT_DISPLAY_NAME - 1],
+        studentDisplayName: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.STUDENT_DISPLAY_NAME - 1],
         startTime: startTime,
         endTime: null,
         questionOrder: questionOrder,
@@ -1001,8 +1002,8 @@ const DataAccess = {
         isLocked: false,
         answerOrders: answerOrders,
         answerChoiceMap: answerChoiceMap,
-        timeAdjustmentMinutes: row[INDIVIDUAL_SESSION_COLUMNS.TIME_ADJUSTMENT_MINUTES - 1],
-        pauseDurationMs: row[INDIVIDUAL_SESSION_COLUMNS.PAUSE_DURATION_MS - 1],
+        timeAdjustmentMinutes: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.TIME_ADJUSTMENT_MINUTES - 1],
+        pauseDurationMs: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.PAUSE_DURATION_MS - 1],
         lastHeartbeatMs: heartbeatMs,
         connectionHealth: 'GREEN',
         rowIndex: sheet.getLastRow()
@@ -1014,7 +1015,7 @@ const DataAccess = {
       if (studentState) {
         const ss = SpreadsheetApp.getActiveSpreadsheet();
         const sheet = ss.getSheetByName("IndividualSessionState");
-        sheet.getRange(studentState.rowIndex, INDIVIDUAL_SESSION_COLUMNS.CURRENT_QUESTION_INDEX).setValue(newIndex);
+        sheet.getRange(studentState.rowIndex, Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.CURRENT_QUESTION_INDEX).setValue(newIndex);
       }
     },
 
@@ -1023,8 +1024,8 @@ const DataAccess = {
       if (studentState) {
         const ss = SpreadsheetApp.getActiveSpreadsheet();
         const sheet = ss.getSheetByName("IndividualSessionState");
-        sheet.getRange(studentState.rowIndex, INDIVIDUAL_SESSION_COLUMNS.IS_LOCKED).setValue(true);
-        sheet.getRange(studentState.rowIndex, INDIVIDUAL_SESSION_COLUMNS.END_TIME).setValue(new Date().toISOString());
+        sheet.getRange(studentState.rowIndex, Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.IS_LOCKED).setValue(true);
+        sheet.getRange(studentState.rowIndex, Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.END_TIME).setValue(new Date().toISOString());
       }
     },
 
@@ -1033,7 +1034,7 @@ const DataAccess = {
       if (studentState) {
         const ss = SpreadsheetApp.getActiveSpreadsheet();
         const sheet = ss.getSheetByName("IndividualSessionState");
-        sheet.getRange(studentState.rowIndex, INDIVIDUAL_SESSION_COLUMNS.ANSWER_ORDERS).setValue(JSON.stringify(answerOrders));
+        sheet.getRange(studentState.rowIndex, Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.ANSWER_ORDERS).setValue(JSON.stringify(answerOrders));
       }
     },
 
@@ -1053,9 +1054,9 @@ const DataAccess = {
       const ss = SpreadsheetApp.getActiveSpreadsheet();
       const sheet = ss.getSheetByName("IndividualSessionState");
       const nowMs = Date.now();
-      sheet.getRange(state.rowIndex, INDIVIDUAL_SESSION_COLUMNS.LAST_HEARTBEAT_MS).setValue(nowMs);
+      sheet.getRange(state.rowIndex, Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.LAST_HEARTBEAT_MS).setValue(nowMs);
       if (connectionMeta && connectionMeta.status) {
-        sheet.getRange(state.rowIndex, INDIVIDUAL_SESSION_COLUMNS.CONNECTION_HEALTH).setValue(connectionMeta.status);
+        sheet.getRange(state.rowIndex, Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.CONNECTION_HEALTH).setValue(connectionMeta.status);
       }
     },
 
@@ -1073,7 +1074,7 @@ const DataAccess = {
       const sheet = ss.getSheetByName('IndividualSessionState');
       const rowIndex = state.rowIndex;
 
-      const columns = INDIVIDUAL_SESSION_COLUMNS;
+      const columns = Veritas.Config.INDIVIDUAL_SESSION_COLUMNS;
 
       const setColumnValue = (column, value) => {
         sheet.getRange(rowIndex, column).setValue(value);
@@ -1274,6 +1275,7 @@ const StateVersionManager = {
 // CORE APP & ROUTING
 // =============================================================================
 
+// Keep legacy reference while using Veritas.Config.ALLOWED_FOLDER_ID
 const ALLOWED_FOLDER_ID = '1kLraHu_V-eGyVh_bOm9Vp_AdPylTToCi';
 
 function doGet(e) {
@@ -1394,7 +1396,7 @@ function serveImage_(e) {
 
     while (parents.hasNext()) {
       const parent = parents.next();
-      if (parent.getId() === ALLOWED_FOLDER_ID) {
+      if (parent.getId() === Veritas.Config.ALLOWED_FOLDER_ID) {
         isAllowed = true;
         break;
       }
@@ -2196,7 +2198,7 @@ function saveDraft(pollData) {
     const pollId = "D-" + Utilities.getUuid(); // "D" for Draft
     const timestamp = new Date().toISOString();
 
-    writePollRows_(pollId, pollName, className, questions, timestamp, timestamp, { sessionType: SESSION_TYPES.LIVE });
+    writePollRows_(pollId, pollName, className, questions, timestamp, timestamp, { sessionType: Veritas.Config.SESSION_TYPES.LIVE });
 
     CacheManager.invalidate('ALL_POLLS_DATA');
 
@@ -2331,7 +2333,7 @@ function getIndividualTimedSessionState(token) {
     if (studentState.isLocked) {
       return applyConnectionMetaToPayload_({
         status: 'LOCKED',
-        sessionType: SESSION_TYPES.SECURE,
+        sessionType: Veritas.Config.SESSION_TYPES.SECURE,
         message: 'Your session has ended.',
         pollId: pollId,
         sessionId: sessionId
@@ -2347,7 +2349,7 @@ function getIndividualTimedSessionState(token) {
 
 function endIndividualTimedSession(pollId) {
   return withErrorHandling(() => {
-    if (Session.getActiveUser().getEmail() !== TEACHER_EMAIL) {
+    if (Session.getActiveUser().getEmail() !== Veritas.Config.TEACHER_EMAIL) {
       throw new Error('Unauthorized');
     }
 
@@ -2399,7 +2401,7 @@ function getIndividualTimedSessionTeacherView(pollId, sessionId) {
   return withErrorHandling(() => {
     // Verify teacher authorization
     const currentUser = Session.getActiveUser().getEmail();
-    if (currentUser !== TEACHER_EMAIL && !isAdditionalTeacher_(currentUser)) {
+    if (currentUser !== Veritas.Config.TEACHER_EMAIL && !isAdditionalTeacher_(currentUser)) {
       throw new Error('Unauthorized');
     }
 
@@ -2632,7 +2634,7 @@ function startIndividualTimedSession(pollId) {
     // Set live status to indicate individual timed session is running
     DataAccess.liveStatus.set(pollId, -1, "OPEN", {
       reason: 'SECURE_ASSESSMENT_RUNNING',
-      sessionPhase: SECURE_SESSION_PHASE,
+      sessionPhase: Veritas.Config.SECURE_SESSION_PHASE,
       startedAt: nowIso,
       endedAt: null,
       timeLimitMinutes: poll.timeLimitMinutes,
@@ -2670,7 +2672,7 @@ function adjustSecureAssessmentTime(pollId, sessionId, studentEmail, deltaMinute
     }
 
     const teacherEmail = Session.getActiveUser().getEmail();
-    if (teacherEmail !== TEACHER_EMAIL && !isAdditionalTeacher_(teacherEmail)) {
+    if (teacherEmail !== Veritas.Config.TEACHER_EMAIL && !isAdditionalTeacher_(teacherEmail)) {
       throw new Error('Unauthorized');
     }
 
@@ -2698,7 +2700,7 @@ function adjustSecureAssessmentTimeBulk(pollId, sessionId, studentEmails, deltaM
       throw new Error('Poll and session are required');
     }
     const teacherEmail = Session.getActiveUser().getEmail();
-    if (teacherEmail !== TEACHER_EMAIL && !isAdditionalTeacher_(teacherEmail)) {
+    if (teacherEmail !== Veritas.Config.TEACHER_EMAIL && !isAdditionalTeacher_(teacherEmail)) {
       throw new Error('Unauthorized');
     }
     if (!Array.isArray(studentEmails) || studentEmails.length === 0) {
@@ -2724,7 +2726,7 @@ function adjustSecureAssessmentTimeForAll(pollId, sessionId, deltaMinutes) {
       throw new Error('Poll and session are required');
     }
     const teacherEmail = Session.getActiveUser().getEmail();
-    if (teacherEmail !== TEACHER_EMAIL && !isAdditionalTeacher_(teacherEmail)) {
+    if (teacherEmail !== Veritas.Config.TEACHER_EMAIL && !isAdditionalTeacher_(teacherEmail)) {
       throw new Error('Unauthorized');
     }
     const numericDelta = Number(deltaMinutes);
@@ -2787,7 +2789,7 @@ function pauseSecureAssessmentStudent(pollId, sessionId, studentEmail) {
     }
 
     const teacherEmail = Session.getActiveUser().getEmail();
-    if (teacherEmail !== TEACHER_EMAIL && !isAdditionalTeacher_(teacherEmail)) {
+    if (teacherEmail !== Veritas.Config.TEACHER_EMAIL && !isAdditionalTeacher_(teacherEmail)) {
       throw new Error('Unauthorized');
     }
 
@@ -2823,7 +2825,7 @@ function resumeSecureAssessmentStudent(pollId, sessionId, studentEmail) {
     }
 
     const teacherEmail = Session.getActiveUser().getEmail();
-    if (teacherEmail !== TEACHER_EMAIL && !isAdditionalTeacher_(teacherEmail)) {
+    if (teacherEmail !== Veritas.Config.TEACHER_EMAIL && !isAdditionalTeacher_(teacherEmail)) {
       throw new Error('Unauthorized');
     }
 
@@ -2870,7 +2872,7 @@ function forceSubmitSecureAssessmentStudent(pollId, sessionId, studentEmail) {
     }
 
     const teacherEmail = Session.getActiveUser().getEmail();
-    if (teacherEmail !== TEACHER_EMAIL && !isAdditionalTeacher_(teacherEmail)) {
+    if (teacherEmail !== Veritas.Config.TEACHER_EMAIL && !isAdditionalTeacher_(teacherEmail)) {
       throw new Error('Unauthorized');
     }
 
@@ -3077,7 +3079,7 @@ function updatePoll(pollId, pollName, className, questions, metadata) {
     const createdAt = existingPoll && existingPoll.createdAt ? existingPoll.createdAt : new Date().toISOString();
     const updatedAt = new Date().toISOString();
 
-    const normalizedMetadata = normalizeSecureMetadata_(metadata || existingPoll || { sessionType: SESSION_TYPES.LIVE });
+    const normalizedMetadata = normalizeSecureMetadata_(metadata || existingPoll || { sessionType: Veritas.Config.SESSION_TYPES.LIVE });
     if (isSecureSessionType_(normalizedMetadata.sessionType) && !normalizedMetadata.timeLimitMinutes) {
       throw new Error('Time limit is required for Secure Assessments');
     }
@@ -3633,7 +3635,7 @@ function getArchivedPolls() {
         pollEntry.latestTimestamp = Math.max(pollEntry.latestTimestamp, timestamp);
       }
 
-      if (questionIndex === -1 && PROCTOR_VIOLATION_VALUES.indexOf(answer) !== -1) {
+      if (questionIndex === -1 && Veritas.Config.PROCTOR_VIOLATION_VALUES.indexOf(answer) !== -1) {
         pollEntry.violations.set(studentEmail, true);
         return;
       }
@@ -3820,7 +3822,7 @@ function buildResponseMaps_(responseValues) {
     const pollEntry = responsesByPoll.get(pollId);
 
     // Track violations
-    if (questionIndex === -1 && PROCTOR_VIOLATION_VALUES.indexOf(answer) !== -1) {
+    if (questionIndex === -1 && Veritas.Config.PROCTOR_VIOLATION_VALUES.indexOf(answer) !== -1) {
       pollEntry.violations.set(studentEmail, true);
       return;
     }
@@ -5674,7 +5676,7 @@ function getLivePollData(pollId, questionIndex) {
     
     const lockedStudents = new Set();
     pollResponses
-      .filter(r => r[3] === -1 && PROCTOR_VIOLATION_VALUES.indexOf(r[5]) !== -1)
+      .filter(r => r[3] === -1 && Veritas.Config.PROCTOR_VIOLATION_VALUES.indexOf(r[5]) !== -1)
       .forEach(r => lockedStudents.add(r[4]));
 
     // OPTIMIZATION: Batch load all proctor states in a single operation
@@ -6620,7 +6622,7 @@ const ProctorAccess = {
       if (data[i][0] === pollId && data[i][1] === studentEmail) {
         // Migrate old data: if column 2 is boolean (old "locked" field), convert to status
         let status = 'OK';
-        if (typeof data[i][2] === 'string' && PROCTOR_STATUS_VALUES.includes(data[i][2])) {
+        if (typeof data[i][2] === 'string' && Veritas.Config.PROCTOR_STATUS_VALUES.includes(data[i][2])) {
           status = data[i][2];
         } else if (data[i][2] === true || data[i][2] === 'TRUE') {
           status = 'LOCKED'; // Migration: locked=true → LOCKED
@@ -6714,7 +6716,7 @@ const ProctorAccess = {
 
         // Migrate old data: if column 2 is boolean (old "locked" field), convert to status
         let status = 'OK';
-        if (typeof data[i][2] === 'string' && PROCTOR_STATUS_VALUES.includes(data[i][2])) {
+        if (typeof data[i][2] === 'string' && Veritas.Config.PROCTOR_STATUS_VALUES.includes(data[i][2])) {
           status = data[i][2];
         } else if (data[i][2] === true || data[i][2] === 'TRUE') {
           status = 'LOCKED'; // Migration: locked=true → LOCKED
@@ -6791,7 +6793,7 @@ const ProctorAccess = {
    */
   setState: function(state) {
     // INVARIANT CHECKS (enforce state machine rules)
-    const validStatuses = PROCTOR_STATUS_VALUES;
+    const validStatuses = Veritas.Config.PROCTOR_STATUS_VALUES;
     if (!validStatuses.includes(state.status)) {
       throw new Error(`Invalid proctor status: ${state.status}. Must be one of: ${validStatuses.join(', ')}`);
     }
@@ -6963,7 +6965,7 @@ function reportStudentViolation(reason, token) {
         pollId,
         -1,
         studentEmail,
-        PROCTOR_VIOLATION_CODES.LOCKED,
+        Veritas.Config.PROCTOR_VIOLATION_CODES.LOCKED,
         false
       ]);
 
@@ -7008,7 +7010,7 @@ function reportStudentViolation(reason, token) {
       pollId,
       -1,
       studentEmail,
-      PROCTOR_VIOLATION_CODES.LOCKED,
+      Veritas.Config.PROCTOR_VIOLATION_CODES.LOCKED,
       false
     ]);
 
@@ -7166,7 +7168,7 @@ function teacherBlockStudent(studentEmail, pollId, reason) {
       pollId,
       -1,
       studentEmail,
-      PROCTOR_VIOLATION_CODES.TEACHER_BLOCK,
+      Veritas.Config.PROCTOR_VIOLATION_CODES.TEACHER_BLOCK,
       false
     ]);
 
@@ -7550,7 +7552,7 @@ function generatePollEmailHtml(pollUrl) {
 function sendPollLinkToClass(className) {
   return withErrorHandling(() => {
     // Only the teacher can run this
-    if (Session.getActiveUser().getEmail() !== TEACHER_EMAIL) {
+    if (Session.getActiveUser().getEmail() !== Veritas.Config.TEACHER_EMAIL) {
       throw new Error('Unauthorized action.');
     }
     
@@ -7593,7 +7595,7 @@ function sendPollLinkToClass(className) {
       });
     });
     
-    CacheManager.invalidate(CLASS_LINKS_CACHE_PREFIX + encodeURIComponent(className));
+    CacheManager.invalidate(Veritas.Config.CLASS_LINKS_CACHE_PREFIX + encodeURIComponent(className));
 
     Logger.log('Personalized poll links sent', {
       className: className,
@@ -7613,11 +7615,11 @@ function sendPollLinkToClass(className) {
  */
 function getStudentLinksForClass(className) {
   return withErrorHandling(() => {
-    if (Session.getActiveUser().getEmail() !== TEACHER_EMAIL) {
+    if (Session.getActiveUser().getEmail() !== Veritas.Config.TEACHER_EMAIL) {
       throw new Error('Unauthorized action.');
     }
 
-    const cacheKey = CLASS_LINKS_CACHE_PREFIX + encodeURIComponent(className);
+    const cacheKey = Veritas.Config.CLASS_LINKS_CACHE_PREFIX + encodeURIComponent(className);
 
     return CacheManager.get(cacheKey, () => {
       const roster = DataAccess.roster.getByClass(className) || [];
@@ -7676,7 +7678,7 @@ function getPolls_() {
       const questionIndex = typeof row[3] === 'number' ? row[3] : parseInt(row[3], 10) || 0;
       const createdAt = row[5] || '';
       const updatedAt = row[6] || createdAt || '';
-      const sessionType = normalizeSessionTypeValue_(row[7] || SESSION_TYPES.LIVE);
+      const sessionType = normalizeSessionTypeValue_(row[7] || Veritas.Config.SESSION_TYPES.LIVE);
       const timeLimitRaw = row[8];
       const timeLimitMinutes = typeof timeLimitRaw === 'number'
         ? timeLimitRaw

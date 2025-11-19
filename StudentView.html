@@ -75,6 +75,7 @@
       }
     };
   </script>
+  <?!= include('SecureAssessmentShared'); ?>
   <script>window.SESSION_TOKEN = '<?= sessionToken ?>';</script>
   <style>
     /* Veritas Design System - CSS Custom Properties */
@@ -1431,7 +1432,24 @@
         var secureOverlayMessage = document.getElementById('secure-overlay-message');
         var secureOverlaySubtext = document.getElementById('secure-overlay-subtext');
 
-        var secureTimerInterval = null;
+        var secureCountdownController = window.SecureAssessmentShared.createCountdown({
+            onTick: function(seconds) {
+                updateSecureTimerDisplay(seconds);
+            },
+            onExpire: function() {
+                handleSecureTimeExpiry();
+            }
+        });
+        var secureSessionHeartbeat = window.SecureAssessmentShared.createHeartbeat({
+            intervalMs: 3500,
+            onBeat: function() {
+                pollForIndividualSessionState();
+            }
+        });
+        var secureFullscreenManager = window.SecureAssessmentShared.createFullscreenManager(document, {
+            onChange: handleSecureFullscreenChange
+        });
+        var secureSessionActive = false;
         var secureQuestionState = null;
         var secureSelectedOptionIndex = null;
         var secureSubmitting = false;
@@ -1612,10 +1630,7 @@
         }
 
         function stopSecureCountdown() {
-            if (secureTimerInterval) {
-                clearInterval(secureTimerInterval);
-                secureTimerInterval = null;
-            }
+            secureCountdownController.stop();
         }
 
         function updateSecureTimerDisplay(seconds) {
@@ -1630,19 +1645,8 @@
         }
 
         function startSecureCountdown(timeRemainingSeconds) {
-            stopSecureCountdown();
             var remaining = Math.max(0, Math.floor(timeRemainingSeconds || 0));
-            updateSecureTimerDisplay(remaining);
-            secureTimerInterval = setInterval(function() {
-                remaining -= 1;
-                if (remaining >= 0) {
-                    updateSecureTimerDisplay(remaining);
-                }
-                if (remaining <= 0) {
-                    stopSecureCountdown();
-                    handleSecureTimeExpiry();
-                }
-            }, 1000);
+            secureCountdownController.start(remaining);
         }
 
         function handleSecureTimeExpiry() {
@@ -1892,6 +1896,32 @@
         var secureRulesList = document.getElementById('secure-rules-list');
         var secureLobbyContext = null;
 
+        function reportViolationDebounced(reason) {
+            if (violationDebounceTimer) {
+                clearTimeout(violationDebounceTimer);
+            }
+            violationDebounceTimer = setTimeout(function() {
+                if (violationLogged || (isInteractionBlocked && !isTeacherBlocked)) {
+                    return;
+                }
+                violationLogged = true;
+                isInteractionBlocked = true;
+                google.script.run
+                    .withSuccessHandler(function(response) {
+                        if (response.success) {
+                            currentLockVersion = response.lockVersion;
+                            showLockedMessage();
+                            startProctorPolling();
+                        }
+                    })
+                    .withFailureHandler(function(error) {
+                        console.error('Violation report failed:', error);
+                        showLockedMessage();
+                    })
+                    .reportStudentViolation(reason, SESSION_TOKEN);
+            }, 300);
+        }
+
         var VeritasModal = null;
         var veritasModalReady = new Promise(function(resolve) {
             function initializeModal() {
@@ -2091,18 +2121,29 @@
         }
 
         function requestFullscreenForSecureAssessment() {
-            if (!document || !document.documentElement) {
+            if (!secureFullscreenManager) {
                 return Promise.resolve();
             }
-            if (document.fullscreenElement || document.webkitFullscreenElement) {
+            if (secureFullscreenManager.isFullscreen()) {
                 return Promise.resolve();
             }
-            var element = document.documentElement;
-            var request = element.requestFullscreen || element.webkitRequestFullscreen || element.msRequestFullscreen;
-            if (request) {
-                return request.call(element);
+            return secureFullscreenManager.request().catch(function() {
+                return Promise.resolve();
+            });
+        }
+
+        function handleSecureFullscreenChange(event) {
+            if (event.hidden && !isInteractionBlocked && !violationLogged) {
+                reportViolationDebounced('tab-blur');
+                return;
             }
-            return Promise.resolve();
+            if (event.isFullscreen) {
+                fullscreenEnteredOnce = true;
+                return;
+            }
+            if (fullscreenEnteredOnce && !isInteractionBlocked && !violationLogged) {
+                reportViolationDebounced('exit-fullscreen');
+            }
         }
 
         function handleSecureBeginClick() {
@@ -2702,59 +2743,6 @@
                     console.error('Fullscreen error:', e);
                 }
 
-                function reportViolationDebounced(reason) {
-                    // Clear any existing timer
-                    if (violationDebounceTimer) {
-                        clearTimeout(violationDebounceTimer);
-                    }
-
-                    // Set a new timer for 300ms
-                    violationDebounceTimer = setTimeout(function() {
-                        // Check if already reported to prevent duplicates
-                        if (violationLogged || (isInteractionBlocked && !isTeacherBlocked)) {
-                            console.log('Violation already reported, skipping');
-                            return;
-                        }
-
-                        console.log('VIOLATION: ' + reason);
-                        // Set flags BEFORE RPC to prevent retry-based double-bump
-                        violationLogged = true;
-                        isInteractionBlocked = true;
-
-                        google.script.run
-                            .withSuccessHandler(function(response) {
-                                if (response.success) {
-                                    currentLockVersion = response.lockVersion;
-                                    showLockedMessage();
-                                    startProctorPolling();
-                                }
-                            })
-                            .withFailureHandler(function(error) {
-                                console.error('Violation report failed:', error);
-                                // Keep flags set - student stays locked locally even if server unreachable
-                                showLockedMessage();
-                            })
-                            .reportStudentViolation(reason, SESSION_TOKEN);
-                    }, 300);
-                }
-
-                document.addEventListener('visibilitychange', function() {
-                    if (document.hidden && !isInteractionBlocked && !violationLogged) {
-                        reportViolationDebounced('tab-blur');
-                    }
-                });
-
-                document.addEventListener('fullscreenchange', function() {
-                    if (document.fullscreenElement) {
-                        // Student has successfully entered fullscreen
-                        fullscreenEnteredOnce = true;
-                    } else if (fullscreenEnteredOnce && !isInteractionBlocked && !violationLogged) {
-                        // Only report violation if they were previously in fullscreen
-                        // This prevents false violations during initial fullscreen transition
-                        reportViolationDebounced('exit-fullscreen');
-                    }
-                });
-
                 hideConnectivityBanner();
                 startPolling(true);
             };
@@ -2820,12 +2808,19 @@
 
         function updateStudentView(data) {
             data = data || {};
+            if (studentLoader) studentLoader.style.display = 'none';
             if (data.sessionType === 'INDIVIDUAL_TIMED' || data.sessionType === 'SECURE_ASSESSMENT') {
-                pollForIndividualSessionState();
+                if (!secureSessionActive) {
+                    secureSessionActive = true;
+                    secureSessionHeartbeat.start(true);
+                }
                 return;
             }
+            if (secureSessionActive) {
+                secureSessionActive = false;
+                secureSessionHeartbeat.stop();
+            }
             console.log('Status update:', data.status);
-            if (studentLoader) studentLoader.style.display = 'none';
 
             if (statusSubMessage) {
                 statusSubMessage.style.display = 'none';

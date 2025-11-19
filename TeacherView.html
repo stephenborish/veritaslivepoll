@@ -74,6 +74,7 @@
       }
     };
   </script>
+  <?!= include('SecureAssessmentShared'); ?>
 
   <!-- Google Charts -->
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
@@ -3734,12 +3735,16 @@
   var studentSearchQuery='';
   var studentTableSort={column:'lastName',direction:'asc'};
   var pollInterval=null;
-  var individualPollInterval = null;
+  var missionControlHeartbeat = window.SecureAssessmentShared.createHeartbeat({
+    intervalMs: 3000,
+    onBeat: function(){
+      pollIndividualSessionState();
+    }
+  });
   var currentSecureSessionId = null;
   var currentMissionControlPollId = null;
   var missionControlStudents = [];
   var currentManagedStudent = null;
-  var visualTimerInterval=null;
   var isPaused=false;
   var isLiveSession=false;
   var isNavigating=false; // Flag to prevent polling during question navigation
@@ -5787,10 +5792,7 @@
       clearInterval(pollInterval);
       pollInterval=null;
     }
-    if (individualPollInterval) {
-      clearInterval(individualPollInterval);
-      individualPollInterval = null;
-    }
+    missionControlHeartbeat.stop();
     if(analyticsRefreshInterval){
       clearInterval(analyticsRefreshInterval);
       analyticsRefreshInterval=null;
@@ -8941,10 +8943,7 @@
 
     if (!confirmed) return;
 
-    if (individualPollInterval) {
-      clearInterval(individualPollInterval);
-      individualPollInterval = null;
-    }
+    missionControlHeartbeat.stop();
 
     var pollId = currentMissionControlPollId || (CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId);
     if (!pollId) {
@@ -9062,10 +9061,9 @@
       isRunning=false; // Update new timer variable
 
       // Stop any running timer
-      if(visualTimerInterval){
-        clearInterval(visualTimerInterval);
-        visualTimerInterval=null;
-      }
+      teacherCountdown.stop();
+      isRunning=false;
+      timerActive=false;
 
       // Update UI
       toggleButtons(false);
@@ -10329,11 +10327,20 @@
   var timerRemainingSeconds = 90;     // Current countdown value (for compatibility)
   var timerExpiredHandled = false;    // Tracks if expiry event was processed
   var timerActive = false;            // Current running state
-  var visualTimerInterval = null;     // setInterval reference for countdown
 
   // New timer implementation variables
   var totalSeconds = 90;              // Total seconds for new timer
   var isRunning = false;              // Is timer currently running
+  var teacherCountdown = window.SecureAssessmentShared.createCountdown({
+    onTick: function(seconds){
+      totalSeconds = seconds;
+      timerRemainingSeconds = seconds;
+      updateDisplay();
+    },
+    onExpire: function(){
+      finishTimer();
+    }
+  });
 
   // Sidebar toggle state
   var sidebarVisible = true;
@@ -10525,14 +10532,7 @@
     toggleButtons(true);
     updateTimerStatus('Timer running…', 'info');
 
-    visualTimerInterval = setInterval(function() {
-      totalSeconds--;
-      updateDisplay();
-
-      if (totalSeconds <= 0) {
-        finishTimer();
-      }
-    }, 1000);
+    teacherCountdown.start(totalSeconds);
   }
 
   /**
@@ -10541,8 +10541,7 @@
   function pauseTimer() {
     if (!isRunning) return;
 
-    clearInterval(visualTimerInterval);
-    visualTimerInterval = null;
+    teacherCountdown.pause();
     toggleButtons(false);
     updateTimerStatus('Timer paused at ' + formatTime(totalSeconds) + '.', 'info');
   }
@@ -10551,16 +10550,11 @@
    * Resets the timer to the default value
    */
   function resetTimer() {
-    // Clear any running interval
-    if (visualTimerInterval) {
-      clearInterval(visualTimerInterval);
-      visualTimerInterval = null;
-    }
-
+    teacherCountdown.stop();
     totalSeconds = timerPresetSeconds;
     timerRemainingSeconds = totalSeconds;
     timerExpiredHandled = false;
-    updateDisplay();
+    teacherCountdown.set(totalSeconds);
     toggleButtons(false);
 
     var timerDisplay = document.getElementById('timer-display');
@@ -10576,8 +10570,7 @@
    * Called when the timer reaches 0
    */
   function finishTimer() {
-    clearInterval(visualTimerInterval);
-    visualTimerInterval = null;
+    teacherCountdown.stop();
     toggleButtons(false);
 
     var timerDisplay = document.getElementById('timer-display');
@@ -10596,6 +10589,8 @@
     if (!timerExpiredHandled) {
       timerExpiredHandled = true;
       timerRemainingSeconds = 0;
+      totalSeconds = 0;
+      updateDisplay();
       updateTimerStatus('Time expired — poll paused.', 'danger');
 
       if (PREVIEW_MODE) {
@@ -10629,7 +10624,7 @@
     timerRemainingSeconds = totalSeconds;
     timerPresetSeconds = totalSeconds;
 
-    updateDisplay();
+    teacherCountdown.set(totalSeconds);
   }
 
   /**
@@ -10660,6 +10655,7 @@
     // Update legacy variables
     timerRemainingSeconds = totalSeconds;
     timerPresetSeconds = totalSeconds;
+    teacherCountdown.set(totalSeconds);
     updateHudTimer();
   }
 
@@ -10690,8 +10686,9 @@
   }
 
   function stopVisualTimer(){
-    clearInterval(visualTimerInterval);
-    visualTimerInterval=null;
+    teacherCountdown.stop();
+    isRunning=false;
+    timerActive=false;
   }
 
   function updateTimerInputs(){
@@ -12858,10 +12855,8 @@
     renderIndividualStudentCards(view);
     pollIndividualSessionState();
 
-    if (individualPollInterval) {
-      clearInterval(individualPollInterval);
-    }
-    individualPollInterval = setInterval(pollIndividualSessionState, 3000); // Poll every 3 seconds
+    missionControlHeartbeat.stop();
+    missionControlHeartbeat.start(true);
   }
   window.showIndividualTimedView = showIndividualTimedView; // Expose for testing
 

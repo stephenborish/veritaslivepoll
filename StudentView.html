@@ -154,6 +154,7 @@
       border-top: 4px solid var(--veritas-gold);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
       overflow: hidden;
+      max-width: 100%;
     }
 
     .student-card.results-stage,
@@ -185,6 +186,8 @@
       flex-direction: row;
       gap: 16px;
       align-items: flex-start;
+      max-width: 100%;
+      overflow-x: hidden;
     }
 
     .student-card-body-content {
@@ -192,6 +195,9 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
     }
 
     .student-question-image {
@@ -217,6 +223,8 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
+      max-width: 100%;
+      overflow-x: hidden;
     }
 
     .student-pre-live-card {
@@ -227,6 +235,7 @@
     .secure-session-card {
       position: relative;
       width: min(98vw, 1600px);
+      max-width: 100%;
       margin: clamp(8px, 2vw, 20px) auto;
       background: var(--bg-card);
       border-radius: var(--radius-lg);
@@ -235,6 +244,7 @@
       min-height: calc(100vh - 200px);
       display: flex;
       flex-direction: column;
+      overflow-x: hidden;
     }
 
     .secure-session-header {
@@ -283,12 +293,16 @@
       flex-direction: column;
       gap: 12px;
       flex: 1;
+      max-width: 100%;
+      overflow-x: hidden;
     }
 
     .secure-question-pane {
       display: flex;
       flex-direction: column;
       gap: 12px;
+      max-width: 100%;
+      overflow: hidden;
     }
 
     .secure-question-pane .student-stem {
@@ -312,6 +326,8 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
+      max-width: 100%;
+      overflow: hidden;
     }
 
     .secure-options-pane .student-choices {
@@ -498,6 +514,10 @@
       color: var(--text-primary);
       margin: 0;
       text-align: left;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      max-width: 100%;
     }
 
     .student-subline {
@@ -521,6 +541,8 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
+      max-width: 100%;
+      overflow: hidden;
     }
 
     .student-choices li {
@@ -541,6 +563,7 @@
     .answer-option {
       position: relative;
       width: 100%;
+      max-width: 100%;
       text-align: left;
       display: flex;
       align-items: flex-start;
@@ -554,6 +577,8 @@
       transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease, background-color 200ms ease;
       cursor: pointer;
       appearance: none;
+      box-sizing: border-box;
+      overflow: hidden;
     }
 
     .answer-option:hover {
@@ -633,7 +658,9 @@
       flex-direction: column;
       gap: 0;
       min-width: 0;
+      max-width: 100%;
       justify-content: flex-start;
+      overflow: hidden;
     }
 
     .answer-option .option-text {
@@ -642,10 +669,15 @@
       line-height: 1.6;
       font-family: "Inter", sans-serif;
       margin: 0;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      max-width: 100%;
     }
 
     .answer-option .option-image {
-      max-width: 300px;
+      max-width: min(300px, 100%);
+      width: 100%;
       height: auto;
       border-radius: var(--radius-md);
       border: 1px solid rgba(18, 56, 93, 0.16);

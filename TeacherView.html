@@ -2646,6 +2646,38 @@
                 <p id="summary-completed" class="text-3xl font-bold text-slate-900 dark:text-white">0</p>
               </div>
             </div>
+            <div class="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] mb-6">
+              <div class="p-4 rounded-xl border border-brand-light-gray/70 bg-white dark:bg-brand-dark-gray/20 shadow-sm">
+                <div class="flex flex-col gap-3">
+                  <div class="flex flex-wrap items-center gap-3">
+                    <span class="text-sm font-semibold text-brand-dark-gray dark:text-white uppercase tracking-wide">Extend time</span>
+                    <div class="flex items-center gap-2">
+                      <input id="bulk-time-input" type="number" min="1" step="1" value="5" class="w-20 rounded-lg border border-slate-200 bg-white/90 px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-veritas-gold" aria-label="Minutes to extend" />
+                      <span class="text-xs text-slate-500">minutes</span>
+                    </div>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-3">
+                    <button id="bulk-time-all-btn" type="button" class="inline-flex items-center gap-2 rounded-full bg-veritas-navy text-white px-4 py-2 text-sm font-semibold shadow hover:bg-veritas-navy/90 transition-colors">
+                      <span class="material-symbols-outlined text-base">schedule_add</span>
+                      <span>Add to entire class</span>
+                    </button>
+                    <button id="bulk-time-selected-btn" type="button" class="inline-flex items-center gap-2 rounded-full bg-emerald-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-emerald-700 transition-colors disabled:opacity-60" disabled>
+                      <span class="material-symbols-outlined text-base">group_add</span>
+                      <span id="bulk-selected-label">Add to selected</span>
+                    </button>
+                    <button id="bulk-selection-clear" type="button" class="text-xs font-semibold text-slate-500 underline hidden">Clear selection</button>
+                  </div>
+                  <p class="text-xs text-slate-500">Selecting student cards enables targeted adjustments. <span id="bulk-selection-count">0</span> students selected.</p>
+                </div>
+              </div>
+              <div class="p-4 rounded-xl border border-brand-light-gray/70 bg-slate-50 dark:bg-brand-dark-gray/20 shadow-sm">
+                <h4 class="text-sm font-semibold text-brand-dark-gray dark:text-white mb-2 flex items-center gap-2">
+                  <span class="material-symbols-outlined text-base text-veritas-navy">visibility_lock</span>
+                  Re-entry monitoring
+                </h4>
+                <p class="text-xs text-slate-500 leading-relaxed">Locked students will surface an "Approve re-entry" action on their tile so you can clear violations without leaving Mission Control.</p>
+              </div>
+            </div>
             <div id="individual-session-students-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               <!-- Student cards will be dynamically inserted here -->
             </div>
@@ -3744,6 +3776,8 @@
   var currentSecureSessionId = null;
   var currentMissionControlPollId = null;
   var missionControlStudents = [];
+  var missionControlSelectedEmails = new Set();
+  var bulkControlsLoading = false;
   var currentManagedStudent = null;
   var isPaused=false;
   var isLiveSession=false;
@@ -5356,6 +5390,12 @@
   var studentManagerUnlock=document.getElementById('student-manager-unlock');
   var studentManagerForceSubmit=document.getElementById('student-manager-force-submit');
   var studentManagerClose=document.getElementById('student-manager-close');
+  var bulkTimeInput=document.getElementById('bulk-time-input');
+  var bulkTimeAllBtn=document.getElementById('bulk-time-all-btn');
+  var bulkTimeSelectedBtn=document.getElementById('bulk-time-selected-btn');
+  var bulkSelectionCount=document.getElementById('bulk-selection-count');
+  var bulkSelectionClear=document.getElementById('bulk-selection-clear');
+  var bulkSelectedLabel=document.getElementById('bulk-selected-label');
   var questionSortResetBtn=document.getElementById('question-sort-reset-btn');
   var questionSortHelp=document.getElementById('question-sort-help');
   var questionNavigatorContainer=document.getElementById('question-navigator');
@@ -12873,12 +12913,17 @@
       empty.textContent = 'Students will appear here as they join the assessment.';
       grid.appendChild(empty);
     } else {
+      pruneMissionSelection(students);
       students.forEach(function(student) {
         var statusClass = 'bg-slate-100 text-slate-700';
-        if (student.status === 'In Progress') {
+        if (student.status && student.status.indexOf('In Progress') === 0) {
           statusClass = 'bg-emerald-50 text-emerald-700';
-        } else if (student.status === 'Locked') {
+        } else if (student.status && student.status.indexOf('Locked') === 0) {
           statusClass = 'bg-red-50 text-red-700';
+        } else if (student.status === 'Blocked') {
+          statusClass = 'bg-red-50 text-red-700';
+        } else if (student.status === 'Awaiting Fullscreen') {
+          statusClass = 'bg-blue-50 text-blue-700';
         } else if (student.status === 'Paused') {
           statusClass = 'bg-amber-50 text-amber-700';
         } else if (student.status === 'Submitted') {
@@ -12905,18 +12950,47 @@
         var progressPct = student.progressPct != null ? student.progressPct : 0;
         var progressDisplay = `Q ${student.progress || 0} / ${student.totalQuestions || 0}`;
         var manageDisabled = student.status === 'Not Started';
+        var selected = missionControlSelectedEmails.has(student.email);
+        var answeredCount = student.progress || 0;
+        var correctCount = typeof student.correctCount === 'number' ? student.correctCount : null;
+        var totalQuestions = student.totalQuestions || 0;
+        var scoreSummary = (answeredCount > 0 && correctCount !== null)
+          ? `${correctCount} correct`
+          : (answeredCount > 0 ? 'Responses recorded' : 'Awaiting responses');
+        var scorePctSummary = (typeof student.scorePct === 'number' && totalQuestions > 0 && answeredCount > 0)
+          ? `${Math.round(student.scorePct)}% of exam`
+          : '';
+        var progressFillClass = 'bg-emerald-500';
+        if (student.status && student.status.indexOf('Locked') === 0) {
+          progressFillClass = 'bg-red-500';
+        } else if (student.status === 'Blocked') {
+          progressFillClass = 'bg-red-500';
+        } else if (student.status === 'Paused') {
+          progressFillClass = 'bg-amber-500';
+        }
+        var requiresUnlock = student.proctorStatus === 'LOCKED' || student.proctorStatus === 'BLOCKED';
 
         var card = document.createElement('div');
-        card.className = 'rounded-2xl border border-slate-200 dark:border-brand-dark-gray/60 bg-white dark:bg-brand-dark-gray/30 p-4 shadow-sm flex flex-col gap-3';
+        var baseCardClass = 'mission-student-card rounded-2xl border border-slate-200 dark:border-brand-dark-gray/60 bg-white dark:bg-brand-dark-gray/30 p-4 shadow-sm flex flex-col gap-3 transition-all';
+        if (selected) {
+          baseCardClass += ' ring-2 ring-amber-400 ring-opacity-70 shadow-lg';
+        }
+        card.className = baseCardClass;
+        card.dataset.email = student.email;
         card.innerHTML = `
           <div class="flex items-start justify-between gap-3">
             <div>
               <p class="text-base font-semibold text-brand-dark-gray dark:text-white">${escapeHtml(student.name)}</p>
               <span class="inline-flex mt-1 px-2.5 py-1 text-xs font-semibold rounded-full ${statusClass}">${student.status}</span>
             </div>
-            <div class="flex items-center gap-2 text-xs text-slate-500">
-              <span class="h-2.5 w-2.5 rounded-full ${connectionClass}"></span>
-              <span>${connectionLabel}</span>
+            <div class="flex items-center gap-3 text-xs text-slate-500">
+              <button type="button" class="mission-select-btn rounded-full border border-slate-300 dark:border-slate-600 p-1.5 text-slate-500 hover:text-veritas-navy" data-action="toggle-select" data-email="${student.email}" aria-pressed="${selected ? 'true' : 'false'}" title="Select student">
+                <span class="material-symbols-outlined text-base" data-role="selection-icon">${selected ? 'check_circle' : 'radio_button_unchecked'}</span>
+              </button>
+              <div class="flex items-center gap-1.5">
+                <span class="h-2.5 w-2.5 rounded-full ${connectionClass}"></span>
+                <span>${connectionLabel}</span>
+              </div>
             </div>
           </div>
           <div>
@@ -12925,13 +12999,23 @@
               <span>Remaining ${timeLabel}</span>
             </div>
             <div class="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800">
-              <div class="h-2 rounded-full ${student.status === 'Locked' ? 'bg-red-500' : 'bg-emerald-500'}" style="width: ${progressPct}%"></div>
+              <div class="h-2 rounded-full ${progressFillClass}" style="width: ${progressPct}%"></div>
+            </div>
+            <div class="flex items-center justify-between text-xs text-slate-600 mt-2">
+              <span class="font-semibold">${scoreSummary}</span>
+              <span>${scorePctSummary}</span>
             </div>
           </div>
-          <button class="mission-manage-btn inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 dark:border-slate-600 px-4 py-2 text-sm font-semibold text-brand-dark-gray dark:text-white hover:bg-slate-50 disabled:opacity-60" data-action="manage-student" data-email="${student.email}" ${manageDisabled ? 'disabled' : ''}>
-            <span class="material-symbols-outlined text-base">tune</span>
-            Manage
-          </button>
+          <div class="flex flex-col gap-2 pt-1">
+            <button class="mission-manage-btn inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 dark:border-slate-600 px-4 py-2 text-sm font-semibold text-brand-dark-gray dark:text-white hover:bg-slate-50 disabled:opacity-60" data-action="manage-student" data-email="${student.email}" ${manageDisabled ? 'disabled' : ''}>
+              <span class="material-symbols-outlined text-base">tune</span>
+              Manage
+            </button>
+            ${requiresUnlock ? `<button type="button" class="inline-flex items-center justify-center gap-2 rounded-full border border-blue-200 text-blue-700 bg-blue-50 px-4 py-2 text-xs font-semibold hover:bg-blue-100" data-action="unlock-student" data-email="${student.email}" data-lock-version="${student.lockVersion || 0}">
+              <span class="material-symbols-outlined text-base">lock_open_right</span>
+              <span>Approve re-entry</span>
+            </button>` : ''}
+          </div>
         `;
         grid.appendChild(card);
       });
@@ -12939,7 +13023,180 @@
 
     updateMissionControlSummary(view && view.summary ? view.summary : {});
     attachManageHandlers();
+    attachSelectionHandlers();
+    attachUnlockHandlers();
     syncManagedStudentState();
+    syncMissionSelectionIndicators();
+    updateBulkControlsState();
+  }
+
+  function pruneMissionSelection(students) {
+    if (!missionControlSelectedEmails.size) { return; }
+    var existing = new Set(students.map(function(student) { return student.email; }));
+    Array.from(missionControlSelectedEmails).forEach(function(email) {
+      if (!existing.has(email)) {
+        missionControlSelectedEmails.delete(email);
+      }
+    });
+  }
+
+  function attachSelectionHandlers() {
+    var toggles = document.querySelectorAll('#individual-session-students-grid [data-action="toggle-select"]');
+    toggles.forEach(function(toggle) {
+      toggle.addEventListener('click', function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        toggleStudentSelection(toggle.dataset.email);
+      });
+    });
+  }
+
+  function attachUnlockHandlers() {
+    var buttons = document.querySelectorAll('#individual-session-students-grid [data-action="unlock-student"]');
+    buttons.forEach(function(btn) {
+      btn.addEventListener('click', function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!currentMissionControlPollId) { return; }
+        var email = btn.dataset.email;
+        var lockVersion = Number(btn.dataset.lockVersion || 0);
+        approveStudentUnlock(email, currentMissionControlPollId, lockVersion, btn);
+      });
+    });
+  }
+
+  function toggleStudentSelection(email) {
+    if (!email) { return; }
+    if (missionControlSelectedEmails.has(email)) {
+      missionControlSelectedEmails.delete(email);
+    } else {
+      missionControlSelectedEmails.add(email);
+    }
+    syncMissionSelectionIndicators();
+    updateBulkControlsState();
+  }
+
+  function clearMissionSelection() {
+    if (!missionControlSelectedEmails.size) { return; }
+    missionControlSelectedEmails.clear();
+    syncMissionSelectionIndicators();
+    updateBulkControlsState();
+  }
+
+  function syncMissionSelectionIndicators() {
+    var cards = document.querySelectorAll('#individual-session-students-grid .mission-student-card');
+    cards.forEach(function(card) {
+      var email = card.dataset.email;
+      var selected = email && missionControlSelectedEmails.has(email);
+      card.classList.toggle('ring-2', !!selected);
+      card.classList.toggle('ring-amber-400', !!selected);
+      card.classList.toggle('ring-opacity-70', !!selected);
+      card.classList.toggle('shadow-lg', !!selected);
+      var icon = card.querySelector('[data-role="selection-icon"]');
+      if (icon) {
+        icon.textContent = selected ? 'check_circle' : 'radio_button_unchecked';
+      }
+      var toggle = card.querySelector('[data-action="toggle-select"]');
+      if (toggle) {
+        toggle.setAttribute('aria-pressed', selected ? 'true' : 'false');
+      }
+    });
+  }
+
+  function updateBulkControlsState() {
+    if (bulkSelectionCount) {
+      bulkSelectionCount.textContent = missionControlSelectedEmails.size;
+    }
+    if (bulkSelectionClear) {
+      bulkSelectionClear.classList.toggle('hidden', missionControlSelectedEmails.size === 0);
+    }
+    if (!bulkControlsLoading && bulkSelectedLabel) {
+      bulkSelectedLabel.textContent = missionControlSelectedEmails.size > 0
+        ? 'Add to selected (' + missionControlSelectedEmails.size + ')'
+        : 'Add to selected';
+    }
+    if (!bulkControlsLoading && bulkTimeSelectedBtn) {
+      var disabled = missionControlSelectedEmails.size === 0 || !currentMissionControlPollId || !currentSecureSessionId;
+      bulkTimeSelectedBtn.disabled = disabled;
+      bulkTimeSelectedBtn.classList.toggle('opacity-60', disabled);
+    }
+  }
+
+  function setBulkControlsLoading(isLoading, scope) {
+    bulkControlsLoading = !!isLoading;
+    if (bulkTimeAllBtn) {
+      bulkTimeAllBtn.disabled = !!isLoading;
+      bulkTimeAllBtn.classList.toggle('opacity-60', !!isLoading);
+      var allLabel = bulkTimeAllBtn.querySelector('span:last-child');
+      if (allLabel) {
+        allLabel.textContent = isLoading && scope === 'ALL' ? 'Adding...' : 'Add to entire class';
+      }
+    }
+    if (bulkTimeSelectedBtn) {
+      var disableSelected = isLoading || missionControlSelectedEmails.size === 0 || !currentMissionControlPollId || !currentSecureSessionId;
+      bulkTimeSelectedBtn.disabled = disableSelected;
+      bulkTimeSelectedBtn.classList.toggle('opacity-60', disableSelected);
+      if (bulkSelectedLabel) {
+        if (isLoading && scope === 'SELECTED') {
+          bulkSelectedLabel.textContent = 'Adding...';
+        } else if (!isLoading) {
+          bulkSelectedLabel.textContent = missionControlSelectedEmails.size > 0
+            ? 'Add to selected (' + missionControlSelectedEmails.size + ')'
+            : 'Add to selected';
+        }
+      }
+    }
+    if (!isLoading) {
+      updateBulkControlsState();
+    }
+  }
+
+  async function handleBulkTimeAdjust(scope) {
+    if (!currentMissionControlPollId || !currentSecureSessionId) {
+      await veritasAlert('Launch a secure assessment before extending time.', { title: 'Extend time' });
+      return;
+    }
+    if (scope === 'SELECTED' && missionControlSelectedEmails.size === 0) {
+      await veritasAlert('Select at least one student first.', { title: 'Extend time' });
+      return;
+    }
+    if (!bulkTimeInput) { return; }
+    var minutes = parseFloat(bulkTimeInput.value);
+    if (isNaN(minutes) || minutes <= 0) {
+      await veritasAlert('Enter a positive number of minutes to add.', { title: 'Extend time' });
+      bulkTimeInput.focus();
+      return;
+    }
+    if (PREVIEW_MODE) {
+      await previewOnlyNotice('adjust secure assessment time');
+      return;
+    }
+    setBulkControlsLoading(true, scope);
+    var runner = google.script.run
+      .withSuccessHandler(function(response) {
+        setBulkControlsLoading(false, scope);
+        if (response && response.success) {
+          var audience = scope === 'ALL' ? 'the entire class' : missionControlSelectedEmails.size + ' student(s)';
+          showToast('success', 'Time extended', 'Added ' + minutes + ' minute(s) for ' + audience + '.', 4000);
+          pollIndividualSessionState();
+        } else {
+          veritasAlert('Unable to extend time. Please try again.', { title: 'Extend time failed', destructive: true });
+        }
+      })
+      .withFailureHandler(function(error) {
+        setBulkControlsLoading(false, scope);
+        handleError(error);
+      });
+    if (scope === 'ALL') {
+      runner.adjustSecureAssessmentTimeForAll(currentMissionControlPollId, currentSecureSessionId, minutes);
+    } else {
+      runner.adjustSecureAssessmentTimeBulk(
+        currentMissionControlPollId,
+        currentSecureSessionId,
+        Array.from(missionControlSelectedEmails),
+        minutes
+      );
+    }
   }
 
   function pollIndividualSessionState() {
@@ -13009,7 +13266,14 @@
     if(!student){return;}
     if(studentManagerName){studentManagerName.textContent=student.name;}
     if(studentManagerStatus){studentManagerStatus.textContent=student.status;}
-    if(studentManagerProgress){studentManagerProgress.textContent='Q '+(student.progress||0)+' / '+(student.totalQuestions||0);}
+    if(studentManagerProgress){
+      var answeredQuestions = student.progress||0;
+      var progressText='Q '+answeredQuestions+' / '+(student.totalQuestions||0);
+      if(typeof student.correctCount==='number' && answeredQuestions>0){
+        progressText+=' • '+student.correctCount+' correct';
+      }
+      studentManagerProgress.textContent=progressText;
+    }
     if(studentManagerTime){studentManagerTime.textContent=student.timeRemainingSeconds!=null?formatTime(student.timeRemainingSeconds):'--:--';}
     if(studentManagerExtra){
       var extraMinutes=student.timeAdjustmentMinutes||0;
@@ -13122,9 +13386,21 @@
     });
   }
 
+  if(bulkTimeAllBtn){
+    bulkTimeAllBtn.addEventListener('click',function(){handleBulkTimeAdjust('ALL');});
+  }
+  if(bulkTimeSelectedBtn){
+    bulkTimeSelectedBtn.addEventListener('click',function(){handleBulkTimeAdjust('SELECTED');});
+  }
+  if(bulkSelectionClear){
+    bulkSelectionClear.addEventListener('click',function(){clearMissionSelection();});
+  }
+
+  updateBulkControlsState();
+
 
 })();
   </script>
-  
+
 </body>
 </html>

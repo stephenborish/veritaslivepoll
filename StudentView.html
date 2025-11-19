@@ -123,6 +123,28 @@
       --radius-full: 9999px;
     }
 
+    body.secure-overlay-active {
+      overflow: hidden;
+    }
+
+    .secure-topbar-timer {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      background: rgba(4, 12, 30, 0.45);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .secure-topbar-time {
+      font-size: 1.45rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: #fff;
+    }
+
     .student-card {
       width: min(85vw, 1200px);
       margin: 32px auto;
@@ -204,20 +226,23 @@
 
     .secure-focus-shell {
       position: relative;
-      width: min(92vw, 1100px);
-      margin: 32px auto;
+      width: min(96vw, 1200px);
+      margin: clamp(16px, 4vw, 40px) auto;
       background: var(--bg-card);
       border-radius: var(--radius-lg);
       border: 1px solid rgba(18, 56, 93, 0.12);
-      box-shadow: 0 25px 70px rgba(15, 23, 42, 0.15);
+      box-shadow: 0 25px 70px rgba(15, 23, 42, 0.18);
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: calc(100vh - 180px);
     }
 
     .secure-focus-header {
       display: flex;
       flex-wrap: wrap;
       gap: 18px;
-      align-items: flex-start;
+      align-items: center;
       justify-content: space-between;
       padding: 24px 32px;
       border-bottom: 1px solid rgba(18, 56, 93, 0.1);
@@ -238,23 +263,11 @@
       color: var(--text-primary);
     }
 
-    .secure-timer {
-      margin-left: auto;
-      text-align: right;
-    }
-
     .secure-connection-dot {
       width: 14px;
       height: 14px;
       border-radius: 999px;
       box-shadow: 0 0 12px rgba(18, 56, 93, 0.35);
-    }
-
-    .secure-timer-value {
-      font-size: 1.4rem;
-      font-weight: 700;
-      color: var(--veritas-navy);
-      letter-spacing: 0.04em;
     }
 
     .secure-connection-warning {
@@ -269,17 +282,23 @@
     .secure-focus-body {
       display: flex;
       flex-direction: column;
-      gap: 24px;
-      padding: 28px 32px;
+      gap: clamp(20px, 3vw, 36px);
+      padding: clamp(24px, 3vw, 40px);
+      flex: 1;
+      min-height: 0;
     }
 
     .secure-question-pane,
     .secure-options-pane {
       width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      min-height: 0;
     }
 
     .secure-question-text {
-      font-size: 1.35rem;
+      font-size: clamp(1.2rem, 0.9rem + 1vw, 1.6rem);
       line-height: 1.6;
       color: var(--text-primary);
     }
@@ -308,6 +327,24 @@
       display: flex;
       flex-direction: column;
       gap: 16px;
+    }
+
+    @media (min-width: 1024px) {
+      .secure-focus-body {
+        flex-direction: row;
+        align-items: flex-start;
+      }
+
+      .secure-question-pane,
+      .secure-options-pane {
+        flex: 1;
+      }
+
+      .secure-options-pane {
+        max-height: calc(100vh - 320px);
+        overflow-y: auto;
+        padding-right: 12px;
+      }
     }
 
     .secure-option {
@@ -367,11 +404,14 @@
     }
 
     .secure-focus-footer {
-      padding: 0 32px 32px;
+      border-top: 1px solid rgba(18, 56, 93, 0.1);
+      padding: 20px clamp(24px, 3vw, 40px) 32px;
       display: flex;
-      flex-direction: column;
-      gap: 10px;
-      align-items: flex-end;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      background: linear-gradient(0deg, rgba(18, 56, 93, 0.04), rgba(18, 56, 93, 0));
     }
 
     .secure-connection-indicator {
@@ -434,14 +474,17 @@
     }
 
     .secure-overlay {
-      position: absolute;
+      position: fixed;
       inset: 0;
-      background: rgba(6, 11, 26, 0.8);
+      width: 100vw;
+      height: 100vh;
+      background: rgba(6, 11, 26, 0.85);
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 24px;
-      z-index: 40;
+      z-index: 999;
+      backdrop-filter: blur(4px);
     }
 
     .secure-overlay.hidden {
@@ -1198,11 +1241,19 @@
       <img alt="Malvern Prep Logo" class="h-12 w-auto" src="https://raw.githubusercontent.com/stephenborish/veritasassets/main/Malvern%20Logo.png"/>
       <div class="flex flex-col">
         <h1 class="text-white text-xl font-extrabold tracking-[0.15em] uppercase">Veritas</h1>
-        <p class="text-white/70 text-xs tracking-wide">Live Poll</p>
+        <p id="student-mode-label" class="text-white/70 text-xs tracking-wide">Live Poll</p>
       </div>
     </div>
-    <div id="loader" class="loader" style="display: none;">
-      <div class="h-6 w-6 animate-spin rounded-full border-2 border-white/80 border-t-transparent"></div>
+    <div class="flex items-center gap-4">
+      <div id="secure-topbar-timer" class="secure-topbar-timer hidden">
+        <div class="flex flex-col text-right leading-tight">
+          <span class="text-[0.6rem] uppercase tracking-[0.35em] text-white/70">Time Remaining</span>
+          <span id="secure-countdown" class="secure-topbar-time">00:00</span>
+        </div>
+      </div>
+      <div id="loader" class="loader" style="display: none;">
+        <div class="h-6 w-6 animate-spin rounded-full border-2 border-white/80 border-t-transparent"></div>
+      </div>
     </div>
   </header>
 
@@ -1391,10 +1442,6 @@
             <p class="secure-label">Question</p>
             <p id="secure-progress-label" class="secure-value">Question 1 of 10</p>
           </div>
-          <div class="secure-timer" aria-live="polite">
-            <p class="secure-label">Time Remaining</p>
-            <p id="secure-countdown" class="secure-timer-value">00:00</p>
-          </div>
         </div>
         <div id="secure-connection-warning" class="secure-connection-warning hidden"></div>
         <div class="secure-focus-body">
@@ -1436,6 +1483,8 @@
         var secureFocusContainer = document.getElementById('individual-timed-session');
         var secureProgressLabel = document.getElementById('secure-progress-label');
         var secureCountdownEl = document.getElementById('secure-countdown');
+        var secureTopbarTimer = document.getElementById('secure-topbar-timer');
+        var studentModeLabel = document.getElementById('student-mode-label');
         var secureConnectionDot = document.getElementById('secure-connection-dot');
         var secureConnectionIndicator = document.getElementById('secure-connection-indicator');
         var secureConnectionStatus = document.getElementById('secure-connection-status');
@@ -1476,6 +1525,15 @@
         var secureSubmitting = false;
         var secureTimeExpired = false;
         var securePollInFlight = false;
+
+        function setSecureChromeState(isActive) {
+            if (studentModeLabel) {
+                studentModeLabel.textContent = isActive ? 'Secure Assessment' : 'Live Poll';
+            }
+            if (secureTopbarTimer) {
+                secureTopbarTimer.classList.toggle('hidden', !isActive);
+            }
+        }
 
         function formatTime(seconds) {
             var minutes = Math.floor(seconds / 60);
@@ -1528,6 +1586,11 @@
             statusContainer.style.display = 'none';
             if (preLiveCard) preLiveCard.style.display = 'none';
             if (secureFocusContainer) secureFocusContainer.style.display = 'block';
+            if (!secureSessionActive) {
+                secureSessionActive = true;
+                secureSessionHeartbeat.start(true);
+            }
+            setSecureChromeState(true);
             hideSecureOverlay();
             setSecureConnectionIndicatorVisible(true);
             secureQuestionState = state;
@@ -1747,6 +1810,9 @@
             if (secureOverlayTitle) secureOverlayTitle.textContent = title;
             if (secureOverlayMessage) secureOverlayMessage.textContent = message || '';
             if (secureOverlaySubtext) secureOverlaySubtext.textContent = subtext || '';
+            if (document && document.body) {
+                document.body.classList.add('secure-overlay-active');
+            }
         }
 
         function hideSecureOverlay() {
@@ -1754,6 +1820,9 @@
             secureOverlay.classList.add('hidden');
             if (secureOverlayMessage) secureOverlayMessage.textContent = '';
             if (secureOverlaySubtext) secureOverlaySubtext.textContent = '';
+            if (document && document.body) {
+                document.body.classList.remove('secure-overlay-active');
+            }
         }
 
         function showSecureLockout(message, subtext) {
@@ -2185,6 +2254,7 @@
             var isNewLobbyContext = previousLobbyKey !== nextLobbyKey;
             var previousWindowStatus = previousContext ? previousContext.windowStatus : null;
             setSecureConnectionIndicatorVisible(false);
+            setSecureChromeState(true);
 
             secureLobbyContext = {
                 pollId: state.pollId,
@@ -2946,12 +3016,14 @@
                     secureSessionActive = true;
                     secureSessionHeartbeat.start(true);
                 }
+                setSecureChromeState(true);
                 return;
             }
             if (secureSessionActive) {
                 secureSessionActive = false;
                 secureSessionHeartbeat.stop();
                 setSecureConnectionIndicatorVisible(false);
+                setSecureChromeState(false);
             }
             console.log('Status update:', data.status);
 

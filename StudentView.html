@@ -123,6 +123,126 @@
       --radius-full: 9999px;
     }
 
+    body {
+      background: #ffffff;
+      color: #000000;
+      font-family: "Inter", sans-serif;
+    }
+
+    .page-shell {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 96px clamp(16px, 4vw, 40px) 88px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      min-height: 100vh;
+    }
+
+    .hud-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 64px;
+      background: var(--veritas-navy);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 clamp(16px, 3vw, 32px);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+      z-index: 60;
+    }
+
+    .hud-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-transform: uppercase;
+    }
+
+    .hud-brand {
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      font-size: 1.1rem;
+    }
+
+    .hud-mode {
+      color: rgba(255, 255, 255, 0.75);
+      font-size: 0.82rem;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+    }
+
+    .hud-center {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .hud-progress {
+      margin: 0;
+      color: #ffffff;
+      letter-spacing: 0.14em;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .hud-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .hud-timer {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hud-icon-btn {
+      width: 36px;
+      height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      background: transparent;
+      color: #ffffff;
+      cursor: pointer;
+      transition: background-color 120ms ease, border-color 120ms ease;
+    }
+
+    .hud-icon-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+
+    .hud-timer-value {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-weight: 700;
+      font-size: 1.05rem;
+      letter-spacing: 0.08em;
+    }
+
+    .hud-timer.alert-warning .hud-timer-value {
+      color: #c2410c;
+    }
+
+    .hud-timer.alert-danger .hud-timer-value {
+      color: #b91c1c;
+      animation: pulse-dot 1s ease-in-out infinite;
+    }
+
+    .hud-timer.timer-hidden .hud-timer-value {
+      color: rgba(255, 255, 255, 0.6);
+      letter-spacing: 0.08em;
+    }
+
     body.secure-overlay-active {
       overflow: hidden;
     }
@@ -153,77 +273,249 @@
       color: #fff;
     }
 
+    .student-card,
+    .secure-session-card {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      background: transparent;
+      color: #000000;
+      border-radius: 0;
+      border: none;
+      box-shadow: none;
+      padding: 0;
+    }
+
+    .student-card-body,
+    .student-card-options,
+    .secure-session-body {
+      padding: 0;
+    }
+
+    .student-question-number,
+    .student-card-header,
+    .secure-session-header {
+      display: none;
+    }
+
+    .question-layout {
+      display: grid;
+      grid-template-columns: 3fr 1fr;
+      gap: 24px;
+      align-items: flex-start;
+      width: 100%;
+    }
+
+    .question-layout.no-image {
+      grid-template-columns: 1fr;
+    }
+
+    .question-textual {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .student-stem {
+      font-family: "Noto Serif", serif;
+      font-size: 1.6rem;
+      line-height: 1.6;
+      font-weight: 700;
+      color: #000000;
+      margin: 0;
+      text-align: left;
+    }
+
+    .student-subline {
+      color: #4b5563;
+      margin: 0;
+      text-align: left;
+    }
+
+    .question-visual {
+      display: flex;
+      justify-content: flex-end;
+      width: 100%;
+    }
+
+    .question-visual img {
+      max-height: 300px;
+      width: 100%;
+      object-fit: contain;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      padding: 8px;
+      background: #ffffff;
+      cursor: zoom-in;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
+    }
+
+    .answer-area {
+      margin-top: 20px;
+    }
+
+    .student-choices {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      padding: 0;
+      margin: 0;
+      list-style: none;
+    }
+
+    .answer-option {
+      background: #ffffff;
+      border: 1px solid #d1d5db;
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+      color: #000000;
+    }
+
+    .answer-option:hover:not(.answer-option-disabled) {
+      border-color: #9ca3af;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
+    }
+
+    .answer-option .option-body {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .answer-option .option-leading {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .letter-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      border: 1px solid #cbd5e1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: #12385d;
+      background: #f8fafc;
+      flex-shrink: 0;
+    }
+
+    .answer-option .option-text {
+      color: #000000;
+      font-size: 1.05rem;
+      line-height: 1.6;
+      font-family: "Inter", sans-serif;
+      margin: 0;
+      text-align: left;
+    }
+
+    .answer-option .option-image {
+      width: 100%;
+      height: 150px;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      box-shadow: none;
+      object-fit: cover;
+      margin: 0 0 6px;
+    }
+
+    .answer-option .result-ribbon,
+    .answer-option .result-indicator {
+      display: none;
+    }
+
+    .answer-option.answer-option-selected {
+      border: 2px solid #12385d;
+      box-shadow: 0 0 0 3px rgba(18, 56, 93, 0.18);
+      background: #e8f1fa;
+    }
+
+    .answer-option.answer-option-selected .letter-badge {
+      background-color: #12385d;
+      border-color: #12385d;
+      color: #ffffff;
+    }
+
+    .secure-session-body {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      width: 100%;
+    }
+
+    .secure-session-footer {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #ffffff;
+      border-top: 1px solid #e5e7eb;
+      box-shadow: 0 -8px 20px rgba(0, 0, 0, 0.08);
+      padding: 14px clamp(16px, 3vw, 32px);
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 12px;
+      z-index: 55;
+    }
+
+    body.secure-mode-active .page-shell {
+      padding-bottom: 180px;
+    }
+
     .student-card {
-      width: min(96vw, 2200px);
-      margin: 16px auto;
-      background: var(--bg-card);
-      color: var(--text-primary);
-      border-radius: var(--radius-md);
-      border-top: 4px solid var(--veritas-gold);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-      overflow: hidden;
-      max-width: 100%;
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      background: transparent;
+      color: #000000;
+      border-radius: 0;
+      border: none;
+      box-shadow: none;
+      overflow: visible;
+      padding: 0;
     }
 
     .student-card.results-stage,
     .student-card.showing-results {
-      background: var(--bg-card);
+      background: transparent;
     }
 
-    .student-card-header {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      padding: 10px 17px 7px;
-      border-bottom: 1px solid var(--navy-12);
-      background: linear-gradient(135deg, rgba(18, 56, 93, 0.06), var(--gold-08));
-      backdrop-filter: blur(8px);
-    }
-
-    .student-question-number {
-      font-size: 0.85rem;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      color: var(--veritas-navy);
-      font-weight: 600;
-    }
-
+    .student-card-header,
+    .student-question-number,
     .student-card-body {
-      padding: 12px 12px 7px;
-      display: flex;
-      flex-direction: row;
-      gap: 16px;
-      align-items: flex-start;
-      max-width: 100%;
-      overflow-x: hidden;
+      display: none;
     }
 
     .student-card-body-content {
-      flex: 1;
       display: flex;
       flex-direction: column;
       gap: 12px;
-      min-width: 0;
-      max-width: 100%;
-      overflow: hidden;
     }
 
     .student-question-image {
-      max-width: 300px;
-      width: 100%;
       max-height: 300px;
-      height: auto;
+      width: 100%;
       object-fit: contain;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--navy-12);
-      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
-      cursor: pointer;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
+      cursor: zoom-in;
+      padding: 8px;
+      background: #ffffff;
       transition: transform 200ms ease, box-shadow 200ms ease;
     }
 
     .student-question-image:hover {
       transform: scale(1.02);
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
     }
 
 
@@ -300,73 +592,39 @@
       padding: clamp(20px, 4vw, 48px) clamp(24px, 4vw, 48px);
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 24px;
       flex: 1;
       max-width: 100%;
       overflow-x: hidden;
     }
 
-    .secure-question-pane {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      max-width: 100%;
-      overflow: hidden;
-    }
-
-    .secure-question-pane .student-stem {
-      font-size: 1.2rem;
-      line-height: 1.6;
-      font-weight: 400;
-      color: var(--text-primary);
-      margin: 0;
-      text-align: left;
-    }
-
-    .secure-question-pane .student-question-image {
-      width: 100%;
-      max-width: 360px;
-      max-height: 320px;
-      margin-top: 8px;
-      cursor: zoom-in;
-    }
-
+    .secure-question-pane,
     .secure-options-pane {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      max-width: 100%;
-      overflow: hidden;
-    }
-
-    .secure-options-pane .student-choices {
-      gap: 14px;
-    }
-
-    .secure-answer-option .option-text {
-      font-size: 1.02rem;
+      display: none;
     }
 
     .secure-answer-option .letter-badge {
-      width: 42px;
-      height: 42px;
+      width: 32px;
+      height: 32px;
     }
 
     .secure-session-footer {
-      padding: clamp(16px, 3vw, 32px) clamp(24px, 4vw, 48px) clamp(24px, 4vw, 56px);
-      border-top: 1px solid rgba(18, 56, 93, 0.08);
-      background: rgba(18, 56, 93, 0.02);
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #ffffff;
+      border-top: 1px solid #e5e7eb;
+      box-shadow: 0 -8px 20px rgba(0, 0, 0, 0.08);
+      padding: 14px clamp(16px, 3vw, 32px);
       display: flex;
-      flex-direction: column;
-      gap: 10px;
-      align-items: flex-end;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 12px;
+      z-index: 55;
     }
 
     @media (max-width: 1023px) {
-      .secure-session-body {
-        flex-direction: column;
-      }
-
       .secure-session-footer {
         align-items: stretch;
       }
@@ -1165,24 +1423,24 @@
     .waiting-dots .dot:nth-child(1) { animation-delay: 0s; }
     .waiting-dots .dot:nth-child(2) { animation-delay: 0.2s; }
     .waiting-dots .dot:nth-child(3) { animation-delay: 0.4s; }
-  </style>
+</style>
 </head>
-<body class="font-display bg-gradient-to-br from-veritas-navy via-[#1a4a73] to-[#2a5a83] text-white min-h-screen">
-  <!-- Header - Subtle overlay style -->
-  <header class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 bg-gradient-to-br from-veritas-navy/95 via-[#1a4a73]/95 to-[#2a5a83]/95 backdrop-blur-sm">
-    <div class="flex items-center gap-3">
-      <img alt="Malvern Prep Logo" class="h-12 w-auto" src="https://raw.githubusercontent.com/stephenborish/veritasassets/main/Malvern%20Logo.png"/>
-      <div class="flex flex-col">
-        <h1 class="text-white text-xl font-extrabold tracking-[0.15em] uppercase">Veritas</h1>
-        <p id="student-mode-label" class="text-white/70 text-xs tracking-wide">Live Poll</p>
-      </div>
+<body class="font-display bg-white text-black min-h-screen">
+  <!-- Global Heads-Up Display -->
+  <header class="hud-bar">
+    <div class="hud-left">
+      <span class="hud-brand" aria-label="Veritas">VERITAS</span>
+      <span id="student-mode-label" class="hud-mode">Live Poll</span>
     </div>
-    <div class="flex items-center gap-4">
-      <div id="secure-topbar-timer" class="secure-topbar-timer hidden">
-        <div class="flex flex-col text-right leading-tight">
-          <span class="text-[0.6rem] uppercase tracking-[0.35em] text-white/70">Time Remaining</span>
-          <span id="secure-countdown" class="secure-topbar-time">00:00</span>
-        </div>
+    <div class="hud-center">
+      <p id="question-progress" class="hud-progress" aria-live="polite">QUESTION --</p>
+    </div>
+    <div class="hud-right">
+      <div id="secure-topbar-timer" class="hud-timer hidden" aria-live="polite">
+        <button id="timer-visibility-toggle" type="button" class="hud-icon-btn" aria-pressed="false" aria-label="Hide timer">
+          <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+        </button>
+        <span id="secure-countdown" class="hud-timer-value">00:00</span>
       </div>
       <div id="loader" class="loader" style="display: none;">
         <div class="h-6 w-6 animate-spin rounded-full border-2 border-white/80 border-t-transparent"></div>
@@ -1190,7 +1448,7 @@
     </div>
   </header>
 
-  <main class="flex flex-col items-center justify-center min-h-screen p-6 pt-24 space-y-4">
+  <main class="page-shell">
     <div id="connectivity-banner" class="hidden fixed top-20 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-lg flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-800 shadow-lg transition-all duration-200 backdrop-blur-sm">
       <span id="connectivity-icon" class="material-symbols-outlined text-2xl">sync</span>
       <div class="flex flex-col text-left flex-1">
@@ -1199,42 +1457,22 @@
       </div>
     </div>
     <!-- Entry Screen - Clean Professional Landing Panel -->
-    <div id="entry-screen" class="w-full max-w-4xl mx-auto text-center animate-fade-in px-6">
-      <!-- Main Welcome Card -->
-      <div class="bg-white rounded-3xl shadow-2xl border border-gray-100 p-12 sm:p-16 relative">
-        <!-- Decorative accent bar -->
-        <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-1.5 bg-gradient-to-r from-transparent via-[#c5a05a] to-transparent rounded-full"></div>
-
-        <!-- Logo/Brand Icon -->
-        <div class="mb-8">
-          <div class="w-20 h-20 mx-auto rounded-2xl flex items-center justify-center mb-6" style="background: linear-gradient(135deg, #12385d 0%, #1a4a75 100%);">
-            <span class="material-symbols-outlined text-5xl text-white">fact_check</span>
+    <div id="entry-screen" class="w-full max-w-4xl mx-auto text-left animate-fade-in px-6">
+      <div class="space-y-8">
+        <div class="flex items-center gap-4">
+          <div class="w-14 h-14 rounded-xl flex items-center justify-center" style="background: #12385d; color: #ffffff;">
+            <span class="material-symbols-outlined text-3xl">fact_check</span>
+          </div>
+          <div>
+            <p class="text-sm font-semibold uppercase tracking-[0.22em] text-[#12385d]">Veritas</p>
+            <h1 class="text-4xl sm:text-5xl font-bold" style="color: #12385d; letter-spacing: -0.01em;">Live Polls</h1>
           </div>
         </div>
-
-        <!-- Welcome Message -->
-        <div class="mb-10">
-          <h1 class="text-5xl sm:text-6xl font-bold mb-6" style="color: #12385d; letter-spacing: -0.02em;">
-            Welcome to <span style="color: #c5a05a;">VERITAS</span>
-          </h1>
-          <p class="text-lg text-gray-600 leading-relaxed max-w-xl mx-auto">
-            Your live polling session is ready. Click below to begin and participate in real-time.
-          </p>
-        </div>
-
-        <!-- Begin Button -->
-        <button id="start-session-btn" class="relative inline-flex items-center justify-center gap-3 px-12 py-4 rounded-xl text-white text-lg font-semibold transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-4 focus:ring-[#12385d]/20" style="background: linear-gradient(135deg, #12385d 0%, #1a4a75 100%); z-index: 10;">
+        <p class="text-lg text-gray-700 leading-relaxed max-w-2xl">Your session will begin in fullscreen for a distraction-free experience. Click below to get started.</p>
+        <button id="start-session-btn" class="inline-flex items-center justify-center gap-3 px-10 py-3 rounded-full text-white text-lg font-semibold transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-[#12385d]/20" style="background: #12385d;">
           <span class="material-symbols-outlined text-2xl">play_arrow</span>
           <span>Begin Poll</span>
         </button>
-
-        <!-- Session Info -->
-        <div class="mt-10 pt-8 border-t border-gray-100">
-          <div class="flex items-center justify-center gap-2 text-sm text-gray-500">
-            <span class="material-symbols-outlined text-lg">info</span>
-            <span>This session will enter fullscreen mode for your focus</span>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -1242,8 +1480,8 @@
     <!-- Student App Container -->
     <div class="w-full max-w-6xl mx-auto" id="student-container" style="display: none;">
       <div id="student-loader" class="text-center py-12 animate-fade-in" style="display: block;">
-        <div class="h-16 w-16 animate-spin rounded-full border-4 border-white/30 border-t-white mx-auto mb-4"></div>
-        <p class="text-white/90 text-lg">Preparing your secure session...</p>
+        <div class="h-16 w-16 animate-spin rounded-full border-4 border-[#12385d]/20 border-t-[#12385d] mx-auto mb-4"></div>
+        <p class="text-[#12385d] text-lg">Preparing your secure session...</p>
       </div>
 
       <section id="secure-lobby" class="secure-lobby-card animate-fade-in" style="display: none;">
@@ -1361,17 +1599,16 @@
 
       <!-- Question Container -->
       <section id="question-container" class="student-card prevent-select animate-fade-in" aria-live="polite" style="display: none;">
-        <div class="student-card-header">
-          <p id="question-number" class="student-question-number"></p>
-        </div>
-        <div id="question-content" class="student-card-body">
-          <div class="student-card-body-content">
+        <div id="question-content" class="question-layout no-image">
+          <div class="question-textual">
             <h2 id="question-text" class="student-stem"></h2>
             <p id="question-subline" class="student-subline hidden"></p>
           </div>
-          <img id="question-image" src="" alt="Question" class="student-question-image" referrerpolicy="no-referrer" onerror="this.style.display='none';" style="display: none;" />
+          <div id="question-visual" class="question-visual">
+            <img id="question-image" src="" alt="Question" class="student-question-image" referrerpolicy="no-referrer" onerror="this.style.display='none';" style="display: none;" />
+          </div>
         </div>
-        <div class="student-card-options">
+        <div class="answer-area">
           <p id="no-responses-message" class="student-no-responses hidden"></p>
           <ul id="options-list" class="student-choices"></ul>
         </div>
@@ -1379,28 +1616,28 @@
 
       <!-- Secure Assessment Focus Mode -->
       <section id="individual-timed-session" class="student-card secure-session-card prevent-select animate-fade-in" style="display: none;" aria-live="polite">
-        <div class="student-card-header secure-session-header">
-          <div>
-            <p class="secure-session-meta">Secure Assessment</p>
-            <p id="secure-progress-label" class="secure-session-progress">Question 1 of 10</p>
-          </div>
-        </div>
+        <p id="secure-progress-label" class="sr-only">Question 1 of 10</p>
         <div id="secure-connection-warning" class="secure-connection-warning hidden"></div>
-        <div class="student-card-body secure-session-body">
-          <div class="secure-question-pane">
-            <h2 id="secure-question-text" class="student-stem"></h2>
-            <img id="secure-question-image" src="" alt="Question" class="student-question-image" referrerpolicy="no-referrer" onerror="this.style.display='none';" style="display: none;" />
+        <div id="secure-question-content" class="secure-session-body">
+          <div id="secure-question-layout" class="question-layout no-image">
+            <div class="question-textual">
+              <h2 id="secure-question-text" class="student-stem"></h2>
+              <p id="secure-question-subline" class="student-subline hidden"></p>
+            </div>
+            <div id="secure-question-visual" class="question-visual">
+              <img id="secure-question-image" src="" alt="Question" class="student-question-image" referrerpolicy="no-referrer" onerror="this.style.display='none';" style="display: none;" />
+            </div>
           </div>
-          <div class="secure-options-pane">
+          <div class="answer-area">
             <ul id="secure-options-list" class="student-choices"></ul>
           </div>
         </div>
         <div class="secure-session-footer">
           <button id="secure-submit-btn" class="secure-submit-btn" type="button">
             <span class="material-symbols-outlined text-xl" aria-hidden="true">arrow_forward</span>
-            <span id="secure-submit-label">Submit &amp; Next</span>
+            <span id="secure-submit-label">Lock Answer &amp; Next</span>
           </button>
-          <p id="secure-submit-hint" class="secure-submit-hint">Select an answer or submit to leave blank.</p>
+          <p id="secure-submit-hint" class="secure-submit-hint">Select an answer before locking and moving forward.</p>
         </div>
       </section>
 
@@ -1418,17 +1655,28 @@
         var secureProgressLabel = document.getElementById('secure-progress-label');
         var secureCountdownEl = document.getElementById('secure-countdown');
         var secureTopbarTimer = document.getElementById('secure-topbar-timer');
+        var timerVisibilityToggle = document.getElementById('timer-visibility-toggle');
+        var questionProgressEl = document.getElementById('question-progress');
         var studentModeLabel = document.getElementById('student-mode-label');
+        var questionLayout = document.getElementById('question-content');
+        var questionVisual = document.getElementById('question-visual');
+        var secureQuestionLayout = document.getElementById('secure-question-layout');
+        var secureQuestionVisual = document.getElementById('secure-question-visual');
         var secureConnectionDot = document.getElementById('secure-connection-dot');
         var secureConnectionIndicator = document.getElementById('secure-connection-indicator');
         var secureConnectionStatus = document.getElementById('secure-connection-status');
         var secureConnectionWarning = document.getElementById('secure-connection-warning');
         var secureQuestionText = document.getElementById('secure-question-text');
+        var secureQuestionSubline = document.getElementById('secure-question-subline');
         var secureQuestionImage = document.getElementById('secure-question-image');
         var secureOptionsList = document.getElementById('secure-options-list');
         var secureSubmitBtn = document.getElementById('secure-submit-btn');
         var secureSubmitLabel = document.getElementById('secure-submit-label');
         var secureSubmitHint = document.getElementById('secure-submit-hint');
+        var timerHidden = false;
+        var lastTimerDisplay = '00:00';
+        var secureCountdownTotal = 0;
+        var bodyEl = document.body;
         var secureCloseTimer = null;
 
         var secureCountdownController = window.SecureAssessmentShared.createCountdown({
@@ -1448,6 +1696,15 @@
         var secureFullscreenManager = window.SecureAssessmentShared.createFullscreenManager(document, {
             onChange: handleSecureFullscreenChange
         });
+
+        if (timerVisibilityToggle) {
+            timerVisibilityToggle.addEventListener('click', function() {
+                timerHidden = !timerHidden;
+                applyTimerVisibility();
+            });
+        }
+
+        applyTimerVisibility();
         var secureSessionActive = false;
         var secureQuestionState = null;
         var secureSelectedOptionIndex = null;
@@ -1487,6 +1744,11 @@
             return (state.pollId || 'poll') + ':' + (state.progressIndex || 0);
         }
 
+        function toggleSecureLayout(active) {
+            if (!bodyEl) return;
+            bodyEl.classList.toggle('secure-mode-active', !!active);
+        }
+
         function setSecureConnectionIndicatorVisible(visible) {
             if (!secureConnectionIndicator) return;
             if (visible) {
@@ -1516,6 +1778,7 @@
             statusContainer.style.display = 'none';
             if (preLiveCard) preLiveCard.style.display = 'none';
             if (secureFocusContainer) secureFocusContainer.style.display = 'block';
+            toggleSecureLayout(true);
             if (!secureSessionActive) {
                 secureSessionActive = true;
                 secureSessionHeartbeat.start(true);
@@ -1543,8 +1806,15 @@
             if (secureProgressLabel) {
                 secureProgressLabel.textContent = `Question ${state.progressIndex + 1} of ${state.totalQuestions}`;
             }
+            if (questionProgressEl) {
+                questionProgressEl.textContent = `QUESTION ${state.progressIndex + 1} OF ${state.totalQuestions}`;
+            }
             if (secureQuestionText) {
                 secureQuestionText.textContent = state.question.questionText || '';
+            }
+            if (secureQuestionSubline) {
+                secureQuestionSubline.classList.add('hidden');
+                secureQuestionSubline.textContent = '';
             }
             if (secureQuestionImage) {
                 if (state.question.questionImageURL) {
@@ -1553,6 +1823,13 @@
                 } else {
                     secureQuestionImage.style.display = 'none';
                 }
+            }
+            var secureHasImage = !!state.question.questionImageURL;
+            if (secureQuestionLayout) {
+                secureQuestionLayout.classList.toggle('no-image', !secureHasImage);
+            }
+            if (secureQuestionVisual) {
+                secureQuestionVisual.style.display = secureHasImage ? 'flex' : 'none';
             }
             if (secureOptionsList) {
                 secureOptionsList.innerHTML = '';
@@ -1575,18 +1852,19 @@
             button.setAttribute('aria-pressed', 'false');
             var displayText = (option && option.text) ? option.text.toString() : '';
             var cleanText = displayText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-            var content = '<div class="option-leading">';
-            content += '<div class="letter-badge" aria-hidden="true">' + letter + '</div>';
-            content += '</div>';
-            content += '<div class="option-body">';
+            var content = '';
             if (option && option.imageURL) {
                 content += '<img src="' + escapeHtml(option.imageURL) + '" alt="Answer ' + letter + '" class="option-image" referrerpolicy="no-referrer">';
             }
+            content += '<div class="option-leading">';
+            content += '<div class="letter-badge" aria-hidden="true">' + letter + '</div>';
+            content += '<div class="option-body">';
             if (cleanText) {
                 content += '<p class="option-text">' + escapeHtml(cleanText).replace(/\n/g, '<br>') + '</p>';
             }
             content += '<span class="result-ribbon"></span>';
             content += '<span class="sr-only secure-selection-announcement"></span>';
+            content += '</div>';
             content += '</div>';
             content += '<span class="result-indicator" aria-hidden="true"></span>';
             button.innerHTML = content;
@@ -1700,19 +1978,39 @@
             secureCountdownController.stop();
         }
 
-        function updateSecureTimerDisplay(seconds) {
-            if (!secureCountdownEl) return;
-            secureCountdownEl.textContent = formatTime(Math.max(0, seconds));
-            secureCountdownEl.classList.remove('text-red-500', 'text-amber-500', 'animate-pulse');
-            if (seconds <= 60) {
-                secureCountdownEl.classList.add('text-red-500', 'animate-pulse');
-            } else if (seconds <= 300) {
-                secureCountdownEl.classList.add('text-amber-500');
+        function applyTimerVisibility() {
+            if (!secureCountdownEl || !secureTopbarTimer) return;
+            secureCountdownEl.textContent = timerHidden ? '••:••' : lastTimerDisplay;
+            secureTopbarTimer.classList.toggle('timer-hidden', timerHidden);
+            if (timerVisibilityToggle) {
+                timerVisibilityToggle.setAttribute('aria-pressed', timerHidden ? 'true' : 'false');
+                timerVisibilityToggle.setAttribute('aria-label', timerHidden ? 'Show timer' : 'Hide timer');
+                var icon = timerVisibilityToggle.querySelector('.material-symbols-outlined');
+                if (icon) {
+                    icon.textContent = timerHidden ? 'visibility_off' : 'visibility';
+                }
             }
+        }
+
+        function updateSecureTimerDisplay(seconds) {
+            if (!secureCountdownEl || !secureTopbarTimer) return;
+            var safeSeconds = Math.max(0, seconds);
+            lastTimerDisplay = formatTime(safeSeconds);
+            secureTopbarTimer.classList.remove('alert-warning', 'alert-danger');
+            var ratio = secureCountdownTotal > 0 ? Math.max(0, Math.min(1, safeSeconds / secureCountdownTotal)) : 1;
+            if (ratio <= 0.1) {
+                secureTopbarTimer.classList.add('alert-danger');
+            } else if (ratio <= 0.25) {
+                secureTopbarTimer.classList.add('alert-warning');
+            }
+            applyTimerVisibility();
         }
 
         function startSecureCountdown(timeRemainingSeconds) {
             var remaining = Math.max(0, Math.floor(timeRemainingSeconds || 0));
+            secureCountdownTotal = remaining || secureCountdownTotal;
+            lastTimerDisplay = formatTime(remaining);
+            applyTimerVisibility();
             secureCountdownController.start(remaining);
         }
 
@@ -1984,7 +2282,6 @@
         var statusMessage = document.getElementById('status-message');
         var questionContainer = document.getElementById('question-container');
         var optionsList = document.getElementById('options-list');
-        var questionNumberEl = document.getElementById('question-number');
         var questionTextEl = document.getElementById('question-text');
         var questionImageEl = document.getElementById('question-image');
         var questionSublineEl = document.getElementById('question-subline');
@@ -2309,6 +2606,10 @@
             if (statusContainer) statusContainer.style.display = 'none';
             if (questionContainer) questionContainer.style.display = 'none';
             if (secureFocusContainer) secureFocusContainer.style.display = 'none';
+            toggleSecureLayout(false);
+            if (questionProgressEl) {
+                questionProgressEl.textContent = 'WAITING TO BEGIN';
+            }
             if (secureLobbyCard) secureLobbyCard.style.display = 'block';
 
             if (secureLobbyTitle) {
@@ -3124,6 +3425,10 @@
                 hasAnsweredCurrent = false;
                 pendingSubmission = false;
                 currentQuestionKey = null;
+                toggleSecureLayout(false);
+                if (questionProgressEl) {
+                    questionProgressEl.textContent = 'QUESTION --';
+                }
                 questionContainer.style.display = 'none';
                 if (statusContainer) {
                     statusContainer.style.display = 'none';
@@ -3157,6 +3462,7 @@
                 var resetTimestamp = (data.metadata && data.metadata.resetAt) ? data.metadata.resetAt : '';
                 var questionKey = data.pollId + ':' + data.questionIndex + ':' + resetTimestamp;
                 var isNewQuestion = questionKey !== currentQuestionKey;
+                toggleSecureLayout(false);
 
                 if (isNewQuestion) {
                     currentQuestionKey = questionKey;
@@ -3170,8 +3476,8 @@
 
                     var qNum = (data.questionIndex || 0) + 1;
                     var qTotal = data.totalQuestions || '?';
-                    if (questionNumberEl) {
-                        questionNumberEl.textContent = 'Question ' + qNum + ' of ' + qTotal;
+                    if (questionProgressEl) {
+                        questionProgressEl.textContent = 'QUESTION ' + qNum + ' OF ' + qTotal;
                     }
 
                     if (questionTextEl) {
@@ -3183,13 +3489,20 @@
                         questionSublineEl.textContent = '';
                     }
 
+                    var hasQuestionImage = !!data.questionImageURL;
                     if (questionImageEl) {
-                        if (data.questionImageURL) {
+                        if (hasQuestionImage) {
                             questionImageEl.src = data.questionImageURL;
                             questionImageEl.style.display = 'block';
                         } else {
                             questionImageEl.style.display = 'none';
                         }
+                    }
+                    if (questionLayout) {
+                        questionLayout.classList.toggle('no-image', !hasQuestionImage);
+                    }
+                    if (questionVisual) {
+                        questionVisual.style.display = hasQuestionImage ? 'flex' : 'none';
                     }
 
                     if (noResponsesMessageEl) {
@@ -3568,13 +3881,13 @@
 
             var displayText = (option.text || '').trim();
 
-            var content = '<div class="option-leading">';
-            content += '<div class="letter-badge" aria-hidden="true">' + letter + '</div>';
-            content += '</div>';
-            content += '<div class="option-body">';
+            var content = '';
             if (option.imageURL) {
                 content += '<img src="' + escapeHtml(option.imageURL) + '" alt="Answer ' + letter + '" class="option-image" referrerpolicy="no-referrer">';
             }
+            content += '<div class="option-leading">';
+            content += '<div class="letter-badge" aria-hidden="true">' + letter + '</div>';
+            content += '<div class="option-body">';
             if (displayText) {
                 // Remove carriage returns and normalize line endings before converting to <br>
                 var cleanText = displayText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
@@ -3583,7 +3896,7 @@
             content += '<span class="result-ribbon"></span>';
             content += '<span class="sr-only result-announcement"></span>';
             content += '</div>';
-
+            content += '</div>';
             content += '<span class="result-indicator" aria-hidden="true"></span>';
             btn.innerHTML = content;
             btn.addEventListener('click', function(event) {
@@ -3759,19 +4072,26 @@
 
             var qNum = (data.questionIndex || 0) + 1;
             var qTotal = data.totalQuestions || '?';
-            if (questionNumberEl) {
-                questionNumberEl.textContent = 'Question ' + qNum + ' of ' + qTotal;
+            if (questionProgressEl) {
+                questionProgressEl.textContent = 'QUESTION ' + qNum + ' OF ' + qTotal;
             }
             if (questionTextEl) {
                 questionTextEl.textContent = data.questionText || '';
             }
+            var hasQuestionImage = !!data.questionImageURL;
             if (questionImageEl) {
-                if (data.questionImageURL) {
+                if (hasQuestionImage) {
                     questionImageEl.src = data.questionImageURL;
                     questionImageEl.style.display = 'block';
                 } else {
                     questionImageEl.style.display = 'none';
                 }
+            }
+            if (questionLayout) {
+                questionLayout.classList.toggle('no-image', !hasQuestionImage);
+            }
+            if (questionVisual) {
+                questionVisual.style.display = hasQuestionImage ? 'flex' : 'none';
             }
 
             if (questionSublineEl) {

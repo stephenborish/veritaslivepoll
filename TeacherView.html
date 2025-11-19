@@ -2353,19 +2353,38 @@
             <option value="">-- Choose a poll --</option>
           </select>
         </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <button id="start-poll-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-veritas-gold text-white text-sm font-semibold hover:bg-veritas-gold/90 transition-colors shadow-sm disabled:cursor-not-allowed disabled:opacity-60" disabled>
-            <span class="material-symbols-outlined text-lg">play_circle</span>
-            <span>Start Session</span>
-          </button>
-          <button id="send-link-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-            <span class="material-symbols-outlined text-lg">mail</span>
-            <span>Send Links</span>
-          </button>
-          <button id="view-links-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-            <span class="material-symbols-outlined text-lg">visibility</span>
-            <span>View Links</span>
-          </button>
+        <div class="flex flex-col gap-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <button id="start-poll-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-veritas-gold text-white text-sm font-semibold hover:bg-veritas-gold/90 transition-colors shadow-sm disabled:cursor-not-allowed disabled:opacity-60" disabled>
+              <span class="material-symbols-outlined text-lg">play_circle</span>
+              <span>Start Session</span>
+            </button>
+            <button id="send-link-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+              <span class="material-symbols-outlined text-lg">mail</span>
+              <span>Send Links</span>
+            </button>
+            <button id="view-links-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+              <span class="material-symbols-outlined text-lg">visibility</span>
+              <span>View Links</span>
+            </button>
+          </div>
+          <div id="secure-session-meta" class="hidden rounded-xl border border-brand-white/30 bg-brand-white/5 px-3 py-2 text-xs text-brand-white/90 leading-snug" aria-live="polite" aria-hidden="true">
+            <div id="secure-session-time" class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-sm opacity-80">timer</span>
+              <span id="secure-session-time-text"></span>
+            </div>
+            <div id="secure-session-access" class="mt-1 flex items-center gap-2">
+              <span class="material-symbols-outlined text-sm opacity-80">key</span>
+              <div class="flex items-center gap-1">
+                <span>Access Code:</span>
+                <span id="secure-session-access-value" class="font-semibold tracking-widest"></span>
+              </div>
+            </div>
+            <div id="secure-session-window" class="mt-1 flex items-center gap-2">
+              <span class="material-symbols-outlined text-sm opacity-80">calendar_month</span>
+              <span id="secure-session-window-text"></span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -2569,6 +2588,7 @@
                     <th class="px-4 py-3 text-left font-semibold">Poll</th>
                     <th class="px-4 py-3 text-left font-semibold">Class</th>
                     <th class="px-4 py-3 text-left font-semibold">Questions</th>
+                    <th class="px-4 py-3 text-left font-semibold">Mode</th>
                     <th class="px-4 py-3 text-left font-semibold">Last Edited</th>
                     <th class="px-4 py-3 text-right font-semibold">Actions</th>
                   </tr>
@@ -3373,6 +3393,53 @@
             <select id="class-select" class="w-full max-w-md rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
               <option value="">-- Select Class --</option>
             </select>
+          </div>
+
+          <div class="bg-brand-white dark:bg-brand-dark-gray/20 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm mb-6">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-dark-gray/60 dark:text-brand-white/60">Session Mode</p>
+                <h3 class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white mt-1">Choose how students will experience this activity</h3>
+                <p class="text-sm text-brand-dark-gray/70 dark:text-brand-white/70 mt-2">Use Live Poll for synchronous, teacher-paced checks. Secure Assessment enables timed, randomized, proctored exams.</p>
+              </div>
+              <div class="inline-flex rounded-full border border-brand-light-gray dark:border-brand-dark-gray/50 overflow-hidden">
+                <button type="button" id="builder-mode-live" data-session-type="LIVE_POLL" class="builder-session-toggle px-4 py-2 text-sm font-semibold transition-colors focus:outline-none">Live Poll</button>
+                <button type="button" id="builder-mode-secure" data-session-type="SECURE_ASSESSMENT" class="builder-session-toggle px-4 py-2 text-sm font-semibold transition-colors focus:outline-none">Secure Assessment</button>
+              </div>
+            </div>
+
+            <div id="secure-assessment-settings" class="mt-5 hidden">
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div>
+                  <label for="secure-time-limit-input" class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Time Limit (minutes)</label>
+                  <input id="secure-time-limit-input" type="number" min="5" step="5" placeholder="60" class="mt-2 w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                  <p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-2">Required for Secure Assessments. Each student receives a personal countdown.</p>
+                </div>
+                <div>
+                  <label for="secure-access-code-input" class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Access Code (optional)</label>
+                  <input id="secure-access-code-input" type="text" maxlength="24" placeholder="BIO101" class="mt-2 w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 uppercase tracking-[0.2em]" />
+                  <p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-2">Students must enter this code before the exam begins.</p>
+                </div>
+                <div>
+                  <label for="secure-available-input" class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Available From</label>
+                  <input id="secure-available-input" type="datetime-local" class="mt-2 w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                  <p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-2">Students cannot start before this window opens.</p>
+                </div>
+                <div>
+                  <label for="secure-due-input" class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Due By</label>
+                  <input id="secure-due-input" type="datetime-local" class="mt-2 w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                  <p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-2">Sessions end automatically after this deadline.</p>
+                </div>
+              </div>
+
+              <div class="mt-5 flex items-start gap-3 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
+                <span class="material-symbols-outlined text-blue-600 dark:text-blue-300">shield_lock</span>
+                <div>
+                  <p class="text-sm font-semibold text-blue-900 dark:text-blue-200">Secure Assessment requirements</p>
+                  <p class="text-sm text-blue-900/80 dark:text-blue-100/70 mt-1">Students must stay in fullscreen, avoid tab switching, and will appear in Mission Control for live monitoring.</p>
+                </div>
+              </div>
+            </div>
           </div>
 
 
@@ -4367,6 +4434,13 @@
   var selectedQuestionIndex=0;
   var editingPollId=null;
   var isPollDirty=false;
+  var pollSessionType='LIVE_POLL';
+  var secureAssessmentConfig={
+    timeLimitMinutes:60,
+    accessCode:'',
+    availableFrom:'',
+    dueBy:''
+  };
   var pollSortMode='updated_desc';
   var pollClassFilter='all';
   var rosterData={};
@@ -5157,6 +5231,19 @@
   var pollsTableBody=document.getElementById('polls-table-body');
   var pollsEmptyState=document.getElementById('polls-empty-state');
   var classSelect=document.getElementById('class-select');
+  var sessionToggleButtons=document.querySelectorAll('.builder-session-toggle');
+  var secureSettingsPanel=document.getElementById('secure-assessment-settings');
+  var secureSessionMeta=document.getElementById('secure-session-meta');
+  var secureSessionTimeRow=document.getElementById('secure-session-time');
+  var secureSessionTimeText=document.getElementById('secure-session-time-text');
+  var secureSessionAccessRow=document.getElementById('secure-session-access');
+  var secureSessionAccessValue=document.getElementById('secure-session-access-value');
+  var secureSessionWindowRow=document.getElementById('secure-session-window');
+  var secureSessionWindowText=document.getElementById('secure-session-window-text');
+  var secureTimeLimitInput=document.getElementById('secure-time-limit-input');
+  var secureAccessCodeInput=document.getElementById('secure-access-code-input');
+  var secureAvailableInput=document.getElementById('secure-available-input');
+  var secureDueInput=document.getElementById('secure-due-input');
   var questionSortResetBtn=document.getElementById('question-sort-reset-btn');
   var questionSortHelp=document.getElementById('question-sort-help');
   var questionNavigatorContainer=document.getElementById('question-navigator');
@@ -5225,6 +5312,48 @@
   bindClick('save-poll-btn',savePoll);
   bindInput('new-poll-name','input',markPollDirty);
   bindChange(classSelect,markPollDirty,'class-select');
+
+  if(sessionToggleButtons&&sessionToggleButtons.length){
+    sessionToggleButtons.forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var targetType=this.dataset.sessionType;
+        setPollSessionType(targetType);
+      });
+    });
+  }
+
+  if(secureTimeLimitInput){
+    secureTimeLimitInput.addEventListener('input',function(){
+      readSecureSettingsFromInputs();
+      markPollDirty();
+    });
+  }
+
+  if(secureAccessCodeInput){
+    secureAccessCodeInput.addEventListener('input',function(){
+      this.value=(this.value||'').toUpperCase();
+      readSecureSettingsFromInputs();
+      markPollDirty();
+    });
+  }
+
+  if(secureAvailableInput){
+    secureAvailableInput.addEventListener('change',function(){
+      readSecureSettingsFromInputs();
+      markPollDirty();
+    });
+  }
+
+  if(secureDueInput){
+    secureDueInput.addEventListener('change',function(){
+      readSecureSettingsFromInputs();
+      markPollDirty();
+    });
+  }
+
+  syncSessionTypeToggleUI();
+  updateSecureSettingsVisibility();
+  populateSecureSettingsInputs();
 
   if(pollSearchInput){
     pollSearchInput.addEventListener('input',function(){
@@ -5840,7 +5969,20 @@
     polls.forEach(function(poll){
       var opt=document.createElement('option');
       opt.value=poll.pollId;
-      opt.textContent=poll.pollName+' ('+poll.className+') - '+poll.questions.length+' questions';
+      var questionTotal=Array.isArray(poll.questions)?poll.questions.length:0;
+      var label=poll.pollName+' ('+(poll.className||'Unassigned')+') - '+questionTotal+' questions';
+      if(isSecureSessionTypeClient(poll.sessionType)){
+        var minutes=getSecureTimeLimitMinutes(poll);
+        var code=getSecureAccessCode(poll);
+        label='🔒 '+label;
+        if(minutes){
+          label+=' • '+minutes+' min';
+        }
+        if(code){
+          label+=' • Code '+code;
+        }
+      }
+      opt.textContent=label;
       if(poll.pollId===previousValue){
         opt.selected=true;
         hasSelection=true;
@@ -6112,7 +6254,7 @@
       var className = escapeHtml(poll && poll.className ? poll.className : 'Unassigned');
       var questionCount = Array.isArray(poll && poll.questions) ? poll.questions.length : 0;
       var lastEdited = formatDateTime(poll.updatedAt || poll.lastRunAt || poll.createdAt);
-      var sessionType = poll.sessionType || 'live'; // Default to 'live'
+      var sessionType = normalizeSessionTypeClient(poll.sessionType);
 
       var htmlParts = [];
 
@@ -6137,6 +6279,27 @@
       htmlParts.push('</span>');
 
       htmlParts.push('</div>');
+
+      if(sessionType==='SECURE_ASSESSMENT'){
+        var secureTimeLabel=describeSecureTimeLimit(poll);
+        var secureAccessCode=getSecureAccessCode(poll);
+        var secureWindowLabel=describeSecureAvailability(poll);
+        htmlParts.push('<div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-100 mb-4">');
+        if(secureTimeLabel){
+          htmlParts.push('<div class="flex items-center gap-2 mb-2"><span class="material-symbols-outlined text-base">timer</span><span>'+escapeHtml(secureTimeLabel)+'</span></div>');
+        }
+        htmlParts.push('<div class="flex items-center gap-2 mb-2"><span class="material-symbols-outlined text-base">key</span><span>Access Code: ');
+        if(secureAccessCode){
+          htmlParts.push('<span class="font-semibold tracking-widest">'+escapeHtml(secureAccessCode)+'</span>');
+        }else{
+          htmlParts.push('<span class="opacity-80">Not required</span>');
+        }
+        htmlParts.push('</span></div>');
+        if(secureWindowLabel){
+          htmlParts.push('<div class="flex items-center gap-2"><span class="material-symbols-outlined text-base">calendar_month</span><span>'+escapeHtml(secureWindowLabel)+'</span></div>');
+        }
+        htmlParts.push('</div>');
+      }
 
 
       // Stats
@@ -6184,21 +6347,117 @@
   }
 
   function getSessionTypeInfo(sessionType) {
-    switch (sessionType) {
-      case 'individual':
-        return {
-          label: 'Individual Timed',
-          icon: 'timer',
-          badgeClass: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-        };
-      case 'live':
-      default:
-        return {
-          label: 'Live Poll',
-          icon: 'groups',
-          badgeClass: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
-        };
+    var normalized=normalizeSessionTypeClient(sessionType);
+    if(normalized==='SECURE_ASSESSMENT'){
+      return {
+        label:'Secure Assessment',
+        icon:'lock',
+        badgeClass:'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200'
+      };
     }
+    return {
+      label:'Live Poll',
+      icon:'groups',
+      badgeClass:'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
+    };
+  }
+
+  function getSecureTimeLimitMinutes(poll){
+    if(!poll)return null;
+    var direct=poll.timeLimitMinutes;
+    if(typeof direct==='number'&&direct>0){
+      return direct;
+    }
+    if(typeof direct==='string'&&direct.trim()!==''){
+      var parsed=parseInt(direct,10);
+      if(!isNaN(parsed)&&parsed>0){
+        return parsed;
+      }
+    }
+    if(poll.secureSettings){
+      var fallback=poll.secureSettings.timeLimitMinutes;
+      if(typeof fallback==='number'&&fallback>0){
+        return fallback;
+      }
+      if(typeof fallback==='string'&&fallback.trim()!==''){
+        var parsedFallback=parseInt(fallback,10);
+        if(!isNaN(parsedFallback)&&parsedFallback>0){
+          return parsedFallback;
+        }
+      }
+    }
+    return null;
+  }
+
+  function describeSecureTimeLimit(poll){
+    var minutes=getSecureTimeLimitMinutes(poll);
+    if(!minutes){
+      return '';
+    }
+    var unit=minutes===1?'minute':'minutes';
+    return 'Time limit: '+minutes+' '+unit;
+  }
+
+  function getSecureAccessCode(poll){
+    if(!poll)return '';
+    if(poll.accessCode&&poll.accessCode.toString().trim()!==''){
+      return poll.accessCode.toString().trim().toUpperCase();
+    }
+    if(poll.secureSettings&&poll.secureSettings.accessCode){
+      return poll.secureSettings.accessCode.toString().trim().toUpperCase();
+    }
+    return '';
+  }
+
+  function getSecureAvailabilityWindow(poll){
+    if(!poll)return {availableFrom:'',dueBy:''};
+    var available=poll.availableFrom||'';
+    var due=poll.dueBy||'';
+    if(!available&&poll.secureSettings){
+      available=poll.secureSettings.availableFrom||'';
+    }
+    if(!due&&poll.secureSettings){
+      due=poll.secureSettings.dueBy||'';
+    }
+    return {availableFrom:available||'',dueBy:due||''};
+  }
+
+  function describeSecureAvailability(poll){
+    var window=getSecureAvailabilityWindow(poll);
+    var available=window.availableFrom;
+    var due=window.dueBy;
+    if(available&&due){
+      return 'Window: '+formatDateTime(available)+' → '+formatDateTime(due);
+    }
+    if(available){
+      return 'Opens '+formatDateTime(available);
+    }
+    if(due){
+      return 'Due '+formatDateTime(due);
+    }
+    return '';
+  }
+
+  function buildSessionModeCellHtml(poll){
+    var sessionType=normalizeSessionTypeClient(poll.sessionType);
+    var info=getSessionTypeInfo(sessionType);
+    var html='<div class="flex flex-col gap-1">';
+    html+='<span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold rounded-full '+info.badgeClass+'">';
+    html+='<span class="material-symbols-outlined text-sm">'+info.icon+'</span>'+info.label+'</span>';
+    if(sessionType==='SECURE_ASSESSMENT'){
+      var timeLabel=describeSecureTimeLimit(poll);
+      var code=getSecureAccessCode(poll);
+      if(timeLabel){
+        html+='<span class="text-xs text-rose-700 dark:text-rose-200">'+escapeHtml(timeLabel)+'</span>';
+      }
+      if(code){
+        html+='<span class="text-xs text-rose-700 dark:text-rose-200">Code: <span class="font-semibold tracking-widest">'+escapeHtml(code)+'</span></span>';
+      } else {
+        html+='<span class="text-xs text-rose-700/80 dark:text-rose-200/80">No access code</span>';
+      }
+    }
+    html+='</div>';
+    return html;
   }
 
   function renderPollTable(polls){
@@ -6221,6 +6480,7 @@
       htmlParts.push('</td>');
       htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">'+escapeHtml(poll.className||'—')+'</td>');
       htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">'+(poll.questions?poll.questions.length:0)+'</td>');
+      htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">'+buildSessionModeCellHtml(poll)+'</td>');
       htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">'+lastEdited+'</td>');
       htmlParts.push('<td class="px-4 py-3 align-top">');
       htmlParts.push('<div class="flex justify-end gap-2">');
@@ -6378,6 +6638,9 @@
     var className=selectedPoll&&selectedPoll.className?selectedPoll.className:'';
     var hasSelection=!!selectedPoll;
 
+    updateSessionLaunchControls(selectedPoll);
+    updateSecureSessionMeta(selectedPoll);
+
     if(sendLinkBtn){
       if(hasSelection && className){
         sendLinkBtn.disabled=false;
@@ -6411,6 +6674,79 @@
         startPollBtn.setAttribute('aria-disabled','true');
       }else{
         startPollBtn.removeAttribute('aria-disabled');
+      }
+    }
+  }
+
+  function updateSessionLaunchControls(selectedPoll){
+    if(!startPollBtn){
+      return;
+    }
+    var isSecure=selectedPoll?isSecureSessionTypeClient(selectedPoll.sessionType):false;
+    var icon=isSecure?'rocket_launch':'play_circle';
+    var label=isSecure?'Launch Exam Room':'Start Session';
+    var defaultHtml='<span class="material-symbols-outlined text-lg">'+icon+'</span><span>'+label+'</span>';
+    startPollBtn.dataset.defaultHtml=defaultHtml;
+    startPollBtn.dataset.sessionMode=isSecure?'secure':'live';
+    startPollBtn.setAttribute('aria-label',label);
+    startPollBtn.classList.remove('bg-veritas-gold','hover:bg-veritas-gold/90','bg-rose-600','hover:bg-rose-700');
+    if(isSecure){
+      startPollBtn.classList.add('bg-rose-600','hover:bg-rose-700');
+    }else{
+      startPollBtn.classList.add('bg-veritas-gold','hover:bg-veritas-gold/90');
+    }
+    if(startPollBtn.getAttribute('aria-busy')==='true'){
+      return;
+    }
+    startPollBtn.innerHTML=defaultHtml;
+  }
+
+  function updateSecureSessionMeta(selectedPoll){
+    if(!secureSessionMeta){
+      return;
+    }
+    if(!selectedPoll||!isSecureSessionTypeClient(selectedPoll.sessionType)){
+      secureSessionMeta.classList.add('hidden');
+      secureSessionMeta.setAttribute('aria-hidden','true');
+      return;
+    }
+
+    secureSessionMeta.classList.remove('hidden');
+    secureSessionMeta.setAttribute('aria-hidden','false');
+
+    var timeLabel=describeSecureTimeLimit(selectedPoll);
+    if(secureSessionTimeRow){
+      if(timeLabel){
+        secureSessionTimeRow.classList.remove('hidden');
+        if(secureSessionTimeText){
+          secureSessionTimeText.textContent=timeLabel;
+        }
+      }else{
+        secureSessionTimeRow.classList.add('hidden');
+      }
+    }
+
+    if(secureSessionAccessRow&&secureSessionAccessValue){
+      secureSessionAccessRow.classList.remove('hidden');
+      var accessCode=getSecureAccessCode(selectedPoll);
+      if(accessCode){
+        secureSessionAccessValue.textContent=accessCode;
+        secureSessionAccessValue.classList.remove('text-brand-white/70');
+      }else{
+        secureSessionAccessValue.textContent='Not required';
+        secureSessionAccessValue.classList.add('text-brand-white/70');
+      }
+    }
+
+    var windowLabel=describeSecureAvailability(selectedPoll);
+    if(secureSessionWindowRow){
+      if(windowLabel){
+        secureSessionWindowRow.classList.remove('hidden');
+        if(secureSessionWindowText){
+          secureSessionWindowText.textContent=windowLabel;
+        }
+      }else{
+        secureSessionWindowRow.classList.add('hidden');
       }
     }
   }
@@ -7926,8 +8262,8 @@
     }
 
     // Check session type and call appropriate function
-    if (selectedPoll.sessionType === 'INDIVIDUAL_TIMED') {
-      setButtonLoading(startPollBtn, true, 'Starting...');
+    if (isSecureSessionTypeClient(selectedPoll.sessionType)) {
+      setButtonLoading(startPollBtn, true, 'Launching...');
 
       if (PREVIEW_MODE) {
         setButtonLoading(startPollBtn, false);
@@ -10740,6 +11076,15 @@
       return;
     }
 
+    var previewMetadata={
+      sessionType:normalizeSessionTypeClient(currentPreviewPoll.sessionType),
+      timeLimitMinutes:currentPreviewPoll.timeLimitMinutes||null,
+      accessCode:currentPreviewPoll.accessCode||'',
+      availableFrom:currentPreviewPoll.availableFrom||'',
+      dueBy:currentPreviewPoll.dueBy||'',
+      secureSettings:currentPreviewPoll.secureSettings||{}
+    };
+
     google.script.run
       .withSuccessHandler(async function(polls){
         refreshPollData(polls);
@@ -10755,8 +11100,7 @@
         currentPreviewPoll.pollName,
         currentPreviewPoll.className,
         currentPreviewPoll.questions,
-        currentPreviewPoll.sessionType,
-        currentPreviewPoll.timeLimitMinutes
+        previewMetadata
       );
   }
 
@@ -10791,6 +11135,15 @@
       return;
     }
 
+    var reorderMetadata={
+      sessionType:normalizeSessionTypeClient(currentPreviewPoll.sessionType),
+      timeLimitMinutes:currentPreviewPoll.timeLimitMinutes||null,
+      accessCode:currentPreviewPoll.accessCode||'',
+      availableFrom:currentPreviewPoll.availableFrom||'',
+      dueBy:currentPreviewPoll.dueBy||'',
+      secureSettings:currentPreviewPoll.secureSettings||{}
+    };
+
     google.script.run
       .withSuccessHandler(async function(polls){
         refreshPollData(polls);
@@ -10804,8 +11157,7 @@
         currentPreviewPoll.pollName,
         currentPreviewPoll.className,
         currentPreviewPoll.questions,
-        currentPreviewPoll.sessionType,
-        currentPreviewPoll.timeLimitMinutes
+        reorderMetadata
       );
   }
 
@@ -11078,6 +11430,135 @@
     setSaveStatus(message||'All changes saved');
   }
 
+  function normalizeSessionTypeClient(value){
+    if(!value)return 'LIVE_POLL';
+    var normalized=value.toString().toUpperCase();
+    if(normalized==='LIVE'||normalized==='LIVE_POLL')return 'LIVE_POLL';
+    if(normalized==='SECURE_ASSESSMENT'||normalized==='SECURE'||normalized==='INDIVIDUAL_TIMED')return 'SECURE_ASSESSMENT';
+    return 'LIVE_POLL';
+  }
+
+  function isSecureSessionTypeClient(value){
+    return normalizeSessionTypeClient(value)==='SECURE_ASSESSMENT';
+  }
+
+  function syncSessionTypeToggleUI(){
+    if(!sessionToggleButtons)return;
+    sessionToggleButtons.forEach(function(btn){
+      var isActive=normalizeSessionTypeClient(btn.dataset.sessionType)===normalizeSessionTypeClient(pollSessionType);
+      if(isActive){
+        btn.classList.add('bg-primary','text-brand-white');
+        btn.classList.remove('text-brand-dark-gray','dark:text-brand-white/70');
+      }else{
+        btn.classList.remove('bg-primary','text-brand-white');
+        btn.classList.add('text-brand-dark-gray','dark:text-brand-white/70');
+      }
+    });
+  }
+
+  function updateSecureSettingsVisibility(){
+    if(!secureSettingsPanel)return;
+    if(isSecureSessionTypeClient(pollSessionType)){
+      secureSettingsPanel.classList.remove('hidden');
+    }else{
+      secureSettingsPanel.classList.add('hidden');
+    }
+  }
+
+  function isoToLocalInput(isoValue){
+    if(!isoValue)return '';
+    var date=new Date(isoValue);
+    if(isNaN(date.getTime()))return '';
+    var year=date.getFullYear();
+    var month=String(date.getMonth()+1).padStart(2,'0');
+    var day=String(date.getDate()).padStart(2,'0');
+    var hours=String(date.getHours()).padStart(2,'0');
+    var minutes=String(date.getMinutes()).padStart(2,'0');
+    return year+'-'+month+'-'+day+'T'+hours+':'+minutes;
+  }
+
+  function localInputToIso(localValue){
+    if(!localValue)return '';
+    var date=new Date(localValue);
+    if(isNaN(date.getTime()))return '';
+    return date.toISOString();
+  }
+
+  function populateSecureSettingsInputs(){
+    if(secureTimeLimitInput){
+      secureTimeLimitInput.value=typeof secureAssessmentConfig.timeLimitMinutes==='number'?secureAssessmentConfig.timeLimitMinutes:'';
+    }
+    if(secureAccessCodeInput){
+      secureAccessCodeInput.value=secureAssessmentConfig.accessCode||'';
+    }
+    if(secureAvailableInput){
+      secureAvailableInput.value=isoToLocalInput(secureAssessmentConfig.availableFrom);
+    }
+    if(secureDueInput){
+      secureDueInput.value=isoToLocalInput(secureAssessmentConfig.dueBy);
+    }
+  }
+
+  function readSecureSettingsFromInputs(){
+    if(secureTimeLimitInput){
+      var parsed=parseInt(secureTimeLimitInput.value,10);
+      secureAssessmentConfig.timeLimitMinutes=isNaN(parsed)?'':parsed;
+    }
+    if(secureAccessCodeInput){
+      secureAssessmentConfig.accessCode=(secureAccessCodeInput.value||'').trim().toUpperCase();
+    }
+    if(secureAvailableInput){
+      secureAssessmentConfig.availableFrom=localInputToIso(secureAvailableInput.value);
+    }
+    if(secureDueInput){
+      secureAssessmentConfig.dueBy=localInputToIso(secureDueInput.value);
+    }
+    return {
+      timeLimitMinutes:typeof secureAssessmentConfig.timeLimitMinutes==='number'?secureAssessmentConfig.timeLimitMinutes:null,
+      accessCode:secureAssessmentConfig.accessCode||'',
+      availableFrom:secureAssessmentConfig.availableFrom||'',
+      dueBy:secureAssessmentConfig.dueBy||''
+    };
+  }
+
+  function resetSecureAssessmentState(){
+    secureAssessmentConfig={
+      timeLimitMinutes:60,
+      accessCode:'',
+      availableFrom:'',
+      dueBy:''
+    };
+    populateSecureSettingsInputs();
+  }
+
+  function setPollSessionType(newType,suppressDirty){
+    pollSessionType=normalizeSessionTypeClient(newType);
+    syncSessionTypeToggleUI();
+    updateSecureSettingsVisibility();
+    if(!suppressDirty){
+      markPollDirty();
+    }
+  }
+
+  function buildSecureAssessmentPayload(){
+    var current=readSecureSettingsFromInputs();
+    return {
+      sessionType:pollSessionType,
+      timeLimitMinutes:current.timeLimitMinutes,
+      accessCode:current.accessCode,
+      availableFrom:current.availableFrom,
+      dueBy:current.dueBy,
+      secureSettings:{
+        timeLimitMinutes:current.timeLimitMinutes,
+        accessCode:current.accessCode,
+        availableFrom:current.availableFrom,
+        dueBy:current.dueBy,
+        fullscreenRequired:isSecureSessionTypeClient(pollSessionType),
+        proctoringRules:['Fullscreen required','No tab switching','Mission Control monitoring']
+      }
+    };
+  }
+
   // --- Poll Creator Modal ---
   function openPollCreator(existingPoll){
     var saveButton=document.getElementById('save-poll-btn');
@@ -11098,6 +11579,22 @@
         refreshClassOptions(BASE_CLASSES.concat([existingPoll.className]));
       }
       classSelect.value=existingPoll.className||'';
+
+      var existingSessionType=normalizeSessionTypeClient(existingPoll.sessionType);
+      secureAssessmentConfig={
+        timeLimitMinutes:typeof existingPoll.timeLimitMinutes==='number'?existingPoll.timeLimitMinutes:
+          (existingPoll.secureSettings&&typeof existingPoll.secureSettings.timeLimitMinutes==='number'
+            ?existingPoll.secureSettings.timeLimitMinutes:''),
+        accessCode:(existingPoll.accessCode|| (existingPoll.secureSettings&&existingPoll.secureSettings.accessCode)||'').toString().toUpperCase(),
+        availableFrom:existingPoll.availableFrom|| (existingPoll.secureSettings&&existingPoll.secureSettings.availableFrom)||'',
+        dueBy:existingPoll.dueBy|| (existingPoll.secureSettings&&existingPoll.secureSettings.dueBy)||''
+      };
+      if(secureAssessmentConfig.timeLimitMinutes===''){
+        secureAssessmentConfig.timeLimitMinutes=60;
+      }
+      populateSecureSettingsInputs();
+      setPollSessionType(existingSessionType,true);
+      updateSecureSettingsVisibility();
 
       questions=existingPoll.questions.map(function(question){
         var answers=(question.options||[]).map(function(opt){
@@ -11139,6 +11636,9 @@
       editingPollId=null;
       document.getElementById('new-poll-name').value='';
       classSelect.value='';
+      resetSecureAssessmentState();
+      setPollSessionType('LIVE_POLL',true);
+      updateSecureSettingsVisibility();
 
       addQuestion(true);
       saveButton.innerHTML='<span class="truncate">Publish Poll</span>';
@@ -11166,6 +11666,9 @@
     questionIdCounter=0;
     draggedQuestionId=null;
     setQuestionReorderHelp();
+    resetSecureAssessmentState();
+    setPollSessionType('LIVE_POLL',true);
+    updateSecureSettingsVisibility();
   }
 
   function addQuestion(suppressDirty){
@@ -11627,12 +12130,24 @@
 
     var pollName=document.getElementById('new-poll-name').value.trim();
     var className=(classSelect.value||'').trim();
+    var currentSessionType=normalizeSessionTypeClient(pollSessionType);
+    var securePayload=buildSecureAssessmentPayload();
+    securePayload.sessionType=currentSessionType;
 
     if(!pollName||!className){
       await veritasAlert('Please enter a poll name and select a class.',{title:'Save poll'});
       savePollBtn.disabled=false;
       savePollBtn.innerHTML=defaultLabel;
       return;
+    }
+
+    if(isSecureSessionTypeClient(currentSessionType)){
+      if(!securePayload.timeLimitMinutes||securePayload.timeLimitMinutes<=0){
+        await veritasAlert('Secure Assessments require a positive time limit.',{title:'Save poll'});
+        savePollBtn.disabled=false;
+        savePollBtn.innerHTML=defaultLabel;
+        return;
+      }
     }
 
     if(questions.length===0){
@@ -11783,7 +12298,7 @@
       console.log('Saving poll with '+questionCount+' questions');
 
       if(PREVIEW_MODE){
-        var newPollRecord={
+      var newPollRecord={
           pollId:editingPollId||('preview-poll-'+Date.now()),
           pollName:pollName,
           className:className,
@@ -11798,7 +12313,13 @@
           }),
           updatedAt:new Date().toISOString(),
           lastRunAt:null,
-          createdAt:new Date().toISOString()
+          createdAt:new Date().toISOString(),
+          sessionType:currentSessionType,
+          timeLimitMinutes:securePayload.timeLimitMinutes,
+          accessCode:securePayload.accessCode,
+          availableFrom:securePayload.availableFrom,
+          dueBy:securePayload.dueBy,
+          secureSettings:securePayload.secureSettings
         };
         if(editingPollId){
           var existingIndex=ALL_POLLS.findIndex(function(p){return p.pollId===editingPollId;});
@@ -11850,10 +12371,19 @@
           savePollBtn.innerHTML=defaultLabel;
         });
 
+      var pollMetadata={
+        sessionType:currentSessionType,
+        timeLimitMinutes:securePayload.timeLimitMinutes,
+        accessCode:securePayload.accessCode,
+        availableFrom:securePayload.availableFrom,
+        dueBy:securePayload.dueBy,
+        secureSettings:securePayload.secureSettings
+      };
+
       if(editingPollId){
-      request.updatePoll(editingPollId, pollName, className, payloadQuestions);
+      request.updatePoll(editingPollId, pollName, className, payloadQuestions, pollMetadata);
       } else {
-      request.createNewPoll(pollName, className, payloadQuestions);
+      request.createNewPoll(pollName, className, payloadQuestions, pollMetadata);
       }
     } catch(err){
       console.error('Upload/save error:',err);

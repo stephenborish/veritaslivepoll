@@ -3019,6 +3019,20 @@ function getIndividualTimedQuestion(pollId, sessionId, studentEmail, existingSta
     const timeLimitMinutes = timingState.timeLimitMinutes || poll.timeLimitMinutes;
     const remainingMs = timingState.remainingMs;
 
+    if (timingState.allowedMs > 0 && timingState.remainingMs <= 0) {
+      DataAccess.individualSessionState.lockStudent(pollId, sessionId, studentEmail);
+      return {
+        locked: true,
+        status: 'LOCKED',
+        sessionType: normalizeSessionTypeValue_(poll.sessionType),
+        pollId: pollId,
+        sessionId: sessionId,
+        currentQuestionIndex: studentState.currentQuestionIndex,
+        totalQuestions: poll.questions.length,
+        message: 'Time limit expired. Your responses have been secured.'
+      };
+    }
+
     return {
       status: 'ACTIVE',
       sessionType: normalizeSessionTypeValue_(poll.sessionType),

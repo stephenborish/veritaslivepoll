@@ -217,7 +217,7 @@
       display: flex;
       flex-wrap: wrap;
       gap: 18px;
-      align-items: center;
+      align-items: flex-start;
       justify-content: space-between;
       padding: 24px 32px;
       border-bottom: 1px solid rgba(18, 56, 93, 0.1);
@@ -238,14 +238,9 @@
       color: var(--text-primary);
     }
 
-    .secure-connection-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 20px;
-      border-radius: 999px;
-      background: rgba(18, 56, 93, 0.08);
-      border: 1px solid rgba(18, 56, 93, 0.18);
+    .secure-timer {
+      margin-left: auto;
+      text-align: right;
     }
 
     .secure-connection-dot {
@@ -256,7 +251,7 @@
     }
 
     .secure-timer-value {
-      font-size: 1.8rem;
+      font-size: 1.4rem;
       font-weight: 700;
       color: var(--veritas-navy);
       letter-spacing: 0.04em;
@@ -278,14 +273,9 @@
       padding: 28px 32px;
     }
 
-    @media (min-width: 992px) {
-      .secure-focus-body {
-        flex-direction: row;
-      }
-      .secure-question-pane,
-      .secure-options-pane {
-        flex: 1;
-      }
+    .secure-question-pane,
+    .secure-options-pane {
+      width: 100%;
     }
 
     .secure-question-text {
@@ -382,6 +372,34 @@
       flex-direction: column;
       gap: 10px;
       align-items: flex-end;
+    }
+
+    .secure-connection-indicator {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      background: rgba(18, 56, 93, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.2);
+      backdrop-filter: blur(6px);
+      z-index: 60;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
 
     .secure-submit-btn {
@@ -1373,13 +1391,6 @@
             <p class="secure-label">Question</p>
             <p id="secure-progress-label" class="secure-value">Question 1 of 10</p>
           </div>
-          <div class="secure-connection-pill">
-            <span id="secure-connection-dot" class="secure-connection-dot bg-emerald-400" aria-hidden="true"></span>
-            <div>
-              <p class="secure-label">Connection</p>
-              <p id="secure-connection-label" class="secure-value">Synced</p>
-            </div>
-          </div>
           <div class="secure-timer" aria-live="polite">
             <p class="secure-label">Time Remaining</p>
             <p id="secure-countdown" class="secure-timer-value">00:00</p>
@@ -1412,6 +1423,11 @@
         </div>
       </section>
 
+      <div id="secure-connection-indicator" class="secure-connection-indicator hidden" aria-live="polite">
+        <span id="secure-connection-dot" class="secure-connection-dot bg-emerald-400" aria-hidden="true"></span>
+        <span id="secure-connection-status" class="sr-only" role="status">Connected</span>
+      </div>
+
     </div>
   </main>
 
@@ -1421,7 +1437,8 @@
         var secureProgressLabel = document.getElementById('secure-progress-label');
         var secureCountdownEl = document.getElementById('secure-countdown');
         var secureConnectionDot = document.getElementById('secure-connection-dot');
-        var secureConnectionLabel = document.getElementById('secure-connection-label');
+        var secureConnectionIndicator = document.getElementById('secure-connection-indicator');
+        var secureConnectionStatus = document.getElementById('secure-connection-status');
         var secureConnectionWarning = document.getElementById('secure-connection-warning');
         var secureQuestionText = document.getElementById('secure-question-text');
         var secureQuestionImage = document.getElementById('secure-question-image');
@@ -1455,6 +1472,7 @@
         var secureSessionActive = false;
         var secureQuestionState = null;
         var secureSelectedOptionIndex = null;
+        var secureCurrentQuestionKey = null;
         var secureSubmitting = false;
         var secureTimeExpired = false;
         var securePollInFlight = false;
@@ -1463,6 +1481,42 @@
             var minutes = Math.floor(seconds / 60);
             var remainingSeconds = seconds % 60;
             return ('0' + minutes).slice(-2) + ':' + ('0' + remainingSeconds).slice(-2);
+        }
+
+        function deriveSecureQuestionKey(state) {
+            if (!state || !state.question) {
+                return null;
+            }
+            if (state.question.id) {
+                return state.question.id;
+            }
+            if (state.question.questionId) {
+                return state.question.questionId;
+            }
+            if (typeof state.actualQuestionIndex === 'number') {
+                return (state.pollId || 'poll') + ':' + state.actualQuestionIndex;
+            }
+            return (state.pollId || 'poll') + ':' + (state.progressIndex || 0);
+        }
+
+        function setSecureConnectionIndicatorVisible(visible) {
+            if (!secureConnectionIndicator) return;
+            if (visible) {
+                secureConnectionIndicator.classList.remove('hidden');
+            } else {
+                secureConnectionIndicator.classList.add('hidden');
+            }
+        }
+
+        function syncSecureOptionSelection() {
+            if (!secureOptionsList) return;
+            var buttons = secureOptionsList.querySelectorAll('button.secure-option');
+            buttons.forEach(function(btn) {
+                var btnIndex = parseInt(btn.dataset.optionIndex, 10);
+                var selected = btnIndex === secureSelectedOptionIndex;
+                btn.classList.toggle('selected', selected);
+                btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
+            });
         }
 
         function showIndividualTimedView(state) {
@@ -1475,10 +1529,17 @@
             if (preLiveCard) preLiveCard.style.display = 'none';
             if (secureFocusContainer) secureFocusContainer.style.display = 'block';
             hideSecureOverlay();
+            setSecureConnectionIndicatorVisible(true);
             secureQuestionState = state;
-            secureSelectedOptionIndex = null;
+            var nextQuestionKey = deriveSecureQuestionKey(state);
+            var isNewQuestion = secureCurrentQuestionKey !== nextQuestionKey;
+            secureCurrentQuestionKey = nextQuestionKey;
+            if (isNewQuestion) {
+                secureSelectedOptionIndex = null;
+            }
             secureSubmitting = false;
             secureTimeExpired = false;
+            disableSecureOptions(false);
             renderSecureQuestion(state);
             startSecureCountdown(state.timeRemainingSeconds || 0);
             updateSecureConnectionIndicators(state);
@@ -1507,6 +1568,7 @@
                 options.forEach(function(option, index) {
                     secureOptionsList.appendChild(buildSecureOption(option, index, letters.charAt(index) || '#'));
                 });
+                syncSecureOptionSelection();
             }
             updateSecureSubmitState();
         }
@@ -1548,13 +1610,7 @@
         function handleSecureOptionSelect(index) {
             if (!secureOptionsList) return;
             secureSelectedOptionIndex = index;
-            var buttons = secureOptionsList.querySelectorAll('button.secure-option');
-            buttons.forEach(function(btn) {
-                var btnIndex = parseInt(btn.dataset.optionIndex, 10);
-                var selected = btnIndex === secureSelectedOptionIndex;
-                btn.classList.toggle('selected', selected);
-                btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
-            });
+            syncSecureOptionSelection();
             updateSecureSubmitState();
         }
 
@@ -1619,6 +1675,7 @@
                     if (response && response.success) {
                         secureSelectedOptionIndex = null;
                         secureQuestionState = null;
+                        secureCurrentQuestionKey = null;
                         pollForIndividualSessionState();
                     } else {
                         handleError((response && response.error) || 'Failed to submit answer.');
@@ -1699,8 +1756,18 @@
             if (secureOverlaySubtext) secureOverlaySubtext.textContent = '';
         }
 
+        function showSecureLockout(message, subtext) {
+            stopSecureCountdown();
+            setSecureConnectionIndicatorVisible(true);
+            if (secureFocusContainer) {
+                secureFocusContainer.style.display = 'block';
+            }
+            disableSecureOptions(true);
+            showSecureOverlay('LOCKED', message || 'Your session has been paused.', subtext || 'Wait for your teacher to unlock you.');
+        }
+
         function updateSecureConnectionIndicators(state) {
-            if (!state || !secureConnectionDot || !secureConnectionLabel) return;
+            if (!state || !secureConnectionDot) return;
             var health = (state.connectionHealth || '').toUpperCase();
             var dotClasses = ['bg-emerald-400', 'bg-amber-400', 'bg-red-500'];
             dotClasses.forEach(function(cls) { secureConnectionDot.classList.remove(cls); });
@@ -1719,7 +1786,13 @@
                 label = 'Synced';
             }
             var lagSeconds = state.heartbeatLagMs ? Math.max(0, Math.round(state.heartbeatLagMs / 1000)) : 0;
-            secureConnectionLabel.textContent = label + (lagSeconds > 0 ? ' (' + lagSeconds + 's)' : '');
+            if (secureConnectionStatus) {
+                var srLabel = label;
+                if (lagSeconds > 0) {
+                    srLabel += ' • ' + lagSeconds + ' second lag';
+                }
+                secureConnectionStatus.textContent = srLabel;
+            }
             if (secureConnectionWarning) {
                 if (warningText) {
                     secureConnectionWarning.textContent = warningText;
@@ -1751,23 +1824,31 @@
                         hideSecureLobby();
                         if (state.locked || state.status === 'LOCKED') {
                             if (secureFocusContainer) secureFocusContainer.style.display = 'block';
-                            stopSecureCountdown();
                             secureQuestionState = null;
+                            secureCurrentQuestionKey = null;
                             secureSelectedOptionIndex = null;
                             updateSecureConnectionIndicators(state);
-                            showSecureOverlay('LOCKED', state.message || 'Your session has been paused.', 'Wait for your teacher to unlock you.');
+                            showSecureLockout(state.message || 'Your session has been paused.', 'Wait for your teacher to unlock you.');
                         } else if (state.completed || state.status === 'COMPLETED') {
                             stopSecureCountdown();
                             secureQuestionState = null;
+                            secureCurrentQuestionKey = null;
                             secureSelectedOptionIndex = null;
                             updateSecureConnectionIndicators(state);
+                            setSecureConnectionIndicatorVisible(true);
                             showSecureOverlay('COMPLETED', state.message || 'Assessment submitted!', 'Stay in fullscreen until released.');
                         } else if (state.status === 'ENDED') {
                             stopSecureCountdown();
                             secureQuestionState = null;
+                            secureCurrentQuestionKey = null;
                             secureSelectedOptionIndex = null;
                             updateSecureConnectionIndicators(state);
+                            setSecureConnectionIndicatorVisible(false);
                             showSecureOverlay('ENDED', state.message || 'This assessment is no longer active.', 'You may exit once your teacher confirms.');
+                        } else if (isInteractionBlocked) {
+                            updateSecureConnectionIndicators(state);
+                            setSecureConnectionIndicatorVisible(true);
+                            showSecureLockout(state.message || 'Your session has been paused.', 'Wait for your teacher to unlock you.');
                         } else if (state.question && (state.status === 'ACTIVE' || !state.status)) {
                             showIndividualTimedView(state);
                         } else {
@@ -1910,17 +1991,18 @@
                 }
                 violationLogged = true;
                 isInteractionBlocked = true;
+                showLockEnforcementUI('Fullscreen required', 'Return to fullscreen and wait for your teacher to resume the assessment.');
                 google.script.run
                     .withSuccessHandler(function(response) {
                         if (response.success) {
                             currentLockVersion = response.lockVersion;
-                            showLockedMessage();
+                            showLockEnforcementUI('Fullscreen required', 'Your teacher will let you back in once they confirm fullscreen.');
                             startProctorPolling();
                         }
                     })
                     .withFailureHandler(function(error) {
                         console.error('Violation report failed:', error);
-                        showLockedMessage();
+                        showLockEnforcementUI('Fullscreen required', 'Please contact your teacher to resume.');
                     })
                     .reportStudentViolation(reason, SESSION_TOKEN);
             }, 300);
@@ -2102,6 +2184,7 @@
             var nextLobbyKey = (state.pollId || 'poll') + '|' + (state.sessionId || '');
             var isNewLobbyContext = previousLobbyKey !== nextLobbyKey;
             var previousWindowStatus = previousContext ? previousContext.windowStatus : null;
+            setSecureConnectionIndicatorVisible(false);
 
             secureLobbyContext = {
                 pollId: state.pollId,
@@ -2826,7 +2909,7 @@
                     } else if (response.status === 'LOCKED' && response.lockVersion !== currentLockVersion) {
                         // New violation or version mismatch - update lockVersion
                         currentLockVersion = response.lockVersion;
-                        showLockedMessage();
+                        showLockEnforcementUI();
                     } else if (response.status === 'BLOCKED') {
                         isTeacherBlocked = true;
                         if (response.lockVersion && response.lockVersion !== currentLockVersion) {
@@ -2868,6 +2951,7 @@
             if (secureSessionActive) {
                 secureSessionActive = false;
                 secureSessionHeartbeat.stop();
+                setSecureConnectionIndicatorVisible(false);
             }
             console.log('Status update:', data.status);
 
@@ -2897,7 +2981,7 @@
                                 showResumePrompt();
                             } else if (proctorResponse.status === 'LOCKED') {
                                 isTeacherBlocked = false;
-                                showLockedMessage();
+                                showLockEnforcementUI();
                                 startProctorPolling();
                             } else if (proctorResponse.status === 'BLOCKED') {
                                 isTeacherBlocked = true;
@@ -3617,7 +3701,7 @@
             return div.innerHTML;
         }
 
-        function showLockedMessage() {
+        function showLockedMessage(message, subMessage) {
             console.log('Showing locked message');
             stopPolling();
             recoveringFromOutage = false;
@@ -3630,11 +3714,17 @@
             if (studentLoader) studentLoader.style.display = 'none';
 
             if (statusSubMessage) {
-                statusSubMessage.style.display = 'none';
-                statusSubMessage.textContent = '';
+                if (subMessage) {
+                    statusSubMessage.style.display = 'block';
+                    statusSubMessage.className = 'text-red-200 text-base mt-4';
+                    statusSubMessage.textContent = subMessage;
+                } else {
+                    statusSubMessage.style.display = 'none';
+                    statusSubMessage.textContent = '';
+                }
             }
 
-            statusMessage.textContent = 'Oops - you left fullscreen. Your poll has been paused until your teacher lets you back in.';
+            statusMessage.textContent = message || 'Oops - you left fullscreen. Your poll has been paused until your teacher lets you back in.';
             statusMessage.className = 'text-red-300 text-xl font-semibold';
 
             var iconEl = statusContainer.querySelector('.material-symbols-outlined');
@@ -3646,6 +3736,14 @@
                 resumeControls.style.display = 'none';
             }
             isTeacherBlocked = false;
+        }
+
+        function showLockEnforcementUI(message, subtext) {
+            if (secureSessionActive) {
+                showSecureLockout(message, subtext);
+            } else {
+                showLockedMessage(message, subtext);
+            }
         }
 
         function showTeacherBlockedMessage() {

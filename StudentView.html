@@ -127,6 +127,14 @@
       overflow: hidden;
     }
 
+    #student-container {
+      width: 100%;
+      max-width: none;
+      margin: 0 auto;
+      padding-left: clamp(12px, 3vw, 48px);
+      padding-right: clamp(12px, 3vw, 48px);
+    }
+
     .secure-topbar-timer {
       display: inline-flex;
       align-items: center;
@@ -235,8 +243,8 @@
 
     .secure-session-card {
       position: relative;
-      width: min(880px, calc(100vw - 96px));
-      max-width: 100%;
+      width: 95vw;
+      max-width: 95vw;
       margin: clamp(32px, 5vh, 84px) auto;
       background: var(--bg-card);
       border-radius: var(--radius-lg);

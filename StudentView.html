@@ -1898,6 +1898,7 @@
         var secureBeginLabel = document.getElementById('secure-begin-label');
         var secureRulesList = document.getElementById('secure-rules-list');
         var secureLobbyContext = null;
+        var secureWindowAutoReloaded = false;
 
         function reportViolationDebounced(reason) {
             if (violationDebounceTimer) {
@@ -2067,12 +2068,40 @@
             setSecureAccessError('');
         }
 
+        function shouldAutoReloadForSecureWindow(previousStatus, nextStatus) {
+            if (!previousStatus || !nextStatus) {
+                return false;
+            }
+            var wasBlocked = isSecureWindowBlocked(previousStatus);
+            var isBlockedNow = isSecureWindowBlocked(nextStatus);
+            return wasBlocked && !isBlockedNow;
+        }
+
+        function triggerSecureWindowReload() {
+            if (secureWindowAutoReloaded) {
+                return;
+            }
+            secureWindowAutoReloaded = true;
+            if (secureBeginBtn) {
+                secureBeginBtn.disabled = true;
+                secureBeginBtn.classList.add('opacity-60');
+            }
+            if (secureBeginLabel) {
+                secureBeginLabel.textContent = 'Refreshing...';
+            }
+            setTimeout(function() {
+                window.location.reload();
+            }, 750);
+        }
+
         function showSecureLobby(state) {
-            var previousLobbyKey = secureLobbyContext && secureLobbyContext.lobbyKey
-                ? secureLobbyContext.lobbyKey
-                : (secureLobbyContext ? (secureLobbyContext.pollId + '|' + secureLobbyContext.sessionId) : null);
+            var previousContext = secureLobbyContext;
+            var previousLobbyKey = previousContext && previousContext.lobbyKey
+                ? previousContext.lobbyKey
+                : (previousContext ? (previousContext.pollId + '|' + previousContext.sessionId) : null);
             var nextLobbyKey = (state.pollId || 'poll') + '|' + (state.sessionId || '');
             var isNewLobbyContext = previousLobbyKey !== nextLobbyKey;
+            var previousWindowStatus = previousContext ? previousContext.windowStatus : null;
 
             secureLobbyContext = {
                 pollId: state.pollId,
@@ -2081,6 +2110,11 @@
                 windowStatus: (state.availability && state.availability.windowStatus) || state.windowStatus || 'OPEN',
                 lobbyKey: nextLobbyKey
             };
+
+            if (shouldAutoReloadForSecureWindow(previousWindowStatus, secureLobbyContext.windowStatus)) {
+                triggerSecureWindowReload();
+                return;
+            }
 
             if (entryScreen) entryScreen.style.display = 'none';
             if (studentContainer) studentContainer.style.display = 'block';

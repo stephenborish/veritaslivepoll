@@ -2434,6 +2434,21 @@ function getIndividualTimedSessionTeacherView(pollId, sessionId) {
     const studentEmails = roster.map(s => s.email);
     const proctorStates = ProctorAccess.getStatesBatch(pollId, studentEmails, effectiveSessionId);
 
+    const responsesByStudent = new Map();
+    const pollResponses = DataAccess.responses.getByPoll(pollId) || [];
+    pollResponses.forEach(row => {
+      const email = row[4];
+      if (!email) return;
+      if (!responsesByStudent.has(email)) {
+        responsesByStudent.set(email, []);
+      }
+      const timestampValue = row[1] ? Date.parse(row[1]) : NaN;
+      responsesByStudent.get(email).push({
+        timestamp: timestampValue,
+        isCorrect: row[6] === true || row[6] === 'TRUE'
+      });
+    });
+
     // Build student view data
     const timeLimitMinutes = poll.timeLimitMinutes || 0;
     const totalQuestions = poll.questions.length;
@@ -2457,13 +2472,13 @@ function getIndividualTimedSessionTeacherView(pollId, sessionId) {
       let statusTone = 'idle';
       let progress = 0;
       let answered = 0;
+      let correctCount = 0;
       let timeRemainingSeconds = timeLimitMinutes * 60;
       let pauseActive = false;
       let connectionMeta = { status: 'GRAY', heartbeatLagMs: null, lastHeartbeatAt: null };
+      let summaryBucket = 'notStarted';
 
       if (state) {
-        progress = Math.max(0, state.currentQuestionIndex || 0);
-        answered = progress;
         const timingState = computeSecureTimingState_(state, poll, liveMetadata);
         if (timingState && typeof timingState.remainingMs === 'number') {
           timeRemainingSeconds = Math.max(0, Math.floor(timingState.remainingMs / 1000));
@@ -2471,22 +2486,55 @@ function getIndividualTimedSessionTeacherView(pollId, sessionId) {
 
         pauseActive = !!(state.additionalMetadata && state.additionalMetadata.pauseActive);
 
+        const answeredFromMetadata = state.additionalMetadata && typeof state.additionalMetadata.answeredCount === 'number'
+          ? state.additionalMetadata.answeredCount
+          : null;
+        const correctFromMetadata = state.additionalMetadata && typeof state.additionalMetadata.correctCount === 'number'
+          ? state.additionalMetadata.correctCount
+          : null;
+
+        let answeredFromResponses = null;
+        let correctFromResponses = null;
+        if ((answeredFromMetadata === null || correctFromMetadata === null) && state.startTime && responsesByStudent.has(email)) {
+          const startMs = Date.parse(state.startTime);
+          if (!isNaN(startMs)) {
+            const endMs = state.endTime ? Date.parse(state.endTime) : null;
+            const bucket = responsesByStudent.get(email) || [];
+            const relevant = bucket.filter(entry => {
+              if (isNaN(entry.timestamp)) { return false; }
+              if (entry.timestamp < startMs) { return false; }
+              if (endMs && entry.timestamp > endMs) { return false; }
+              return true;
+            });
+            answeredFromResponses = relevant.length;
+            correctFromResponses = relevant.filter(entry => entry.isCorrect === true).length;
+          }
+        }
+
+        answered = typeof answeredFromMetadata === 'number'
+          ? answeredFromMetadata
+          : (answeredFromResponses != null ? answeredFromResponses : Math.max(0, state.currentQuestionIndex || 0));
+        progress = answered;
+        correctCount = typeof correctFromMetadata === 'number'
+          ? correctFromMetadata
+          : (correctFromResponses != null ? correctFromResponses : 0);
+
         if (pauseActive) {
           status = 'Paused';
           statusTone = 'warning';
-          summary.paused++;
+          summaryBucket = 'paused';
         } else if (state.isLocked && state.endTime) {
           status = 'Submitted';
           statusTone = 'success';
-          summary.completed++;
+          summaryBucket = 'completed';
         } else if (state.isLocked) {
           status = 'Locked';
           statusTone = 'critical';
-          summary.locked++;
+          summaryBucket = 'locked';
         } else {
           status = 'In Progress';
           statusTone = 'active';
-          summary.inProgress++;
+          summaryBucket = 'inProgress';
         }
 
         const lastHeartbeatMs = Number(state.lastHeartbeatMs || 0);
@@ -2496,13 +2544,31 @@ function getIndividualTimedSessionTeacherView(pollId, sessionId) {
             lastSeen: new Date(lastHeartbeatMs).toISOString()
           });
         }
-      } else {
-        summary.notStarted++;
+      }
+
+      if (proctorState.status === 'LOCKED') {
+        status = 'Locked - Violation';
+        statusTone = 'critical';
+        summaryBucket = 'locked';
+      } else if (proctorState.status === 'BLOCKED') {
+        status = 'Blocked';
+        statusTone = 'critical';
+        summaryBucket = 'locked';
+      } else if (proctorState.status === 'AWAITING_FULLSCREEN') {
+        status = 'Awaiting Fullscreen';
+        statusTone = 'warning';
+      }
+
+      if (summaryBucket && Object.prototype.hasOwnProperty.call(summary, summaryBucket)) {
+        summary[summaryBucket] = (summary[summaryBucket] || 0) + 1;
       }
 
       const progressPct = totalQuestions > 0
         ? Math.min(100, Math.round((answered / totalQuestions) * 100))
         : 0;
+      const scorePct = totalQuestions > 0
+        ? Math.round((correctCount / totalQuestions) * 100)
+        : null;
 
       return {
         name: student.name,
@@ -2512,6 +2578,8 @@ function getIndividualTimedSessionTeacherView(pollId, sessionId) {
         progress: answered,
         totalQuestions: totalQuestions,
         progressPct: progressPct,
+        correctCount: correctCount,
+        scorePct: scorePct,
         timeRemainingSeconds: timeRemainingSeconds,
         pauseActive: pauseActive,
         connection: connectionMeta,
@@ -2568,6 +2636,7 @@ function startIndividualTimedSession(pollId) {
       startedAt: nowIso,
       endedAt: null,
       timeLimitMinutes: poll.timeLimitMinutes,
+      secureDefaultTimeAdjustmentMinutes: 0,
       isCollecting: true,
       resultsVisibility: 'HIDDEN',
       sessionId: sessionId
@@ -2610,26 +2679,105 @@ function adjustSecureAssessmentTime(pollId, sessionId, studentEmail, deltaMinute
       throw new Error('A non-zero time adjustment is required');
     }
 
-    const studentState = DataAccess.individualSessionState.getByStudent(pollId, sessionId, studentEmail);
-    if (!studentState) {
-      throw new Error('Student session not initialized');
+    const result = applySecureAssessmentTimeAdjustment_(
+      pollId,
+      sessionId,
+      studentEmail,
+      numericDelta,
+      teacherEmail,
+      true
+    );
+
+    return { success: true, timeAdjustmentMinutes: result.timeAdjustmentMinutes };
+  })();
+}
+
+function adjustSecureAssessmentTimeBulk(pollId, sessionId, studentEmails, deltaMinutes) {
+  return withErrorHandling(() => {
+    if (!pollId || !sessionId) {
+      throw new Error('Poll and session are required');
+    }
+    const teacherEmail = Session.getActiveUser().getEmail();
+    if (teacherEmail !== TEACHER_EMAIL && !isAdditionalTeacher_(teacherEmail)) {
+      throw new Error('Unauthorized');
+    }
+    if (!Array.isArray(studentEmails) || studentEmails.length === 0) {
+      throw new Error('At least one student must be selected');
+    }
+    const numericDelta = Number(deltaMinutes);
+    if (isNaN(numericDelta) || numericDelta === 0) {
+      throw new Error('A non-zero time adjustment is required');
     }
 
-    const currentAdjustment = Number(studentState.timeAdjustmentMinutes || 0);
-    const nextAdjustment = Math.max(0, currentAdjustment + numericDelta);
+    const uniqueEmails = Array.from(new Set(studentEmails.filter(email => !!email)));
+    const updates = uniqueEmails.map(email => (
+      applySecureAssessmentTimeAdjustment_(pollId, sessionId, email, numericDelta, teacherEmail, false)
+    )).filter(result => !result.skipped);
 
-    DataAccess.individualSessionState.updateFields(pollId, sessionId, studentEmail, {
-      timeAdjustmentMinutes: nextAdjustment
-    });
-
-    logAssessmentEvent_(pollId, sessionId, studentEmail, 'TIME_ADJUSTED', {
-      deltaMinutes: numericDelta,
-      totalAdjustmentMinutes: nextAdjustment,
-      actor: teacherEmail
-    });
-
-    return { success: true, timeAdjustmentMinutes: nextAdjustment };
+    return { success: true, updated: updates, requested: uniqueEmails.length };
   })();
+}
+
+function adjustSecureAssessmentTimeForAll(pollId, sessionId, deltaMinutes) {
+  return withErrorHandling(() => {
+    if (!pollId || !sessionId) {
+      throw new Error('Poll and session are required');
+    }
+    const teacherEmail = Session.getActiveUser().getEmail();
+    if (teacherEmail !== TEACHER_EMAIL && !isAdditionalTeacher_(teacherEmail)) {
+      throw new Error('Unauthorized');
+    }
+    const numericDelta = Number(deltaMinutes);
+    if (isNaN(numericDelta) || numericDelta === 0) {
+      throw new Error('A non-zero time adjustment is required');
+    }
+
+    const liveMetadata = DataAccess.liveStatus.getMetadata() || {};
+    const previousGlobal = Number(liveMetadata.secureDefaultTimeAdjustmentMinutes || 0);
+    const nextGlobal = Math.max(0, previousGlobal + numericDelta);
+    const nextMetadata = { ...liveMetadata, secureDefaultTimeAdjustmentMinutes: nextGlobal };
+    DataAccess.liveStatus.setMetadata_(nextMetadata);
+
+    const allStates = DataAccess.individualSessionState.getAllForSession(pollId, sessionId);
+    const emails = Array.from(new Set(allStates.map(state => state.studentEmail).filter(Boolean)));
+    const updates = emails.length
+      ? emails.map(email => (
+          applySecureAssessmentTimeAdjustment_(pollId, sessionId, email, numericDelta, teacherEmail, false)
+        )).filter(result => !result.skipped)
+      : [];
+
+    return {
+      success: true,
+      updated: updates,
+      requested: emails.length,
+      globalAdjustmentMinutes: nextGlobal
+    };
+  })();
+}
+
+function applySecureAssessmentTimeAdjustment_(pollId, sessionId, studentEmail, numericDelta, actorEmail, throwIfMissing) {
+  const studentState = DataAccess.individualSessionState.getByStudent(pollId, sessionId, studentEmail);
+  if (!studentState) {
+    if (throwIfMissing) {
+      throw new Error('Student session not initialized');
+    }
+    return { email: studentEmail, skipped: true };
+  }
+
+  const currentAdjustment = Number(studentState.timeAdjustmentMinutes || 0);
+  const nextAdjustment = Math.max(0, currentAdjustment + numericDelta);
+
+  DataAccess.individualSessionState.updateFields(pollId, sessionId, studentEmail, {
+    timeAdjustmentMinutes: nextAdjustment
+  });
+
+  logAssessmentEvent_(pollId, sessionId, studentEmail, 'TIME_ADJUSTED', {
+    deltaMinutes: numericDelta,
+    totalAdjustmentMinutes: nextAdjustment,
+    actor: actorEmail
+  });
+
+  return { email: studentEmail, timeAdjustmentMinutes: nextAdjustment };
 }
 
 function pauseSecureAssessmentStudent(pollId, sessionId, studentEmail) {
@@ -5708,6 +5856,8 @@ function beginIndividualTimedAttempt(pollId, sessionId, token, options) {
     const shuffledIndices = shuffleArray_(questionIndices);
     const answerOrders = buildInitialAnswerOrderMap_(poll);
 
+    const defaultAdjustmentMinutes = Math.max(0, Number(metadata.secureDefaultTimeAdjustmentMinutes || 0));
+
     DataAccess.individualSessionState.initStudent(
       pollId,
       sessionId,
@@ -5718,7 +5868,8 @@ function beginIndividualTimedAttempt(pollId, sessionId, token, options) {
         displayName: lookupStudentDisplayName_(poll.className, studentEmail),
         questionOrderSeed: shuffledIndices.join('-'),
         answerChoiceMap: answerOrders,
-        additionalMetadata: { className: poll.className }
+        additionalMetadata: { className: poll.className },
+        timeAdjustmentMinutes: defaultAdjustmentMinutes
       }
     );
 
@@ -6077,6 +6228,17 @@ function submitIndividualTimedAnswer(pollId, sessionId, studentEmail, actualQues
     // Advance to next question
     const nextProgressIndex = studentState.currentQuestionIndex + 1;
     DataAccess.individualSessionState.updateProgress(pollId, sessionId, studentEmail, nextProgressIndex);
+
+    const existingCorrect = (studentState.additionalMetadata && typeof studentState.additionalMetadata.correctCount === 'number')
+      ? studentState.additionalMetadata.correctCount
+      : 0;
+    const updatedMetadata = {
+      mergeAdditionalMetadata: {
+        correctCount: existingCorrect + (isCorrect ? 1 : 0),
+        answeredCount: nextProgressIndex
+      }
+    };
+    DataAccess.individualSessionState.updateFields(pollId, sessionId, studentEmail, updatedMetadata);
 
     // Check if completed all questions
     const isComplete = nextProgressIndex >= poll.questions.length;

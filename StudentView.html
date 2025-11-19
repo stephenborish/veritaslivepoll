@@ -201,13 +201,14 @@
     }
 
     .student-question-image {
-      width: 300px;
-      height: 300px;
+      max-width: 300px;
+      width: 100%;
+      max-height: 300px;
+      height: auto;
       object-fit: contain;
       border-radius: var(--radius-md);
       border: 1px solid var(--navy-12);
       box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
-      flex-shrink: 0;
       cursor: pointer;
       transition: transform 200ms ease, box-shadow 200ms ease;
     }

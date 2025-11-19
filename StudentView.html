@@ -642,6 +642,9 @@
       color: var(--veritas-navy);
       opacity: 0;
       transform: scale(0.85);
+      position: absolute;
+      top: 16px;
+      right: 18px;
       transition: opacity 220ms ease, transform 220ms ease, background-color 220ms ease, color 220ms ease;
     }
 
@@ -667,9 +670,9 @@
 
     .answer-option .option-leading {
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
       align-items: center;
-      gap: 8px;
+      gap: 12px;
       align-self: flex-start;
     }
 
@@ -3236,13 +3239,15 @@
                 statusSubMessage.style.display = 'block';
                 statusSubMessage.className = 'text-white/90 text-base mt-4';
 
-                // Add click handlers to confidence buttons
                 var confidenceBtns = statusSubMessage.querySelectorAll('.confidence-btn');
                 for (var i = 0; i < confidenceBtns.length; i++) {
-                    confidenceBtns[i].onclick = function() {
+                    confidenceBtns[i].addEventListener('click', function(event) {
+                        event.preventDefault();
                         var confidence = this.dataset.confidence;
                         submitAnswerWithConfidence(pollId, questionIndex, pendingAnswerText, confidence);
-            };
+                    });
+                }
+            }
         }
 
         if (secureBeginBtn) {
@@ -3253,8 +3258,6 @@
             secureAccessCodeInput.addEventListener('input', function() {
                 setSecureAccessError('');
             });
-        }
-            }
         }
 
         function submitAnswerWithConfidence(pollId, questionIndex, answerText, confidence) {
@@ -3334,7 +3337,6 @@
             var displayText = (option.text || '').trim();
 
             var content = '<div class="option-leading">';
-            content += '<span class="result-indicator" aria-hidden="true"></span>';
             content += '<div class="letter-badge" aria-hidden="true">' + letter + '</div>';
             content += '</div>';
             content += '<div class="option-body">';
@@ -3350,10 +3352,14 @@
             content += '<span class="sr-only result-announcement"></span>';
             content += '</div>';
 
+            content += '<span class="result-indicator" aria-hidden="true"></span>';
             btn.innerHTML = content;
-            btn.onclick = function() {
-                submitAnswer(pollId, currentPollState.actualQuestionIndex, option.text);
-            };
+            btn.addEventListener('click', function(event) {
+                if (event && event.target && event.target.closest('.option-image')) {
+                    return;
+                }
+                submitAnswer(pollId, questionIndex, option.text);
+            });
 
             return btn;
         }

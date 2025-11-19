@@ -13566,6 +13566,8 @@
     currentBookViewData = null;
   }
 
+  window.closeBookView = closeBookView;
+
   function showBookViewError(message) {
     var loading = document.getElementById('book-view-loading');
     var content = document.getElementById('book-view-content');
@@ -13836,6 +13838,8 @@
     if (detailView) detailView.classList.add('hidden');
     currentStudentDetail = null;
   }
+
+  window.closeStudentDetail = closeStudentDetail;
 
   // Add ESC key support to close student detail view
   document.addEventListener('keydown', function(e) {

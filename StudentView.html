@@ -317,7 +317,8 @@
       align-items: flex-start;
     }
 
-    .student-stem {
+    .student-stem,
+    #secure-question-text {
       font-family: "Noto Serif", serif;
       font-size: 1.6rem;
       line-height: 1.6;
@@ -535,17 +536,18 @@
 
     .secure-session-card {
       position: relative;
-      width: 95vw;
-      max-width: 95vw;
-      margin: clamp(32px, 5vh, 84px) auto;
-      background: var(--bg-card);
-      border-radius: var(--radius-lg);
-      border: 1px solid rgba(18, 56, 93, 0.12);
-      box-shadow: 0 25px 70px rgba(15, 23, 42, 0.18);
-      min-height: calc(100vh - 200px);
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      background: transparent;
+      border-radius: 0;
+      border: none;
+      box-shadow: none;
+      min-height: auto;
       display: flex;
       flex-direction: column;
       overflow-x: hidden;
+      padding: 0;
     }
 
     .secure-session-header {
@@ -589,7 +591,7 @@
     }
 
     .secure-session-body {
-      padding: clamp(20px, 4vw, 48px) clamp(24px, 4vw, 48px);
+      padding: 0;
       display: flex;
       flex-direction: column;
       gap: 24px;
@@ -774,18 +776,7 @@
       margin: 0;
     }
 
-    .student-stem {
-      font-size: 1.2rem;
-      line-height: 1.6;
-      font-weight: 400;
-      color: var(--text-primary);
-      margin: 0;
-      text-align: left;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-      word-break: break-word;
-      max-width: 100%;
-    }
+    /* .student-stem styling moved to unified section above (line 320) */
 
     .student-subline {
       font-size: 0.95rem;
@@ -893,7 +884,29 @@
       transition: opacity 220ms ease, transform 220ms ease, background-color 220ms ease, color 220ms ease;
     }
 
+    .percentage-bubble {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background-color: #f3f4f6;
+      color: #111827;
+      font-size: 0.9rem;
+      font-weight: 600;
+      opacity: 0;
+      transform: scale(0.85);
+      margin-left: auto;
+      margin-right: 8px;
+      transition: opacity 220ms ease, transform 220ms ease;
+    }
+
     #question-container.showing-results .answer-option .result-indicator {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    #question-container.showing-results .answer-option .percentage-bubble {
       opacity: 1;
       transform: scale(1);
     }
@@ -919,17 +932,28 @@
       align-items: center;
       gap: 12px;
       align-self: flex-start;
+      flex: 1;
+      min-width: 0;
     }
 
     .answer-option .option-body {
       flex: 1;
       display: flex;
-      flex-direction: column;
-      gap: 0;
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
       min-width: 0;
       max-width: 100%;
       justify-content: flex-start;
       overflow: hidden;
+    }
+
+    .answer-option .option-text-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      min-width: 0;
     }
 
     .answer-option .option-text {
@@ -1359,6 +1383,74 @@
       border: 0;
     }
 
+    .status-card {
+      background: #ffffff !important;
+      color: #111827 !important;
+    }
+
+    .status-card .material-symbols-outlined {
+      color: var(--veritas-navy) !important;
+    }
+
+    .confidence-selector {
+      margin-top: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .confidence-btn {
+      height: 3.5rem;
+      padding: 0 1.5rem;
+      border-radius: 0.75rem;
+      border: 2px solid;
+      transition: all 200ms ease;
+      font-weight: 600;
+      font-size: 1.125rem;
+      cursor: pointer;
+      color: #111827 !important;
+    }
+
+    .confidence-btn[data-confidence="guessing"] {
+      background-color: #fecaca;
+      border-color: #ef4444;
+    }
+
+    .confidence-btn[data-confidence="guessing"]:hover {
+      background-color: #fca5a5;
+      border-color: #dc2626;
+    }
+
+    .confidence-btn[data-confidence="somewhat-sure"] {
+      background-color: #fde68a;
+      border-color: #f59e0b;
+    }
+
+    .confidence-btn[data-confidence="somewhat-sure"]:hover {
+      background-color: #fcd34d;
+      border-color: #d97706;
+    }
+
+    .confidence-btn[data-confidence="very-sure"] {
+      background-color: #bfdbfe;
+      border-color: #3b82f6;
+    }
+
+    .confidence-btn[data-confidence="very-sure"]:hover {
+      background-color: #93c5fd;
+      border-color: #2563eb;
+    }
+
+    .confidence-btn[data-confidence="certain"] {
+      background-color: #bbf7d0;
+      border-color: #22c55e;
+    }
+
+    .confidence-btn[data-confidence="certain"]:hover {
+      background-color: #86efac;
+      border-color: #16a34a;
+    }
+
     /* Student Landing Page Animations */
     @keyframes drawLine {
       from {
@@ -1572,24 +1664,24 @@
 
       <!-- Status Container -->
       <div id="status-container" class="text-center py-12 animate-fade-in" style="display: none;">
-        <div class="bg-black/20 backdrop-blur-lg rounded-xl border border-white/10 p-8 sm:p-12 shadow-2xl max-w-3xl mx-auto">
-          <span class="material-symbols-outlined text-6xl text-white mb-4 inline-block">schedule</span>
-          <h2 id="status-message" class="text-white text-2xl font-semibold">Connecting to poll...</h2>
-          <p id="status-submessage" class="text-white/70 text-lg mt-4" style="display: none;"></p>
+        <div class="status-card bg-white rounded-2xl border border-gray-200 p-8 sm:p-12 shadow-2xl max-w-3xl mx-auto">
+          <span class="material-symbols-outlined text-6xl text-veritas-navy mb-4 inline-block">schedule</span>
+          <h2 id="status-message" class="text-gray-900 text-2xl font-semibold">Connecting...</h2>
+          <p id="status-submessage" class="text-gray-700 text-lg mt-4" style="display: none;"></p>
           <div id="resume-controls" class="mt-8 space-y-3" style="display: none;">
-            <p class="text-white/90 text-base leading-relaxed">
-              Click below to return to fullscreen and resume the poll.
+            <p class="text-gray-800 text-base leading-relaxed">
+              Click below to return to fullscreen and resume.
             </p>
             <button id="resume-session-btn" class="mx-auto flex items-center justify-center gap-2 px-8 py-4 rounded-lg bg-green-500 text-white text-lg font-bold hover:bg-green-600 transition-transform duration-300 hover:scale-105 shadow-lg">
               <span class="material-symbols-outlined text-xl">fullscreen</span>
-              <span>Resume Poll</span>
+              <span id="resume-session-label">Resume Poll</span>
             </button>
           </div>
           <div id="secure-exit-controls" class="mt-10 space-y-3 hidden">
-            <p id="secure-exit-description" class="text-white/80 text-base leading-relaxed">
+            <p id="secure-exit-description" class="text-gray-800 text-base leading-relaxed">
               When your teacher dismisses you, use the button below to close fullscreen safely.
             </p>
-            <button id="secure-exit-btn" class="mx-auto flex items-center justify-center gap-2 px-8 py-3 rounded-lg border border-white/30 bg-white/10 text-white text-base font-semibold hover:bg-white/20 transition-colors">
+            <button id="secure-exit-btn" class="mx-auto flex items-center justify-center gap-2 px-8 py-3 rounded-lg border border-gray-300 bg-gray-100 text-gray-900 text-base font-semibold hover:bg-gray-200 transition-colors">
               <span class="material-symbols-outlined text-lg">logout</span>
               <span id="secure-exit-label">Exit Secure Session</span>
             </button>
@@ -1712,6 +1804,18 @@
         var secureSubmitting = false;
         var secureTimeExpired = false;
         var securePollInFlight = false;
+
+        function getModeName() {
+            return secureSessionActive ? 'Assessment' : 'Poll';
+        }
+
+        function getModeNameLowerCase() {
+            return secureSessionActive ? 'assessment' : 'poll';
+        }
+
+        function getFullModeName() {
+            return secureSessionActive ? 'Secure Assessment' : 'Live Poll';
+        }
 
         function setSecureChromeState(isActive) {
             if (studentModeLabel) {
@@ -1859,11 +1963,14 @@
             content += '<div class="option-leading">';
             content += '<div class="letter-badge" aria-hidden="true">' + letter + '</div>';
             content += '<div class="option-body">';
+            content += '<div class="option-text-wrapper">';
             if (cleanText) {
                 content += '<p class="option-text">' + escapeHtml(cleanText).replace(/\n/g, '<br>') + '</p>';
             }
             content += '<span class="result-ribbon"></span>';
             content += '<span class="sr-only secure-selection-announcement"></span>';
+            content += '</div>';
+            content += '<span class="percentage-bubble"></span>';
             content += '</div>';
             content += '</div>';
             content += '<span class="result-indicator" aria-hidden="true"></span>';
@@ -3888,6 +3995,7 @@
             content += '<div class="option-leading">';
             content += '<div class="letter-badge" aria-hidden="true">' + letter + '</div>';
             content += '<div class="option-body">';
+            content += '<div class="option-text-wrapper">';
             if (displayText) {
                 // Remove carriage returns and normalize line endings before converting to <br>
                 var cleanText = displayText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
@@ -3895,6 +4003,8 @@
             }
             content += '<span class="result-ribbon"></span>';
             content += '<span class="sr-only result-announcement"></span>';
+            content += '</div>';
+            content += '<span class="percentage-bubble"></span>';
             content += '</div>';
             content += '</div>';
             content += '<span class="result-indicator" aria-hidden="true"></span>';
@@ -4007,6 +4117,17 @@
                 }
 
                 var percentage = typeof percentages[answerText] === 'number' ? percentages[answerText] : 0;
+
+                // Update percentage bubble
+                var percentageBubble = btn.querySelector('.percentage-bubble');
+                if (percentageBubble) {
+                    if (totalResponses > 0) {
+                        percentageBubble.textContent = percentage + '%';
+                    } else {
+                        percentageBubble.textContent = '';
+                    }
+                }
+
                 if (ribbon) {
                     if (totalResponses > 0) {
                         ribbon.textContent = percentage + '%';
@@ -4190,13 +4311,14 @@
             console.log('Showing locked message');
             stopPolling();
             recoveringFromOutage = false;
+            var modeName = getModeNameLowerCase();
             showStatusPanel({
                 icon: 'lock',
-                iconClass: 'text-red-300',
-                message: message || 'Oops - you left fullscreen. Your poll has been paused until your teacher lets you back in.',
-                messageClass: 'text-red-300 text-xl font-semibold',
+                iconClass: 'text-veritas-navy',
+                message: message || 'Oops - you left fullscreen. Your ' + modeName + ' has been paused until your teacher lets you back in.',
+                messageClass: 'text-gray-900 text-xl font-semibold',
                 subtext: subMessage || '',
-                subClass: 'text-red-200 text-base mt-4',
+                subClass: 'text-gray-700 text-base mt-4',
                 showResume: false,
                 lockScroll: true
             });
@@ -4218,11 +4340,11 @@
             isTeacherBlocked = true;
             showStatusPanel({
                 icon: 'block',
-                iconClass: 'text-amber-200',
+                iconClass: 'text-veritas-navy',
                 message: 'Your teacher has paused responses for this question.',
-                messageClass: 'text-amber-200 text-xl font-semibold',
+                messageClass: 'text-gray-900 text-xl font-semibold',
                 subtext: 'Stay in fullscreen and wait for your teacher to unblock you.',
-                subClass: 'text-amber-200/80 text-base mt-4',
+                subClass: 'text-gray-700 text-base mt-4',
                 showResume: false,
                 lockScroll: true
             });
@@ -4231,11 +4353,16 @@
         function showResumePrompt() {
             console.log('Showing resume prompt');
             stopPolling();
+            var modeName = getFullModeName();
+            var resumeLabel = document.getElementById('resume-session-label');
+            if (resumeLabel) {
+                resumeLabel.textContent = 'Resume ' + modeName;
+            }
             showStatusPanel({
                 icon: 'fullscreen',
-                iconClass: 'text-green-300',
-                message: 'You are cleared for re-entry. Go fullscreen to get back in the game.',
-                messageClass: 'text-white text-xl font-semibold',
+                iconClass: 'text-veritas-navy',
+                message: 'You are cleared for re-entry. Go fullscreen to get back in.',
+                messageClass: 'text-gray-900 text-xl font-semibold',
                 showResume: true,
                 lockScroll: true
             });
@@ -4245,9 +4372,9 @@
             console.error('Error:', error);
             showStatusPanel({
                 icon: 'error',
-                iconClass: 'text-yellow-300',
+                iconClass: 'text-veritas-navy',
                 message: 'An error occurred: ' + (error.message || error),
-                messageClass: 'text-yellow-300 text-2xl font-bold',
+                messageClass: 'text-gray-900 text-2xl font-bold',
                 showResume: false,
                 lockScroll: false
             });

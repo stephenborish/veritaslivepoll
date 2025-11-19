@@ -23,6 +23,11 @@ const SESSION_TYPES = {
 };
 
 const SECURE_SESSION_PHASE = 'SECURE_ASSESSMENT';
+const DEFAULT_SECURE_PROCTORING_RULES = [
+  'Fullscreen required for the entire assessment',
+  'No tab switching or window switching',
+  'Session monitored in Mission Control'
+];
 
 function normalizeSessionTypeValue_(value) {
   if (!value) return SESSION_TYPES.LIVE;
@@ -97,6 +102,156 @@ function normalizeSecureMetadata_(metadata) {
     dueBy: dueBy,
     missionControlState: missionControlState,
     secureSettings: secureSettings
+  };
+}
+
+function parseDateInput_(value) {
+  if (!value) return null;
+  try {
+    const date = new Date(value);
+    if (!isNaN(date.getTime())) {
+      return date;
+    }
+  } catch (err) {
+    Logger.error('Failed to parse date input', err);
+  }
+  const parsed = Date.parse(value);
+  if (!isNaN(parsed)) {
+    return new Date(parsed);
+  }
+  return null;
+}
+
+function formatSecureDateLabel_(dateObj) {
+  if (!dateObj) return '';
+  const timezone = Session.getScriptTimeZone ? Session.getScriptTimeZone() : 'Etc/GMT';
+  return Utilities.formatDate(dateObj, timezone, 'MMM d, yyyy h:mm a');
+}
+
+function buildSecureAvailabilityDescriptor_(poll) {
+  const now = new Date();
+  const availableFromDate = parseDateInput_(poll.availableFrom);
+  const dueByDate = parseDateInput_(poll.dueBy);
+  let windowStatus = 'OPEN';
+
+  if (availableFromDate && now < availableFromDate) {
+    windowStatus = 'NOT_YET_OPEN';
+  } else if (dueByDate && now > dueByDate) {
+    windowStatus = 'PAST_DUE';
+  }
+
+  const segments = [];
+  if (availableFromDate) {
+    segments.push('Opens ' + formatSecureDateLabel_(availableFromDate));
+  }
+  if (dueByDate) {
+    segments.push('Due by ' + formatSecureDateLabel_(dueByDate));
+  }
+
+  const message = segments.length > 0 ? segments.join(' • ') : 'Available now';
+
+  return {
+    availableFrom: availableFromDate ? availableFromDate.toISOString() : '',
+    dueBy: dueByDate ? dueByDate.toISOString() : '',
+    windowStatus: windowStatus,
+    message: message,
+    blockingMessage: windowStatus === 'NOT_YET_OPEN'
+      ? 'This assessment is not open yet.'
+      : windowStatus === 'PAST_DUE'
+        ? 'This assessment window has closed.'
+        : ''
+  };
+}
+
+function buildSecureAssessmentLobbyState_(poll, sessionId) {
+  const availability = buildSecureAvailabilityDescriptor_(poll);
+  const rules = Array.isArray(poll.secureSettings && poll.secureSettings.proctoringRules)
+    ? poll.secureSettings.proctoringRules.filter(rule => typeof rule === 'string' && rule.trim() !== '')
+    : DEFAULT_SECURE_PROCTORING_RULES;
+
+  return {
+    status: 'LOBBY',
+    sessionType: SESSION_TYPES.SECURE,
+    pollId: poll.pollId,
+    sessionId: sessionId,
+    pollName: poll.pollName,
+    className: poll.className,
+    timeLimitMinutes: poll.timeLimitMinutes || null,
+    questionCount: poll.questions.length,
+    requiresAccessCode: !!(poll.accessCode && poll.accessCode.toString().trim()),
+    availability: availability,
+    proctoringRules: rules,
+    lobbyMessage: 'Secure Assessment: ' + (poll.pollName || ''),
+    windowStatus: availability.windowStatus,
+    blockingReason: availability.blockingMessage
+  };
+}
+
+function deriveSecureConnectionMeta_(heartbeatInfo) {
+  const deltaMs = heartbeatInfo && typeof heartbeatInfo.deltaMs === 'number'
+    ? heartbeatInfo.deltaMs
+    : 0;
+  let status = 'GREEN';
+  if (deltaMs > 30000) {
+    status = 'RED';
+  } else if (deltaMs > 10000) {
+    status = 'YELLOW';
+  }
+
+  const lastHeartbeatAt = (heartbeatInfo && (heartbeatInfo.previousSeen || heartbeatInfo.lastSeen)) || null;
+  return {
+    status: status,
+    heartbeatLagMs: deltaMs,
+    lastHeartbeatAt: lastHeartbeatAt
+  };
+}
+
+function applyConnectionMetaToPayload_(payload, connectionMeta) {
+  if (!payload || !connectionMeta) {
+    return payload;
+  }
+  return {
+    ...payload,
+    connectionHealth: connectionMeta.status,
+    heartbeatLagMs: connectionMeta.heartbeatLagMs,
+    lastHeartbeatAt: connectionMeta.lastHeartbeatAt
+  };
+}
+
+function lookupStudentDisplayName_(className, studentEmail) {
+  if (!className || !studentEmail) {
+    return '';
+  }
+  const roster = DataAccess.roster.getByClass(className) || [];
+  const normalizedEmail = studentEmail.toString().trim().toLowerCase();
+  const match = roster.find(entry => (entry.email || '').toLowerCase() === normalizedEmail);
+  if (!match) {
+    return (studentEmail.split('@')[0] || '').trim();
+  }
+  const parts = extractStudentNameParts_(match.name || '');
+  return parts.displayName || parts.trimmed || match.name || '';
+}
+
+function computeSecureTimingState_(studentState, poll, metadata) {
+  const baseLimitMinutes = (metadata && metadata.timeLimitMinutes) || poll.timeLimitMinutes || 0;
+  const adjustmentMinutes = studentState && studentState.timeAdjustmentMinutes
+    ? Number(studentState.timeAdjustmentMinutes)
+    : 0;
+  const pauseDurationMs = studentState && studentState.pauseDurationMs
+    ? Number(studentState.pauseDurationMs)
+    : 0;
+  const startTimeMs = studentState && studentState.startTime
+    ? new Date(studentState.startTime).getTime()
+    : Date.now();
+  const allowedMs = Math.max(0, baseLimitMinutes) * 60000 + (adjustmentMinutes * 60000);
+  const elapsedMs = Math.max(0, Date.now() - startTimeMs - Math.max(0, pauseDurationMs));
+  const remainingMs = allowedMs - elapsedMs;
+  return {
+    allowedMs: allowedMs,
+    elapsedMs: elapsedMs,
+    remainingMs: remainingMs,
+    timeLimitMinutes: baseLimitMinutes,
+    adjustmentMinutes: adjustmentMinutes
   };
 }
 
@@ -561,6 +716,79 @@ function normalizeSheetBoolean_(value, defaultValue = false) {
   return defaultValue;
 }
 
+const INDIVIDUAL_SESSION_COLUMNS = {
+  POLL_ID: 1,
+  SESSION_ID: 2,
+  STUDENT_EMAIL: 3,
+  STUDENT_DISPLAY_NAME: 4,
+  START_TIME: 5,
+  END_TIME: 6,
+  QUESTION_ORDER: 7,
+  QUESTION_ORDER_SEED: 8,
+  CURRENT_QUESTION_INDEX: 9,
+  IS_LOCKED: 10,
+  VIOLATION_CODE: 11,
+  ANSWER_ORDERS: 12,
+  ANSWER_CHOICE_MAP: 13,
+  TIME_ADJUSTMENT_MINUTES: 14,
+  PAUSE_DURATION_MS: 15,
+  LAST_HEARTBEAT_MS: 16,
+  CONNECTION_HEALTH: 17,
+  PROCTOR_STATUS: 18,
+  ADDITIONAL_METADATA_JSON: 19
+};
+
+const INDIVIDUAL_SESSION_COLUMN_COUNT = INDIVIDUAL_SESSION_COLUMNS.ADDITIONAL_METADATA_JSON;
+
+function parseIndividualSessionRow_(row, index) {
+  const parseJson = (value, fallback) => {
+    if (!value && value !== 0) return fallback;
+    try {
+      return JSON.parse(value);
+    } catch (err) {
+      Logger.error('Failed to parse IndividualSessionState JSON column', err);
+      return fallback;
+    }
+  };
+
+  return {
+    pollId: row[INDIVIDUAL_SESSION_COLUMNS.POLL_ID - 1] || '',
+    sessionId: row[INDIVIDUAL_SESSION_COLUMNS.SESSION_ID - 1] || '',
+    studentEmail: row[INDIVIDUAL_SESSION_COLUMNS.STUDENT_EMAIL - 1] || '',
+    studentDisplayName: row[INDIVIDUAL_SESSION_COLUMNS.STUDENT_DISPLAY_NAME - 1] || '',
+    startTime: row[INDIVIDUAL_SESSION_COLUMNS.START_TIME - 1] || null,
+    endTime: row[INDIVIDUAL_SESSION_COLUMNS.END_TIME - 1] || null,
+    questionOrder: parseJson(row[INDIVIDUAL_SESSION_COLUMNS.QUESTION_ORDER - 1], []),
+    questionOrderSeed: row[INDIVIDUAL_SESSION_COLUMNS.QUESTION_ORDER_SEED - 1] || '',
+    currentQuestionIndex: Number(row[INDIVIDUAL_SESSION_COLUMNS.CURRENT_QUESTION_INDEX - 1]) || 0,
+    isLocked: coerceBoolean_(row[INDIVIDUAL_SESSION_COLUMNS.IS_LOCKED - 1], false),
+    violationCode: row[INDIVIDUAL_SESSION_COLUMNS.VIOLATION_CODE - 1] || '',
+    answerOrders: parseJson(row[INDIVIDUAL_SESSION_COLUMNS.ANSWER_ORDERS - 1], {}),
+    answerChoiceMap: parseJson(row[INDIVIDUAL_SESSION_COLUMNS.ANSWER_CHOICE_MAP - 1], {}),
+    timeAdjustmentMinutes: Number(row[INDIVIDUAL_SESSION_COLUMNS.TIME_ADJUSTMENT_MINUTES - 1]) || 0,
+    pauseDurationMs: Number(row[INDIVIDUAL_SESSION_COLUMNS.PAUSE_DURATION_MS - 1]) || 0,
+    lastHeartbeatMs: Number(row[INDIVIDUAL_SESSION_COLUMNS.LAST_HEARTBEAT_MS - 1]) || 0,
+    connectionHealth: row[INDIVIDUAL_SESSION_COLUMNS.CONNECTION_HEALTH - 1] || 'UNKNOWN',
+    proctorStatus: row[INDIVIDUAL_SESSION_COLUMNS.PROCTOR_STATUS - 1] || '',
+    additionalMetadata: parseJson(row[INDIVIDUAL_SESSION_COLUMNS.ADDITIONAL_METADATA_JSON - 1], {}),
+    rowIndex: index + 2
+  };
+}
+
+function coerceBoolean_(value, defaultValue) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') {
+    if (value === 1) return true;
+    if (value === 0) return false;
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim().toLowerCase();
+    if (trimmed === 'true' || trimmed === '1' || trimmed === 'yes') return true;
+    if (trimmed === 'false' || trimmed === '0' || trimmed === 'no') return false;
+  }
+  return !!defaultValue;
+}
+
 // --- DATA ACCESS LAYER (Database-Style Queries) ---
 const DataAccess = {
   responses: {
@@ -720,52 +948,63 @@ const DataAccess = {
 
       for (let i = 0; i < values.length; i++) {
         if (values[i][0] === pollId && values[i][1] === sessionId && values[i][2] === studentEmail) {
-          return {
-            pollId: values[i][0],
-            sessionId: values[i][1],
-            studentEmail: values[i][2],
-            startTime: values[i][3],
-            endTime: values[i][4],
-            questionOrder: JSON.parse(values[i][5] || "[]"),
-            currentQuestionIndex: values[i][6],
-            isLocked: values[i][7],
-            answerOrders: JSON.parse(values[i][8] || "{}"),
-            rowIndex: i + 2
-          };
+          return parseIndividualSessionRow_(values[i], i);
         }
       }
       return null;
     },
 
-    initStudent: function(pollId, sessionId, studentEmail, questionOrder, answerOrders) {
+    initStudent: function(pollId, sessionId, studentEmail, questionOrder, answerOrders, options = {}) {
       const ss = SpreadsheetApp.getActiveSpreadsheet();
       const sheet = ss.getSheetByName("IndividualSessionState");
       const startTime = new Date().toISOString();
+      const row = new Array(INDIVIDUAL_SESSION_COLUMN_COUNT).fill('');
+      const heartbeatMs = Date.now();
+      const seed = (options && options.questionOrderSeed)
+        ? options.questionOrderSeed
+        : questionOrder.join('-');
+      const answerChoiceMap = (options && options.answerChoiceMap) || {};
+      row[INDIVIDUAL_SESSION_COLUMNS.POLL_ID - 1] = pollId;
+      row[INDIVIDUAL_SESSION_COLUMNS.SESSION_ID - 1] = sessionId;
+      row[INDIVIDUAL_SESSION_COLUMNS.STUDENT_EMAIL - 1] = studentEmail;
+      row[INDIVIDUAL_SESSION_COLUMNS.STUDENT_DISPLAY_NAME - 1] = (options && options.displayName) || '';
+      row[INDIVIDUAL_SESSION_COLUMNS.START_TIME - 1] = startTime;
+      row[INDIVIDUAL_SESSION_COLUMNS.END_TIME - 1] = null;
+      row[INDIVIDUAL_SESSION_COLUMNS.QUESTION_ORDER - 1] = JSON.stringify(questionOrder);
+      row[INDIVIDUAL_SESSION_COLUMNS.QUESTION_ORDER_SEED - 1] = seed;
+      row[INDIVIDUAL_SESSION_COLUMNS.CURRENT_QUESTION_INDEX - 1] = 0;
+      row[INDIVIDUAL_SESSION_COLUMNS.IS_LOCKED - 1] = false;
+      row[INDIVIDUAL_SESSION_COLUMNS.VIOLATION_CODE - 1] = null;
+      row[INDIVIDUAL_SESSION_COLUMNS.ANSWER_ORDERS - 1] = JSON.stringify(answerOrders);
+      row[INDIVIDUAL_SESSION_COLUMNS.ANSWER_CHOICE_MAP - 1] = JSON.stringify(answerChoiceMap);
+      row[INDIVIDUAL_SESSION_COLUMNS.TIME_ADJUSTMENT_MINUTES - 1] = (options && options.timeAdjustmentMinutes) || 0;
+      row[INDIVIDUAL_SESSION_COLUMNS.PAUSE_DURATION_MS - 1] = (options && options.pauseDurationMs) || 0;
+      row[INDIVIDUAL_SESSION_COLUMNS.LAST_HEARTBEAT_MS - 1] = heartbeatMs;
+      row[INDIVIDUAL_SESSION_COLUMNS.CONNECTION_HEALTH - 1] = 'GREEN';
+      row[INDIVIDUAL_SESSION_COLUMNS.PROCTOR_STATUS - 1] = 'ACTIVE';
+      row[INDIVIDUAL_SESSION_COLUMNS.ADDITIONAL_METADATA_JSON - 1] = (options && options.additionalMetadata)
+        ? JSON.stringify(options.additionalMetadata)
+        : '';
 
-      const newRow = [
-        pollId,
-        sessionId,
-        studentEmail,
-        startTime,
-        null, // endTime
-        JSON.stringify(questionOrder),
-        0,    // currentQuestionIndex
-        false,// isLocked
-        JSON.stringify(answerOrders)
-      ];
-
-      sheet.appendRow(newRow);
+      sheet.appendRow(row);
 
       return {
         pollId: pollId,
         sessionId: sessionId,
         studentEmail: studentEmail,
+        studentDisplayName: row[INDIVIDUAL_SESSION_COLUMNS.STUDENT_DISPLAY_NAME - 1],
         startTime: startTime,
         endTime: null,
         questionOrder: questionOrder,
+        questionOrderSeed: seed,
         currentQuestionIndex: 0,
         isLocked: false,
         answerOrders: answerOrders,
+        answerChoiceMap: answerChoiceMap,
+        timeAdjustmentMinutes: row[INDIVIDUAL_SESSION_COLUMNS.TIME_ADJUSTMENT_MINUTES - 1],
+        pauseDurationMs: row[INDIVIDUAL_SESSION_COLUMNS.PAUSE_DURATION_MS - 1],
+        lastHeartbeatMs: heartbeatMs,
+        connectionHealth: 'GREEN',
         rowIndex: sheet.getLastRow()
       };
     },
@@ -775,7 +1014,7 @@ const DataAccess = {
       if (studentState) {
         const ss = SpreadsheetApp.getActiveSpreadsheet();
         const sheet = ss.getSheetByName("IndividualSessionState");
-        sheet.getRange(studentState.rowIndex, 7).setValue(newIndex);
+        sheet.getRange(studentState.rowIndex, INDIVIDUAL_SESSION_COLUMNS.CURRENT_QUESTION_INDEX).setValue(newIndex);
       }
     },
 
@@ -784,8 +1023,8 @@ const DataAccess = {
       if (studentState) {
         const ss = SpreadsheetApp.getActiveSpreadsheet();
         const sheet = ss.getSheetByName("IndividualSessionState");
-        sheet.getRange(studentState.rowIndex, 8).setValue(true);
-        sheet.getRange(studentState.rowIndex, 5).setValue(new Date().toISOString());
+        sheet.getRange(studentState.rowIndex, INDIVIDUAL_SESSION_COLUMNS.IS_LOCKED).setValue(true);
+        sheet.getRange(studentState.rowIndex, INDIVIDUAL_SESSION_COLUMNS.END_TIME).setValue(new Date().toISOString());
       }
     },
 
@@ -794,7 +1033,7 @@ const DataAccess = {
       if (studentState) {
         const ss = SpreadsheetApp.getActiveSpreadsheet();
         const sheet = ss.getSheetByName("IndividualSessionState");
-        sheet.getRange(studentState.rowIndex, 9).setValue(JSON.stringify(answerOrders));
+        sheet.getRange(studentState.rowIndex, INDIVIDUAL_SESSION_COLUMNS.ANSWER_ORDERS).setValue(JSON.stringify(answerOrders));
       }
     },
 
@@ -805,18 +1044,19 @@ const DataAccess = {
 
       return values
         .filter(row => row[0] === pollId && row[1] === sessionId)
-        .map((row, index) => ({
-          pollId: row[0],
-          sessionId: row[1],
-          studentEmail: row[2],
-          startTime: row[3],
-          endTime: row[4],
-          questionOrder: JSON.parse(row[5] || "[]"),
-          currentQuestionIndex: row[6],
-          isLocked: row[7],
-          answerOrders: JSON.parse(row[8] || "{}"),
-          rowIndex: index + 2
-        }));
+        .map((row, index) => parseIndividualSessionRow_(row, index));
+    },
+
+    touchHeartbeat: function(pollId, sessionId, studentEmail, connectionMeta, existingState) {
+      const state = existingState || this.getByStudent(pollId, sessionId, studentEmail);
+      if (!state) return;
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const sheet = ss.getSheetByName("IndividualSessionState");
+      const nowMs = Date.now();
+      sheet.getRange(state.rowIndex, INDIVIDUAL_SESSION_COLUMNS.LAST_HEARTBEAT_MS).setValue(nowMs);
+      if (connectionMeta && connectionMeta.status) {
+        sheet.getRange(state.rowIndex, INDIVIDUAL_SESSION_COLUMNS.CONNECTION_HEALTH).setValue(connectionMeta.status);
+      }
     }
   }
 };
@@ -1949,16 +2189,35 @@ function getIndividualTimedSessionState(token) {
       return { status: 'ENDED' };
     }
 
-    const studentState = initializeIndividualTimedStudent(pollId, sessionId, studentEmail);
-
-    if (studentState.isLocked) {
-      return {
-        status: 'LOCKED',
-        message: 'Your session has ended.',
-      };
+    const poll = DataAccess.polls.getById(pollId);
+    if (!poll || !isSecureSessionType_(poll.sessionType)) {
+      return { status: 'ENDED' };
     }
 
-    return getIndividualTimedQuestion(pollId, sessionId, studentEmail);
+    const heartbeatInfo = StateVersionManager.noteHeartbeat(studentEmail);
+    const connectionMeta = deriveSecureConnectionMeta_(heartbeatInfo);
+    const studentState = DataAccess.individualSessionState.getByStudent(pollId, sessionId, studentEmail);
+
+    if (!studentState) {
+      return applyConnectionMetaToPayload_(buildSecureAssessmentLobbyState_(poll, sessionId), connectionMeta);
+    }
+
+    DataAccess.individualSessionState.touchHeartbeat(pollId, sessionId, studentEmail, connectionMeta, studentState);
+
+    if (studentState.isLocked) {
+      return applyConnectionMetaToPayload_({
+        status: 'LOCKED',
+        sessionType: SESSION_TYPES.SECURE,
+        message: 'Your session has ended.',
+        pollId: pollId,
+        sessionId: sessionId
+      }, connectionMeta);
+    }
+
+    return applyConnectionMetaToPayload_(
+      getIndividualTimedQuestion(pollId, sessionId, studentEmail, studentState),
+      connectionMeta
+    );
   })();
 }
 
@@ -2170,7 +2429,13 @@ function initializeIndividualTimedStudent(pollId, sessionId, studentEmail) {
         sessionId,
         studentEmail,
         shuffledIndices,
-        answerOrders
+        answerOrders,
+        {
+          displayName: lookupStudentDisplayName_(poll.className, studentEmail),
+          questionOrderSeed: shuffledIndices.join('-'),
+          answerChoiceMap: answerOrders,
+          additionalMetadata: { className: poll.className }
+        }
       );
     } else if (!studentState.answerOrders || typeof studentState.answerOrders !== 'object') {
       const regeneratedOrders = buildInitialAnswerOrderMap_(poll);
@@ -2178,15 +2443,11 @@ function initializeIndividualTimedStudent(pollId, sessionId, studentEmail) {
       DataAccess.individualSessionState.setAnswerOrders(pollId, sessionId, studentEmail, regeneratedOrders);
     }
 
-    // Check if time limit expired
+    // Check if time limit expired with adjustments
     const metadata = DataAccess.liveStatus.getMetadata();
-    const timeLimitMinutes = metadata.timeLimitMinutes || poll.timeLimitMinutes;
-    const startTime = new Date(studentState.startTime).getTime();
-    const currentTime = Date.now();
-    const elapsedMinutes = (currentTime - startTime) / (1000 * 60);
+    const timingState = computeSecureTimingState_(studentState, poll, metadata);
 
-    if (elapsedMinutes >= timeLimitMinutes && !studentState.isLocked) {
-      // Auto-lock student if time expired
+    if (timingState.allowedMs > 0 && timingState.remainingMs <= 0 && !studentState.isLocked) {
       DataAccess.individualSessionState.lockStudent(pollId, sessionId, studentEmail);
       studentState.isLocked = true;
       studentState.endTime = new Date().toISOString();
@@ -2198,16 +2459,18 @@ function initializeIndividualTimedStudent(pollId, sessionId, studentEmail) {
 /**
  * Get current question for student in individual timed session
  */
-function getIndividualTimedQuestion(pollId, sessionId, studentEmail) {
+function getIndividualTimedQuestion(pollId, sessionId, studentEmail, existingState) {
   return withErrorHandling(() => {
     const poll = DataAccess.polls.getById(pollId);
     if (!poll) throw new Error('Poll not found');
 
-    const studentState = initializeIndividualTimedStudent(pollId, sessionId, studentEmail);
+    const studentState = existingState || initializeIndividualTimedStudent(pollId, sessionId, studentEmail);
 
     if (studentState.isLocked) {
       return {
         locked: true,
+        status: 'LOCKED',
+        sessionType: normalizeSessionTypeValue_(poll.sessionType),
         message: 'Time limit expired or session completed',
         currentQuestionIndex: studentState.currentQuestionIndex,
         totalQuestions: poll.questions.length
@@ -2242,6 +2505,8 @@ function shuffleArray_(array) {
       DataAccess.individualSessionState.lockStudent(pollId, sessionId, studentEmail);
       return {
         completed: true,
+        status: 'COMPLETED',
+        sessionType: normalizeSessionTypeValue_(poll.sessionType),
         message: 'All questions completed',
         totalQuestions: poll.questions.length
       };
@@ -2273,15 +2538,16 @@ function shuffleArray_(array) {
       options: shuffledOptions
     };
 
-    // Calculate time remaining
-    const timeLimitMinutes = poll.timeLimitMinutes;
-    const startTime = new Date(studentState.startTime).getTime();
-    const currentTime = Date.now();
-    const elapsedMs = currentTime - startTime;
-    const remainingMs = (timeLimitMinutes * 60 * 1000) - elapsedMs;
+    const metadata = DataAccess.liveStatus.getMetadata();
+    const timingState = computeSecureTimingState_(studentState, poll, metadata);
+    const timeLimitMinutes = timingState.timeLimitMinutes || poll.timeLimitMinutes;
+    const remainingMs = timingState.remainingMs;
 
     return {
+      status: 'ACTIVE',
+      sessionType: normalizeSessionTypeValue_(poll.sessionType),
       sessionId: sessionId,
+      pollId: pollId,
       question: questionPayload,
       actualQuestionIndex: actualQuestionIndex,
       progressIndex: studentState.currentQuestionIndex,
@@ -2289,7 +2555,8 @@ function shuffleArray_(array) {
       timeRemainingSeconds: Math.max(0, Math.floor(remainingMs / 1000)),
       startTime: studentState.startTime,
       timeLimitMinutes: timeLimitMinutes,
-      answerOrder: answerOrder
+      answerOrder: answerOrder,
+      timeAdjustmentMinutes: studentState.timeAdjustmentMinutes || 0
     };
   })();
 }
@@ -5043,19 +5310,71 @@ function computeAnswerPercentages_(answerCounts) {
 // STUDENT APP FUNCTIONS
 // =============================================================================
 
-function beginIndividualTimedAttempt(pollId, sessionId, token) {
+function beginIndividualTimedAttempt(pollId, sessionId, token, options) {
   return withErrorHandling(() => {
     const studentEmail = TokenManager.getStudentEmail(token);
     if (!studentEmail) {
       throw new Error('Invalid or expired session token.');
     }
 
-    // This function will create the student's session state if it doesn't exist.
-    initializeIndividualTimedStudent(pollId, sessionId, studentEmail);
+    const liveStatus = DataAccess.liveStatus.get();
+    const metadata = liveStatus && liveStatus.metadata ? liveStatus.metadata : {};
+    if (liveStatus[0] !== pollId || metadata.sessionId !== sessionId || !isSecureSessionPhase_(metadata.sessionPhase)) {
+      throw new Error('Secure Assessment is not currently active.');
+    }
 
-    Logger.log('Student began individual timed attempt', { pollId, sessionId, studentEmail });
+    const poll = DataAccess.polls.getById(pollId);
+    if (!poll || !isSecureSessionType_(poll.sessionType)) {
+      throw new Error('Secure Assessment configuration not found.');
+    }
 
-    return { success: true };
+    const availability = buildSecureAvailabilityDescriptor_(poll);
+    if (availability.windowStatus === 'NOT_YET_OPEN') {
+      throw new Error('This assessment is not open yet.');
+    }
+    if (availability.windowStatus === 'PAST_DUE') {
+      throw new Error('This assessment window has closed.');
+    }
+
+    const requiresAccess = poll.accessCode && poll.accessCode.toString().trim() !== '';
+    if (requiresAccess) {
+      const providedCode = (options && options.accessCode ? options.accessCode : '').toString().trim();
+      if (!providedCode) {
+        throw new Error('Access code is required to begin.');
+      }
+      const normalizedProvided = providedCode.toUpperCase();
+      const normalizedExpected = poll.accessCode.toString().trim().toUpperCase();
+      if (normalizedProvided !== normalizedExpected) {
+        throw new Error('Access code is incorrect. Please try again.');
+      }
+    }
+
+    const existingState = DataAccess.individualSessionState.getByStudent(pollId, sessionId, studentEmail);
+    if (existingState) {
+      return { success: true, alreadyStarted: true };
+    }
+
+    const questionIndices = poll.questions.map((_, idx) => idx);
+    const shuffledIndices = shuffleArray_(questionIndices);
+    const answerOrders = buildInitialAnswerOrderMap_(poll);
+
+    DataAccess.individualSessionState.initStudent(
+      pollId,
+      sessionId,
+      studentEmail,
+      shuffledIndices,
+      answerOrders,
+      {
+        displayName: lookupStudentDisplayName_(poll.className, studentEmail),
+        questionOrderSeed: shuffledIndices.join('-'),
+        answerChoiceMap: answerOrders,
+        additionalMetadata: { className: poll.className }
+      }
+    );
+
+    Logger.log('Student began secure assessment attempt', { pollId, sessionId, studentEmail });
+
+    return { success: true, sessionId: sessionId };
   })();
 }
 
@@ -5360,19 +5679,15 @@ function submitIndividualTimedAnswer(pollId, sessionId, studentEmail, actualQues
     // CRITICAL: Check elapsed time to prevent submissions after time limit
     // This protects against client-side timer bypass or delayed lock sweeps
     const metadata = DataAccess.liveStatus.getMetadata();
-    const timeLimitMinutes = metadata.timeLimitMinutes || poll.timeLimitMinutes;
-    const startTime = new Date(studentState.startTime).getTime();
-    const currentTime = Date.now();
-    const elapsedMinutes = (currentTime - startTime) / (1000 * 60);
+    const timingState = computeSecureTimingState_(studentState, poll, metadata);
 
-    if (elapsedMinutes >= timeLimitMinutes) {
-      // Time limit exceeded - lock the student and reject submission
+    if (timingState.allowedMs > 0 && timingState.remainingMs <= 0) {
       DataAccess.individualSessionState.lockStudent(pollId, sessionId, studentEmail);
       Logger.log('Submission rejected: time limit exceeded', {
         pollId: pollId,
         studentEmail: studentEmail,
-        elapsedMinutes: elapsedMinutes.toFixed(2),
-        timeLimitMinutes: timeLimitMinutes
+        elapsedMs: timingState.elapsedMs,
+        allowedMs: timingState.allowedMs
       });
       throw new Error('Time limit exceeded. Your session has been locked and this response cannot be recorded.');
     }

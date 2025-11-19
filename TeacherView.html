@@ -2353,19 +2353,38 @@
             <option value="">-- Choose a poll --</option>
           </select>
         </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <button id="start-poll-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-veritas-gold text-white text-sm font-semibold hover:bg-veritas-gold/90 transition-colors shadow-sm disabled:cursor-not-allowed disabled:opacity-60" disabled>
-            <span class="material-symbols-outlined text-lg">play_circle</span>
-            <span>Start Session</span>
-          </button>
-          <button id="send-link-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-            <span class="material-symbols-outlined text-lg">mail</span>
-            <span>Send Links</span>
-          </button>
-          <button id="view-links-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-            <span class="material-symbols-outlined text-lg">visibility</span>
-            <span>View Links</span>
-          </button>
+        <div class="flex flex-col gap-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <button id="start-poll-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-veritas-gold text-white text-sm font-semibold hover:bg-veritas-gold/90 transition-colors shadow-sm disabled:cursor-not-allowed disabled:opacity-60" disabled>
+              <span class="material-symbols-outlined text-lg">play_circle</span>
+              <span>Start Session</span>
+            </button>
+            <button id="send-link-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+              <span class="material-symbols-outlined text-lg">mail</span>
+              <span>Send Links</span>
+            </button>
+            <button id="view-links-btn" class="flex items-center gap-2 h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+              <span class="material-symbols-outlined text-lg">visibility</span>
+              <span>View Links</span>
+            </button>
+          </div>
+          <div id="secure-session-meta" class="hidden rounded-xl border border-brand-white/30 bg-brand-white/5 px-3 py-2 text-xs text-brand-white/90 leading-snug" aria-live="polite" aria-hidden="true">
+            <div id="secure-session-time" class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-sm opacity-80">timer</span>
+              <span id="secure-session-time-text"></span>
+            </div>
+            <div id="secure-session-access" class="mt-1 flex items-center gap-2">
+              <span class="material-symbols-outlined text-sm opacity-80">key</span>
+              <div class="flex items-center gap-1">
+                <span>Access Code:</span>
+                <span id="secure-session-access-value" class="font-semibold tracking-widest"></span>
+              </div>
+            </div>
+            <div id="secure-session-window" class="mt-1 flex items-center gap-2">
+              <span class="material-symbols-outlined text-sm opacity-80">calendar_month</span>
+              <span id="secure-session-window-text"></span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -2569,6 +2588,7 @@
                     <th class="px-4 py-3 text-left font-semibold">Poll</th>
                     <th class="px-4 py-3 text-left font-semibold">Class</th>
                     <th class="px-4 py-3 text-left font-semibold">Questions</th>
+                    <th class="px-4 py-3 text-left font-semibold">Mode</th>
                     <th class="px-4 py-3 text-left font-semibold">Last Edited</th>
                     <th class="px-4 py-3 text-right font-semibold">Actions</th>
                   </tr>
@@ -5213,6 +5233,13 @@
   var classSelect=document.getElementById('class-select');
   var sessionToggleButtons=document.querySelectorAll('.builder-session-toggle');
   var secureSettingsPanel=document.getElementById('secure-assessment-settings');
+  var secureSessionMeta=document.getElementById('secure-session-meta');
+  var secureSessionTimeRow=document.getElementById('secure-session-time');
+  var secureSessionTimeText=document.getElementById('secure-session-time-text');
+  var secureSessionAccessRow=document.getElementById('secure-session-access');
+  var secureSessionAccessValue=document.getElementById('secure-session-access-value');
+  var secureSessionWindowRow=document.getElementById('secure-session-window');
+  var secureSessionWindowText=document.getElementById('secure-session-window-text');
   var secureTimeLimitInput=document.getElementById('secure-time-limit-input');
   var secureAccessCodeInput=document.getElementById('secure-access-code-input');
   var secureAvailableInput=document.getElementById('secure-available-input');
@@ -5942,7 +5969,20 @@
     polls.forEach(function(poll){
       var opt=document.createElement('option');
       opt.value=poll.pollId;
-      opt.textContent=poll.pollName+' ('+poll.className+') - '+poll.questions.length+' questions';
+      var questionTotal=Array.isArray(poll.questions)?poll.questions.length:0;
+      var label=poll.pollName+' ('+(poll.className||'Unassigned')+') - '+questionTotal+' questions';
+      if(isSecureSessionTypeClient(poll.sessionType)){
+        var minutes=getSecureTimeLimitMinutes(poll);
+        var code=getSecureAccessCode(poll);
+        label='🔒 '+label;
+        if(minutes){
+          label+=' • '+minutes+' min';
+        }
+        if(code){
+          label+=' • Code '+code;
+        }
+      }
+      opt.textContent=label;
       if(poll.pollId===previousValue){
         opt.selected=true;
         hasSelection=true;
@@ -6240,6 +6280,27 @@
 
       htmlParts.push('</div>');
 
+      if(sessionType==='SECURE_ASSESSMENT'){
+        var secureTimeLabel=describeSecureTimeLimit(poll);
+        var secureAccessCode=getSecureAccessCode(poll);
+        var secureWindowLabel=describeSecureAvailability(poll);
+        htmlParts.push('<div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-100 mb-4">');
+        if(secureTimeLabel){
+          htmlParts.push('<div class="flex items-center gap-2 mb-2"><span class="material-symbols-outlined text-base">timer</span><span>'+escapeHtml(secureTimeLabel)+'</span></div>');
+        }
+        htmlParts.push('<div class="flex items-center gap-2 mb-2"><span class="material-symbols-outlined text-base">key</span><span>Access Code: ');
+        if(secureAccessCode){
+          htmlParts.push('<span class="font-semibold tracking-widest">'+escapeHtml(secureAccessCode)+'</span>');
+        }else{
+          htmlParts.push('<span class="opacity-80">Not required</span>');
+        }
+        htmlParts.push('</span></div>');
+        if(secureWindowLabel){
+          htmlParts.push('<div class="flex items-center gap-2"><span class="material-symbols-outlined text-base">calendar_month</span><span>'+escapeHtml(secureWindowLabel)+'</span></div>');
+        }
+        htmlParts.push('</div>');
+      }
+
 
       // Stats
       htmlParts.push('<div class="text-xs text-gray-500 dark:text-gray-400 mb-4">Last updated: ' + lastEdited + '</div>');
@@ -6301,6 +6362,104 @@
     };
   }
 
+  function getSecureTimeLimitMinutes(poll){
+    if(!poll)return null;
+    var direct=poll.timeLimitMinutes;
+    if(typeof direct==='number'&&direct>0){
+      return direct;
+    }
+    if(typeof direct==='string'&&direct.trim()!==''){
+      var parsed=parseInt(direct,10);
+      if(!isNaN(parsed)&&parsed>0){
+        return parsed;
+      }
+    }
+    if(poll.secureSettings){
+      var fallback=poll.secureSettings.timeLimitMinutes;
+      if(typeof fallback==='number'&&fallback>0){
+        return fallback;
+      }
+      if(typeof fallback==='string'&&fallback.trim()!==''){
+        var parsedFallback=parseInt(fallback,10);
+        if(!isNaN(parsedFallback)&&parsedFallback>0){
+          return parsedFallback;
+        }
+      }
+    }
+    return null;
+  }
+
+  function describeSecureTimeLimit(poll){
+    var minutes=getSecureTimeLimitMinutes(poll);
+    if(!minutes){
+      return '';
+    }
+    var unit=minutes===1?'minute':'minutes';
+    return 'Time limit: '+minutes+' '+unit;
+  }
+
+  function getSecureAccessCode(poll){
+    if(!poll)return '';
+    if(poll.accessCode&&poll.accessCode.toString().trim()!==''){
+      return poll.accessCode.toString().trim().toUpperCase();
+    }
+    if(poll.secureSettings&&poll.secureSettings.accessCode){
+      return poll.secureSettings.accessCode.toString().trim().toUpperCase();
+    }
+    return '';
+  }
+
+  function getSecureAvailabilityWindow(poll){
+    if(!poll)return {availableFrom:'',dueBy:''};
+    var available=poll.availableFrom||'';
+    var due=poll.dueBy||'';
+    if(!available&&poll.secureSettings){
+      available=poll.secureSettings.availableFrom||'';
+    }
+    if(!due&&poll.secureSettings){
+      due=poll.secureSettings.dueBy||'';
+    }
+    return {availableFrom:available||'',dueBy:due||''};
+  }
+
+  function describeSecureAvailability(poll){
+    var window=getSecureAvailabilityWindow(poll);
+    var available=window.availableFrom;
+    var due=window.dueBy;
+    if(available&&due){
+      return 'Window: '+formatDateTime(available)+' → '+formatDateTime(due);
+    }
+    if(available){
+      return 'Opens '+formatDateTime(available);
+    }
+    if(due){
+      return 'Due '+formatDateTime(due);
+    }
+    return '';
+  }
+
+  function buildSessionModeCellHtml(poll){
+    var sessionType=normalizeSessionTypeClient(poll.sessionType);
+    var info=getSessionTypeInfo(sessionType);
+    var html='<div class="flex flex-col gap-1">';
+    html+='<span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold rounded-full '+info.badgeClass+'">';
+    html+='<span class="material-symbols-outlined text-sm">'+info.icon+'</span>'+info.label+'</span>';
+    if(sessionType==='SECURE_ASSESSMENT'){
+      var timeLabel=describeSecureTimeLimit(poll);
+      var code=getSecureAccessCode(poll);
+      if(timeLabel){
+        html+='<span class="text-xs text-rose-700 dark:text-rose-200">'+escapeHtml(timeLabel)+'</span>';
+      }
+      if(code){
+        html+='<span class="text-xs text-rose-700 dark:text-rose-200">Code: <span class="font-semibold tracking-widest">'+escapeHtml(code)+'</span></span>';
+      } else {
+        html+='<span class="text-xs text-rose-700/80 dark:text-rose-200/80">No access code</span>';
+      }
+    }
+    html+='</div>';
+    return html;
+  }
+
   function renderPollTable(polls){
     polls=polls||getFilteredSortedPolls();
     pollsTableBody.innerHTML='';
@@ -6321,6 +6480,7 @@
       htmlParts.push('</td>');
       htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">'+escapeHtml(poll.className||'—')+'</td>');
       htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">'+(poll.questions?poll.questions.length:0)+'</td>');
+      htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">'+buildSessionModeCellHtml(poll)+'</td>');
       htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">'+lastEdited+'</td>');
       htmlParts.push('<td class="px-4 py-3 align-top">');
       htmlParts.push('<div class="flex justify-end gap-2">');
@@ -6478,6 +6638,9 @@
     var className=selectedPoll&&selectedPoll.className?selectedPoll.className:'';
     var hasSelection=!!selectedPoll;
 
+    updateSessionLaunchControls(selectedPoll);
+    updateSecureSessionMeta(selectedPoll);
+
     if(sendLinkBtn){
       if(hasSelection && className){
         sendLinkBtn.disabled=false;
@@ -6511,6 +6674,79 @@
         startPollBtn.setAttribute('aria-disabled','true');
       }else{
         startPollBtn.removeAttribute('aria-disabled');
+      }
+    }
+  }
+
+  function updateSessionLaunchControls(selectedPoll){
+    if(!startPollBtn){
+      return;
+    }
+    var isSecure=selectedPoll?isSecureSessionTypeClient(selectedPoll.sessionType):false;
+    var icon=isSecure?'rocket_launch':'play_circle';
+    var label=isSecure?'Launch Exam Room':'Start Session';
+    var defaultHtml='<span class="material-symbols-outlined text-lg">'+icon+'</span><span>'+label+'</span>';
+    startPollBtn.dataset.defaultHtml=defaultHtml;
+    startPollBtn.dataset.sessionMode=isSecure?'secure':'live';
+    startPollBtn.setAttribute('aria-label',label);
+    startPollBtn.classList.remove('bg-veritas-gold','hover:bg-veritas-gold/90','bg-rose-600','hover:bg-rose-700');
+    if(isSecure){
+      startPollBtn.classList.add('bg-rose-600','hover:bg-rose-700');
+    }else{
+      startPollBtn.classList.add('bg-veritas-gold','hover:bg-veritas-gold/90');
+    }
+    if(startPollBtn.getAttribute('aria-busy')==='true'){
+      return;
+    }
+    startPollBtn.innerHTML=defaultHtml;
+  }
+
+  function updateSecureSessionMeta(selectedPoll){
+    if(!secureSessionMeta){
+      return;
+    }
+    if(!selectedPoll||!isSecureSessionTypeClient(selectedPoll.sessionType)){
+      secureSessionMeta.classList.add('hidden');
+      secureSessionMeta.setAttribute('aria-hidden','true');
+      return;
+    }
+
+    secureSessionMeta.classList.remove('hidden');
+    secureSessionMeta.setAttribute('aria-hidden','false');
+
+    var timeLabel=describeSecureTimeLimit(selectedPoll);
+    if(secureSessionTimeRow){
+      if(timeLabel){
+        secureSessionTimeRow.classList.remove('hidden');
+        if(secureSessionTimeText){
+          secureSessionTimeText.textContent=timeLabel;
+        }
+      }else{
+        secureSessionTimeRow.classList.add('hidden');
+      }
+    }
+
+    if(secureSessionAccessRow&&secureSessionAccessValue){
+      secureSessionAccessRow.classList.remove('hidden');
+      var accessCode=getSecureAccessCode(selectedPoll);
+      if(accessCode){
+        secureSessionAccessValue.textContent=accessCode;
+        secureSessionAccessValue.classList.remove('text-brand-white/70');
+      }else{
+        secureSessionAccessValue.textContent='Not required';
+        secureSessionAccessValue.classList.add('text-brand-white/70');
+      }
+    }
+
+    var windowLabel=describeSecureAvailability(selectedPoll);
+    if(secureSessionWindowRow){
+      if(windowLabel){
+        secureSessionWindowRow.classList.remove('hidden');
+        if(secureSessionWindowText){
+          secureSessionWindowText.textContent=windowLabel;
+        }
+      }else{
+        secureSessionWindowRow.classList.add('hidden');
       }
     }
   }
@@ -8027,7 +8263,7 @@
 
     // Check session type and call appropriate function
     if (isSecureSessionTypeClient(selectedPoll.sessionType)) {
-      setButtonLoading(startPollBtn, true, 'Starting...');
+      setButtonLoading(startPollBtn, true, 'Launching...');
 
       if (PREVIEW_MODE) {
         setButtonLoading(startPollBtn, false);

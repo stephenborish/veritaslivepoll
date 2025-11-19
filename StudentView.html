@@ -2133,6 +2133,9 @@
         }
 
         function handleSecureFullscreenChange(event) {
+            if (!secureSessionActive) {
+                return;
+            }
             if (event.hidden && !isInteractionBlocked && !violationLogged) {
                 reportViolationDebounced('tab-blur');
                 return;

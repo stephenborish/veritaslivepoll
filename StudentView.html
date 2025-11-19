@@ -280,23 +280,24 @@
     .secure-session-body {
       padding: clamp(20px, 2.5vw, 32px);
       display: flex;
-      flex-wrap: wrap;
-      gap: 24px;
-      align-items: flex-start;
+      flex-direction: column;
+      gap: 20px;
       flex: 1;
     }
 
     .secure-question-pane {
-      flex: 1 1 55%;
       display: flex;
       flex-direction: column;
-      gap: 16px;
-      min-width: 260px;
+      gap: 20px;
     }
 
     .secure-question-pane .student-stem {
-      font-size: clamp(1.2rem, 0.85rem + 1vw, 1.7rem);
+      font-size: 1.2rem;
       line-height: 1.6;
+      font-weight: 400;
+      color: var(--text-primary);
+      margin: 0;
+      text-align: left;
     }
 
     .secure-question-pane .student-question-image {
@@ -308,11 +309,9 @@
     }
 
     .secure-options-pane {
-      flex: 1 1 40%;
-      min-width: 240px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 20px;
     }
 
     .secure-options-pane .student-choices {
@@ -1616,10 +1615,21 @@
                     setSecureSubmitLoading(false);
                     disableSecureOptions(false);
                     if (response && response.success) {
+                        // Clear current question state immediately to prevent re-display
+                        var previousQuestionKey = secureCurrentQuestionKey;
                         secureSelectedOptionIndex = null;
                         secureQuestionState = null;
                         secureCurrentQuestionKey = null;
-                        pollForIndividualSessionState();
+
+                        // Clear the UI to show transition between questions
+                        if (secureQuestionText) secureQuestionText.textContent = '';
+                        if (secureQuestionImage) secureQuestionImage.style.display = 'none';
+                        if (secureOptionsList) secureOptionsList.innerHTML = '';
+
+                        // Brief delay before polling to allow server state to update
+                        setTimeout(function() {
+                            pollForIndividualSessionState();
+                        }, 300);
                     } else {
                         handleError((response && response.error) || 'Failed to submit answer.');
                     }
@@ -1865,6 +1875,17 @@
                     }
                 }
                 submitIndividualAnswer(secureQuestionState, answerText);
+            });
+        }
+
+        // Add click handler to secure assessment question image for zoom
+        if (secureQuestionImage) {
+            secureQuestionImage.addEventListener('click', function(e) {
+                e.stopPropagation();
+                e.preventDefault();
+                if (window.expandImage) {
+                    window.expandImage(this);
+                }
             });
         }
 

@@ -5396,6 +5396,171 @@ function getDashboardSummary() {
 }
 
 /**
+ * Get comprehensive book view data for secure assessments
+ * Returns detailed student-by-student, question-by-question breakdown
+ * with psychometric data and class comparisons
+ */
+function getSecureAssessmentBookView(pollId) {
+  return withErrorHandling(() => {
+    const poll = DataAccess.polls.getById(pollId);
+    if (!poll) {
+      return { success: false, error: 'Poll not found' };
+    }
+
+    // Only works for secure assessments
+    if (poll.sessionType !== 'SECURE_ASSESSMENT') {
+      return { success: false, error: 'This feature is only available for secure assessments' };
+    }
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const responsesSheet = ss.getSheetByName('Responses');
+    const responseValues = responsesSheet ? getDataRangeValues_(responsesSheet) : [];
+    const roster = DataAccess.roster.getByClass(poll.className);
+
+    // Filter responses for this poll
+    const pollResponses = responseValues.filter(row => row[2] === pollId);
+
+    // Build response data structure
+    const responsesByQuestion = buildResponsesByQuestion_(pollResponses);
+    const studentTotalScores = calculateStudentTotalScores_(poll, responsesByQuestion);
+
+    // Get psychometric data
+    const classOverview = computeClassOverview_(poll, responsesByQuestion, studentTotalScores, roster);
+    const itemAnalysis = computeItemAnalysis_(poll, responsesByQuestion, studentTotalScores);
+
+    // Build student-by-student breakdown
+    const studentDetails = [];
+    const studentsWhoAnswered = new Set();
+
+    responsesByQuestion.forEach((responses, qIdx) => {
+      responses.forEach(r => studentsWhoAnswered.add(r.email));
+    });
+
+    studentsWhoAnswered.forEach(email => {
+      const student = roster.find(s => s.email === email) || { email: email, name: email };
+      const totalScore = studentTotalScores.get(email) || 0;
+      const maxScore = poll.questions.length;
+      const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+
+      // Build question-by-question response breakdown for this student
+      const questionResponses = [];
+      poll.questions.forEach((question, qIdx) => {
+        const responses = responsesByQuestion.get(qIdx) || [];
+        const studentResponse = responses.find(r => r.email === email);
+
+        questionResponses.push({
+          questionIndex: qIdx,
+          questionText: question.questionText || '',
+          questionImageURL: question.questionImageURL || null,
+          correctAnswer: question.correctAnswer,
+          studentAnswer: studentResponse ? studentResponse.answer : null,
+          isCorrect: studentResponse ? studentResponse.isCorrect : false,
+          answered: !!studentResponse,
+          confidence: studentResponse ? studentResponse.confidence : null,
+          timestamp: studentResponse ? studentResponse.timestamp : null
+        });
+      });
+
+      // Calculate percentile rank
+      const scores = Array.from(studentTotalScores.values()).sort((a, b) => b - a);
+      const rank = scores.indexOf(totalScore) + 1;
+      const percentileRank = scores.length > 0 ? Math.round((1 - (rank / scores.length)) * 100) : 0;
+
+      studentDetails.push({
+        email: email,
+        name: student.name || student.displayName || email,
+        totalScore: totalScore,
+        maxScore: maxScore,
+        percentage: percentage,
+        percentileRank: percentileRank,
+        rank: rank,
+        questionResponses: questionResponses,
+        completedAll: questionResponses.every(q => q.answered)
+      });
+    });
+
+    // Sort students by total score descending
+    studentDetails.sort((a, b) => b.totalScore - a.totalScore);
+
+    // Add enhanced item analysis with more context
+    const enhancedItemAnalysis = itemAnalysis.map(item => {
+      const question = poll.questions[item.questionIndex];
+      return {
+        ...item,
+        options: question.options || [],
+        questionImageURL: question.questionImageURL || null,
+        interpretation: {
+          difficulty: interpretDifficulty(item.difficulty),
+          discrimination: interpretDiscrimination(item.discrimination),
+          overall: interpretItemQuality(item.difficulty, item.discrimination)
+        }
+      };
+    });
+
+    return {
+      success: true,
+      pollId: pollId,
+      pollName: poll.pollName,
+      className: poll.className,
+      sessionType: poll.sessionType,
+      timeLimitMinutes: poll.timeLimitMinutes || null,
+      questionCount: poll.questions.length,
+      classOverview: {
+        ...classOverview,
+        interpretation: {
+          participation: interpretParticipation(classOverview.participantCount, classOverview.rosterSize),
+          meanScore: interpretMeanScore(classOverview.mean, poll.questions.length),
+          stdDev: interpretStdDev(classOverview.stdDev, poll.questions.length)
+        }
+      },
+      itemAnalysis: enhancedItemAnalysis,
+      studentDetails: studentDetails
+    };
+  })();
+}
+
+/**
+ * Interpret difficulty level
+ */
+function interpretDifficulty(difficulty) {
+  if (difficulty >= 0.9) return { level: 'very-easy', message: 'Very Easy (>90% correct)', color: 'green' };
+  if (difficulty >= 0.75) return { level: 'easy', message: 'Easy (75-90% correct)', color: 'lightgreen' };
+  if (difficulty >= 0.5) return { level: 'moderate', message: 'Moderate (50-75% correct)', color: 'blue' };
+  if (difficulty >= 0.3) return { level: 'hard', message: 'Hard (30-50% correct)', color: 'orange' };
+  return { level: 'very-hard', message: 'Very Hard (<30% correct)', color: 'red' };
+}
+
+/**
+ * Interpret discrimination quality
+ */
+function interpretDiscrimination(discrimination) {
+  if (discrimination >= 0.4) return { level: 'excellent', message: 'Excellent discrimination', color: 'green' };
+  if (discrimination >= 0.3) return { level: 'good', message: 'Good discrimination', color: 'lightgreen' };
+  if (discrimination >= 0.2) return { level: 'fair', message: 'Fair discrimination', color: 'blue' };
+  if (discrimination >= 0) return { level: 'poor', message: 'Poor discrimination', color: 'orange' };
+  return { level: 'problematic', message: 'Negative discrimination - Review question', color: 'red' };
+}
+
+/**
+ * Interpret overall item quality
+ */
+function interpretItemQuality(difficulty, discrimination) {
+  if (discrimination < 0) {
+    return { quality: 'problematic', message: 'Question needs review - high performers doing worse than low performers', color: 'red' };
+  }
+  if (difficulty > 0.9 || difficulty < 0.2) {
+    return { quality: 'poor', message: 'Too easy or too hard - not discriminating well', color: 'orange' };
+  }
+  if (discrimination >= 0.3 && difficulty >= 0.3 && difficulty <= 0.8) {
+    return { quality: 'excellent', message: 'Well-constructed question with good discrimination', color: 'green' };
+  }
+  if (discrimination >= 0.2) {
+    return { quality: 'good', message: 'Acceptable question quality', color: 'lightgreen' };
+  }
+  return { quality: 'fair', message: 'Question could be improved', color: 'blue' };
+}
+
+/**
  * Save misconception tag for an item
  */
 function saveMisconceptionTag(pollId, questionIndex, tag) {

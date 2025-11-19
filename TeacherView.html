@@ -2625,6 +2625,10 @@
                 <p id="individual-session-meta" class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm">Monitoring student progress in real-time.</p>
               </div>
               <div class="flex items-center gap-2">
+                <button id="view-book-report-btn" class="h-10 px-5 rounded-lg bg-veritas-gold text-white text-sm font-bold hover:bg-veritas-gold/90 transition-colors flex items-center gap-2">
+                  <span class="material-symbols-outlined text-lg">menu_book</span>
+                  <span>Book View</span>
+                </button>
                 <button id="end-individual-session-btn" class="h-10 px-5 rounded-lg bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors">End Session</button>
               </div>
             </div>
@@ -3463,6 +3467,163 @@
           <p id="student-manager-message" class="text-sm text-slate-500"></p>
         </div>
         <div id="student-manager-loading" class="hidden text-sm text-slate-500">Working...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Book View Modal -->
+  <div id="book-view-modal" class="fixed inset-0 z-50 hidden overflow-y-auto">
+    <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onclick="closeBookView()"></div>
+    <div class="relative w-full max-w-[95vw] mx-auto my-8 bg-white dark:bg-brand-dark-gray rounded-2xl shadow-2xl border border-brand-light-gray dark:border-brand-dark-gray/40">
+      <!-- Header -->
+      <div class="sticky top-0 z-10 flex items-start justify-between gap-4 p-6 border-b border-slate-200 dark:border-brand-dark-gray/60 bg-white dark:bg-brand-dark-gray">
+        <div>
+          <div class="flex items-center gap-3 mb-2">
+            <span class="material-symbols-outlined text-3xl text-veritas-gold">menu_book</span>
+            <h2 id="book-view-title" class="text-3xl font-bold text-brand-dark-gray dark:text-white">Assessment Book View</h2>
+          </div>
+          <p id="book-view-subtitle" class="text-sm text-slate-500">Comprehensive student performance analysis</p>
+        </div>
+        <button onclick="closeBookView()" class="h-10 w-10 inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-brand-dark-gray/70 text-slate-600 dark:text-white hover:bg-slate-200 transition-colors">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div id="book-view-loading" class="p-12 text-center">
+        <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-veritas-gold"></div>
+        <p class="mt-4 text-slate-600 dark:text-slate-400">Loading book view data...</p>
+      </div>
+
+      <div id="book-view-content" class="hidden p-6 space-y-6">
+        <!-- Class Overview Section -->
+        <div class="bg-gradient-to-r from-veritas-navy to-veritas-navy/80 rounded-xl p-6 text-white shadow-lg">
+          <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined">analytics</span>
+            Class Overview
+          </h3>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+              <p class="text-sm opacity-80">Total Students</p>
+              <p id="book-class-total-students" class="text-3xl font-bold">0</p>
+            </div>
+            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+              <p class="text-sm opacity-80">Class Average</p>
+              <p id="book-class-average" class="text-3xl font-bold">0%</p>
+            </div>
+            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+              <p class="text-sm opacity-80">Median Score</p>
+              <p id="book-class-median" class="text-3xl font-bold">0</p>
+            </div>
+            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+              <p class="text-sm opacity-80">Std. Deviation</p>
+              <p id="book-class-stddev" class="text-3xl font-bold">0.0</p>
+            </div>
+          </div>
+          <div id="book-class-interpretation" class="mt-4 p-3 bg-white/10 backdrop-blur-sm rounded-lg text-sm">
+            <!-- Interpretation messages will be inserted here -->
+          </div>
+        </div>
+
+        <!-- View Toggle -->
+        <div class="flex gap-3 border-b border-slate-200 dark:border-brand-dark-gray/40">
+          <button id="book-tab-students" class="px-6 py-3 font-semibold text-sm transition-colors border-b-2 border-veritas-gold text-veritas-gold">
+            Student Roster
+          </button>
+          <button id="book-tab-questions" class="px-6 py-3 font-semibold text-sm transition-colors border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-veritas-gold hover:border-veritas-gold/30">
+            Question Analysis
+          </button>
+          <button id="book-tab-matrix" class="px-6 py-3 font-semibold text-sm transition-colors border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-veritas-gold hover:border-veritas-gold/30">
+            Response Matrix
+          </button>
+        </div>
+
+        <!-- Student Roster Tab -->
+        <div id="book-content-students" class="book-tab-content">
+          <div class="bg-white dark:bg-brand-dark-gray/30 rounded-xl border border-slate-200 dark:border-brand-dark-gray/40 overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead class="bg-slate-100 dark:bg-brand-dark-gray/50">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">Rank</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">Student Name</th>
+                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">Score</th>
+                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">Percentage</th>
+                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">Percentile</th>
+                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="book-students-table-body" class="divide-y divide-slate-200 dark:divide-brand-dark-gray/40">
+                  <!-- Student rows will be inserted here -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Question Analysis Tab -->
+        <div id="book-content-questions" class="book-tab-content hidden">
+          <div class="space-y-4" id="book-questions-container">
+            <!-- Question analysis cards will be inserted here -->
+          </div>
+        </div>
+
+        <!-- Response Matrix Tab -->
+        <div id="book-content-matrix" class="book-tab-content hidden">
+          <div class="bg-white dark:bg-brand-dark-gray/30 rounded-xl border border-slate-200 dark:border-brand-dark-gray/40 overflow-hidden">
+            <div class="p-4 bg-slate-100 dark:bg-brand-dark-gray/50">
+              <h3 class="text-lg font-bold text-brand-dark-gray dark:text-white">Complete Response Matrix</h3>
+              <p class="text-sm text-slate-600 dark:text-slate-400">Each cell shows student's answer with correct/incorrect indicator</p>
+            </div>
+            <div class="overflow-x-auto p-4">
+              <table class="w-full text-xs">
+                <thead>
+                  <tr>
+                    <th class="sticky left-0 bg-slate-100 dark:bg-brand-dark-gray/50 px-3 py-2 text-left font-semibold border-r border-slate-300 dark:border-brand-dark-gray/60">Student</th>
+                    <tbody id="book-matrix-questions-header">
+                      <!-- Question headers will be inserted here -->
+                    </tbody>
+                    <th class="bg-slate-100 dark:bg-brand-dark-gray/50 px-3 py-2 text-center font-semibold">Total</th>
+                  </tr>
+                </thead>
+                <tbody id="book-matrix-table-body">
+                  <!-- Matrix rows will be inserted here -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Individual Student Detail View (expandable) -->
+        <div id="book-student-detail" class="hidden fixed inset-0 z-50 overflow-y-auto">
+          <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onclick="closeStudentDetail()"></div>
+          <div class="relative w-full max-w-5xl mx-auto my-8 bg-white dark:bg-brand-dark-gray rounded-2xl shadow-2xl border border-brand-light-gray dark:border-brand-dark-gray/40">
+            <div class="sticky top-0 z-10 flex items-start justify-between gap-4 p-6 border-b border-slate-200 dark:border-brand-dark-gray/60 bg-white dark:bg-brand-dark-gray">
+              <div>
+                <h3 id="student-detail-name" class="text-2xl font-bold text-brand-dark-gray dark:text-white">Student Name</h3>
+                <div class="flex items-center gap-4 mt-2 text-sm text-slate-600 dark:text-slate-400">
+                  <span>Score: <strong id="student-detail-score">0/0</strong></span>
+                  <span>Percentage: <strong id="student-detail-percentage">0%</strong></span>
+                  <span>Rank: <strong id="student-detail-rank">0</strong></span>
+                  <span>Percentile: <strong id="student-detail-percentile">0th</strong></span>
+                </div>
+              </div>
+              <button onclick="closeStudentDetail()" class="h-10 w-10 inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-brand-dark-gray/70 text-slate-600 dark:text-white hover:bg-slate-200 transition-colors">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div class="p-6 max-h-[70vh] overflow-y-auto">
+              <div id="student-detail-responses" class="space-y-4">
+                <!-- Question-by-question responses will be inserted here -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="book-view-error" class="hidden p-12 text-center">
+        <span class="material-symbols-outlined text-6xl text-red-500">error</span>
+        <p class="mt-4 text-lg font-semibold text-slate-800 dark:text-slate-200">Error Loading Data</p>
+        <p id="book-view-error-message" class="text-slate-600 dark:text-slate-400"></p>
       </div>
     </div>
   </div>
@@ -13321,6 +13482,369 @@
       if(btn){btn.disabled=!!isLoading;}
     });
   }
+
+  // ============= BOOK VIEW FUNCTIONS =============
+  var currentBookViewData = null;
+  var currentStudentDetail = null;
+
+  function openBookView() {
+    var modal = document.getElementById('book-view-modal');
+    var loading = document.getElementById('book-view-loading');
+    var content = document.getElementById('book-view-content');
+    var error = document.getElementById('book-view-error');
+
+    if (!modal || !currentMissionControlPollId) return;
+
+    // Show modal with loading state
+    modal.classList.remove('hidden');
+    loading.classList.remove('hidden');
+    content.classList.add('hidden');
+    error.classList.add('hidden');
+
+    // Fetch book view data
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.success) {
+          currentBookViewData = result;
+          renderBookView(result);
+          loading.classList.add('hidden');
+          content.classList.remove('hidden');
+        } else {
+          showBookViewError(result.error || 'Failed to load book view data');
+        }
+      })
+      .withFailureHandler(function(error) {
+        showBookViewError('Error: ' + error.message);
+      })
+      .getSecureAssessmentBookView(currentMissionControlPollId);
+  }
+
+  function closeBookView() {
+    var modal = document.getElementById('book-view-modal');
+    if (modal) modal.classList.add('hidden');
+    currentBookViewData = null;
+  }
+
+  function showBookViewError(message) {
+    var loading = document.getElementById('book-view-loading');
+    var content = document.getElementById('book-view-content');
+    var error = document.getElementById('book-view-error');
+    var errorMessage = document.getElementById('book-view-error-message');
+
+    loading.classList.add('hidden');
+    content.classList.add('hidden');
+    error.classList.remove('hidden');
+    if (errorMessage) errorMessage.textContent = message;
+  }
+
+  function renderBookView(data) {
+    // Update header
+    var title = document.getElementById('book-view-title');
+    var subtitle = document.getElementById('book-view-subtitle');
+    if (title) title.textContent = data.pollName + ' - Book View';
+    if (subtitle) subtitle.textContent = data.className + ' • ' + data.questionCount + ' questions • ' + data.studentDetails.length + ' students';
+
+    // Render class overview
+    renderClassOverview(data.classOverview, data.questionCount);
+
+    // Render student roster
+    renderStudentRoster(data.studentDetails);
+
+    // Render question analysis
+    renderQuestionAnalysis(data.itemAnalysis, data.studentDetails);
+
+    // Render response matrix
+    renderResponseMatrix(data.studentDetails, data.questionCount);
+  }
+
+  function renderClassOverview(overview, questionCount) {
+    var totalStudents = document.getElementById('book-class-total-students');
+    var average = document.getElementById('book-class-average');
+    var median = document.getElementById('book-class-median');
+    var stddev = document.getElementById('book-class-stddev');
+    var interpretation = document.getElementById('book-class-interpretation');
+
+    if (totalStudents) totalStudents.textContent = overview.participantCount;
+    if (average) {
+      var avgPct = questionCount > 0 ? Math.round((overview.mean / questionCount) * 100) : 0;
+      average.textContent = avgPct + '%';
+    }
+    if (median) median.textContent = overview.median + '/' + questionCount;
+    if (stddev) stddev.textContent = overview.stdDev.toFixed(2);
+
+    if (interpretation && overview.interpretation) {
+      var html = '';
+      if (overview.interpretation.participation) {
+        html += '<div class="mb-2"><strong>Participation:</strong> ' + overview.interpretation.participation.message + '</div>';
+      }
+      if (overview.interpretation.meanScore) {
+        html += '<div class="mb-2"><strong>Class Performance:</strong> ' + overview.interpretation.meanScore.message + '</div>';
+      }
+      if (overview.interpretation.stdDev) {
+        html += '<div><strong>Score Distribution:</strong> ' + overview.interpretation.stdDev.message + '</div>';
+      }
+      interpretation.innerHTML = html;
+    }
+  }
+
+  function renderStudentRoster(students) {
+    var tbody = document.getElementById('book-students-table-body');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+    students.forEach(function(student) {
+      var row = document.createElement('tr');
+      row.className = 'hover:bg-slate-50 dark:hover:bg-brand-dark-gray/20 transition-colors cursor-pointer';
+      row.onclick = function() { openStudentDetail(student); };
+
+      var rankBadge = '';
+      if (student.rank === 1) rankBadge = '<span class="ml-2 text-yellow-500">🥇</span>';
+      else if (student.rank === 2) rankBadge = '<span class="ml-2 text-gray-400">🥈</span>';
+      else if (student.rank === 3) rankBadge = '<span class="ml-2 text-orange-600">🥉</span>';
+
+      var percentageClass = 'text-slate-700 dark:text-slate-300';
+      if (student.percentage >= 90) percentageClass = 'text-green-600 dark:text-green-400 font-bold';
+      else if (student.percentage >= 80) percentageClass = 'text-green-600 dark:text-green-400';
+      else if (student.percentage >= 70) percentageClass = 'text-blue-600 dark:text-blue-400';
+      else if (student.percentage >= 60) percentageClass = 'text-yellow-600 dark:text-yellow-400';
+      else percentageClass = 'text-red-600 dark:text-red-400';
+
+      row.innerHTML = '<td class="px-4 py-3 text-sm font-semibold">' + student.rank + rankBadge + '</td>' +
+        '<td class="px-4 py-3 text-sm font-medium text-brand-dark-gray dark:text-white">' + escapeHtml(student.name) + '</td>' +
+        '<td class="px-4 py-3 text-sm text-center">' + student.totalScore + '/' + student.maxScore + '</td>' +
+        '<td class="px-4 py-3 text-sm text-center ' + percentageClass + '">' + student.percentage + '%</td>' +
+        '<td class="px-4 py-3 text-sm text-center">' + student.percentileRank + 'th</td>' +
+        '<td class="px-4 py-3 text-center"><button class="px-3 py-1 text-xs font-semibold rounded-lg bg-veritas-gold/10 text-veritas-gold hover:bg-veritas-gold/20 transition-colors">View Details</button></td>';
+
+      tbody.appendChild(row);
+    });
+  }
+
+  function renderQuestionAnalysis(items, students) {
+    var container = document.getElementById('book-questions-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+    items.forEach(function(item, idx) {
+      var card = document.createElement('div');
+      card.className = 'bg-white dark:bg-brand-dark-gray/30 rounded-xl border border-slate-200 dark:border-brand-dark-gray/40 p-6 shadow-sm';
+
+      var difficultyColor = item.interpretation.difficulty.color;
+      var discriminationColor = item.interpretation.discrimination.color;
+      var overallColor = item.interpretation.overall.color;
+
+      var html = '<div class="flex items-start justify-between gap-4 mb-4">' +
+        '<div class="flex-1"><h4 class="text-lg font-bold text-brand-dark-gray dark:text-white mb-2">Question ' + (idx + 1) + '</h4>' +
+        '<p class="text-sm text-slate-600 dark:text-slate-400">' + escapeHtml(item.questionText) + '</p></div>' +
+        '<div class="flex gap-2">';
+
+      item.flags.forEach(function(flag) {
+        var flagLabel = flag.replace(/-/g, ' ').toUpperCase();
+        html += '<span class="px-2 py-1 text-xs font-semibold rounded bg-red-100 text-red-800">⚠ ' + flagLabel + '</span>';
+      });
+
+      html += '</div></div>';
+
+      // Psychometric metrics
+      html += '<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">' +
+        '<div class="bg-slate-50 dark:bg-brand-dark-gray/40 rounded-lg p-3"><p class="text-xs text-slate-500 mb-1">Difficulty (P-Value)</p><p class="text-2xl font-bold" style="color:' + difficultyColor + '">' + (item.difficultyPct || 0) + '%</p><p class="text-xs text-slate-600 dark:text-slate-400">' + item.interpretation.difficulty.message + '</p></div>' +
+        '<div class="bg-slate-50 dark:bg-brand-dark-gray/40 rounded-lg p-3"><p class="text-xs text-slate-500 mb-1">Discrimination</p><p class="text-2xl font-bold" style="color:' + discriminationColor + '">' + item.discrimination.toFixed(2) + '</p><p class="text-xs text-slate-600 dark:text-slate-400">' + item.interpretation.discrimination.message + '</p></div>' +
+        '<div class="bg-slate-50 dark:bg-brand-dark-gray/40 rounded-lg p-3"><p class="text-xs text-slate-500 mb-1">Responses</p><p class="text-2xl font-bold text-slate-700 dark:text-slate-300">' + item.responseCount + '</p><p class="text-xs text-slate-600 dark:text-slate-400">students answered</p></div>' +
+        '<div class="bg-slate-50 dark:bg-brand-dark-gray/40 rounded-lg p-3"><p class="text-xs text-slate-500 mb-1">Overall Quality</p><p class="text-sm font-bold" style="color:' + overallColor + '">' + item.interpretation.overall.quality.toUpperCase() + '</p><p class="text-xs text-slate-600 dark:text-slate-400">' + item.interpretation.overall.message + '</p></div>' +
+        '</div>';
+
+      // Distractor analysis
+      if (item.distractorAnalysis && item.distractorAnalysis.length > 0) {
+        html += '<div class="border-t border-slate-200 dark:border-brand-dark-gray/40 pt-4"><h5 class="text-sm font-semibold text-brand-dark-gray dark:text-white mb-3">Answer Choice Analysis</h5>' +
+          '<div class="space-y-2">';
+
+        item.distractorAnalysis.forEach(function(dist) {
+          var isCorrect = dist.isCorrect;
+          var bgClass = isCorrect ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-slate-50 dark:bg-brand-dark-gray/40 border-slate-200 dark:border-brand-dark-gray/60';
+          var icon = isCorrect ? '✓' : '';
+
+          html += '<div class="flex items-center gap-3 p-3 rounded-lg border ' + bgClass + '">' +
+            '<div class="flex-shrink-0 w-8 h-8 rounded-full bg-white dark:bg-brand-dark-gray flex items-center justify-center font-bold text-sm">' + dist.optionLetter + '</div>' +
+            '<div class="flex-1"><p class="text-sm font-medium text-brand-dark-gray dark:text-white">' + icon + ' ' + escapeHtml(dist.option) + (isCorrect ? ' <span class="text-green-600 dark:text-green-400">(Correct Answer)</span>' : '') + '</p></div>' +
+            '<div class="text-right"><p class="text-sm font-bold text-brand-dark-gray dark:text-white">' + dist.totalPct.toFixed(1) + '%</p><p class="text-xs text-slate-500">selected</p></div>' +
+            '<div class="text-right"><p class="text-xs text-slate-500">High: ' + dist.highGroupPct.toFixed(1) + '%</p><p class="text-xs text-slate-500">Low: ' + dist.lowGroupPct.toFixed(1) + '%</p></div>' +
+            '</div>';
+        });
+
+        html += '</div></div>';
+      }
+
+      card.innerHTML = html;
+      container.appendChild(card);
+    });
+  }
+
+  function renderResponseMatrix(students, questionCount) {
+    var headerBody = document.getElementById('book-matrix-questions-header');
+    var tbody = document.getElementById('book-matrix-table-body');
+    if (!headerBody || !tbody) return;
+
+    // Create question headers
+    headerBody.innerHTML = '';
+    for (var i = 0; i < questionCount; i++) {
+      var th = document.createElement('th');
+      th.className = 'bg-slate-100 dark:bg-brand-dark-gray/50 px-3 py-2 text-center font-semibold border-l border-slate-300 dark:border-brand-dark-gray/60';
+      th.textContent = 'Q' + (i + 1);
+      headerBody.appendChild(th);
+    }
+
+    // Create student rows
+    tbody.innerHTML = '';
+    students.forEach(function(student) {
+      var row = document.createElement('tr');
+      row.className = 'hover:bg-slate-50 dark:hover:bg-brand-dark-gray/20';
+
+      var nameCell = document.createElement('td');
+      nameCell.className = 'sticky left-0 bg-white dark:bg-brand-dark-gray px-3 py-2 text-sm font-medium border-r border-slate-300 dark:border-brand-dark-gray/60';
+      nameCell.textContent = student.name;
+      row.appendChild(nameCell);
+
+      student.questionResponses.forEach(function(qResp) {
+        var cell = document.createElement('td');
+        cell.className = 'px-3 py-2 text-center text-xs border-l border-slate-200 dark:border-brand-dark-gray/60';
+
+        if (qResp.answered) {
+          if (qResp.isCorrect) {
+            cell.className += ' bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 font-semibold';
+            cell.innerHTML = '✓<br><span class="text-[10px]">' + escapeHtml(qResp.studentAnswer) + '</span>';
+          } else {
+            cell.className += ' bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 font-semibold';
+            cell.innerHTML = '✗<br><span class="text-[10px]">' + escapeHtml(qResp.studentAnswer) + '</span>';
+          }
+        } else {
+          cell.className += ' bg-slate-100 dark:bg-brand-dark-gray/40 text-slate-400';
+          cell.textContent = '—';
+        }
+
+        row.appendChild(cell);
+      });
+
+      var totalCell = document.createElement('td');
+      totalCell.className = 'px-3 py-2 text-center font-bold text-sm bg-slate-100 dark:bg-brand-dark-gray/50';
+      totalCell.textContent = student.totalScore + '/' + student.maxScore;
+      row.appendChild(totalCell);
+
+      tbody.appendChild(row);
+    });
+  }
+
+  function openStudentDetail(student) {
+    currentStudentDetail = student;
+    var detailView = document.getElementById('book-student-detail');
+    if (!detailView) return;
+
+    // Update header
+    var name = document.getElementById('student-detail-name');
+    var score = document.getElementById('student-detail-score');
+    var percentage = document.getElementById('student-detail-percentage');
+    var rank = document.getElementById('student-detail-rank');
+    var percentile = document.getElementById('student-detail-percentile');
+
+    if (name) name.textContent = student.name;
+    if (score) score.textContent = student.totalScore + '/' + student.maxScore;
+    if (percentage) percentage.textContent = student.percentage + '%';
+    if (rank) rank.textContent = '#' + student.rank;
+    if (percentile) percentile.textContent = student.percentileRank + 'th percentile';
+
+    // Render responses
+    var responsesContainer = document.getElementById('student-detail-responses');
+    if (responsesContainer) {
+      responsesContainer.innerHTML = '';
+      student.questionResponses.forEach(function(qResp, idx) {
+        var card = document.createElement('div');
+        card.className = 'bg-white dark:bg-brand-dark-gray/30 rounded-lg border border-slate-200 dark:border-brand-dark-gray/40 p-4';
+
+        var statusClass = qResp.isCorrect ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+        var statusIcon = qResp.isCorrect ? '✓' : '✗';
+        var statusText = qResp.isCorrect ? 'Correct' : 'Incorrect';
+
+        if (!qResp.answered) {
+          statusClass = 'bg-slate-100 text-slate-600 dark:bg-brand-dark-gray/40 dark:text-slate-400';
+          statusIcon = '—';
+          statusText = 'Not Answered';
+        }
+
+        var html = '<div class="flex items-start justify-between gap-4 mb-3">' +
+          '<h5 class="text-sm font-bold text-brand-dark-gray dark:text-white">Question ' + (idx + 1) + '</h5>' +
+          '<span class="px-3 py-1 text-xs font-semibold rounded-full ' + statusClass + '">' + statusIcon + ' ' + statusText + '</span>' +
+          '</div>' +
+          '<p class="text-sm text-slate-700 dark:text-slate-300 mb-3">' + escapeHtml(qResp.questionText) + '</p>';
+
+        if (qResp.answered) {
+          html += '<div class="space-y-2">' +
+            '<div><span class="text-xs font-semibold text-slate-500">Student Answer:</span> <span class="text-sm font-medium text-brand-dark-gray dark:text-white">' + escapeHtml(qResp.studentAnswer) + '</span></div>' +
+            '<div><span class="text-xs font-semibold text-slate-500">Correct Answer:</span> <span class="text-sm font-medium text-green-700 dark:text-green-400">' + escapeHtml(qResp.correctAnswer) + '</span></div>' +
+            '</div>';
+        }
+
+        card.innerHTML = html;
+        responsesContainer.appendChild(card);
+      });
+    }
+
+    detailView.classList.remove('hidden');
+  }
+
+  function closeStudentDetail() {
+    var detailView = document.getElementById('book-student-detail');
+    if (detailView) detailView.classList.add('hidden');
+    currentStudentDetail = null;
+  }
+
+  function switchBookTab(tabName) {
+    // Update tab buttons
+    var tabs = ['students', 'questions', 'matrix'];
+    tabs.forEach(function(tab) {
+      var btn = document.getElementById('book-tab-' + tab);
+      var content = document.getElementById('book-content-' + tab);
+
+      if (btn) {
+        if (tab === tabName) {
+          btn.className = 'px-6 py-3 font-semibold text-sm transition-colors border-b-2 border-veritas-gold text-veritas-gold';
+        } else {
+          btn.className = 'px-6 py-3 font-semibold text-sm transition-colors border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-veritas-gold hover:border-veritas-gold/30';
+        }
+      }
+
+      if (content) {
+        if (tab === tabName) {
+          content.classList.remove('hidden');
+        } else {
+          content.classList.add('hidden');
+        }
+      }
+    });
+  }
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    var map = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    };
+    return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
+  }
+
+  // Bind book view events
+  bindClick('view-book-report-btn', openBookView);
+
+  var bookTabStudents = document.getElementById('book-tab-students');
+  var bookTabQuestions = document.getElementById('book-tab-questions');
+  var bookTabMatrix = document.getElementById('book-tab-matrix');
+
+  if (bookTabStudents) bookTabStudents.addEventListener('click', function() { switchBookTab('students'); });
+  if (bookTabQuestions) bookTabQuestions.addEventListener('click', function() { switchBookTab('questions'); });
+  if (bookTabMatrix) bookTabMatrix.addEventListener('click', function() { switchBookTab('matrix'); });
+
+  // ============= END BOOK VIEW FUNCTIONS =============
 
   function runMissionControlAction(fnName,args){
     if(PREVIEW_MODE){

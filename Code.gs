@@ -2827,28 +2827,6 @@ function getIndividualTimedQuestion(pollId, sessionId, studentEmail, existingSta
       };
     }
 
-function buildInitialAnswerOrderMap_(poll) {
-  const answerOrders = {};
-  if (poll && Array.isArray(poll.questions)) {
-    poll.questions.forEach((q, idx) => {
-      const optionCount = Array.isArray(q.options) ? q.options.length : 0;
-      if (optionCount > 0) {
-        answerOrders[idx] = shuffleArray_(q.options.map((_, i) => i));
-      }
-    });
-  }
-  return answerOrders;
-}
-
-function shuffleArray_(array) {
-  const shuffled = array.slice();
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
-}
-
     // Check if completed all questions
     if (studentState.currentQuestionIndex >= poll.questions.length) {
       // Lock student - they finished
@@ -3771,8 +3749,30 @@ function computeSessionAggregates_(polls, responsesByPoll) {
       participationPct: Math.round(participationPct * 10) / 10,
       medianTimeSec: Math.round(medianTimeSec),
       integrityRate: Math.round(integrityRate * 10) / 10
-    };
-  });
+  };
+});
+}
+
+function buildInitialAnswerOrderMap_(poll) {
+  const answerOrders = {};
+  if (poll && Array.isArray(poll.questions)) {
+    poll.questions.forEach((q, idx) => {
+      const optionCount = Array.isArray(q.options) ? q.options.length : 0;
+      if (optionCount > 0) {
+        answerOrders[idx] = shuffleArray_(q.options.map((_, i) => i));
+      }
+    });
+  }
+  return answerOrders;
+}
+
+function shuffleArray_(array) {
+  const shuffled = array.slice();
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
 }
 
 /**

@@ -2065,11 +2065,18 @@
         }
 
         function showSecureLobby(state) {
+            var previousLobbyKey = secureLobbyContext && secureLobbyContext.lobbyKey
+                ? secureLobbyContext.lobbyKey
+                : (secureLobbyContext ? (secureLobbyContext.pollId + '|' + secureLobbyContext.sessionId) : null);
+            var nextLobbyKey = (state.pollId || 'poll') + '|' + (state.sessionId || '');
+            var isNewLobbyContext = previousLobbyKey !== nextLobbyKey;
+
             secureLobbyContext = {
                 pollId: state.pollId,
                 sessionId: state.sessionId,
                 requiresAccessCode: !!state.requiresAccessCode,
-                windowStatus: (state.availability && state.availability.windowStatus) || state.windowStatus || 'OPEN'
+                windowStatus: (state.availability && state.availability.windowStatus) || state.windowStatus || 'OPEN',
+                lobbyKey: nextLobbyKey
             };
 
             if (entryScreen) entryScreen.style.display = 'none';
@@ -2112,10 +2119,12 @@
             if (secureAccessCodeGroup) {
                 secureAccessCodeGroup.style.display = secureLobbyContext.requiresAccessCode ? 'block' : 'none';
             }
-            if (secureAccessCodeInput) {
+            if (secureAccessCodeInput && isNewLobbyContext) {
                 secureAccessCodeInput.value = '';
             }
-            setSecureAccessError('');
+            if (isNewLobbyContext) {
+                setSecureAccessError('');
+            }
             renderSecureRules(state.proctoringRules);
             updateSecureBeginButton();
         }

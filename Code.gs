@@ -1832,6 +1832,25 @@ function getPollForEditing(pollId) {
       throw new Error('Poll not found');
     }
 
+    const sessionType = normalizeSessionTypeValue_(poll.sessionType);
+    const timeLimitMinutes = (typeof poll.timeLimitMinutes === 'number')
+      ? poll.timeLimitMinutes
+      : (poll.secureSettings && typeof poll.secureSettings.timeLimitMinutes === 'number'
+        ? poll.secureSettings.timeLimitMinutes
+        : null);
+    const accessCode = poll.accessCode ? poll.accessCode.toString().trim() : '';
+    const availableFrom = poll.availableFrom || (poll.secureSettings && poll.secureSettings.availableFrom) || '';
+    const dueBy = poll.dueBy || (poll.secureSettings && poll.secureSettings.dueBy) || '';
+    let secureSettings = {};
+    if (poll.secureSettings && typeof poll.secureSettings === 'object') {
+      try {
+        secureSettings = JSON.parse(JSON.stringify(poll.secureSettings));
+      } catch (err) {
+        Logger.log('Secure settings clone fallback in getPollForEditing', err);
+        secureSettings = { ...poll.secureSettings };
+      }
+    }
+
     const questions = poll.questions.map(question => ({
       questionText: question.questionText || '',
       questionImageURL: question.questionImageURL || null,
@@ -1852,6 +1871,13 @@ function getPollForEditing(pollId) {
       className: poll.className,
       createdAt: poll.createdAt || '',
       updatedAt: poll.updatedAt || '',
+      sessionType: sessionType,
+      timeLimitMinutes: timeLimitMinutes,
+      accessCode: accessCode,
+      availableFrom: availableFrom,
+      dueBy: dueBy,
+      missionControlState: poll.missionControlState || '',
+      secureSettings: secureSettings,
       questions: questions
     };
   })();

@@ -146,7 +146,7 @@
     }
 
     .student-card {
-      width: min(98vw, 1600px);
+      width: min(96vw, 2200px);
       margin: 16px auto;
       background: var(--bg-card);
       color: var(--text-primary);
@@ -235,7 +235,7 @@
 
     .secure-session-card {
       position: relative;
-      width: min(98vw, 1600px);
+      width: min(96vw, 2200px);
       max-width: 100%;
       margin: clamp(8px, 2vw, 20px) auto;
       background: var(--bg-card);
@@ -551,6 +551,8 @@
       margin: 0 !important;
       padding: 0 !important;
       line-height: 1;
+      width: 100%;
+      display: block;
     }
 
     .student-card img {
@@ -1654,15 +1656,17 @@
                         secureQuestionState = null;
                         secureCurrentQuestionKey = null;
 
-                        // Clear the UI to show transition between questions
-                        if (secureQuestionText) secureQuestionText.textContent = '';
+                        // Show loading state instead of blank screen
+                        if (secureQuestionText) {
+                            secureQuestionText.innerHTML = '<div style="display: flex; align-items: center; gap: 12px; padding: 20px 0;"><div style="width: 24px; height: 24px; border: 3px solid rgba(18, 56, 93, 0.2); border-top-color: #12385d; border-radius: 50%; animation: veritas-spin 0.7s linear infinite;"></div><span style="color: #4b5563; font-size: 1.1rem;">Loading next question...</span></div>';
+                        }
                         if (secureQuestionImage) secureQuestionImage.style.display = 'none';
                         if (secureOptionsList) secureOptionsList.innerHTML = '';
 
-                        // Brief delay before polling to allow server state to update
+                        // Immediate polling to load next question faster
                         setTimeout(function() {
                             pollForIndividualSessionState();
-                        }, 300);
+                        }, 100);
                     } else {
                         handleError((response && response.error) || 'Failed to submit answer.');
                     }

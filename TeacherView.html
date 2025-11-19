@@ -3607,7 +3607,7 @@
                   <span>Percentile: <strong id="student-detail-percentile">0th</strong></span>
                 </div>
               </div>
-              <button onclick="closeStudentDetail()" class="h-10 w-10 inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-brand-dark-gray/70 text-slate-600 dark:text-white hover:bg-slate-200 transition-colors">
+              <button onclick="closeStudentDetail()" class="h-10 w-10 inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-brand-dark-gray/70 text-slate-600 dark:text-white hover:bg-red-500 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-red-500" title="Close" aria-label="Close student detail view">
                 <span class="material-symbols-outlined">close</span>
               </button>
             </div>
@@ -3929,11 +3929,13 @@
   var studentTableSort={column:'lastName',direction:'asc'};
   var pollInterval=null;
   var missionControlHeartbeat = window.SecureAssessmentShared.createHeartbeat({
-    intervalMs: 3000,
+    intervalMs: 6000, // Increased from 3000ms to reduce 429 errors
     onBeat: function(){
       pollIndividualSessionState();
     }
   });
+  var missionControlPollFailures = 0;
+  var missionControlBackoffMs = 0;
   var currentSecureSessionId = null;
   var currentMissionControlPollId = null;
   var missionControlStudents = [];
@@ -13365,11 +13367,50 @@
       return;
     }
 
+    // Skip this poll if we're in backoff period
+    if (missionControlBackoffMs > 0) {
+      var remaining = missionControlBackoffMs - 1000;
+      if (remaining <= 0) {
+        missionControlBackoffMs = 0;
+      } else {
+        missionControlBackoffMs = remaining;
+        console.log('Mission control polling backing off:', remaining + 'ms remaining');
+        return;
+      }
+    }
+
     google.script.run
       .withSuccessHandler(function(view) {
+        // Reset failure count on success
+        missionControlPollFailures = 0;
+        missionControlBackoffMs = 0;
         renderIndividualStudentCards(view);
       })
-      .withFailureHandler(handleError)
+      .withFailureHandler(function(error) {
+        var errorMsg = error && error.message ? error.message : String(error);
+
+        // Check if it's a 429 rate limit error
+        if (errorMsg.includes('429') || errorMsg.includes('Rate limit') || errorMsg.includes('quota')) {
+          missionControlPollFailures++;
+          // Exponential backoff: 5s, 10s, 20s, 40s (max)
+          missionControlBackoffMs = Math.min(5000 * Math.pow(2, missionControlPollFailures - 1), 40000);
+          console.warn('Rate limit hit, backing off for ' + missionControlBackoffMs + 'ms');
+
+          // Show a less alarming message to teachers
+          if (missionControlPollFailures === 1) {
+            showToast('warning', 'Slow down', 'Reducing update frequency to prevent rate limits', 3000);
+          }
+        } else {
+          // For other errors, show the error but don't stop polling
+          console.error('Mission control poll error:', error);
+          if (missionControlPollFailures < 3) {
+            // Only show error alert if it persists
+            missionControlPollFailures++;
+          } else {
+            handleError(error);
+          }
+        }
+      })
       .getIndividualTimedSessionTeacherView(currentMissionControlPollId, currentSecureSessionId);
   }
 
@@ -13795,6 +13836,16 @@
     if (detailView) detailView.classList.add('hidden');
     currentStudentDetail = null;
   }
+
+  // Add ESC key support to close student detail view
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' || e.keyCode === 27) {
+      var detailView = document.getElementById('book-student-detail');
+      if (detailView && !detailView.classList.contains('hidden')) {
+        closeStudentDetail();
+      }
+    }
+  });
 
   function switchBookTab(tabName) {
     // Update tab buttons

@@ -31,14 +31,23 @@ Veritas.Env = {
 // The Veritas Live Poll system is organized into the following modules:
 //
 // FOUNDATION LAYER
-// - _00_Config.gs (Veritas.Config)
+// - _01_Core.gs (Veritas.Core)
+//   Namespace initialization and global setup
+//
+// - _02_Config.gs (Veritas.Config)
 //   Configuration constants, session types, proctoring rules
 //
-// - _02_DataAccess.gs (DataAccess)
-//   Data access layer for spreadsheet operations (polls, responses, roster, etc.)
+// - _03_Logging.gs (Veritas.Logging)
+//   Logging utilities and error tracking
 //
-// - _05_Utils.gs (Utilities)
+// - _04_Security.gs (Veritas.Security)
+//   Authentication, authorization, and teacher verification
+//
+// - _05_Utils.gs (Veritas.Utils)
 //   Utility functions: error handling, caching, logging, rate limiting, tokens
+//
+// - _06_DataAccess.gs (DataAccess)
+//   Data access layer for spreadsheet operations (polls, responses, roster, etc.)
 //
 // MODELS LAYER (Business Logic)
 // - _07_Models_Poll.gs (Veritas.Models.Poll)
@@ -50,7 +59,7 @@ Veritas.Env = {
 // - _09_Models_Analytics.gs (Veritas.Models.Analytics)
 //   Analytics hub, psychometrics, insights, interpretations, dashboard summaries
 //
-// API/ROUTING LAYER (Phase 2D)
+// API/ROUTING LAYER
 // - _10_TeacherApi.gs (Veritas.TeacherApi)
 //   Teacher-facing server methods with security enforcement
 //   58 functions: dashboard, analytics, poll management, roster, sessions, setup
@@ -63,8 +72,12 @@ Veritas.Env = {
 //   Web app routing, authentication, template serving, image proxy
 //
 // - _13_ExposedApi.gs
-//   Centralized registry of all 67 functions exposed to google.script.run
+//   Centralized registry of all 79 functions exposed to google.script.run
 //   Thin wrappers that delegate to TeacherApi, StudentApi, or Routing
+//
+// DEVELOPMENT TOOLS
+// - _14_DevTools.gs (Veritas.DevTools)
+//   Development utilities and smoke tests
 //
 // =============================================================================
 

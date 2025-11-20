@@ -7,23 +7,799 @@
 
 Veritas.Data = Veritas.Data || {};
 
-// This module will be populated with data access functions migrated from Code.gs
-// Functions will be organized by data entity (Polls, Rosters, Classes, Responses, etc.)
+// =============================================================================
+// SPREADSHEET HELPERS
+// =============================================================================
 
 /**
  * Get the main spreadsheet
  * @returns {Spreadsheet} The main spreadsheet
- * @private
  */
-Veritas.Data.getSpreadsheet_ = function() {
-  // Will be implemented - currently in Code.gs as getDataRangeValues_ etc.
+Veritas.Data.getSpreadsheet = function() {
   return SpreadsheetApp.getActiveSpreadsheet();
 };
 
-// Placeholder: Will contain functions like:
-// - Veritas.Data.Polls.getById(pollId)
-// - Veritas.Data.Polls.create(pollData)
-// - Veritas.Data.Polls.update(pollId, pollData)
-// - Veritas.Data.Rosters.getByClass(className)
-// - Veritas.Data.Responses.getByPoll(pollId)
-// - etc.
+/**
+ * Ensure a sheet exists, create if missing
+ * @param {Spreadsheet} ss - Spreadsheet object
+ * @param {string} name - Sheet name
+ * @returns {Sheet} The sheet
+ */
+Veritas.Data.ensureSheet = function(ss, name) {
+  var sheet = ss.getSheetByName(name);
+  if (!sheet) {
+    sheet = ss.insertSheet(name);
+  }
+  return sheet;
+};
+
+/**
+ * Ensure headers exist in a sheet
+ * @param {Sheet} sheet - Sheet object
+ * @param {string[]} desiredHeaders - Array of header names
+ */
+Veritas.Data.ensureHeaders = function(sheet, desiredHeaders) {
+  var lastCol = sheet.getLastColumn();
+  var existingHeaders = [];
+
+  if (lastCol > 0) {
+    existingHeaders = sheet
+      .getRange(1, 1, 1, lastCol)
+      .getValues()[0]
+      .map(function(value) { return (value || '').toString().trim(); });
+  }
+
+  var filteredExisting = existingHeaders.filter(function(value) { return value.length > 0; });
+
+  if (filteredExisting.length === 0) {
+    sheet.getRange(1, 1, 1, desiredHeaders.length).setValues([desiredHeaders]);
+  } else {
+    var missingHeaders = desiredHeaders.filter(function(header) {
+      return filteredExisting.indexOf(header) === -1;
+    });
+
+    if (missingHeaders.length > 0) {
+      var startCol = filteredExisting.length + 1;
+      sheet.getRange(1, startCol, 1, missingHeaders.length).setValues([missingHeaders]);
+      for (var i = 0; i < missingHeaders.length; i++) {
+        filteredExisting.push(missingHeaders[i]);
+      }
+    }
+  }
+
+  var headerWidth = Math.max(sheet.getLastColumn(), desiredHeaders.length);
+  if (headerWidth > 0) {
+    sheet
+      .getRange(1, 1, 1, headerWidth)
+      .setFontWeight('bold')
+      .setBackground('#4285f4')
+      .setFontColor('#ffffff');
+  }
+  sheet.setFrozenRows(1);
+};
+
+/**
+ * Get all data values from a sheet (excluding header row)
+ * @param {Sheet} sheet - Sheet object
+ * @returns {Array[]} Array of row arrays
+ */
+Veritas.Data.getDataRangeValues = function(sheet) {
+  if (sheet.getLastRow() < 2) {
+    return [];
+  }
+  return sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
+};
+
+// =============================================================================
+// CLASSES ENTITY
+// =============================================================================
+
+Veritas.Data.Classes = {
+  /**
+   * Get all class names
+   * @returns {string[]} Array of class names (sorted)
+   */
+  getAll: function() {
+    return Veritas.Utils.CacheManager.get('CLASSES_LIST', function() {
+      var ss = Veritas.Data.getSpreadsheet();
+      var classesSheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.CLASSES);
+
+      if (classesSheet && classesSheet.getLastRow() >= 2) {
+        var values = classesSheet.getRange(2, 1, classesSheet.getLastRow() - 1, 1).getValues();
+        return values
+          .map(function(row) { return row[0]; })
+          .filter(function(name) { return name && name.toString().trim() !== ''; })
+          .map(function(name) { return name.toString().trim(); })
+          .filter(function(value, index, arr) { return arr.indexOf(value) === index; })
+          .sort();
+      }
+
+      // Fallback: Get unique classes from Rosters
+      var rosterSheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.ROSTERS);
+      var values = Veritas.Data.getDataRangeValues(rosterSheet);
+      var classNamesSet = {};
+
+      for (var i = 0; i < values.length; i++) {
+        var name = values[i][0];
+        if (name && name.toString().trim() !== '') {
+          classNamesSet[name.toString().trim()] = true;
+        }
+      }
+
+      var classNames = Object.keys(classNamesSet);
+      classNames.sort();
+      return classNames;
+    }, Veritas.Utils.CacheManager.CACHE_TIMES.LONG);
+  },
+
+  /**
+   * Ensure a class exists in the Classes sheet
+   * @param {string} className - Class name
+   * @param {string} description - Class description (optional)
+   */
+  ensureExists: function(className, description) {
+    if (!className || className.trim() === '') {
+      throw new Error('Class name cannot be empty');
+    }
+
+    var ss = Veritas.Data.getSpreadsheet();
+    var classesSheet = Veritas.Data.ensureSheet(ss, Veritas.Config.SHEET_NAMES.CLASSES);
+    Veritas.Data.ensureHeaders(classesSheet, ['ClassName', 'Description']);
+
+    var values = Veritas.Data.getDataRangeValues(classesSheet);
+    var exists = false;
+
+    for (var i = 0; i < values.length; i++) {
+      if (values[i][0] === className) {
+        exists = true;
+        break;
+      }
+    }
+
+    if (!exists) {
+      classesSheet.appendRow([className, description || '']);
+      Veritas.Utils.CacheManager.invalidate('CLASSES_LIST');
+      Veritas.Logging.info('Class created', { className: className });
+    }
+  },
+
+  /**
+   * Rename a class
+   * @param {string} oldName - Old class name
+   * @param {string} newName - New class name
+   */
+  rename: function(oldName, newName) {
+    if (!oldName || !newName || oldName.trim() === '' || newName.trim() === '') {
+      throw new Error('Class names cannot be empty');
+    }
+
+    var ss = Veritas.Data.getSpreadsheet();
+
+    // Update Classes sheet
+    var classesSheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.CLASSES);
+    if (classesSheet) {
+      var values = Veritas.Data.getDataRangeValues(classesSheet);
+      for (var i = 0; i < values.length; i++) {
+        if (values[i][0] === oldName) {
+          classesSheet.getRange(i + 2, 1).setValue(newName);
+          break;
+        }
+      }
+    }
+
+    // Update Rosters sheet
+    var rosterSheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.ROSTERS);
+    if (rosterSheet) {
+      var rosterValues = Veritas.Data.getDataRangeValues(rosterSheet);
+      for (var i = 0; i < rosterValues.length; i++) {
+        if (rosterValues[i][0] === oldName) {
+          rosterSheet.getRange(i + 2, 1).setValue(newName);
+        }
+      }
+    }
+
+    // Update Polls sheet
+    var pollsSheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.POLLS);
+    if (pollsSheet) {
+      var pollValues = Veritas.Data.getDataRangeValues(pollsSheet);
+      for (var i = 0; i < pollValues.length; i++) {
+        if (pollValues[i][2] === oldName) {
+          pollsSheet.getRange(i + 2, 3).setValue(newName);
+        }
+      }
+    }
+
+    // Invalidate caches
+    Veritas.Utils.CacheManager.invalidate(['CLASSES_LIST', 'ALL_POLLS_DATA', Veritas.Config.CLASS_LINKS_CACHE_PREFIX + oldName]);
+
+    Veritas.Logging.info('Class renamed', { oldName: oldName, newName: newName });
+  },
+
+  /**
+   * Delete a class
+   * @param {string} className - Class name to delete
+   */
+  delete: function(className) {
+    if (!className || className.trim() === '') {
+      throw new Error('Class name cannot be empty');
+    }
+
+    var ss = Veritas.Data.getSpreadsheet();
+
+    // Delete from Classes sheet
+    var classesSheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.CLASSES);
+    if (classesSheet) {
+      var values = Veritas.Data.getDataRangeValues(classesSheet);
+      for (var i = values.length - 1; i >= 0; i--) {
+        if (values[i][0] === className) {
+          classesSheet.deleteRow(i + 2);
+          break;
+        }
+      }
+    }
+
+    // Delete from Rosters sheet
+    var rosterSheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.ROSTERS);
+    if (rosterSheet) {
+      var rosterValues = Veritas.Data.getDataRangeValues(rosterSheet);
+      for (var i = rosterValues.length - 1; i >= 0; i--) {
+        if (rosterValues[i][0] === className) {
+          rosterSheet.deleteRow(i + 2);
+        }
+      }
+    }
+
+    // Invalidate caches
+    Veritas.Utils.CacheManager.invalidate(['CLASSES_LIST', Veritas.Config.CLASS_LINKS_CACHE_PREFIX + className]);
+
+    Veritas.Logging.info('Class deleted', { className: className });
+  }
+};
+
+// =============================================================================
+// ROSTERS ENTITY
+// =============================================================================
+
+Veritas.Data.Rosters = {
+  /**
+   * Get roster for a class
+   * @param {string} className - Class name
+   * @returns {Array<{name: string, email: string}>} Array of student objects
+   */
+  getByClass: function(className) {
+    var ss = Veritas.Data.getSpreadsheet();
+    var rosterSheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.ROSTERS);
+    var values = Veritas.Data.getDataRangeValues(rosterSheet);
+
+    return values
+      .filter(function(row) { return row[0] === className; })
+      .map(function(row) {
+        return {
+          name: (row[1] || '').toString().trim(),
+          email: (row[2] || '').toString().trim()
+        };
+      })
+      .filter(function(entry) { return entry.name !== '' && entry.email !== ''; })
+      .sort(function(a, b) { return a.name.localeCompare(b.name); });
+  },
+
+  /**
+   * Save roster for a class (replaces existing)
+   * @param {string} className - Class name
+   * @param {Array<{name: string, email: string}>} rosterEntries - Student entries
+   */
+  save: function(className, rosterEntries) {
+    if (!className || className.trim() === '') {
+      throw new Error('Class name cannot be empty');
+    }
+
+    var ss = Veritas.Data.getSpreadsheet();
+    var rosterSheet = Veritas.Data.ensureSheet(ss, Veritas.Config.SHEET_NAMES.ROSTERS);
+    Veritas.Data.ensureHeaders(rosterSheet, ['ClassName', 'StudentName', 'StudentEmail']);
+
+    // Remove existing entries for this class
+    var values = Veritas.Data.getDataRangeValues(rosterSheet);
+    for (var i = values.length - 1; i >= 0; i--) {
+      if (values[i][0] === className) {
+        rosterSheet.deleteRow(i + 2);
+      }
+    }
+
+    // Add new entries
+    for (var i = 0; i < rosterEntries.length; i++) {
+      var entry = rosterEntries[i];
+      if (entry.name && entry.email) {
+        rosterSheet.appendRow([className, entry.name, entry.email]);
+      }
+    }
+
+    // Invalidate cache
+    Veritas.Utils.CacheManager.invalidate(Veritas.Config.CLASS_LINKS_CACHE_PREFIX + className);
+
+    Veritas.Logging.info('Roster saved', { className: className, count: rosterEntries.length });
+  },
+
+  /**
+   * Bulk add students to roster (appends to existing)
+   * @param {string} className - Class name
+   * @param {Array<{name: string, email: string}>} studentEntries - Student entries
+   */
+  bulkAdd: function(className, studentEntries) {
+    if (!className || className.trim() === '') {
+      throw new Error('Class name cannot be empty');
+    }
+
+    var ss = Veritas.Data.getSpreadsheet();
+    var rosterSheet = Veritas.Data.ensureSheet(ss, Veritas.Config.SHEET_NAMES.ROSTERS);
+    Veritas.Data.ensureHeaders(rosterSheet, ['ClassName', 'StudentName', 'StudentEmail']);
+
+    // Get existing emails to avoid duplicates
+    var existing = Veritas.Data.Rosters.getByClass(className);
+    var existingEmails = {};
+    for (var i = 0; i < existing.length; i++) {
+      existingEmails[existing[i].email.toLowerCase()] = true;
+    }
+
+    var added = 0;
+    for (var i = 0; i < studentEntries.length; i++) {
+      var entry = studentEntries[i];
+      if (entry.name && entry.email) {
+        var emailLower = entry.email.toLowerCase();
+        if (!existingEmails[emailLower]) {
+          rosterSheet.appendRow([className, entry.name, entry.email]);
+          existingEmails[emailLower] = true;
+          added++;
+        }
+      }
+    }
+
+    // Invalidate cache
+    Veritas.Utils.CacheManager.invalidate(Veritas.Config.CLASS_LINKS_CACHE_PREFIX + className);
+
+    Veritas.Logging.info('Students bulk added to roster', { className: className, added: added });
+
+    return { added: added, skipped: studentEntries.length - added };
+  }
+};
+
+// =============================================================================
+// POLLS ENTITY
+// =============================================================================
+
+Veritas.Data.Polls = {
+  /**
+   * Get all polls
+   * @returns {Array<Object>} Array of poll objects with questions
+   */
+  getAll: function() {
+    return Veritas.Utils.CacheManager.get('ALL_POLLS_DATA', function() {
+      var ss = Veritas.Data.getSpreadsheet();
+      var pollSheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.POLLS);
+      var values = Veritas.Data.getDataRangeValues(pollSheet);
+
+      var pollsMap = {};
+
+      // Sort by pollId, then questionIndex
+      values.sort(function(a, b) {
+        if (a[0] < b[0]) return -1;
+        if (a[0] > b[0]) return 1;
+        return a[3] - b[3];
+      });
+
+      for (var i = 0; i < values.length; i++) {
+        var row = values[i];
+        var pollId = row[0];
+        var pollName = row[1];
+        var className = row[2];
+        var questionIndex = typeof row[3] === 'number' ? row[3] : parseInt(row[3], 10) || 0;
+        var createdAt = row[5] || '';
+        var updatedAt = row[6] || createdAt || '';
+        var sessionType = normalizeSessionTypeValue_(row[7] || Veritas.Config.SESSION_TYPES.LIVE);
+        var timeLimitRaw = row[8];
+        var timeLimitMinutes = typeof timeLimitRaw === 'number'
+          ? timeLimitRaw
+          : (timeLimitRaw ? Number(timeLimitRaw) : null);
+        var accessCode = row[9] || '';
+        var availableFrom = row[10] || '';
+        var dueBy = row[11] || '';
+        var missionControlState = row[12] || '';
+        var secureSettings = {};
+
+        if (row[13]) {
+          try {
+            secureSettings = JSON.parse(row[13]);
+          } catch (err) {
+            Veritas.Logging.error('Failed to parse SecureSettingsJSON', err);
+            secureSettings = {};
+          }
+        }
+
+        var questionData = normalizeQuestionObject_(JSON.parse(row[4] || "{}"), updatedAt);
+        questionData.index = questionIndex;
+
+        if (!pollsMap[pollId]) {
+          pollsMap[pollId] = {
+            pollId: pollId,
+            pollName: pollName,
+            className: className,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            sessionType: sessionType,
+            timeLimitMinutes: timeLimitMinutes,
+            accessCode: accessCode,
+            availableFrom: availableFrom,
+            dueBy: dueBy,
+            missionControlState: missionControlState,
+            secureSettings: secureSettings,
+            questions: []
+          };
+        }
+
+        var pollEntry = pollsMap[pollId];
+        pollEntry.questions.push(questionData);
+        pollEntry.questionCount = pollEntry.questions.length;
+      }
+
+      var pollsArray = [];
+      for (var pollId in pollsMap) {
+        if (pollsMap.hasOwnProperty(pollId)) {
+          pollsArray.push(pollsMap[pollId]);
+        }
+      }
+
+      return pollsArray;
+    }, Veritas.Utils.CacheManager.CACHE_TIMES.LONG);
+  },
+
+  /**
+   * Get poll by ID
+   * @param {string} pollId - Poll ID
+   * @returns {Object|null} Poll object or null
+   */
+  getById: function(pollId) {
+    var polls = Veritas.Data.Polls.getAll();
+    for (var i = 0; i < polls.length; i++) {
+      if (polls[i].pollId === pollId) {
+        return polls[i];
+      }
+    }
+    return null;
+  },
+
+  /**
+   * Write poll rows to Polls sheet
+   * @param {string} pollId - Poll ID
+   * @param {string} pollName - Poll name
+   * @param {string} className - Class name
+   * @param {Array} questions - Questions array
+   * @param {string} createdAt - Created timestamp
+   * @param {string} updatedAt - Updated timestamp
+   * @param {Object} metadata - Poll metadata (sessionType, timeLimitMinutes, etc.)
+   */
+  write: function(pollId, pollName, className, questions, createdAt, updatedAt, metadata) {
+    var ss = Veritas.Data.getSpreadsheet();
+    var pollSheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.POLLS);
+
+    if (!pollSheet) {
+      throw new Error('Polls sheet not found. Run setupSheet() first.');
+    }
+
+    var normalizedMetadata = normalizeSecureMetadata_(metadata);
+    var finalSessionType = normalizedMetadata.sessionType;
+    var finalTimeLimitMinutes = normalizedMetadata.timeLimitMinutes;
+    var accessCode = normalizedMetadata.accessCode || '';
+    var availableFrom = normalizedMetadata.availableFrom || '';
+    var dueBy = normalizedMetadata.dueBy || '';
+    var missionControlState = normalizedMetadata.missionControlState || '';
+    var secureSettingsJson = JSON.stringify(normalizedMetadata.secureSettings || {});
+
+    Veritas.Logging.info('Saving poll data', {
+      pollId: pollId,
+      sessionType: finalSessionType,
+      timeLimitMinutes: finalTimeLimitMinutes,
+      questionCount: questions.length
+    });
+
+    for (var i = 0; i < questions.length; i++) {
+      var q = questions[i];
+      var questionJson = JSON.stringify(q);
+
+      pollSheet.appendRow([
+        pollId,
+        pollName,
+        className,
+        i,
+        questionJson,
+        createdAt,
+        updatedAt,
+        finalSessionType,
+        finalTimeLimitMinutes,
+        accessCode,
+        availableFrom,
+        dueBy,
+        missionControlState,
+        secureSettingsJson
+      ]);
+    }
+
+    Veritas.Utils.CacheManager.invalidate('ALL_POLLS_DATA');
+  },
+
+  /**
+   * Remove all rows for a poll
+   * @param {string} pollId - Poll ID
+   */
+  remove: function(pollId) {
+    var ss = Veritas.Data.getSpreadsheet();
+    var pollSheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.POLLS);
+
+    if (!pollSheet) {
+      return;
+    }
+
+    var values = Veritas.Data.getDataRangeValues(pollSheet);
+
+    for (var i = values.length - 1; i >= 0; i--) {
+      if (values[i][0] === pollId) {
+        pollSheet.deleteRow(i + 2);
+      }
+    }
+
+    Veritas.Utils.CacheManager.invalidate('ALL_POLLS_DATA');
+    Veritas.Logging.info('Poll removed', { pollId: pollId });
+  }
+};
+
+// =============================================================================
+// PROPERTIES ENTITY
+// =============================================================================
+
+Veritas.Data.Properties = {
+  /**
+   * Get a script property value
+   * @param {string} key - Property key
+   * @param {*} defaultValue - Default value if not found
+   * @returns {string|null} Property value or default
+   */
+  get: function(key, defaultValue) {
+    var props = PropertiesService.getScriptProperties();
+    var value = props.getProperty(key);
+    return value !== null ? value : (defaultValue !== undefined ? defaultValue : null);
+  },
+
+  /**
+   * Set a script property value
+   * @param {string} key - Property key
+   * @param {string} value - Property value
+   */
+  set: function(key, value) {
+    var props = PropertiesService.getScriptProperties();
+    props.setProperty(key, value.toString());
+  },
+
+  /**
+   * Get a JSON property value
+   * @param {string} key - Property key
+   * @param {*} defaultValue - Default value if not found
+   * @returns {Object|null} Parsed JSON or default
+   */
+  getJson: function(key, defaultValue) {
+    var value = this.get(key);
+    if (!value) {
+      return defaultValue !== undefined ? defaultValue : null;
+    }
+
+    try {
+      return JSON.parse(value);
+    } catch (err) {
+      Veritas.Logging.error('Failed to parse JSON property', err);
+      return defaultValue !== undefined ? defaultValue : null;
+    }
+  },
+
+  /**
+   * Set a JSON property value
+   * @param {string} key - Property key
+   * @param {Object} value - Value to stringify and save
+   */
+  setJson: function(key, value) {
+    try {
+      var jsonString = JSON.stringify(value);
+      this.set(key, jsonString);
+    } catch (err) {
+      Veritas.Logging.error('Failed to stringify JSON property', err);
+      throw err;
+    }
+  },
+
+  /**
+   * Delete a script property
+   * @param {string} key - Property key
+   */
+  delete: function(key) {
+    var props = PropertiesService.getScriptProperties();
+    props.deleteProperty(key);
+  }
+};
+
+// =============================================================================
+// DRIVE ENTITY
+// =============================================================================
+
+Veritas.Data.Drive = {
+  /**
+   * Get the Drive folder for image storage
+   * @returns {Folder} Drive folder
+   */
+  getFolder: function() {
+    try {
+      return DriveApp.getFolderById(Veritas.Config.ALLOWED_FOLDER_ID);
+    } catch (err) {
+      Veritas.Logging.error('Drive folder not found', err);
+      throw new Error('Image storage folder not configured. Please set ALLOWED_FOLDER_ID.');
+    }
+  },
+
+  /**
+   * Upload image to Drive
+   * @param {string} dataUrl - Base64 data URL
+   * @param {string} fileName - File name
+   * @returns {Object} File metadata {id, url, name}
+   */
+  uploadImage: function(dataUrl, fileName) {
+    if (!dataUrl || !dataUrl.startsWith('data:image/')) {
+      throw new Error('Invalid image data URL');
+    }
+
+    // Parse data URL
+    var base64Data = dataUrl.split(',')[1];
+    var mimeType = dataUrl.split(';')[0].split(':')[1];
+
+    // Decode base64
+    var blob = Utilities.newBlob(
+      Utilities.base64Decode(base64Data),
+      mimeType,
+      fileName
+    );
+
+    // Upload to folder
+    var folder = this.getFolder();
+    var file = folder.createFile(blob);
+
+    // Set sharing to anyone with link can view
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+    Veritas.Logging.info('Image uploaded to Drive', {
+      fileId: file.getId(),
+      fileName: file.getName(),
+      size: file.getSize()
+    });
+
+    return {
+      id: file.getId(),
+      url: file.getUrl(),
+      name: file.getName(),
+      thumbnailUrl: 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(file.getId()) + '&sz=w1000'
+    };
+  },
+
+  /**
+   * Fix permissions for all files in the folder
+   * @returns {number} Number of files updated
+   */
+  fixAllImagePermissions: function() {
+    var folder = this.getFolder();
+    var files = folder.getFiles();
+    var count = 0;
+
+    while (files.hasNext()) {
+      var file = files.next();
+      try {
+        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        count++;
+      } catch (err) {
+        Veritas.Logging.error('Failed to fix file permissions', { fileId: file.getId(), error: err });
+      }
+    }
+
+    Veritas.Logging.info('Fixed image permissions', { count: count });
+    return count;
+  }
+};
+
+// =============================================================================
+// LEGACY COMPATIBILITY WRAPPERS
+// =============================================================================
+
+/**
+ * Legacy function - Get all polls
+ */
+function getPolls_() {
+  return Veritas.Data.Polls.getAll();
+}
+
+/**
+ * Legacy function - Get all classes
+ */
+function getClasses_() {
+  return Veritas.Data.Classes.getAll();
+}
+
+/**
+ * Legacy function - Get roster by class
+ */
+function getRoster_(className) {
+  return Veritas.Data.Rosters.getByClass(className);
+}
+
+/**
+ * Legacy function - Ensure sheet exists
+ */
+function ensureSheet_(ss, name) {
+  return Veritas.Data.ensureSheet(ss, name);
+}
+
+/**
+ * Legacy function - Ensure headers
+ */
+function ensureHeaders_(sheet, desiredHeaders) {
+  return Veritas.Data.ensureHeaders(sheet, desiredHeaders);
+}
+
+/**
+ * Legacy function - Get data range values
+ */
+function getDataRangeValues_(sheet) {
+  return Veritas.Data.getDataRangeValues(sheet);
+}
+
+/**
+ * Legacy function - Write poll rows
+ */
+function writePollRows_(pollId, pollName, className, questions, createdAt, updatedAt, metadata) {
+  return Veritas.Data.Polls.write(pollId, pollName, className, questions, createdAt, updatedAt, metadata);
+}
+
+/**
+ * Legacy function - Remove poll rows
+ */
+function removePollRows_(pollId) {
+  return Veritas.Data.Polls.remove(pollId);
+}
+
+/**
+ * Legacy function - Ensure class exists
+ */
+function ensureClassExists_(className, description) {
+  return Veritas.Data.Classes.ensureExists(className, description);
+}
+
+/**
+ * Legacy function - Get Drive folder
+ */
+function getDriveFolder_() {
+  return Veritas.Data.Drive.getFolder();
+}
+
+/**
+ * Legacy function - Upload image to Drive
+ */
+function uploadImageToDrive(dataUrl, fileName) {
+  return Veritas.Data.Drive.uploadImage(dataUrl, fileName);
+}
+
+/**
+ * Legacy function - Fix all image permissions
+ */
+function fixAllImagePermissions() {
+  return Veritas.Data.Drive.fixAllImagePermissions();
+}
+
+// Also make DataAccess object available for backward compatibility
+var DataAccess = {
+  roster: {
+    getByClass: function(className) {
+      return Veritas.Data.Rosters.getByClass(className);
+    }
+  }
+};

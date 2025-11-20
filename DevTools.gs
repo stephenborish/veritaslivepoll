@@ -61,9 +61,51 @@ Veritas.DevTools.test_Security = function() {
   }
 };
 
-// Additional test functions will be added during validation phase:
+/**
+ * Smoke test: Verify DataAccess module
+ */
+Veritas.DevTools.test_DataAccess = function() {
+  try {
+    // Test Classes entity
+    var classes = Veritas.Data.Classes.getAll();
+    if (!Array.isArray(classes)) {
+      throw new Error('Classes.getAll() did not return an array');
+    }
+
+    // Test Polls entity
+    var polls = Veritas.Data.Polls.getAll();
+    if (!Array.isArray(polls)) {
+      throw new Error('Polls.getAll() did not return an array');
+    }
+
+    // Test Properties entity
+    var testKey = 'DEVTOOLS_TEST_' + Date.now();
+    Veritas.Data.Properties.set(testKey, 'test_value');
+    var retrieved = Veritas.Data.Properties.get(testKey);
+    if (retrieved !== 'test_value') {
+      throw new Error('Properties get/set failed');
+    }
+    Veritas.Data.Properties.delete(testKey);
+
+    // Test JSON properties
+    var testObj = { foo: 'bar', num: 42 };
+    Veritas.Data.Properties.setJson(testKey, testObj);
+    var retrievedObj = Veritas.Data.Properties.getJson(testKey);
+    if (!retrievedObj || retrievedObj.foo !== 'bar' || retrievedObj.num !== 42) {
+      throw new Error('JSON Properties get/set failed');
+    }
+    Veritas.Data.Properties.delete(testKey);
+
+    Veritas.Logging.info('DataAccess test passed');
+    return { success: true, classCount: classes.length, pollCount: polls.length };
+  } catch (err) {
+    Veritas.Logging.error('DataAccess test failed', err);
+    return { success: false, error: err.message };
+  }
+};
+
+// Additional test functions to be added:
 // - test_PollCreation
 // - test_StudentSubmission
 // - test_ProctorLockUnlock
-// - test_DataAccess
 // etc.

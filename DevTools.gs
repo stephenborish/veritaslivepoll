@@ -104,8 +104,141 @@ Veritas.DevTools.test_DataAccess = function() {
   }
 };
 
-// Additional test functions to be added:
-// - test_PollCreation
-// - test_StudentSubmission
-// - test_ProctorLockUnlock
+/**
+ * Smoke test: Verify Models.Poll module
+ */
+Veritas.DevTools.test_ModelsPoll = function() {
+  try {
+    // Verify namespace exists
+    if (!Veritas.Models || !Veritas.Models.Poll) {
+      throw new Error('Models.Poll namespace not found');
+    }
+
+    // Verify key functions exist
+    if (typeof Veritas.Models.Poll.normalizeQuestionObject !== 'function') {
+      throw new Error('Models.Poll.normalizeQuestionObject function not found');
+    }
+    if (typeof Veritas.Models.Poll.normalizeSecureMetadata !== 'function') {
+      throw new Error('Models.Poll.normalizeSecureMetadata function not found');
+    }
+    if (typeof Veritas.Models.Poll.buildSecureAvailabilityDescriptor !== 'function') {
+      throw new Error('Models.Poll.buildSecureAvailabilityDescriptor function not found');
+    }
+
+    // Test normalizeSessionTypeValue
+    var sessionType = Veritas.Models.Poll.normalizeSessionTypeValue('LIVE');
+    if (sessionType !== Veritas.Config.SESSION_TYPES.LIVE) {
+      throw new Error('normalizeSessionTypeValue failed');
+    }
+
+    Veritas.Logging.info('Models.Poll test passed');
+    return { success: true, module: 'Models.Poll' };
+  } catch (err) {
+    Veritas.Logging.error('Models.Poll test failed', err);
+    return { success: false, error: err.message };
+  }
+};
+
+/**
+ * Smoke test: Verify Models.Session module
+ */
+Veritas.DevTools.test_ModelsSession = function() {
+  try {
+    // Verify namespace exists
+    if (!Veritas.Models || !Veritas.Models.Session) {
+      throw new Error('Models.Session namespace not found');
+    }
+
+    // Verify key functions exist
+    if (typeof Veritas.Models.Session.computeSecureTimingState !== 'function') {
+      throw new Error('Models.Session.computeSecureTimingState function not found');
+    }
+    if (typeof Veritas.Models.Session.buildSecureAssessmentLobbyState !== 'function') {
+      throw new Error('Models.Session.buildSecureAssessmentLobbyState function not found');
+    }
+    if (typeof Veritas.Models.Session.lookupStudentDisplayName !== 'function') {
+      throw new Error('Models.Session.lookupStudentDisplayName function not found');
+    }
+
+    // Test computeSecureTimingState
+    var studentState = {
+      startTime: new Date(Date.now() - 30000).toISOString(), // 30 seconds ago
+      timeAdjustmentMinutes: 0,
+      pauseDurationMs: 0
+    };
+    var poll = { timeLimitMinutes: 60 };
+    var timing = Veritas.Models.Session.computeSecureTimingState(studentState, poll, {});
+    if (typeof timing.remainingMs !== 'number') {
+      throw new Error('computeSecureTimingState did not return timing state');
+    }
+
+    Veritas.Logging.info('Models.Session test passed');
+    return { success: true, module: 'Models.Session' };
+  } catch (err) {
+    Veritas.Logging.error('Models.Session test failed', err);
+    return { success: false, error: err.message };
+  }
+};
+
+/**
+ * Smoke test: Verify Models.Analytics module
+ */
+Veritas.DevTools.test_ModelsAnalytics = function() {
+  try {
+    // Verify namespace exists
+    if (!Veritas.Models || !Veritas.Models.Analytics) {
+      throw new Error('Models.Analytics namespace not found');
+    }
+
+    // Note: This is a stub module, so just verify it exists
+    Veritas.Logging.info('Models.Analytics test passed (stub module)');
+    return { success: true, module: 'Models.Analytics', note: 'Stub module - full implementation pending' };
+  } catch (err) {
+    Veritas.Logging.error('Models.Analytics test failed', err);
+    return { success: false, error: err.message };
+  }
+};
+
+/**
+ * Smoke test: Verify Utils enhancements (URLShortener, StateVersionManager)
+ */
+Veritas.DevTools.test_UtilsEnhancements = function() {
+  try {
+    // Verify URLShortener exists
+    if (!Veritas.Utils.URLShortener || typeof Veritas.Utils.URLShortener.shorten !== 'function') {
+      throw new Error('Utils.URLShortener not found');
+    }
+
+    // Verify StateVersionManager exists
+    if (!Veritas.Utils.StateVersionManager) {
+      throw new Error('Utils.StateVersionManager not found');
+    }
+    if (typeof Veritas.Utils.StateVersionManager.bump !== 'function') {
+      throw new Error('StateVersionManager.bump function not found');
+    }
+    if (typeof Veritas.Utils.StateVersionManager.get !== 'function') {
+      throw new Error('StateVersionManager.get function not found');
+    }
+    if (typeof Veritas.Utils.StateVersionManager.noteHeartbeat !== 'function') {
+      throw new Error('StateVersionManager.noteHeartbeat function not found');
+    }
+
+    // Test StateVersionManager
+    var state = Veritas.Utils.StateVersionManager.get();
+    if (typeof state.version !== 'number') {
+      throw new Error('StateVersionManager.get did not return valid state');
+    }
+
+    Veritas.Logging.info('Utils enhancements test passed');
+    return { success: true, currentStateVersion: state.version };
+  } catch (err) {
+    Veritas.Logging.error('Utils enhancements test failed', err);
+    return { success: false, error: err.message };
+  }
+};
+
+// Additional test functions to be added in future phases:
+// - test_LivePollWorkflow
+// - test_SecureAssessmentWorkflow
+// - test_ProctorStateMachine
 // etc.

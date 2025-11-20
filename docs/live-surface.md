@@ -127,11 +127,11 @@ All exposed functions are defined in **`_13_ExposedApi.gs`** (58 total functions
 | `reportStudentViolation(pollId, token, violationType)` | _13_ExposedApi.gs:569 | ✓ Yes | Report proctoring violation |
 | `studentConfirmFullscreen(pollId, token)` | _13_ExposedApi.gs:579 | ✓ Yes | Confirm fullscreen mode |
 
-### 2.10 Utility Functions (Legacy, defined in DataAccess.gs)
+### 2.10 Utility Functions (Legacy, defined in _06_DataAccess.gs)
 
 | Function | Location | Called From HTML | Purpose |
 |----------|----------|------------------|---------|
-| `uploadImageToDrive(dataUrl, fileName)` | DataAccess.gs:787 | ✓ Yes | Upload poll question images |
+| `uploadImageToDrive(dataUrl, fileName)` | _06_DataAccess.gs:787 | ✓ Yes | Upload poll question images |
 
 ---
 
@@ -152,8 +152,8 @@ All exposed functions are defined in **`_13_ExposedApi.gs`** (58 total functions
 | `_11_StudentApi.gs` | 568 | Veritas.StudentApi | Student API with token validation |
 | `_12_Routing.gs` | 473 | Veritas.Routing | Web app routing, templates, image proxy |
 | `_13_ExposedApi.gs` | 605 | Global functions | Exposed function registry |
-| `DataAccess.gs` | 805 | Veritas.Data | Spreadsheet data access layer |
-| `DevTools.gs` | 244 | Veritas.DevTools | Development tools, smoke tests |
+| `_06_DataAccess.gs` | 805 | Veritas.Data | Spreadsheet data access layer |
+| `_14_DevTools.gs` | 244 | Veritas.DevTools | Development tools, smoke tests |
 
 **Total Active Lines:** ~11,060
 
@@ -230,7 +230,7 @@ _10_TeacherApi.gs / _11_StudentApi.gs (security checks)
     ↓
 _07_Models_Poll.gs / _08_Models_Session.gs / _09_Models_Analytics.gs (business logic)
     ↓
-DataAccess.gs / _05_Utils.gs / _02_Config.gs (data & utilities)
+_06_DataAccess.gs / _05_Utils.gs / _02_Config.gs (data & utilities)
     ↓
 SpreadsheetApp / DriveApp / PropertiesService (Google Apps Script APIs)
 ```

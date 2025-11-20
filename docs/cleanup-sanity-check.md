@@ -97,7 +97,7 @@
 | `getStudentProctorState` | _13_ExposedApi.gs:588 | Get proctor violations/fullscreen | Called from student proctor monitoring |
 | `sendPollLinkToClass` | _13_ExposedApi.gs:647 | Email links to class (STUB) | Legacy call, returns helpful error |
 
-**Note:** These functions existed as global functions in their respective modules (_07_, _08_, DataAccess.gs) but were not exposed in _13_ExposedApi.gs. They are now properly wrapped for google.script.run access.
+**Note:** These functions existed as global functions in their respective modules (_07_, _08_, _06_DataAccess.gs) but were not exposed in _13_ExposedApi.gs. They are now properly wrapped for google.script.run access.
 
 ---
 
@@ -231,8 +231,8 @@ grep -r "Models_Poll\.gs\|Models_Session\.gs\|Models_Analytics\.gs\|TeacherApi\.
 | Student API | _11_StudentApi.gs | 568 | ✅ Valid |
 | Routing | _12_Routing.gs | 473 | ✅ Valid |
 | Exposed API | _13_ExposedApi.gs | 675 | ✅ Valid (updated) |
-| Data Access | DataAccess.gs | 805 | ✅ Valid |
-| Dev Tools | DevTools.gs | 244 | ✅ Valid |
+| Data Access | _06_DataAccess.gs | 805 | ✅ Valid |
+| Dev Tools | _14_DevTools.gs | 244 | ✅ Valid |
 
 ### 5.2 Call Flow Validation
 
@@ -247,7 +247,7 @@ _10_TeacherApi.gs / _11_StudentApi.gs (security checks)
     ↓
 _07-09_Models*.gs (business logic)
     ↓
-DataAccess.gs / _05_Utils.gs / _02_Config.gs
+_06_DataAccess.gs / _05_Utils.gs / _02_Config.gs
     ↓
 Google Apps Script APIs
 ```

@@ -635,6 +635,208 @@ Veritas.Utils.TokenManager = {
 };
 
 // =============================================================================
+// URL SHORTENER
+// =============================================================================
+
+/**
+ * URL shortener using TinyURL API
+ */
+Veritas.Utils.URLShortener = {
+  /**
+   * Shorten a URL using TinyURL API
+   * Falls back to original URL if shortening fails
+   * @param {string} longUrl - URL to shorten
+   * @returns {string} Shortened URL or original if shortening fails
+   */
+  shorten: function(longUrl) {
+    try {
+      var apiUrl = 'https://tinyurl.com/api-create.php?url=' + encodeURIComponent(longUrl);
+      var response = UrlFetchApp.fetch(apiUrl, {
+        muteHttpExceptions: true,
+        followRedirects: true
+      });
+
+      if (response.getResponseCode() === 200) {
+        var shortUrl = response.getContentText().trim();
+        if (shortUrl && shortUrl.startsWith('http')) {
+          Veritas.Logging.info('URL shortened successfully', { original: longUrl, shortened: shortUrl });
+          return shortUrl;
+        }
+      }
+
+      Veritas.Logging.info('URL shortening failed, using original URL', { url: longUrl });
+      return longUrl;
+    } catch (e) {
+      Veritas.Logging.error('Error shortening URL, using original', e);
+      return longUrl;
+    }
+  }
+};
+
+// =============================================================================
+// STATE VERSION MANAGER
+// =============================================================================
+
+/**
+ * Live state versioning and heartbeat tracking
+ * Used for real-time state synchronization in live polls and secure assessments
+ */
+Veritas.Utils.StateVersionManager = {
+  VERSION_KEY: 'LIVE_STATE_VERSION_RECORD',
+  HEARTBEAT_PREFIX: 'HEARTBEAT_',
+  STALE_RECOVERY_THRESHOLD_MS: 6000,
+  OUTAGE_RECOVERY_THRESHOLD_MS: 15000,
+
+  /**
+   * Bump state version and record state change
+   * @param {Object} statePayload - State change payload
+   * @returns {Object} New state record
+   */
+  bump: function(statePayload) {
+    var props = PropertiesService.getScriptProperties();
+    var previous = this._readRecord_(props);
+    var version = (previous.version || 0) + 1;
+    var nowIso = new Date().toISOString();
+
+    var record = {
+      version: version,
+      updatedAt: nowIso,
+      pollId: typeof statePayload.pollId === 'string' ? statePayload.pollId : (previous.pollId || ''),
+      questionIndex: typeof statePayload.questionIndex === 'number' ? statePayload.questionIndex : (previous.questionIndex || -1),
+      status: statePayload.status || statePayload.reason || previous.status || 'UNKNOWN',
+      reason: statePayload.reason || 'update',
+      timerRemainingSeconds: statePayload.timerRemainingSeconds !== undefined ? statePayload.timerRemainingSeconds : null,
+      metadata: statePayload.metadata || {}
+    };
+
+    var recordStr = JSON.stringify(record);
+    props.setProperty(this.VERSION_KEY, recordStr);
+
+    // Mirror to cache for fast reads in high-frequency polling scenarios
+    try {
+      CacheService.getScriptCache().put(this.VERSION_KEY, recordStr, Veritas.Utils.CacheManager.CACHE_TIMES.INSTANT);
+    } catch (cacheError) {
+      Veritas.Logging.error('State version cache put failed', cacheError);
+    }
+
+    return record;
+  },
+
+  /**
+   * Get current state version record
+   * @returns {Object} State record
+   */
+  get: function() {
+    var cache = CacheService.getScriptCache();
+    var cached = cache.get(this.VERSION_KEY);
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (err) {
+        Veritas.Logging.error('State version cache parse failed', err);
+      }
+    }
+
+    var props = PropertiesService.getScriptProperties();
+    return this._readRecord_(props);
+  },
+
+  /**
+   * Read state record from properties
+   * @private
+   */
+  _readRecord_: function(props) {
+    var stored = props.getProperty(this.VERSION_KEY);
+    if (!stored) {
+      return {
+        version: 0,
+        updatedAt: null,
+        pollId: '',
+        questionIndex: -1,
+        status: 'PRE_LIVE',
+        reason: 'boot'
+      };
+    }
+
+    try {
+      return JSON.parse(stored);
+    } catch (err) {
+      Veritas.Logging.error('State version parse error', err);
+      return {
+        version: 0,
+        updatedAt: null,
+        pollId: '',
+        questionIndex: -1,
+        status: 'PRE_LIVE',
+        reason: 'boot'
+      };
+    }
+  },
+
+  /**
+   * Generate heartbeat cache key for a student
+   * @private
+   */
+  _heartbeatKey_: function(studentEmail) {
+    if (!studentEmail) return null;
+    return this.HEARTBEAT_PREFIX + studentEmail.replace(/[^A-Za-z0-9]/g, '_').toLowerCase();
+  },
+
+  /**
+   * Note heartbeat from student and calculate connection health
+   * @param {string} studentEmail - Student email
+   * @returns {Object} Heartbeat record with health status
+   */
+  noteHeartbeat: function(studentEmail) {
+    var key = this._heartbeatKey_(studentEmail);
+    if (!key) {
+      return { health: 'UNKNOWN', deltaMs: 0 };
+    }
+
+    var cache = CacheService.getScriptCache();
+    var cached = cache.get(key);
+    var record = { lastSeen: null, previousSeen: null };
+
+    if (cached) {
+      try {
+        record = JSON.parse(cached);
+      } catch (err) {
+        Veritas.Logging.error('Heartbeat cache parse failed', err);
+      }
+    }
+
+    record.previousSeen = record.lastSeen || null;
+    var now = new Date();
+    record.lastSeen = now.toISOString();
+
+    try {
+      cache.put(key, JSON.stringify(record), Veritas.Utils.CacheManager.CACHE_TIMES.LONG);
+    } catch (err) {
+      Veritas.Logging.error('Heartbeat cache put failed', err);
+    }
+
+    var deltaMs = 0;
+    if (record.previousSeen) {
+      deltaMs = now.getTime() - new Date(record.previousSeen).getTime();
+    }
+
+    var health = 'HEALTHY';
+    if (deltaMs > this.OUTAGE_RECOVERY_THRESHOLD_MS) {
+      health = 'RECOVERED_AFTER_OUTAGE';
+    } else if (deltaMs > this.STALE_RECOVERY_THRESHOLD_MS) {
+      health = 'RECOVERING';
+    }
+
+    return {
+      lastSeen: record.lastSeen,
+      previousSeen: record.previousSeen,
+      deltaMs: deltaMs,
+      health: health
+    };
+  }
+};
+
+// =============================================================================
 // LEGACY COMPATIBILITY - Global Objects
 // =============================================================================
 
@@ -708,5 +910,39 @@ var TokenManager = {
   },
   recordShortUrl: function(token, shortUrl) {
     return Veritas.Utils.TokenManager.recordShortUrl(token, shortUrl);
+  }
+};
+
+/**
+ * Legacy URLShortener object - delegates to Veritas.Utils.URLShortener
+ */
+var URLShortener = {
+  shorten: function(longUrl) {
+    return Veritas.Utils.URLShortener.shorten(longUrl);
+  }
+};
+
+/**
+ * Legacy StateVersionManager object - delegates to Veritas.Utils.StateVersionManager
+ */
+var StateVersionManager = {
+  VERSION_KEY: Veritas.Utils.StateVersionManager.VERSION_KEY,
+  HEARTBEAT_PREFIX: Veritas.Utils.StateVersionManager.HEARTBEAT_PREFIX,
+  STALE_RECOVERY_THRESHOLD_MS: Veritas.Utils.StateVersionManager.STALE_RECOVERY_THRESHOLD_MS,
+  OUTAGE_RECOVERY_THRESHOLD_MS: Veritas.Utils.StateVersionManager.OUTAGE_RECOVERY_THRESHOLD_MS,
+  bump: function(statePayload) {
+    return Veritas.Utils.StateVersionManager.bump(statePayload);
+  },
+  get: function() {
+    return Veritas.Utils.StateVersionManager.get();
+  },
+  _readRecord_: function(props) {
+    return Veritas.Utils.StateVersionManager._readRecord_(props);
+  },
+  _heartbeatKey_: function(studentEmail) {
+    return Veritas.Utils.StateVersionManager._heartbeatKey_(studentEmail);
+  },
+  noteHeartbeat: function(studentEmail) {
+    return Veritas.Utils.StateVersionManager.noteHeartbeat(studentEmail);
   }
 };

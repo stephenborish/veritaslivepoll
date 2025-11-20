@@ -1340,13 +1340,853 @@ Veritas.Models.Analytics.generateTeacherActionItems = function(analytics) {
 };
 
 // =============================================================================
-// STUDENT INSIGHTS & DASHBOARD (Batch 4 - TODO)
+// STUDENT INSIGHTS & DASHBOARD (Batch 4)
 // =============================================================================
-// Functions: getStudentInsights, getStudentHistoricalAnalytics,
-// getLivePollData, getDashboardSummary, helper functions
-//
-// TODO: Extract in next batch
-// =============================================================================
+
+/**
+ * Get student insights for a class with performance flags
+ * @param {string} className - Class name to analyze
+ * @param {Object} options - Optional filters {dateFrom, dateTo}
+ * @returns {Object} Student insights with flags and class statistics
+ */
+Veritas.Models.Analytics.getStudentInsights = function(className, options) {
+  return withErrorHandling(function() {
+    options = options || {};
+    var dateFrom = options.dateFrom ? new Date(options.dateFrom) : null;
+    var dateTo = options.dateTo ? new Date(options.dateTo) : null;
+
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var responsesSheet = ss.getSheetByName('Responses');
+    var proctorSheet = ss.getSheetByName('ProctorState');
+    var responseValues = responsesSheet ? getDataRangeValues_(responsesSheet) : [];
+    var proctorValues = proctorSheet ? getDataRangeValues_(proctorSheet) : [];
+
+    var roster = DataAccess.roster.getByClass(className);
+    var polls = DataAccess.polls.getByClass(className);
+
+    // Filter polls by date if specified
+    var filteredPolls = polls.filter(function(poll) {
+      var pollDate = poll.createdAt ? new Date(poll.createdAt) : null;
+      if (dateFrom && pollDate && pollDate < dateFrom) return false;
+      if (dateTo && pollDate && pollDate > dateTo) return false;
+      return true;
+    });
+
+    var pollIds = new Set(filteredPolls.map(function(p) { return p.pollId; }));
+
+    // Build student profiles
+    var studentProfiles = new Map();
+
+    roster.forEach(function(student) {
+      studentProfiles.set(student.email, {
+        email: student.email,
+        name: student.name,
+        totalQuestions: 0,
+        questionsAnswered: 0,
+        correctAnswers: 0,
+        incorrectAnswers: 0,
+        accuracy: 0,
+        participationRate: 0,
+        violations: [],
+        pollsParticipated: new Set(),
+        averageZScore: 0,
+        trend: 'stable', // 'improving', 'declining', 'stable'
+        flags: [] // 'struggling', 'non-responder', 'rule-violator', 'high-performer', 'consistent'
+      });
+    });
+
+    // Analyze responses
+    responseValues.forEach(function(row) {
+      var pollId = row[2];
+      if (!pollIds.has(pollId)) return;
+
+      var timestamp = row[1];
+      if (dateFrom && timestamp && new Date(timestamp) < dateFrom) return;
+      if (dateTo && timestamp && new Date(timestamp) > dateTo) return;
+
+      var studentEmail = (row[4] || '').toString().trim();
+      var answer = row[5];
+      var isCorrectRaw = row[6];
+      var isCorrect = (isCorrectRaw === true) || (isCorrectRaw === 'TRUE') || (isCorrectRaw === 'true') || (isCorrectRaw === 1);
+
+      if (studentProfiles.has(studentEmail)) {
+        var profile = studentProfiles.get(studentEmail);
+        profile.questionsAnswered++;
+        if (isCorrect) {
+          profile.correctAnswers++;
+        } else {
+          profile.incorrectAnswers++;
+        }
+        profile.pollsParticipated.add(pollId);
+      }
+    });
+
+    // Calculate total questions for each student
+    filteredPolls.forEach(function(poll) {
+      roster.forEach(function(student) {
+        if (studentProfiles.has(student.email)) {
+          var profile = studentProfiles.get(student.email);
+          profile.totalQuestions += poll.questionCount || poll.questions.length;
+        }
+      });
+    });
+
+    // Analyze violations
+    proctorValues.forEach(function(row) {
+      if (row[0] && row[0] !== 'PollID') { // Skip header
+        var pollId = row[0];
+        if (!pollIds.has(pollId)) return;
+
+        var studentEmail = (row[1] || '').toString().trim();
+        var status = row[2];
+        var lockReason = row[4] || '';
+        var lockedAt = row[5] || '';
+
+        if (status === 'LOCKED' && studentProfiles.has(studentEmail)) {
+          var profile = studentProfiles.get(studentEmail);
+          profile.violations.push({
+            pollId: pollId,
+            reason: lockReason,
+            timestamp: lockedAt
+          });
+        }
+      }
+    });
+
+    // Calculate metrics and assign flags
+    var studentInsights = [];
+    studentProfiles.forEach(function(profile, email) {
+      // Calculate accuracy
+      var totalAnswered = profile.correctAnswers + profile.incorrectAnswers;
+      profile.accuracy = totalAnswered > 0 ? (profile.correctAnswers / totalAnswered) * 100 : 0;
+
+      // Calculate participation rate
+      profile.participationRate = profile.totalQuestions > 0
+        ? (profile.questionsAnswered / profile.totalQuestions) * 100
+        : 0;
+
+      // Assign flags
+      if (profile.accuracy < 50 && totalAnswered >= 5) {
+        profile.flags.push('struggling');
+      }
+      if (profile.accuracy >= 85 && totalAnswered >= 5) {
+        profile.flags.push('high-performer');
+      }
+      if (profile.participationRate < 50 && profile.totalQuestions >= 5) {
+        profile.flags.push('non-responder');
+      }
+      if (profile.violations.length >= 2) {
+        profile.flags.push('rule-violator');
+      }
+      if (profile.accuracy >= 75 && profile.participationRate >= 90) {
+        profile.flags.push('consistent');
+      }
+
+      // Convert Set to array for JSON serialization
+      profile.pollsParticipated = Array.from(profile.pollsParticipated);
+
+      studentInsights.push(profile);
+    });
+
+    // Sort by flags (struggling and rule violators first)
+    studentInsights.sort(function(a, b) {
+      var aPriority = a.flags.indexOf('struggling') !== -1 || a.flags.indexOf('rule-violator') !== -1 ? 0 : 1;
+      var bPriority = b.flags.indexOf('struggling') !== -1 || b.flags.indexOf('rule-violator') !== -1 ? 0 : 1;
+      if (aPriority !== bPriority) return aPriority - bPriority;
+      return b.accuracy - a.accuracy;
+    });
+
+    // Calculate class-wide statistics
+    var classStats = {
+      totalStudents: studentInsights.length,
+      strugglingCount: studentInsights.filter(function(s) { return s.flags.indexOf('struggling') !== -1; }).length,
+      nonResponderCount: studentInsights.filter(function(s) { return s.flags.indexOf('non-responder') !== -1; }).length,
+      ruleViolatorCount: studentInsights.filter(function(s) { return s.flags.indexOf('rule-violator') !== -1; }).length,
+      highPerformerCount: studentInsights.filter(function(s) { return s.flags.indexOf('high-performer') !== -1; }).length,
+      averageAccuracy: studentInsights.reduce(function(sum, s) { return sum + s.accuracy; }, 0) / studentInsights.length || 0,
+      averageParticipation: studentInsights.reduce(function(sum, s) { return sum + s.participationRate; }, 0) / studentInsights.length || 0
+    };
+
+    return {
+      success: true,
+      className: className,
+      dateRange: { from: dateFrom, to: dateTo },
+      classStats: classStats,
+      students: studentInsights,
+      pollsAnalyzed: filteredPolls.length
+    };
+  })();
+};
+
+/**
+ * Get detailed historical analytics for a specific student
+ * Includes performance trends, violation history, and per-poll breakdown
+ * @param {string} studentEmail - Student email to analyze
+ * @param {string} className - Class name
+ * @param {Object} options - Optional filters {dateFrom, dateTo}
+ * @returns {Object} Historical analytics with trends and confidence data
+ */
+Veritas.Models.Analytics.getStudentHistoricalAnalytics = function(studentEmail, className, options) {
+  return withErrorHandling(function() {
+    options = options || {};
+    var dateFrom = options.dateFrom ? new Date(options.dateFrom) : null;
+    var dateTo = options.dateTo ? new Date(options.dateTo) : null;
+
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var responsesSheet = ss.getSheetByName('Responses');
+    var proctorSheet = ss.getSheetByName('ProctorState');
+    var responseValues = responsesSheet ? getDataRangeValues_(responsesSheet) : [];
+    var proctorValues = proctorSheet ? getDataRangeValues_(proctorSheet) : [];
+
+    var polls = DataAccess.polls.getByClass(className);
+
+    // Filter polls by date
+    var filteredPolls = polls.filter(function(poll) {
+      var pollDate = poll.createdAt ? new Date(poll.createdAt) : null;
+      if (dateFrom && pollDate && pollDate < dateFrom) return false;
+      if (dateTo && pollDate && pollDate > dateTo) return false;
+      return true;
+    }).sort(function(a, b) { return new Date(a.createdAt) - new Date(b.createdAt); });
+
+    // Build per-poll performance
+    var pollPerformance = [];
+    var overallStats = {
+      totalPolls: filteredPolls.length,
+      pollsParticipated: 0,
+      totalQuestions: 0,
+      questionsAnswered: 0,
+      correctAnswers: 0,
+      accuracy: 0,
+      violations: [],
+      confidenceData: {
+        confidentCorrect: 0,
+        confidentIncorrect: 0,
+        uncertainCorrect: 0,
+        uncertainIncorrect: 0
+      }
+    };
+
+    filteredPolls.forEach(function(poll) {
+      var pollResponses = responseValues.filter(function(row) {
+        return row[2] === poll.pollId && (row[4] || '').toString().trim() === studentEmail;
+      });
+
+      var correctCount = pollResponses.filter(function(r) {
+        var isCorrectRaw = r[6];
+        return (isCorrectRaw === true) || (isCorrectRaw === 'TRUE') || (isCorrectRaw === 'true') || (isCorrectRaw === 1);
+      }).length;
+
+      var totalQuestions = poll.questionCount || poll.questions.length;
+      var answered = pollResponses.length;
+      var accuracy = answered > 0 ? (correctCount / answered) * 100 : 0;
+
+      // Check for violations in this poll
+      var pollViolations = proctorValues.filter(function(row) {
+        return row[0] === poll.pollId &&
+               (row[1] || '').toString().trim() === studentEmail &&
+               row[2] === 'LOCKED';
+      });
+
+      // Analyze confidence data
+      var confidenceData = {
+        confidentCorrect: 0,
+        confidentIncorrect: 0,
+        uncertainCorrect: 0,
+        uncertainIncorrect: 0
+      };
+
+      pollResponses.forEach(function(r) {
+        var confidence = r[7];
+        var isCorrectRaw = r[6];
+        var isCorrect = (isCorrectRaw === true) || (isCorrectRaw === 'TRUE') || (isCorrectRaw === 'true') || (isCorrectRaw === 1);
+        var isConfident = (confidence === 'very-sure' || confidence === 'certain');
+
+        if (confidence) {
+          if (isConfident && isCorrect) {
+            confidenceData.confidentCorrect++;
+            overallStats.confidenceData.confidentCorrect++;
+          } else if (isConfident && !isCorrect) {
+            confidenceData.confidentIncorrect++;
+            overallStats.confidenceData.confidentIncorrect++;
+          } else if (!isConfident && isCorrect) {
+            confidenceData.uncertainCorrect++;
+            overallStats.confidenceData.uncertainCorrect++;
+          } else {
+            confidenceData.uncertainIncorrect++;
+            overallStats.confidenceData.uncertainIncorrect++;
+          }
+        }
+      });
+
+      pollPerformance.push({
+        pollId: poll.pollId,
+        pollName: poll.pollName,
+        date: poll.createdAt,
+        totalQuestions: totalQuestions,
+        questionsAnswered: answered,
+        correctAnswers: correctCount,
+        accuracy: Math.round(accuracy * 10) / 10,
+        participated: answered > 0,
+        violations: pollViolations.length,
+        confidenceData: confidenceData
+      });
+
+      // Update overall stats
+      overallStats.totalQuestions += totalQuestions;
+      overallStats.questionsAnswered += answered;
+      overallStats.correctAnswers += correctCount;
+      if (answered > 0) overallStats.pollsParticipated++;
+      pollViolations.forEach(function(v) {
+        overallStats.violations.push({
+          pollId: poll.pollId,
+          pollName: poll.pollName,
+          reason: v[4] || '',
+          timestamp: v[5] || ''
+        });
+      });
+    });
+
+    overallStats.accuracy = overallStats.questionsAnswered > 0
+      ? Math.round((overallStats.correctAnswers / overallStats.questionsAnswered) * 100 * 10) / 10
+      : 0;
+
+    // Calculate trend (last 5 polls vs previous 5 polls)
+    var trend = 'stable';
+    if (pollPerformance.length >= 10) {
+      var recent5 = pollPerformance.slice(-5);
+      var previous5 = pollPerformance.slice(-10, -5);
+      var recentAvg = recent5.reduce(function(sum, p) { return sum + p.accuracy; }, 0) / 5;
+      var previousAvg = previous5.reduce(function(sum, p) { return sum + p.accuracy; }, 0) / 5;
+
+      if (recentAvg > previousAvg + 10) trend = 'improving';
+      else if (recentAvg < previousAvg - 10) trend = 'declining';
+    }
+
+    return {
+      success: true,
+      studentEmail: studentEmail,
+      className: className,
+      dateRange: { from: dateFrom, to: dateTo },
+      overallStats: overallStats,
+      pollPerformance: pollPerformance,
+      trend: trend
+    };
+  })();
+};
+
+/**
+ * Get dashboard summary data (recent sessions and activity)
+ * @returns {Object} Dashboard summary with recent sessions and activity trends
+ */
+Veritas.Models.Analytics.getDashboardSummary = function() {
+  return withErrorHandling(function() {
+    var cacheKey = 'DASHBOARD_SUMMARY';
+
+    return CacheManager.get(cacheKey, function() {
+      try {
+        var analyticsData = Veritas.Models.Analytics.getAnalyticsData({});
+        var sessions = analyticsData.sessions || [];
+
+        // Get recent 5 sessions
+        var recentSessions = sessions
+          .sort(function(a, b) { return new Date(b.date) - new Date(a.date); })
+          .slice(0, 5)
+          .map(function(session) {
+            return {
+              sessionId: session.sessionId || '',
+              sessionName: session.sessionName || 'Untitled',
+              className: session.className || '',
+              date: session.date || new Date().toISOString(),
+              masteryPct: session.masteryPct || 0,
+              participationPct: session.participationPct || 0,
+              flags: (session.integrityRate > 1.5 && session.totalStudents) ? Math.round(session.integrityRate * session.totalStudents / 10) : 0
+            };
+          });
+
+        // Calculate daily activity for the last 7 days
+        var ss = SpreadsheetApp.getActiveSpreadsheet();
+        var responsesSheet = ss.getSheetByName('Responses');
+        var responseValues = responsesSheet ? getDataRangeValues_(responsesSheet) : [];
+
+        var now = new Date();
+        var sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+
+        var dailyActivity = {};
+        var dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+        // Initialize last 7 days
+        for (var i = 6; i >= 0; i--) {
+          var date = new Date(now.getTime() - (i * 24 * 60 * 60 * 1000));
+          var dateKey = date.toISOString().split('T')[0];
+          var dayName = i === 0 ? 'Today' : dayNames[date.getDay()];
+          dailyActivity[dateKey] = {
+            date: dateKey,
+            dayName: dayName,
+            count: 0
+          };
+        }
+
+        // Count responses by day
+        responseValues.forEach(function(row) {
+          var timestamp = row[1]; // Timestamp column
+          if (timestamp && timestamp >= sevenDaysAgo) {
+            var dateKey = new Date(timestamp).toISOString().split('T')[0];
+            if (dailyActivity[dateKey]) {
+              dailyActivity[dateKey].count++;
+            }
+          }
+        });
+
+        var activityArray = Object.keys(dailyActivity).map(function(key) { return dailyActivity[key]; });
+        var totalThisWeek = activityArray.reduce(function(sum, day) { return sum + day.count; }, 0);
+
+        // Calculate previous week for comparison
+        var fourteenDaysAgo = new Date(now.getTime() - (14 * 24 * 60 * 60 * 1000));
+        var totalLastWeek = 0;
+        responseValues.forEach(function(row) {
+          var timestamp = row[1];
+          if (timestamp && timestamp >= fourteenDaysAgo && timestamp < sevenDaysAgo) {
+            totalLastWeek++;
+          }
+        });
+
+        var weekOverWeekChange = totalLastWeek > 0
+          ? Math.round(((totalThisWeek - totalLastWeek) / totalLastWeek) * 100)
+          : 0;
+
+        Logger.log('Dashboard summary computed', {
+          recentSessions: recentSessions.length,
+          totalActivityThisWeek: totalThisWeek
+        });
+
+        return {
+          recentSessions: recentSessions,
+          dailyActivity: activityArray,
+          weekOverWeekChange: weekOverWeekChange,
+          totalActivityThisWeek: totalThisWeek
+        };
+      } catch (error) {
+        Logger.error('Error in getDashboardSummary', error);
+        // Return empty but valid structure
+        return {
+          recentSessions: [],
+          dailyActivity: [],
+          weekOverWeekChange: 0,
+          totalActivityThisWeek: 0
+        };
+      }
+    }, CacheManager.CACHE_TIMES.SHORT);
+  })();
+};
+
+/**
+ * Get live poll data for dashboard (real-time question status)
+ * @param {string} pollId - Poll ID
+ * @param {number} questionIndex - Question index
+ * @returns {Object} Live poll data with student statuses and results
+ */
+Veritas.Models.Analytics.getLivePollData = function(pollId, questionIndex) {
+  return withErrorHandling(function() {
+    var poll = DataAccess.polls.getById(pollId);
+    if (!poll) throw new Error("Poll not found");
+
+    var question = poll.questions[questionIndex];
+    if (!question) throw new Error("Question not found");
+
+    // DEBUG: Log before normalization
+    Logger.log('=== BEFORE NORMALIZATION ===');
+    Logger.log('questionImageFileId: ' + question.questionImageFileId);
+    Logger.log('options count: ' + (question.options ? question.options.length : 0));
+    if (question.options && question.options.length > 0) {
+      question.options.forEach(function(opt, idx) {
+        Logger.log('  Option ' + idx + ': imageFileId=' + opt.imageFileId);
+      });
+    }
+
+    question = normalizeQuestionObject_(question, poll.updatedAt);
+
+    // DEBUG: Log after normalization
+    Logger.log('=== AFTER NORMALIZATION ===');
+    Logger.log('questionImageURL: ' + question.questionImageURL);
+    Logger.log('options count: ' + (question.options ? question.options.length : 0));
+    if (question.options && question.options.length > 0) {
+      question.options.forEach(function(opt, idx) {
+        Logger.log('  Option ' + idx + ': imageURL=' + opt.imageURL);
+      });
+    }
+
+    poll.questions[questionIndex] = question;
+
+    var liveStatus = DataAccess.liveStatus.get();
+    var pollStatus = Array.isArray(liveStatus) ? (liveStatus[2] || 'OPEN') : 'OPEN';
+    var statusQuestionIndex = Array.isArray(liveStatus) ? liveStatus[1] : -1;
+    var metadata = (liveStatus && liveStatus.metadata) ? liveStatus.metadata : {};
+    var currentSessionId = metadata && metadata.sessionId ? metadata.sessionId : null;
+    var endedAt = metadata && Object.prototype.hasOwnProperty.call(metadata, 'endedAt') ? metadata.endedAt : null;
+    var ended = (metadata && metadata.sessionPhase === 'ENDED') || (!!endedAt && endedAt !== null && endedAt !== '');
+    var derivedStatus = metadata && metadata.sessionPhase ? metadata.sessionPhase : null;
+
+    if (!derivedStatus) {
+      if (ended) {
+        derivedStatus = 'ENDED';
+      } else if (pollStatus === 'PAUSED') {
+        derivedStatus = 'PAUSED';
+      } else if (pollStatus === 'OPEN') {
+        derivedStatus = statusQuestionIndex >= 0 ? 'LIVE' : 'PRE_LIVE';
+      } else if (pollStatus === 'CLOSED') {
+        derivedStatus = statusQuestionIndex >= 0 ? 'ENDED' : 'PRE_LIVE';
+      } else {
+        derivedStatus = 'PRE_LIVE';
+      }
+    }
+
+    if (derivedStatus === 'LIVE' && statusQuestionIndex < 0 && !ended) {
+      derivedStatus = 'PRE_LIVE';
+    }
+
+    if (ended) {
+      derivedStatus = 'ENDED';
+    }
+
+    var roster = DataAccess.roster.getByClass(poll.className);
+    var pollResponses = DataAccess.responses.getByPoll(pollId);
+
+    var submittedAnswers = new Map();
+    pollResponses
+      .filter(function(r) { return r[3] === questionIndex; })
+      .forEach(function(r) {
+        var email = r[4];
+        var rawCorrect = r[6];
+        var isCorrect = (rawCorrect === true) || (rawCorrect === 'TRUE') || (rawCorrect === 'true') || (rawCorrect === 1);
+        submittedAnswers.set(email, {
+          timestamp: r[1],
+          answer: r[5],
+          isCorrect: isCorrect,
+          confidence: r[7] || null
+        });
+      });
+
+    var lockedStudents = new Set();
+    pollResponses
+      .filter(function(r) { return r[3] === -1 && Veritas.Config.PROCTOR_VIOLATION_VALUES.indexOf(r[5]) !== -1; })
+      .forEach(function(r) { lockedStudents.add(r[4]); });
+
+    // OPTIMIZATION: Batch load all proctor states in a single operation
+    var studentEmails = roster.map(function(s) { return s.email; });
+    var proctorStates = ProctorAccess.getStatesBatch(pollId, studentEmails, currentSessionId);
+
+    var studentStatusList = roster.map(function(student) {
+      var email = student.email;
+
+      // Get proctor state from batch-loaded map
+      var proctorState = proctorStates.get(email);
+
+      // Get submission if exists
+      var submission = submittedAnswers.has(email) ? submittedAnswers.get(email) : null;
+
+      var nameParts = Veritas.Models.Analytics.extractStudentNameParts(student.name);
+      var fullName = nameParts.trimmed || student.name || '';
+      var displayName = nameParts.displayName || fullName;
+      var shortName = Veritas.Models.Analytics.formatStudentName(student.name);
+
+      var baseStudent = {
+        name: fullName || displayName,
+        displayName: displayName,
+        shortName: shortName,
+        firstName: nameParts.firstName || displayName,
+        lastName: nameParts.lastName || '',
+        email: email,
+        lockVersion: proctorState.lockVersion,
+        lockReason: proctorState.lockReason,
+        lockedAt: proctorState.lockedAt,
+        blockedBy: proctorState.blockedBy || '',
+        blockedAt: proctorState.blockedAt || '',
+        blockedNote: proctorState.blockedNote || '',
+        answer: submission ? submission.answer : '---',
+        isCorrect: submission ? submission.isCorrect : null,
+        timestamp: submission ? submission.timestamp : 0,
+        sessionViolations: proctorState.sessionViolations || 0,
+        sessionExits: proctorState.sessionExits || 0,
+        confidence: submission ? (submission.confidence || null) : null
+      };
+
+      if (proctorState.status === 'BLOCKED') {
+        baseStudent.status = 'BLOCKED';
+        baseStudent.statusNote = proctorState.blockedNote || 'teacher-block';
+        return baseStudent;
+      }
+
+      if (proctorState.status === 'LOCKED' || proctorState.status === 'AWAITING_FULLSCREEN') {
+        baseStudent.status = proctorState.status === 'AWAITING_FULLSCREEN' ? 'AWAITING_FULLSCREEN' : 'LOCKED';
+        return baseStudent;
+      }
+
+      if (submission) {
+        baseStudent.status = 'Submitted';
+        baseStudent.statusNote = submission.isCorrect === true ? 'correct' : (submission.isCorrect === false ? 'incorrect' : 'submitted');
+        return baseStudent;
+      }
+
+      baseStudent.status = 'Waiting...';
+      baseStudent.statusNote = 'waiting';
+      baseStudent.timestamp = 9999999999999;
+      return baseStudent;
+    });
+
+    // Compute metacognition summary
+    var metacognitionSummary = (function() {
+      Logger.log('=== COMPUTING METACOGNITION SUMMARY ===');
+      Logger.log('question.metacognitionEnabled: ' + question.metacognitionEnabled);
+
+      var summary = {
+        enabled: !!question.metacognitionEnabled,
+        totalResponses: 0,
+        responseRate: 0,
+        matrixCounts: {
+          confidentCorrect: 0,
+          confidentIncorrect: 0,
+          uncertainCorrect: 0,
+          uncertainIncorrect: 0
+        },
+        matrixPercentages: null,
+        levels: {},
+        flaggedStudents: []
+      };
+
+      Logger.log('summary.enabled: ' + summary.enabled);
+
+      if (!summary.enabled) {
+        Logger.log('Metacognition not enabled - returning empty summary');
+        return summary;
+      }
+
+      Logger.log('Metacognition enabled - computing statistics');
+
+      var levelKeys = ['guessing', 'somewhat-sure', 'very-sure', 'certain'];
+      var levelStats = {};
+      levelKeys.forEach(function(key) {
+        levelStats[key] = { total: 0, correct: 0, incorrect: 0 };
+      });
+
+      var totalConfidenceResponses = 0;
+
+      submittedAnswers.forEach(function(submission) {
+        var confidence = submission.confidence;
+        if (!confidence) return;
+
+        if (!Object.prototype.hasOwnProperty.call(levelStats, confidence)) {
+          levelStats[confidence] = { total: 0, correct: 0, incorrect: 0 };
+        }
+
+        levelStats[confidence].total++;
+        if (submission.isCorrect) {
+          levelStats[confidence].correct++;
+        } else {
+          levelStats[confidence].incorrect++;
+        }
+
+        totalConfidenceResponses++;
+
+        var isConfident = (confidence === 'very-sure' || confidence === 'certain');
+
+        if (isConfident && submission.isCorrect) {
+          summary.matrixCounts.confidentCorrect++;
+        } else if (isConfident && !submission.isCorrect) {
+          summary.matrixCounts.confidentIncorrect++;
+        } else if (!isConfident && submission.isCorrect) {
+          summary.matrixCounts.uncertainCorrect++;
+        } else {
+          summary.matrixCounts.uncertainIncorrect++;
+        }
+      });
+
+      summary.totalResponses = totalConfidenceResponses;
+      summary.responseRate = roster.length > 0
+        ? Math.round((totalConfidenceResponses / roster.length) * 100)
+        : 0;
+
+      if (totalConfidenceResponses > 0) {
+        summary.matrixPercentages = {
+          confidentCorrect: Math.round((summary.matrixCounts.confidentCorrect / totalConfidenceResponses) * 100),
+          confidentIncorrect: Math.round((summary.matrixCounts.confidentIncorrect / totalConfidenceResponses) * 100),
+          uncertainCorrect: Math.round((summary.matrixCounts.uncertainCorrect / totalConfidenceResponses) * 100),
+          uncertainIncorrect: Math.round((summary.matrixCounts.uncertainIncorrect / totalConfidenceResponses) * 100)
+        };
+      }
+
+      summary.levels = {};
+      Object.keys(levelStats).forEach(function(level) {
+        var stats = levelStats[level];
+        var total = stats.total;
+        summary.levels[level] = {
+          total: total,
+          correct: stats.correct,
+          incorrect: stats.incorrect,
+          totalPct: totalConfidenceResponses > 0 ? Math.round((total / totalConfidenceResponses) * 100) : 0,
+          correctPct: total > 0 ? Math.round((stats.correct / total) * 100) : 0,
+          incorrectPct: total > 0 ? Math.round((stats.incorrect / total) * 100) : 0
+        };
+      });
+
+      summary.flaggedStudents = studentStatusList
+        .filter(function(student) {
+          if (!student || !student.confidence) return false;
+          var isConfident = (student.confidence === 'very-sure' || student.confidence === 'certain');
+          return isConfident && student.isCorrect === false;
+        })
+        .map(function(student) {
+          return {
+            name: student.displayName || student.name || '',
+            email: student.email,
+            answer: student.answer || '',
+            confidence: student.confidence
+          };
+        });
+
+      return summary;
+    })();
+
+    var answerCounts = {};
+    question.options.forEach(function(opt) {
+      if (opt.text) answerCounts[opt.text] = 0;
+    });
+
+    submittedAnswers.forEach(function(submission) {
+      if (answerCounts.hasOwnProperty(submission.answer)) {
+        answerCounts[submission.answer]++;
+      }
+    });
+
+    return {
+      status: derivedStatus,
+      pollId: pollId,
+      pollName: poll.pollName,
+      questionText: question.questionText || '',
+      questionImageURL: question.questionImageURL || null,
+      options: question.options || [],
+      questionIndex: questionIndex,
+      totalQuestions: poll.questions.length,
+      correctAnswer: question.correctAnswer || null,
+      results: answerCounts,
+      studentStatusList: studentStatusList,
+      totalStudents: roster.length,
+      totalResponses: submittedAnswers.size,
+      timerSeconds: question.timerSeconds || null,
+      metadata: metadata,
+      authoritativeStatus: derivedStatus,
+      metacognition: metacognitionSummary
+    };
+  })();
+};
+
+/**
+ * Extract normalized name parts for sorting and display
+ * @param {string} fullName - Student's full name
+ * @returns {Object} Name parts {raw, trimmed, firstName, lastName, displayName}
+ */
+Veritas.Models.Analytics.extractStudentNameParts = function(fullName) {
+  if (!fullName || typeof fullName !== 'string') {
+    return { raw: '', trimmed: '', firstName: '', lastName: '', displayName: '' };
+  }
+
+  var trimmed = fullName.trim();
+  if (!trimmed) {
+    return { raw: fullName, trimmed: '', firstName: '', lastName: '', displayName: '' };
+  }
+
+  var parts = trimmed.split(/\s+/).filter(Boolean);
+  var firstName = parts.length > 0 ? parts[0] : '';
+  var lastName = parts.length > 1 ? parts[parts.length - 1] : '';
+  var displayName = [firstName, lastName].filter(Boolean).join(' ').trim() || trimmed;
+
+  return { raw: fullName, trimmed: trimmed, firstName: firstName, lastName: lastName, displayName: displayName };
+};
+
+/**
+ * Format student name as "FirstName L." (first name + last initial)
+ * @param {string} fullName - Student's full name
+ * @returns {string} Formatted name
+ */
+Veritas.Models.Analytics.formatStudentName = function(fullName) {
+  var parts = Veritas.Models.Analytics.extractStudentNameParts(fullName);
+  if (!parts.trimmed) return '';
+  if (!parts.lastName) return parts.displayName || parts.trimmed;
+  var lastInitial = parts.lastName.charAt(0).toUpperCase();
+  return parts.firstName + ' ' + lastInitial + '.';
+};
+
+/**
+ * Build submitted answers map for a poll question
+ * @param {string} pollId - Poll ID
+ * @param {number} questionIndex - Question index
+ * @returns {Map} Map of student email -> submission data
+ */
+Veritas.Models.Analytics.buildSubmittedAnswersMap = function(pollId, questionIndex) {
+  var responses = DataAccess.responses.getByPollAndQuestion(pollId, questionIndex) || [];
+  var submissions = new Map();
+
+  responses.forEach(function(row) {
+    var email = (row[4] || '').toString().trim();
+    if (!email) return;
+
+    var answer = row[5];
+    var rawCorrect = row[6];
+    var isCorrect = (rawCorrect === true) || (rawCorrect === 'TRUE') || (rawCorrect === 'true') || (rawCorrect === 1);
+    var timestamp = typeof row[1] === 'number' ? row[1] : null;
+
+    submissions.set(email, {
+      answer: answer,
+      isCorrect: isCorrect,
+      timestamp: timestamp
+    });
+  });
+
+  return submissions;
+};
+
+/**
+ * Compute answer counts from submissions
+ * @param {Object} question - Question object with options
+ * @param {Map} submissionsMap - Submissions map
+ * @returns {Object} Counts by answer option
+ */
+Veritas.Models.Analytics.computeAnswerCounts = function(question, submissionsMap) {
+  var counts = {};
+  var options = (question && Array.isArray(question.options)) ? question.options : [];
+
+  options.forEach(function(opt) {
+    if (opt && Object.prototype.hasOwnProperty.call(opt, 'text') && opt.text) {
+      counts[opt.text] = 0;
+    }
+  });
+
+  submissionsMap.forEach(function(submission) {
+    var key = submission.answer;
+    if (key && Object.prototype.hasOwnProperty.call(counts, key)) {
+      counts[key]++;
+    }
+  });
+
+  return counts;
+};
+
+/**
+ * Compute answer percentages from counts
+ * @param {Object} answerCounts - Answer counts by option
+ * @returns {Object} Percentages and total responses
+ */
+Veritas.Models.Analytics.computeAnswerPercentages = function(answerCounts) {
+  var percentages = {};
+  var values = Object.keys(answerCounts || {}).map(function(k) { return answerCounts[k]; });
+  var total = values.reduce(function(sum, value) { return sum + (typeof value === 'number' ? value : 0); }, 0);
+
+  Object.keys(answerCounts || {}).forEach(function(key) {
+    var count = typeof answerCounts[key] === 'number' ? answerCounts[key] : 0;
+    percentages[key] = total > 0 ? Math.round((count / total) * 100) : 0;
+  });
+
+  return { percentages: percentages, totalResponses: total };
+};
 
 // =============================================================================
 // LEGACY COMPATIBILITY WRAPPERS
@@ -1460,4 +2300,41 @@ function getItemActionableInsights(item) {
 
 function generateTeacherActionItems(analytics) {
   return Veritas.Models.Analytics.generateTeacherActionItems(analytics);
+}
+
+// Student Insights & Dashboard wrappers (Batch 4)
+function getStudentInsights(className, options) {
+  return Veritas.Models.Analytics.getStudentInsights(className, options);
+}
+
+function getStudentHistoricalAnalytics(studentEmail, className, options) {
+  return Veritas.Models.Analytics.getStudentHistoricalAnalytics(studentEmail, className, options);
+}
+
+function getDashboardSummary() {
+  return Veritas.Models.Analytics.getDashboardSummary();
+}
+
+function getLivePollData(pollId, questionIndex) {
+  return Veritas.Models.Analytics.getLivePollData(pollId, questionIndex);
+}
+
+function extractStudentNameParts_(fullName) {
+  return Veritas.Models.Analytics.extractStudentNameParts(fullName);
+}
+
+function formatStudentName_(fullName) {
+  return Veritas.Models.Analytics.formatStudentName(fullName);
+}
+
+function buildSubmittedAnswersMap_(pollId, questionIndex) {
+  return Veritas.Models.Analytics.buildSubmittedAnswersMap(pollId, questionIndex);
+}
+
+function computeAnswerCounts_(question, submissionsMap) {
+  return Veritas.Models.Analytics.computeAnswerCounts(question, submissionsMap);
+}
+
+function computeAnswerPercentages_(answerCounts) {
+  return Veritas.Models.Analytics.computeAnswerPercentages(answerCounts);
 }

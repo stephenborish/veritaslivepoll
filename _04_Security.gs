@@ -99,10 +99,9 @@ Veritas.Security.getCurrentStudent = function(token) {
     return { valid: false, email: '', className: '', reason: 'No token provided' };
   }
 
-  // Token validation will be implemented in TokenManager (Utils or separate module)
-  // For now, delegate to the existing TokenManager
+  // Delegate to TokenManager in Utils module
   try {
-    var tokenData = TokenManager.validateToken(token);
+    var tokenData = Veritas.Utils.TokenManager.validateToken(token);
     if (!tokenData) {
       return { valid: false, email: '', className: '', reason: 'Invalid or expired token' };
     }

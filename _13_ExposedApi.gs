@@ -580,11 +580,82 @@ function studentConfirmFullscreen(pollId, token) {
   return Veritas.StudentApi.studentConfirmFullscreen(pollId, token);
 }
 
+/**
+ * Get student proctor state (violations, fullscreen status)
+ * @param {string} token - Session token
+ * @returns {Object} Proctor state
+ */
+function getStudentProctorState(token) {
+  return getStudentProctorState_(token);
+}
+
+// =============================================================================
+// ADDITIONAL UTILITY FUNCTIONS
+// =============================================================================
+
+/**
+ * Upload image to Drive for poll questions
+ * @param {string} dataUrl - Base64 encoded image data
+ * @param {string} fileName - File name
+ * @returns {Object} {success: true, fileId, proxyUrl} or {success: false, error}
+ */
+function uploadImageToDrive(dataUrl, fileName) {
+  return uploadImageToDrive_(dataUrl, fileName);
+}
+
+/**
+ * Get secure assessment book view for a poll
+ * @param {string} pollId - Poll ID
+ * @returns {Object} Book view data
+ */
+function getSecureAssessmentBookView(pollId) {
+  return getSecureAssessmentBookView_(pollId);
+}
+
+/**
+ * Pause poll when timer expires (automatic)
+ * @returns {Object} Result
+ */
+function pausePollForTimerExpiry() {
+  return pausePollForTimerExpiry_();
+}
+
+/**
+ * Reset a specific student's response to a question
+ * @param {string} studentEmail - Student email
+ * @param {string} pollId - Poll ID
+ * @param {number} questionIndex - Question index
+ * @returns {Object} Result
+ */
+function resetStudentResponse(studentEmail, pollId, questionIndex) {
+  return resetStudentResponse_(studentEmail, pollId, questionIndex);
+}
+
+/**
+ * End current question and reveal results to students
+ * @returns {Object} Result
+ */
+function endQuestionAndRevealResults() {
+  return endQuestionAndRevealResults_();
+}
+
+/**
+ * Send poll link to entire class via email (DEPRECATED - not implemented)
+ * @param {string} className - Class name
+ * @returns {Object} Error response
+ */
+function sendPollLinkToClass(className) {
+  return {
+    success: false,
+    error: 'Email distribution feature not implemented. Please use the "View Links" button to access individual student links.'
+  };
+}
+
 // =============================================================================
 // SUMMARY
 // =============================================================================
 //
-// Total Exposed Functions: 72
+// Total Exposed Functions: 79
 //
 // Routing: 2 functions
 // - doGet, include

@@ -1082,13 +1082,262 @@ Veritas.Models.Analytics.computeDistributionAnalysis = function(studentTotalScor
 };
 
 // =============================================================================
-// ENHANCED ANALYTICS WITH INTERPRETATIONS (Batch 3 - TODO)
+// ENHANCED ANALYTICS WITH INTERPRETATIONS (Batch 3)
 // =============================================================================
-// Functions: getEnhancedPostPollAnalytics, interpret* functions (12 total),
-// generateTeacherActionItems
-//
-// TODO: Extract in next batch
-// =============================================================================
+
+/**
+ * Get enhanced post-poll analytics with contextual interpretations
+ * Builds on existing getPostPollAnalytics with better guidance
+ * @param {string} pollId - Poll ID to analyze
+ * @returns {Object} Enhanced analytics with interpretations and action items
+ */
+Veritas.Models.Analytics.getEnhancedPostPollAnalytics = function(pollId) {
+  return withErrorHandling(function() {
+    // Get base analytics
+    var baseAnalytics = Veritas.Models.Analytics.getPostPollAnalytics(pollId);
+    if (!baseAnalytics.success) return baseAnalytics;
+
+    // Add contextual interpretations
+    var enhanced = JSON.parse(JSON.stringify(baseAnalytics)); // Deep clone
+
+    // Interpret class performance
+    var classOverview = enhanced.classOverview;
+    classOverview.interpretation = {
+      participation: Veritas.Models.Analytics.interpretParticipation(classOverview.participantCount, classOverview.rosterSize),
+      meanScore: Veritas.Models.Analytics.interpretMeanScore(classOverview.mean, enhanced.questionCount),
+      stdDev: Veritas.Models.Analytics.interpretStdDev(classOverview.stdDev, enhanced.questionCount),
+      distribution: Veritas.Models.Analytics.interpretDistribution(classOverview.scoreDistribution)
+    };
+
+    // Interpret each item
+    enhanced.itemAnalysis.forEach(function(item) {
+      item.interpretation = {
+        difficulty: Veritas.Models.Analytics.interpretDifficulty(item.difficulty),
+        discrimination: Veritas.Models.Analytics.interpretDiscrimination(item.discrimination),
+        overall: Veritas.Models.Analytics.interpretItemQuality(item.difficulty, item.discrimination),
+        actionable: Veritas.Models.Analytics.getItemActionableInsights(item)
+      };
+    });
+
+    // Add priority flags for teacher action
+    enhanced.teacherActionItems = Veritas.Models.Analytics.generateTeacherActionItems(enhanced);
+
+    return enhanced;
+  })();
+};
+
+/**
+ * Interpret participation rate
+ * @param {number} participated - Number of students who participated
+ * @param {number} total - Total number of students in roster
+ * @returns {Object} Interpretation with level, message, and color
+ */
+Veritas.Models.Analytics.interpretParticipation = function(participated, total) {
+  if (total === 0) return { level: 'unknown', message: 'No roster data available', color: 'gray' };
+  var rate = (participated / total) * 100;
+  if (rate >= 90) return { level: 'excellent', message: Math.round(rate) + '% participation - Excellent engagement', color: 'green' };
+  if (rate >= 75) return { level: 'good', message: Math.round(rate) + '% participation - Good engagement', color: 'green' };
+  if (rate >= 50) return { level: 'moderate', message: Math.round(rate) + '% participation - Consider checking in with absent students', color: 'yellow' };
+  return { level: 'low', message: Math.round(rate) + '% participation - LOW - Check for technical issues or student barriers', color: 'red' };
+};
+
+/**
+ * Interpret mean score
+ * @param {number} mean - Mean score
+ * @param {number} maxScore - Maximum possible score
+ * @returns {Object} Interpretation with level, message, and color
+ */
+Veritas.Models.Analytics.interpretMeanScore = function(mean, maxScore) {
+  if (maxScore === 0) return { level: 'unknown', message: 'No questions', color: 'gray' };
+  var pct = (mean / maxScore) * 100;
+  if (pct >= 85) return { level: 'high', message: Math.round(pct) + '% average - Strong class mastery', color: 'green' };
+  if (pct >= 70) return { level: 'good', message: Math.round(pct) + '% average - Good understanding, some review needed', color: 'green' };
+  if (pct >= 50) return { level: 'moderate', message: Math.round(pct) + '% average - MODERATE - Significant concepts need reteaching', color: 'yellow' };
+  return { level: 'low', message: Math.round(pct) + '% average - LOW - Major instructional intervention needed', color: 'red' };
+};
+
+/**
+ * Interpret standard deviation
+ * @param {number} stdDev - Standard deviation
+ * @param {number} maxScore - Maximum possible score
+ * @returns {Object} Interpretation with level, message, and color
+ */
+Veritas.Models.Analytics.interpretStdDev = function(stdDev, maxScore) {
+  if (maxScore === 0) return { level: 'unknown', message: '', color: 'gray' };
+  var pct = (stdDev / maxScore) * 100;
+  if (pct >= 30) return { level: 'high', message: 'High spread - Students have very different mastery levels', color: 'blue' };
+  if (pct >= 15) return { level: 'moderate', message: 'Moderate spread - Some differentiation in performance', color: 'blue' };
+  return { level: 'low', message: 'Low spread - Class performed similarly (good if scores are high, concerning if low)', color: 'blue' };
+};
+
+/**
+ * Interpret score distribution pattern
+ * @param {Array} scoreDistribution - Array of {score, count, percentage}
+ * @returns {Object} Interpretation with pattern and message
+ */
+Veritas.Models.Analytics.interpretDistribution = function(scoreDistribution) {
+  if (!scoreDistribution || scoreDistribution.length === 0) {
+    return { pattern: 'unknown', message: '' };
+  }
+
+  var maxScore = scoreDistribution.length - 1;
+
+  // Find peak
+  var peakScore = 0;
+  var peakCount = 0;
+  scoreDistribution.forEach(function(item) {
+    if (item.count > peakCount) {
+      peakCount = item.count;
+      peakScore = item.score;
+    }
+  });
+
+  if (peakScore >= maxScore * 0.8) {
+    return { pattern: 'high-peak', message: 'Most students scored very well - poll may have been too easy or material well-taught' };
+  } else if (peakScore <= maxScore * 0.3) {
+    return { pattern: 'low-peak', message: 'Most students struggled - consider reteaching or reviewing question clarity' };
+  } else {
+    return { pattern: 'normal', message: 'Scores spread across range - good discriminating assessment' };
+  }
+};
+
+/**
+ * Interpret item difficulty (P-value)
+ * @param {number} pValue - Difficulty (proportion correct, 0-1)
+ * @returns {Object} Interpretation with level, message, and color
+ */
+Veritas.Models.Analytics.interpretDifficulty = function(pValue) {
+  if (pValue >= 0.9) return { level: 'very-easy', message: 'Very Easy (>90% correct) - May not differentiate student understanding', color: 'blue' };
+  if (pValue >= 0.75) return { level: 'easy', message: 'Easy (75-90% correct) - Good confidence builder', color: 'green' };
+  if (pValue >= 0.5) return { level: 'moderate', message: 'Moderate (50-75% correct) - Ideal difficulty range', color: 'green' };
+  if (pValue >= 0.3) return { level: 'hard', message: 'Hard (30-50% correct) - Challenging but fair', color: 'yellow' };
+  return { level: 'very-hard', message: 'Very Hard (<30% correct) - Most students missed this - Review question or reteach concept', color: 'red' };
+};
+
+/**
+ * Interpret item discrimination index
+ * @param {number} discrimination - Discrimination index (-1 to 1)
+ * @returns {Object} Interpretation with level, message, and color
+ */
+Veritas.Models.Analytics.interpretDiscrimination = function(discrimination) {
+  if (discrimination >= 0.4) return { level: 'excellent', message: 'Excellent (>0.4) - Powerfully separates high/low performers', color: 'green' };
+  if (discrimination >= 0.3) return { level: 'good', message: 'Good (0.3-0.4) - Effectively distinguishes understanding', color: 'green' };
+  if (discrimination >= 0.15) return { level: 'fair', message: 'Fair (0.15-0.3) - Some discrimination but could be improved', color: 'yellow' };
+  if (discrimination >= 0) return { level: 'poor', message: 'Poor (0-0.15) - Barely distinguishes students - Review question quality', color: 'orange' };
+  return { level: 'negative', message: 'NEGATIVE (<0) - FLAWED - High performers got it wrong! Check answer key or question wording', color: 'red' };
+};
+
+/**
+ * Interpret overall item quality based on difficulty and discrimination
+ * @param {number} difficulty - Item difficulty (0-1)
+ * @param {number} discrimination - Discrimination index (-1 to 1)
+ * @returns {Object} Quality assessment with quality level and message
+ */
+Veritas.Models.Analytics.interpretItemQuality = function(difficulty, discrimination) {
+  // Ideal zone: 0.3 < difficulty < 0.8, discrimination > 0.3
+  if (difficulty >= 0.3 && difficulty <= 0.8 && discrimination >= 0.3) {
+    return { quality: 'excellent', message: '⭐ Excellent Question - Keep for future assessments' };
+  } else if (difficulty >= 0.3 && difficulty <= 0.8 && discrimination >= 0.15) {
+    return { quality: 'good', message: '✓ Good Question - Minor tweaks could improve' };
+  } else if (discrimination < 0) {
+    return { quality: 'flawed', message: '⚠ Flawed Question - Immediate review needed' };
+  } else if (difficulty < 0.3 || difficulty > 0.9) {
+    return { quality: 'needs-adjustment', message: '⚡ Adjust Difficulty - Question too easy or too hard' };
+  } else {
+    return { quality: 'fair', message: '◐ Fair Question - Consider revision' };
+  }
+};
+
+/**
+ * Get actionable insights for a specific item
+ * @param {Object} item - Item analysis object with flags
+ * @returns {Array} Array of actionable insight strings
+ */
+Veritas.Models.Analytics.getItemActionableInsights = function(item) {
+  var insights = [];
+
+  if (item.flags.indexOf('negative-discrimination') !== -1) {
+    insights.push('URGENT: Check answer key - high performers chose wrong answer');
+  }
+  if (item.flags.indexOf('problematic-distractor') !== -1) {
+    insights.push('Review distractors - one is confusing high performers');
+  }
+  if (item.flags.indexOf('too-hard') !== -1 && item.discrimination < 0.15) {
+    insights.push('Question is both hard AND non-discriminating - likely needs major revision');
+  }
+  if (item.flags.indexOf('too-easy') !== -1) {
+    insights.push('Consider making this question more challenging or use as warm-up');
+  }
+  if (item.difficulty >= 0.3 && item.difficulty <= 0.8 && item.discrimination >= 0.3) {
+    insights.push('Excellent question - save for future use');
+  }
+
+  return insights;
+};
+
+/**
+ * Generate teacher action items based on analytics
+ * @param {Object} analytics - Complete analytics object
+ * @returns {Array} Array of action item objects with priority, category, message
+ */
+Veritas.Models.Analytics.generateTeacherActionItems = function(analytics) {
+  var actionItems = [];
+
+  // Check participation
+  if (analytics.classOverview.participantCount < analytics.classOverview.rosterSize * 0.75) {
+    actionItems.push({
+      priority: 'high',
+      category: 'participation',
+      message: 'Only ' + analytics.classOverview.participantCount + '/' + analytics.classOverview.rosterSize + ' students participated - Follow up with absent students',
+      count: analytics.classOverview.rosterSize - analytics.classOverview.participantCount
+    });
+  }
+
+  // Check for flawed questions
+  var flawedItems = analytics.itemAnalysis.filter(function(item) {
+    return item.flags.indexOf('negative-discrimination') !== -1;
+  });
+  if (flawedItems.length > 0) {
+    actionItems.push({
+      priority: 'urgent',
+      category: 'question-quality',
+      message: flawedItems.length + ' question(s) have negative discrimination - REVIEW ANSWER KEYS IMMEDIATELY',
+      items: flawedItems.map(function(item) {
+        return { index: item.questionIndex, text: item.questionText };
+      })
+    });
+  }
+
+  // Check for concepts needing reteaching
+  var veryHardItems = analytics.itemAnalysis.filter(function(item) {
+    return item.difficulty < 0.3 && item.responseCount >= 5;
+  });
+  if (veryHardItems.length >= analytics.questionCount * 0.3) {
+    actionItems.push({
+      priority: 'high',
+      category: 'instruction',
+      message: veryHardItems.length + '/' + analytics.questionCount + ' questions were very hard (<30% correct) - Consider reteaching these concepts',
+      items: veryHardItems.map(function(item) {
+        return { index: item.questionIndex, text: item.questionText, pct: item.difficultyPct };
+      })
+    });
+  }
+
+  // Check metacognition red flags
+  if (analytics.metacognition && analytics.metacognition.enabled) {
+    var confidentIncorrectPct = analytics.metacognition.overall ? analytics.metacognition.overall.confidentIncorrect : 0;
+    if (confidentIncorrectPct >= 20) {
+      actionItems.push({
+        priority: 'high',
+        category: 'metacognition',
+        message: confidentIncorrectPct + '% of responses were confidently incorrect - Students have misconceptions they\'re unaware of',
+        data: analytics.metacognition.overall
+      });
+    }
+  }
+
+  return actionItems;
+};
 
 // =============================================================================
 // STUDENT INSIGHTS & DASHBOARD (Batch 4 - TODO)
@@ -1170,4 +1419,45 @@ function computeMetacognitionAnalysis_(poll, responsesByQuestion) {
 
 function computeDistributionAnalysis_(studentTotalScores, maxScore) {
   return Veritas.Models.Analytics.computeDistributionAnalysis(studentTotalScores, maxScore);
+}
+
+// Enhanced Analytics with Interpretations wrappers
+function getEnhancedPostPollAnalytics(pollId) {
+  return Veritas.Models.Analytics.getEnhancedPostPollAnalytics(pollId);
+}
+
+function interpretParticipation(participated, total) {
+  return Veritas.Models.Analytics.interpretParticipation(participated, total);
+}
+
+function interpretMeanScore(mean, maxScore) {
+  return Veritas.Models.Analytics.interpretMeanScore(mean, maxScore);
+}
+
+function interpretStdDev(stdDev, maxScore) {
+  return Veritas.Models.Analytics.interpretStdDev(stdDev, maxScore);
+}
+
+function interpretDistribution(scoreDistribution) {
+  return Veritas.Models.Analytics.interpretDistribution(scoreDistribution);
+}
+
+function interpretDifficulty(pValue) {
+  return Veritas.Models.Analytics.interpretDifficulty(pValue);
+}
+
+function interpretDiscrimination(discrimination) {
+  return Veritas.Models.Analytics.interpretDiscrimination(discrimination);
+}
+
+function interpretItemQuality(difficulty, discrimination) {
+  return Veritas.Models.Analytics.interpretItemQuality(difficulty, discrimination);
+}
+
+function getItemActionableInsights(item) {
+  return Veritas.Models.Analytics.getItemActionableInsights(item);
+}
+
+function generateTeacherActionItems(analytics) {
+  return Veritas.Models.Analytics.generateTeacherActionItems(analytics);
 }

@@ -335,7 +335,7 @@
                     disableSecureOptions(false);
                     handleError(error);
                 })
-                .submitAnswerIndividualTimed(SESSION_TOKEN, answerDetails);
+                .submitIndividualTimedAnswer(answerDetails.pollId, answerDetails.actualQuestionIndex, answerDetails.answer, SESSION_TOKEN, answerDetails.confidenceLevel);
         }
 
         function stopSecureCountdown() {

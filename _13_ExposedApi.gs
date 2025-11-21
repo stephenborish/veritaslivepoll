@@ -600,7 +600,7 @@ function getStudentProctorState(token) {
  * @returns {Object} {success: true, fileId, proxyUrl} or {success: false, error}
  */
 function uploadImageToDrive(dataUrl, fileName) {
-  return uploadImageToDrive_(dataUrl, fileName);
+  return Veritas.Models.Poll.uploadImageToDrive(dataUrl, fileName);
 }
 
 /**
@@ -609,7 +609,7 @@ function uploadImageToDrive(dataUrl, fileName) {
  * @returns {Object} Book view data
  */
 function getSecureAssessmentBookView(pollId) {
-  return getSecureAssessmentBookView_(pollId);
+  return Veritas.Models.Poll.getSecureAssessmentBookView(pollId);
 }
 
 /**
@@ -617,7 +617,7 @@ function getSecureAssessmentBookView(pollId) {
  * @returns {Object} Result
  */
 function pausePollForTimerExpiry() {
-  return pausePollForTimerExpiry_();
+  return Veritas.Models.Session.pausePollForTimerExpiry();
 }
 
 /**
@@ -628,7 +628,7 @@ function pausePollForTimerExpiry() {
  * @returns {Object} Result
  */
 function resetStudentResponse(studentEmail, pollId, questionIndex) {
-  return resetStudentResponse_(studentEmail, pollId, questionIndex);
+  return Veritas.Models.Session.resetStudentResponse(studentEmail, pollId, questionIndex);
 }
 
 /**
@@ -636,7 +636,7 @@ function resetStudentResponse(studentEmail, pollId, questionIndex) {
  * @returns {Object} Result
  */
 function endQuestionAndRevealResults() {
-  return endQuestionAndRevealResults_();
+  return Veritas.Models.Session.endQuestionAndRevealResults();
 }
 
 /**

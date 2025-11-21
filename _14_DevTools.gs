@@ -28,7 +28,9 @@ Veritas.DevTools.runAllTests = function() {
     { name: 'ModelsPoll', fn: Veritas.DevTools.test_ModelsPoll },
     { name: 'ModelsSession', fn: Veritas.DevTools.test_ModelsSession },
     { name: 'ModelsAnalytics', fn: Veritas.DevTools.test_ModelsAnalytics },
-    { name: 'UtilsEnhancements', fn: Veritas.DevTools.test_UtilsEnhancements }
+    { name: 'UtilsEnhancements', fn: Veritas.DevTools.test_UtilsEnhancements },
+    { name: 'TeacherApiWorkflow', fn: Veritas.DevTools.test_TeacherApiWorkflow },
+    { name: 'StudentApiWorkflow', fn: Veritas.DevTools.test_StudentApiWorkflow }
   ];
 
   for (var i = 0; i < tests.length; i++) {
@@ -276,6 +278,406 @@ Veritas.DevTools.test_UtilsEnhancements = function() {
   } catch (err) {
     Veritas.Logging.error('Utils enhancements test failed', err);
     return { success: false, error: err.message };
+  }
+};
+
+/**
+ * Helper: Build an in-memory mock environment so API workflows can be tested
+ */
+function buildWorkflowMockEnvironment_() {
+  var globalObj = this;
+
+  var original = {
+    Logger: globalObj.Logger,
+    DataAccess: globalObj.DataAccess,
+    TokenManager: globalObj.TokenManager,
+    StateVersionManager: globalObj.StateVersionManager,
+    VeritasModels: Veritas.Models,
+    VeritasRouting: Veritas.Routing,
+    Session: globalObj.Session,
+    Utilities: globalObj.Utilities,
+    RateLimiter: globalObj.RateLimiter,
+    withErrorHandling: typeof globalObj.withErrorHandling === 'function' ? globalObj.withErrorHandling : null
+  };
+
+  var mockLogSink = [];
+  var mockLogger = {
+    log: function() {},
+    info: function() {},
+    error: function() {},
+    debug: function() {},
+    warn: function() {},
+    getSink: function() { return mockLogSink; }
+  };
+
+  var mockPoll = {
+    pollId: 'POLL-1',
+    pollName: 'Mock Poll',
+    className: 'Biology',
+    sessionType: 'LIVE',
+    questions: [
+      { prompt: 'Q1', correctAnswer: 'A', answers: ['A', 'B'] },
+      { prompt: 'Q2', correctAnswer: 'B', answers: ['A', 'B'] }
+    ]
+  };
+
+  var liveStatusState = ['POLL-1', -1, 'CLOSED'];
+  liveStatusState.metadata = { sessionId: '', sessionPhase: 'PRE_LIVE', endedAt: '' };
+
+  var responsesStore = [];
+
+  var mockDataAccess = {
+    polls: {
+      getById: function(id) { return mockPoll.pollId === id ? mockPoll : null; },
+      getAll: function() { return [mockPoll]; }
+    },
+    liveStatus: {
+      get: function() { return liveStatusState; },
+      set: function(values, metadata) {
+        liveStatusState[0] = values[0];
+        liveStatusState[1] = values[1];
+        liveStatusState[2] = values[2];
+        liveStatusState.metadata = metadata || liveStatusState.metadata;
+        return liveStatusState;
+      },
+      getMetadata: function() { return liveStatusState.metadata || {}; }
+    },
+    responses: {
+      hasAnswered: function(pollId, questionIndex, studentEmail) {
+        return responsesStore.some(function(r) {
+          return r[2] === pollId && r[3] === questionIndex && r[4] === studentEmail;
+        });
+      },
+      add: function(row) {
+        responsesStore.push(row);
+      },
+      getByPoll: function(pollId) {
+        return responsesStore.filter(function(r) { return r[2] === pollId; });
+      },
+      isLocked: function() { return false; }
+    },
+    roster: {
+      isEnrolled: function(className, studentEmail) {
+        return className === mockPoll.className && studentEmail === 'student@example.com';
+      },
+      getByClass: function() { return [{ name: 'Student Example', email: 'student@example.com' }]; }
+    },
+    individualSessionState: {
+      getByStudent: function() { return null; },
+      initStudent: function(pollId, studentEmail) {
+        return { pollId: pollId, studentEmail: studentEmail };
+      },
+      updateProgress: function() { return true; },
+      lockStudent: function() { return true; },
+      getAllForSession: function() { return []; }
+    }
+  };
+
+  var mockStateVersionManager = {
+    version: 1,
+    noteHeartbeat: function() {
+      return { deltaMs: 0, previousSeen: null, health: 'HEALTHY' };
+    },
+    get: function() {
+      return { version: mockStateVersionManager.version, updatedAt: new Date().toISOString(), status: liveStatusState[2], reason: '' };
+    },
+    OUTAGE_RECOVERY_THRESHOLD_MS: 30000
+  };
+
+  var sessionState = {
+    pollId: mockPoll.pollId,
+    questionIndex: -1,
+    status: 'CLOSED',
+    phase: 'PRE_LIVE',
+    showResults: false,
+    sessionId: 'SESSION-1'
+  };
+
+  function syncSessionToLiveStatus_() {
+    liveStatusState[0] = sessionState.pollId;
+    liveStatusState[1] = sessionState.questionIndex;
+    liveStatusState[2] = sessionState.status;
+    liveStatusState.metadata = liveStatusState.metadata || {};
+    liveStatusState.metadata.sessionId = sessionState.sessionId;
+    liveStatusState.metadata.sessionPhase = sessionState.phase;
+    liveStatusState.metadata.endedAt = sessionState.phase === 'ENDED' ? new Date().toISOString() : '';
+  }
+
+  var mockModelsSession = {
+    startPoll: function(pollId) {
+      sessionState.pollId = pollId;
+      sessionState.questionIndex = 0;
+      sessionState.status = 'OPEN';
+      sessionState.phase = 'LIVE';
+      syncSessionToLiveStatus_();
+      return { pollId: pollId, questionIndex: 0, status: 'OPEN' };
+    },
+    nextQuestion: function() {
+      sessionState.questionIndex = Math.min(sessionState.questionIndex + 1, mockPoll.questions.length - 1);
+      syncSessionToLiveStatus_();
+      return { pollId: sessionState.pollId, questionIndex: sessionState.questionIndex, status: sessionState.status };
+    },
+    previousQuestion: function() {
+      sessionState.questionIndex = Math.max(sessionState.questionIndex - 1, 0);
+      syncSessionToLiveStatus_();
+      return { pollId: sessionState.pollId, questionIndex: sessionState.questionIndex, status: sessionState.status };
+    },
+    stopPoll: function() {
+      sessionState.status = 'PAUSED';
+      sessionState.phase = 'PAUSED';
+      syncSessionToLiveStatus_();
+      return { pollId: sessionState.pollId, status: 'PAUSED' };
+    },
+    resumePoll: function() {
+      sessionState.status = 'OPEN';
+      sessionState.phase = 'LIVE';
+      syncSessionToLiveStatus_();
+      return { pollId: sessionState.pollId, status: 'OPEN' };
+    },
+    closePoll: function() {
+      sessionState.status = 'CLOSED';
+      sessionState.phase = 'ENDED';
+      syncSessionToLiveStatus_();
+      return { pollId: sessionState.pollId, status: 'CLOSED' };
+    },
+    revealResultsToStudents: function() {
+      sessionState.showResults = true;
+      sessionState.phase = 'RESULTS_HOLD';
+      syncSessionToLiveStatus_();
+      return { status: 'RESULTS_HOLD' };
+    },
+    hideResultsFromStudents: function() {
+      sessionState.showResults = false;
+      syncSessionToLiveStatus_();
+      return { status: sessionState.status };
+    },
+    resetLiveQuestion: function() {
+      responsesStore = [];
+      return { pollId: sessionState.pollId, questionIndex: sessionState.questionIndex, reset: true };
+    },
+    startIndividualTimedSession: function(pollId) {
+      sessionState.phase = 'LOBBY';
+      syncSessionToLiveStatus_();
+      return { pollId: pollId, sessionPhase: 'LOBBY' };
+    },
+    endIndividualTimedSession: function(pollId) {
+      sessionState.phase = 'ENDED';
+      syncSessionToLiveStatus_();
+      return { pollId: pollId, sessionPhase: 'ENDED' };
+    },
+    getIndividualTimedSessionState: function(pollId) {
+      return { pollId: pollId, sessionPhase: sessionState.phase };
+    },
+    getIndividualTimedSessionTeacherView: function(pollId) {
+      return { pollId: pollId, students: [] };
+    },
+    adjustSecureAssessmentTime: function() { return { success: true }; },
+    adjustSecureAssessmentTimeBulk: function() { return { success: true }; },
+    adjustSecureAssessmentTimeForAll: function() { return { success: true }; },
+    pauseSecureAssessmentStudent: function() { return { success: true }; },
+    resumeSecureAssessmentStudent: function() { return { success: true }; },
+    forceSubmitSecureAssessmentStudent: function() { return { success: true }; },
+    teacherApproveUnlock: function() { return { success: true }; },
+    teacherBlockStudent: function() { return { success: true }; },
+    teacherUnblockStudent: function() { return { success: true }; },
+    getStudentProctorState: function() {
+      return { status: 'READY', version: mockStateVersionManager.version };
+    },
+    submitIndividualTimedAnswer: function(pollId, questionIndex, answerText, token, confidenceLevel) {
+      return Veritas.StudentApi.submitLivePollAnswer(pollId, questionIndex, answerText, token, confidenceLevel);
+    }
+  };
+
+  var mockTokenManager = {
+    validateToken: function(token) {
+      if (token === 'valid-token') {
+        return { email: 'student@example.com', className: mockPoll.className, token: token };
+      }
+      return null;
+    },
+    getStudentEmail: function(token) {
+      return token === 'valid-token' ? 'student@example.com' : null;
+    },
+    getCurrentStudentEmail: function() { return 'student@example.com'; }
+  };
+
+  var mockRouting = {
+    isTeacherEmail: function(email) { return email === 'teacher@example.com'; }
+  };
+
+  var mockSession = {
+    getActiveUser: function() {
+      return { getEmail: function() { return 'teacher@example.com'; } };
+    }
+  };
+
+  var mockUtilities = {
+    getUuid: function() { return 'uuid-1'; }
+  };
+
+  var mockRateLimiter = {
+    check: function() { return true; }
+  };
+
+  function install() {
+    globalObj.Logger = mockLogger;
+    globalObj.DataAccess = mockDataAccess;
+    globalObj.TokenManager = mockTokenManager;
+    globalObj.StateVersionManager = mockStateVersionManager;
+    Veritas.Models = mockModelsSession ? { Session: mockModelsSession, Poll: Veritas.Models && Veritas.Models.Poll, Analytics: Veritas.Models && Veritas.Models.Analytics } : Veritas.Models;
+    Veritas.Routing = mockRouting;
+    globalObj.Session = mockSession;
+    globalObj.Utilities = mockUtilities;
+    globalObj.RateLimiter = mockRateLimiter;
+    if (!original.withErrorHandling) {
+      globalObj.withErrorHandling = function(fn) { return fn(); };
+    }
+    syncSessionToLiveStatus_();
+  }
+
+  function restore() {
+    globalObj.Logger = original.Logger;
+    globalObj.DataAccess = original.DataAccess;
+    globalObj.TokenManager = original.TokenManager;
+    globalObj.StateVersionManager = original.StateVersionManager;
+    Veritas.Models = original.VeritasModels;
+    Veritas.Routing = original.VeritasRouting;
+    globalObj.Session = original.Session;
+    globalObj.Utilities = original.Utilities;
+    globalObj.RateLimiter = original.RateLimiter;
+    if (!original.withErrorHandling) {
+      delete globalObj.withErrorHandling;
+    }
+  }
+
+  return {
+    install: install,
+    restore: restore,
+    state: sessionState,
+    poll: mockPoll,
+    responsesStore: function() { return responsesStore; },
+    versionManager: mockStateVersionManager
+  };
+}
+
+/**
+ * Workflow test: validate teacher API operations and routing wrappers
+ */
+Veritas.DevTools.test_TeacherApiWorkflow = function() {
+  var mock = buildWorkflowMockEnvironment_();
+  mock.install();
+
+  try {
+    var startState = Veritas.TeacherApi.startPoll('POLL-1');
+    if (startState.status !== 'OPEN' || startState.questionIndex !== 0) {
+      throw new Error('startPoll failed to open poll');
+    }
+
+    var next = Veritas.TeacherApi.nextQuestion();
+    if (next.questionIndex !== 1) {
+      throw new Error('nextQuestion did not advance');
+    }
+
+    var previous = Veritas.TeacherApi.previousQuestion();
+    if (previous.questionIndex !== 0) {
+      throw new Error('previousQuestion did not rewind');
+    }
+
+    var paused = Veritas.TeacherApi.stopPoll();
+    if (paused.status !== 'PAUSED') {
+      throw new Error('stopPoll did not pause session');
+    }
+
+    var resumed = Veritas.TeacherApi.resumePoll();
+    if (resumed.status !== 'OPEN') {
+      throw new Error('resumePoll did not reopen session');
+    }
+
+    var reveal = Veritas.TeacherApi.revealResultsToStudents();
+    if (reveal.status !== 'RESULTS_HOLD') {
+      throw new Error('revealResultsToStudents did not move to results state');
+    }
+
+    var hidden = Veritas.TeacherApi.hideResultsFromStudents();
+    if (hidden.status !== 'OPEN' && hidden.status !== 'CLOSED' && hidden.status !== 'PAUSED') {
+      throw new Error('hideResultsFromStudents returned unexpected status');
+    }
+
+    var reset = Veritas.TeacherApi.resetLiveQuestion();
+    if (!reset.reset) {
+      throw new Error('resetLiveQuestion did not report reset');
+    }
+
+    var lobbyState = Veritas.TeacherApi.startIndividualTimedSession('POLL-1');
+    if (lobbyState.sessionPhase !== 'LOBBY') {
+      throw new Error('startIndividualTimedSession failed');
+    }
+
+    var endedSecure = Veritas.TeacherApi.endIndividualTimedSession('POLL-1');
+    if (endedSecure.sessionPhase !== 'ENDED') {
+      throw new Error('endIndividualTimedSession failed');
+    }
+
+    var closed = Veritas.TeacherApi.closePoll();
+    if (closed.status !== 'CLOSED') {
+      throw new Error('closePoll did not close session');
+    }
+
+    return {
+      success: true,
+      details: {
+        pollId: mock.state.pollId,
+        finalStatus: closed.status,
+        questionIndex: mock.state.questionIndex
+      }
+    };
+  } catch (err) {
+    return { success: false, error: err.message };
+  } finally {
+    mock.restore();
+  }
+};
+
+/**
+ * Workflow test: validate student API operations end-to-end with mocks
+ */
+Veritas.DevTools.test_StudentApiWorkflow = function() {
+  var mock = buildWorkflowMockEnvironment_();
+  mock.install();
+
+  try {
+    Veritas.TeacherApi.startPoll('POLL-1');
+
+    var prelive = Veritas.StudentApi.getStudentPollStatus('valid-token', { lastStateVersion: 0, lastSuccessAt: Date.now(), failureCount: 0 });
+    if (prelive.status !== 'LIVE') {
+      throw new Error('getStudentPollStatus did not return live state for active poll');
+    }
+
+    var submission = Veritas.StudentApi.submitLivePollAnswer('POLL-1', 0, 'A', 'valid-token', 'very-sure');
+    if (!submission.success) {
+      throw new Error('submitLivePollAnswer rejected valid submission');
+    }
+
+    var duplicate = Veritas.StudentApi.submitLivePollAnswer('POLL-1', 0, 'A', 'valid-token');
+    if (duplicate.success) {
+      throw new Error('submitLivePollAnswer allowed duplicate submission');
+    }
+
+    Veritas.TeacherApi.closePoll();
+    var ended = Veritas.StudentApi.getStudentPollStatus('valid-token', { lastStateVersion: 1 });
+    if (ended.status !== 'ENDED') {
+      throw new Error('getStudentPollStatus did not indicate session end');
+    }
+
+    return {
+      success: true,
+      submissions: mock.responsesStore().length,
+      finalStatus: ended.status
+    };
+  } catch (err) {
+    return { success: false, error: err.message };
+  } finally {
+    mock.restore();
   }
 };
 

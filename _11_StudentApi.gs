@@ -440,6 +440,21 @@ Veritas.StudentApi.submitLivePollAnswer = function(pollId, questionIndex, answer
   })();
 };
 
+/**
+ * Get the student's proctoring state (lock/blocked/fullscreen readiness)
+ * @param {string} token - Session token
+ * @returns {Object} Proctor state envelope
+ */
+Veritas.StudentApi.getStudentProctorState = function(token) {
+  return withErrorHandling(function() {
+    // Validate token early to prevent expired/invalid links from polling
+    Veritas.StudentApi.validateToken(token);
+
+    // Delegate to session model which reads current live session metadata
+    return Veritas.Models.Session.getStudentProctorState(token);
+  })();
+};
+
 // =============================================================================
 // SECURE ASSESSMENT STUDENT OPERATIONS
 // =============================================================================

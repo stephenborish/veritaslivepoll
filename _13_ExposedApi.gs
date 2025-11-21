@@ -586,7 +586,7 @@ function studentConfirmFullscreen(pollId, token) {
  * @returns {Object} Proctor state
  */
 function getStudentProctorState(token) {
-  return getStudentProctorState_(token);
+  return Veritas.StudentApi.getStudentProctorState(token);
 }
 
 // =============================================================================

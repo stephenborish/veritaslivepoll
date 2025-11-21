@@ -1400,23 +1400,25 @@
       root.classList.add('is-active');
       root.setAttribute('aria-hidden','false');
       document.body.classList.add('veritas-modal-open');
-      toggleBackground(true);
       active=true;
       root.addEventListener('keydown',trapKey,true);
       document.addEventListener('focus',enforceFocus,true);
 
+      // Move focus to modal BEFORE setting aria-hidden on background to prevent accessibility warnings
+      if(mode==='prompt'){
+        inputField.focus();
+        inputField.select();
+      } else if(mode==='confirm'&&options.focusCancel){
+        cancelBtn.focus();
+      } else {
+        confirmBtn.focus();
+      }
+
+      // Now that focus is inside the modal, it's safe to hide the background
+      toggleBackground(true);
+
       return new Promise(function(resolve){
         resolveFn=resolve;
-        setTimeout(function(){
-          if(mode==='prompt'){
-            inputField.focus();
-            inputField.select();
-          } else if(mode==='confirm'&&options.focusCancel){
-            cancelBtn.focus();
-          } else {
-            confirmBtn.focus();
-          }
-        },0);
       });
     }
 
@@ -1563,13 +1565,7 @@
   }
 
   function onGoogleChartsReady(){
-    if(dashboardSummary){
-      try{
-        renderActivityPulse();
-      }catch(err){
-        console.error('Activity pulse refresh failed:',err);
-      }
-    }
+    // Activity pulse feature has been removed from dashboard
     if(typeof renderAnalyticsByTab==='function'&&typeof analyticsData!=='undefined'&&analyticsData){
       try{
         renderAnalyticsByTab();
@@ -2135,16 +2131,8 @@
   }
 
   function renderDashboardSummary() {
-    try {
-      renderRecentSessions();
-    } catch(e) {
-      console.error('Error rendering recent sessions:', e);
-    }
-    try {
-      renderActivityPulse();
-    } catch(e) {
-      console.error('Error rendering activity pulse:', e);
-    }
+    // Recent sessions and activity pulse features have been removed
+    // The dashboard now only shows the poll library
   }
 
   function renderRecentSessions() {

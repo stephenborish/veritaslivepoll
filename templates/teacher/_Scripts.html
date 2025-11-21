@@ -10046,6 +10046,13 @@
 
   updateBulkControlsState();
 
+  // Expose functions used by inline HTML handlers
+  window.showDashboard = showDashboard;
+  window.openPollCreator = openPollCreator;
+  window.filterStudentsByFlag = filterStudentsByFlag;
+  window.clearStudentFilter = clearStudentFilter;
+  window.sortStudentsBy = sortStudentsBy;
+
 
 })();
   </script>

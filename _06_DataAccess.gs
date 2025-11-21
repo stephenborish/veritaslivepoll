@@ -800,6 +800,343 @@ var DataAccess = {
   roster: {
     getByClass: function(className) {
       return Veritas.Data.Rosters.getByClass(className);
+    },
+
+    isEnrolled: function(className, email) {
+      return this.getByClass(className).some(function(s) { return s.email === email; });
+    }
+  },
+
+  polls: {
+    getById: function(pollId) {
+      return Veritas.Data.Polls.getById(pollId);
+    },
+
+    getByClass: function(className) {
+      var polls = Veritas.Data.Polls.getAll();
+      return polls.filter(function(p) { return p.className === className; });
+    },
+
+    getAll: function() {
+      return Veritas.Data.Polls.getAll();
+    }
+  },
+
+  responses: {
+    getByPoll: function(pollId) {
+      var ss = Veritas.Data.getSpreadsheet();
+      var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.RESPONSES);
+      var values = Veritas.Data.getDataRangeValues(sheet);
+      return values.filter(function(r) { return r[2] === pollId; });
+    },
+
+    getByPollAndQuestion: function(pollId, questionIndex) {
+      return this.getByPoll(pollId).filter(function(r) { return r[3] === questionIndex; });
+    },
+
+    getStudentStatus: function(pollId, studentEmail) {
+      return this.getByPoll(pollId).filter(function(r) { return r[4] === studentEmail; });
+    },
+
+    isLocked: function(pollId, studentEmail) {
+      return this.getStudentStatus(pollId, studentEmail)
+        .some(function(r) { return Veritas.Config.PROCTOR_VIOLATION_VALUES.indexOf(r[5]) !== -1; });
+    },
+
+    hasAnswered: function(pollId, questionIndex, studentEmail) {
+      return this.getByPollAndQuestion(pollId, questionIndex)
+        .some(function(r) { return r[4] === studentEmail; });
+    },
+
+    add: function(responseData) {
+      var ss = Veritas.Data.getSpreadsheet();
+      var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.RESPONSES);
+      sheet.appendRow(responseData);
+    }
+  },
+
+  liveStatus: {
+    METADATA_KEY: 'LIVE_POLL_METADATA',
+
+    get: function() {
+      var statusValues = Veritas.Utils.CacheManager.get('LIVE_POLL_STATUS', function() {
+        var ss = Veritas.Data.getSpreadsheet();
+        var liveSheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.LIVE_STATUS);
+        return liveSheet.getRange("A2:C2").getValues()[0];
+      }, Veritas.Utils.CacheManager.CACHE_TIMES.INSTANT);
+
+      var metadata = this.getMetadata_();
+      if (Array.isArray(statusValues)) {
+        statusValues.metadata = metadata;
+      } else if (statusValues && statusValues.statusData && Array.isArray(statusValues.statusData)) {
+        statusValues.statusData.metadata = metadata;
+        return statusValues.statusData;
+      }
+      return statusValues;
+    },
+
+    set: function(pollId, questionIndex, status, metadata) {
+      metadata = metadata || {};
+      var ss = Veritas.Data.getSpreadsheet();
+      var liveSheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.LIVE_STATUS);
+      var statusData = [pollId, questionIndex, status];
+      liveSheet.getRange("A2:C2").setValues([statusData]);
+
+      var sessionPhase = (metadata && metadata.sessionPhase)
+        ? metadata.sessionPhase
+        : (status === 'OPEN'
+            ? 'LIVE'
+            : status === 'PAUSED'
+              ? 'PAUSED'
+              : (questionIndex < 0 ? 'PRE_LIVE' : 'ENDED'));
+
+      var enrichedMetadata = {};
+      for (var key in metadata) {
+        if (metadata.hasOwnProperty(key)) {
+          enrichedMetadata[key] = metadata[key];
+        }
+      }
+      enrichedMetadata.sessionPhase = sessionPhase;
+
+      if (typeof enrichedMetadata.isCollecting !== 'boolean') {
+        enrichedMetadata.isCollecting = (status === 'OPEN');
+      }
+      if (!enrichedMetadata.resultsVisibility) {
+        enrichedMetadata.resultsVisibility = 'HIDDEN';
+      }
+      if (sessionPhase !== 'ENDED' && enrichedMetadata.endedAt === undefined) {
+        enrichedMetadata.endedAt = null;
+      }
+
+      this.setMetadata_(enrichedMetadata);
+
+      var cache = CacheService.getScriptCache();
+      cache.put('LIVE_POLL_STATUS', JSON.stringify(statusData), Veritas.Utils.CacheManager.CACHE_TIMES.INSTANT);
+
+      var reason = (enrichedMetadata && enrichedMetadata.reason) ? enrichedMetadata.reason : 'STATUS_' + status;
+      Veritas.Utils.StateVersionManager.bump({
+        pollId: pollId || '',
+        questionIndex: typeof questionIndex === 'number' ? questionIndex : -1,
+        status: sessionPhase,
+        reason: reason,
+        metadata: enrichedMetadata,
+        timerRemainingSeconds: (enrichedMetadata && typeof enrichedMetadata.timerRemainingSeconds === 'number')
+          ? enrichedMetadata.timerRemainingSeconds
+          : null
+      });
+    },
+
+    getMetadata: function() {
+      return this.getMetadata_();
+    },
+
+    setMetadata_: function(metadata) {
+      var props = PropertiesService.getScriptProperties();
+      if (metadata && Object.keys(metadata).length > 0) {
+        props.setProperty(this.METADATA_KEY, JSON.stringify(metadata));
+      } else {
+        props.deleteProperty(this.METADATA_KEY);
+      }
+    },
+
+    getMetadata_: function() {
+      var props = PropertiesService.getScriptProperties();
+      var metadataStr = props.getProperty(this.METADATA_KEY);
+      if (!metadataStr) return {};
+      try {
+        return JSON.parse(metadataStr);
+      } catch (err) {
+        Veritas.Logging.error('Failed to parse live poll metadata', err);
+        return {};
+      }
+    }
+  },
+
+  individualSessionState: {
+    getByStudent: function(pollId, sessionId, studentEmail) {
+      var ss = Veritas.Data.getSpreadsheet();
+      var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
+      var values = Veritas.Data.getDataRangeValues(sheet);
+
+      for (var i = 0; i < values.length; i++) {
+        if (values[i][0] === pollId && values[i][1] === sessionId && values[i][2] === studentEmail) {
+          return parseIndividualSessionRow_(values[i], i + 2);
+        }
+      }
+      return null;
+    },
+
+    initStudent: function(pollId, sessionId, studentEmail, questionOrder, answerOrders, options) {
+      options = options || {};
+      var ss = Veritas.Data.getSpreadsheet();
+      var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
+      var startTime = new Date().toISOString();
+      var row = [];
+      for (var i = 0; i < Veritas.Config.INDIVIDUAL_SESSION_COLUMN_COUNT; i++) {
+        row.push('');
+      }
+      var heartbeatMs = Date.now();
+      var seed = (options && options.questionOrderSeed)
+        ? options.questionOrderSeed
+        : questionOrder.join('-');
+      var answerChoiceMap = (options && options.answerChoiceMap) || {};
+
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.POLL_ID - 1] = pollId;
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.SESSION_ID - 1] = sessionId;
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.STUDENT_EMAIL - 1] = studentEmail;
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.STUDENT_DISPLAY_NAME - 1] = (options && options.displayName) || '';
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.START_TIME - 1] = startTime;
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.END_TIME - 1] = null;
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.QUESTION_ORDER - 1] = JSON.stringify(questionOrder);
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.QUESTION_ORDER_SEED - 1] = seed;
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.CURRENT_QUESTION_INDEX - 1] = 0;
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.IS_LOCKED - 1] = false;
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.VIOLATION_CODE - 1] = null;
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.ANSWER_ORDERS - 1] = JSON.stringify(answerOrders);
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.ANSWER_CHOICE_MAP - 1] = JSON.stringify(answerChoiceMap);
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.TIME_ADJUSTMENT_MINUTES - 1] = (options && options.timeAdjustmentMinutes) || 0;
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.PAUSE_DURATION_MS - 1] = (options && options.pauseDurationMs) || 0;
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.LAST_HEARTBEAT_MS - 1] = heartbeatMs;
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.CONNECTION_HEALTH - 1] = 'GREEN';
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.PROCTOR_STATUS - 1] = 'ACTIVE';
+      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.ADDITIONAL_METADATA_JSON - 1] = (options && options.additionalMetadata)
+        ? JSON.stringify(options.additionalMetadata)
+        : '';
+
+      sheet.appendRow(row);
+
+      return {
+        pollId: pollId,
+        sessionId: sessionId,
+        studentEmail: studentEmail,
+        studentDisplayName: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.STUDENT_DISPLAY_NAME - 1],
+        startTime: startTime,
+        endTime: null,
+        questionOrder: questionOrder,
+        questionOrderSeed: seed,
+        currentQuestionIndex: 0,
+        isLocked: false,
+        answerOrders: answerOrders,
+        answerChoiceMap: answerChoiceMap,
+        timeAdjustmentMinutes: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.TIME_ADJUSTMENT_MINUTES - 1],
+        pauseDurationMs: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.PAUSE_DURATION_MS - 1],
+        lastHeartbeatMs: heartbeatMs,
+        connectionHealth: 'GREEN',
+        rowIndex: sheet.getLastRow()
+      };
+    },
+
+    updateProgress: function(pollId, sessionId, studentEmail, newIndex) {
+      var studentState = this.getByStudent(pollId, sessionId, studentEmail);
+      if (studentState) {
+        var ss = Veritas.Data.getSpreadsheet();
+        var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
+        sheet.getRange(studentState.rowIndex, Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.CURRENT_QUESTION_INDEX).setValue(newIndex);
+      }
+    },
+
+    lockStudent: function(pollId, sessionId, studentEmail) {
+      var studentState = this.getByStudent(pollId, sessionId, studentEmail);
+      if (studentState) {
+        var ss = Veritas.Data.getSpreadsheet();
+        var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
+        sheet.getRange(studentState.rowIndex, Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.IS_LOCKED).setValue(true);
+        sheet.getRange(studentState.rowIndex, Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.END_TIME).setValue(new Date().toISOString());
+      }
+    },
+
+    setAnswerOrders: function(pollId, sessionId, studentEmail, answerOrders) {
+      var studentState = this.getByStudent(pollId, sessionId, studentEmail);
+      if (studentState) {
+        var ss = Veritas.Data.getSpreadsheet();
+        var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
+        sheet.getRange(studentState.rowIndex, Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.ANSWER_ORDERS).setValue(JSON.stringify(answerOrders));
+      }
+    },
+
+    getAllForSession: function(pollId, sessionId) {
+      var ss = Veritas.Data.getSpreadsheet();
+      var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
+      var values = Veritas.Data.getDataRangeValues(sheet);
+
+      var results = [];
+      for (var i = 0; i < values.length; i++) {
+        if (values[i][0] === pollId && values[i][1] === sessionId) {
+          results.push(parseIndividualSessionRow_(values[i], i + 2));
+        }
+      }
+      return results;
+    },
+
+    touchHeartbeat: function(pollId, sessionId, studentEmail, connectionMeta, existingState) {
+      var state = existingState || this.getByStudent(pollId, sessionId, studentEmail);
+      if (!state) return;
+      var ss = Veritas.Data.getSpreadsheet();
+      var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
+      var nowMs = Date.now();
+      sheet.getRange(state.rowIndex, Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.LAST_HEARTBEAT_MS).setValue(nowMs);
+      if (connectionMeta && connectionMeta.status) {
+        sheet.getRange(state.rowIndex, Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.CONNECTION_HEALTH).setValue(connectionMeta.status);
+      }
+    },
+
+    updateFields: function(pollId, sessionId, studentEmail, updates) {
+      if (!updates || typeof updates !== 'object') {
+        throw new Error('Updates object required');
+      }
+
+      var state = this.getByStudent(pollId, sessionId, studentEmail);
+      if (!state) {
+        throw new Error('Student session not initialized');
+      }
+
+      var ss = Veritas.Data.getSpreadsheet();
+      var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
+      var rowIndex = state.rowIndex;
+      var columns = Veritas.Config.INDIVIDUAL_SESSION_COLUMNS;
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'timeAdjustmentMinutes')) {
+        sheet.getRange(rowIndex, columns.TIME_ADJUSTMENT_MINUTES).setValue(updates.timeAdjustmentMinutes);
+        state.timeAdjustmentMinutes = updates.timeAdjustmentMinutes;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'pauseDurationMs')) {
+        sheet.getRange(rowIndex, columns.PAUSE_DURATION_MS).setValue(updates.pauseDurationMs);
+        state.pauseDurationMs = updates.pauseDurationMs;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'currentQuestionIndex')) {
+        sheet.getRange(rowIndex, columns.CURRENT_QUESTION_INDEX).setValue(updates.currentQuestionIndex);
+        state.currentQuestionIndex = updates.currentQuestionIndex;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'endTime')) {
+        sheet.getRange(rowIndex, columns.END_TIME).setValue(updates.endTime);
+        state.endTime = updates.endTime;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'isLocked')) {
+        sheet.getRange(rowIndex, columns.IS_LOCKED).setValue(updates.isLocked);
+        state.isLocked = updates.isLocked;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'violationCode')) {
+        sheet.getRange(rowIndex, columns.VIOLATION_CODE).setValue(updates.violationCode);
+        state.violationCode = updates.violationCode;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'proctorStatus')) {
+        sheet.getRange(rowIndex, columns.PROCTOR_STATUS).setValue(updates.proctorStatus);
+        state.proctorStatus = updates.proctorStatus;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'additionalMetadata')) {
+        var metadataJson = JSON.stringify(updates.additionalMetadata);
+        sheet.getRange(rowIndex, columns.ADDITIONAL_METADATA_JSON).setValue(metadataJson);
+        state.additionalMetadata = updates.additionalMetadata;
+      }
+
+      return state;
     }
   }
 };

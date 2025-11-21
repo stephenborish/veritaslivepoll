@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <html class="light" lang="en">
 <head>
-  <?!= include('templates/shared/_Head'); ?>
+  <?!= include('Shared_Head'); ?>
   <title>Veritas Live Poll - Student</title>
 
-  <?!= include('templates/shared/_TailwindConfig'); ?>
+  <?!= include('Shared_TailwindConfig'); ?>
   <?!= include('SecureAssessmentShared'); ?>
 
   <script>window.SESSION_TOKEN = '<?= sessionToken ?>';</script>
 
-  <?!= include('templates/shared/_Styles'); ?>
-  <?!= include('templates/student/_Styles'); ?>
+  <?!= include('Shared_Styles'); ?>
+  <?!= include('Student_Styles'); ?>
 </head>
 <body class="light">
-  <?!= include('templates/student/_Body'); ?>
-  <?!= include('templates/student/_Scripts'); ?>
+  <?!= include('Student_Body'); ?>
+  <?!= include('Student_Scripts'); ?>
 </body>
 </html>

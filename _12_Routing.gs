@@ -401,20 +401,10 @@ Veritas.Routing.serveImage = function(e) {
 // =============================================================================
 // LEGACY COMPATIBILITY WRAPPERS
 // =============================================================================
-
-/**
- * Legacy wrapper for doGet
- */
-function doGet(e) {
-  return Veritas.Routing.doGet(e);
-}
-
-/**
- * Legacy wrapper for include
- */
-function include(filename) {
-  return Veritas.Routing.include(filename);
-}
+//
+// Note: doGet() and include() are defined in _13_ExposedApi.gs
+// to avoid duplicate function definitions.
+//
 
 /**
  * Legacy wrapper for isTeacherEmail_

@@ -16,12 +16,54 @@ Veritas.DevTools.runAllTests = function() {
     totalTests: 0,
     passed: 0,
     failed: 0,
-    errors: []
+    errors: [],
+    details: []
   };
 
-  // Tests will be added during the refactor validation phase
-  Veritas.Logging.info('Running smoke tests', results);
+  var tests = [
+    { name: 'Configuration', fn: Veritas.DevTools.test_Configuration },
+    { name: 'Security', fn: Veritas.DevTools.test_Security },
+    { name: 'DataAccess', fn: Veritas.DevTools.test_DataAccess },
+    { name: 'DataAccessCompatibility', fn: Veritas.DevTools.test_DataAccessCompatibility },
+    { name: 'ModelsPoll', fn: Veritas.DevTools.test_ModelsPoll },
+    { name: 'ModelsSession', fn: Veritas.DevTools.test_ModelsSession },
+    { name: 'ModelsAnalytics', fn: Veritas.DevTools.test_ModelsAnalytics },
+    { name: 'UtilsEnhancements', fn: Veritas.DevTools.test_UtilsEnhancements }
+  ];
 
+  for (var i = 0; i < tests.length; i++) {
+    var test = tests[i];
+    results.totalTests++;
+    try {
+      var testResult = test.fn();
+      if (testResult && testResult.success) {
+        results.passed++;
+        results.details.push({
+          test: test.name,
+          status: 'PASSED',
+          result: testResult
+        });
+      } else {
+        results.failed++;
+        results.errors.push(test.name + ': ' + (testResult.error || 'Unknown error'));
+        results.details.push({
+          test: test.name,
+          status: 'FAILED',
+          error: testResult.error || 'Unknown error'
+        });
+      }
+    } catch (err) {
+      results.failed++;
+      results.errors.push(test.name + ': ' + err.message);
+      results.details.push({
+        test: test.name,
+        status: 'ERROR',
+        error: err.message
+      });
+    }
+  }
+
+  Veritas.Logging.info('Smoke tests completed', results);
   return results;
 };
 
@@ -237,8 +279,184 @@ Veritas.DevTools.test_UtilsEnhancements = function() {
   }
 };
 
+/**
+ * Smoke test: Verify DataAccess compatibility layer
+ */
+Veritas.DevTools.test_DataAccessCompatibility = function() {
+  try {
+    // Test DataAccess.polls
+    if (!DataAccess.polls) {
+      throw new Error('DataAccess.polls not found');
+    }
+    var allPolls = DataAccess.polls.getAll();
+    if (!Array.isArray(allPolls)) {
+      throw new Error('DataAccess.polls.getAll() did not return an array');
+    }
+
+    // Test getById if there are polls
+    if (allPolls.length > 0) {
+      var firstPoll = allPolls[0];
+      var pollById = DataAccess.polls.getById(firstPoll.pollId);
+      if (!pollById || pollById.pollId !== firstPoll.pollId) {
+        throw new Error('DataAccess.polls.getById() failed');
+      }
+
+      // Test getByClass
+      var pollsByClass = DataAccess.polls.getByClass(firstPoll.className);
+      if (!Array.isArray(pollsByClass)) {
+        throw new Error('DataAccess.polls.getByClass() did not return an array');
+      }
+    }
+
+    // Test DataAccess.roster
+    if (!DataAccess.roster) {
+      throw new Error('DataAccess.roster not found');
+    }
+    if (typeof DataAccess.roster.getByClass !== 'function') {
+      throw new Error('DataAccess.roster.getByClass not found');
+    }
+    if (typeof DataAccess.roster.isEnrolled !== 'function') {
+      throw new Error('DataAccess.roster.isEnrolled not found');
+    }
+
+    // Test DataAccess.liveStatus
+    if (!DataAccess.liveStatus) {
+      throw new Error('DataAccess.liveStatus not found');
+    }
+    if (typeof DataAccess.liveStatus.get !== 'function') {
+      throw new Error('DataAccess.liveStatus.get not found');
+    }
+    if (typeof DataAccess.liveStatus.set !== 'function') {
+      throw new Error('DataAccess.liveStatus.set not found');
+    }
+    if (typeof DataAccess.liveStatus.getMetadata !== 'function') {
+      throw new Error('DataAccess.liveStatus.getMetadata not found');
+    }
+
+    // Test liveStatus.get()
+    var liveStatus = DataAccess.liveStatus.get();
+    if (!Array.isArray(liveStatus) && typeof liveStatus !== 'object') {
+      throw new Error('DataAccess.liveStatus.get() did not return expected format');
+    }
+
+    // Test DataAccess.responses
+    if (!DataAccess.responses) {
+      throw new Error('DataAccess.responses not found');
+    }
+    if (typeof DataAccess.responses.getByPoll !== 'function') {
+      throw new Error('DataAccess.responses.getByPoll not found');
+    }
+    if (typeof DataAccess.responses.hasAnswered !== 'function') {
+      throw new Error('DataAccess.responses.hasAnswered not found');
+    }
+    if (typeof DataAccess.responses.isLocked !== 'function') {
+      throw new Error('DataAccess.responses.isLocked not found');
+    }
+
+    // Test DataAccess.individualSessionState
+    if (!DataAccess.individualSessionState) {
+      throw new Error('DataAccess.individualSessionState not found');
+    }
+    if (typeof DataAccess.individualSessionState.getByStudent !== 'function') {
+      throw new Error('DataAccess.individualSessionState.getByStudent not found');
+    }
+    if (typeof DataAccess.individualSessionState.initStudent !== 'function') {
+      throw new Error('DataAccess.individualSessionState.initStudent not found');
+    }
+    if (typeof DataAccess.individualSessionState.updateProgress !== 'function') {
+      throw new Error('DataAccess.individualSessionState.updateProgress not found');
+    }
+    if (typeof DataAccess.individualSessionState.lockStudent !== 'function') {
+      throw new Error('DataAccess.individualSessionState.lockStudent not found');
+    }
+    if (typeof DataAccess.individualSessionState.getAllForSession !== 'function') {
+      throw new Error('DataAccess.individualSessionState.getAllForSession not found');
+    }
+
+    // Test parseIndividualSessionRow_ helper function exists
+    if (typeof parseIndividualSessionRow_ !== 'function') {
+      throw new Error('parseIndividualSessionRow_ helper function not found');
+    }
+
+    Veritas.Logging.info('DataAccess compatibility test passed');
+    return {
+      success: true,
+      pollCount: allPolls.length,
+      tests: [
+        'polls.getAll',
+        'polls.getById',
+        'polls.getByClass',
+        'roster.getByClass',
+        'roster.isEnrolled',
+        'liveStatus.get',
+        'liveStatus.set',
+        'liveStatus.getMetadata',
+        'responses.*',
+        'individualSessionState.*',
+        'parseIndividualSessionRow_'
+      ]
+    };
+  } catch (err) {
+    Veritas.Logging.error('DataAccess compatibility test failed', err);
+    return { success: false, error: err.message };
+  }
+};
+
 // Additional test functions to be added in future phases:
 // - test_LivePollWorkflow
 // - test_SecureAssessmentWorkflow
 // - test_ProctorStateMachine
 // etc.
+
+// =============================================================================
+// CONVENIENT ENTRY POINTS FOR APPS SCRIPT EDITOR
+// =============================================================================
+
+/**
+ * Test DataAccess compatibility - can be run from Apps Script editor
+ */
+function testDataAccessCompatibility() {
+  var result = Veritas.DevTools.test_DataAccessCompatibility();
+  Logger.log('=== DataAccess Compatibility Test ===');
+  Logger.log('Success: ' + result.success);
+  if (result.success) {
+    Logger.log('Poll Count: ' + result.pollCount);
+    Logger.log('Tests Passed:');
+    for (var i = 0; i < result.tests.length; i++) {
+      Logger.log('  ✓ ' + result.tests[i]);
+    }
+  } else {
+    Logger.log('Error: ' + result.error);
+  }
+  return result;
+}
+
+/**
+ * Run all tests - can be run from Apps Script editor
+ */
+function runAllDevTests() {
+  var results = Veritas.DevTools.runAllTests();
+  Logger.log('=== Smoke Test Results ===');
+  Logger.log('Total: ' + results.totalTests);
+  Logger.log('Passed: ' + results.passed);
+  Logger.log('Failed: ' + results.failed);
+
+  if (results.failed > 0) {
+    Logger.log('\nErrors:');
+    for (var i = 0; i < results.errors.length; i++) {
+      Logger.log('  ✗ ' + results.errors[i]);
+    }
+  }
+
+  Logger.log('\nDetailed Results:');
+  for (var i = 0; i < results.details.length; i++) {
+    var detail = results.details[i];
+    var symbol = detail.status === 'PASSED' ? '✓' : '✗';
+    Logger.log('  ' + symbol + ' ' + detail.test + ': ' + detail.status);
+    if (detail.error) {
+      Logger.log('    Error: ' + detail.error);
+    }
+  }
+
+  return results;
+}

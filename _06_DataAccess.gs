@@ -795,6 +795,51 @@ function fixAllImagePermissions() {
   return Veritas.Data.Drive.fixAllImagePermissions();
 }
 
+// =============================================================================
+// HELPER FUNCTIONS FOR INDIVIDUAL SESSION STATE
+// =============================================================================
+
+/**
+ * Parse individual session row from sheet into object
+ * @param {Array} row - Row data from sheet
+ * @param {number} index - Row index (1-based for sheet, includes header)
+ * @returns {Object} Parsed session state object
+ */
+function parseIndividualSessionRow_(row, index) {
+  var parseJson = function(value, fallback) {
+    if (!value && value !== 0) return fallback;
+    try {
+      return JSON.parse(value);
+    } catch (err) {
+      Veritas.Logging.error('Failed to parse IndividualSessionState JSON column', err);
+      return fallback;
+    }
+  };
+
+  return {
+    pollId: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.POLL_ID - 1] || '',
+    sessionId: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.SESSION_ID - 1] || '',
+    studentEmail: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.STUDENT_EMAIL - 1] || '',
+    studentDisplayName: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.STUDENT_DISPLAY_NAME - 1] || '',
+    startTime: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.START_TIME - 1] || null,
+    endTime: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.END_TIME - 1] || null,
+    questionOrder: parseJson(row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.QUESTION_ORDER - 1], []),
+    questionOrderSeed: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.QUESTION_ORDER_SEED - 1] || '',
+    currentQuestionIndex: Number(row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.CURRENT_QUESTION_INDEX - 1]) || 0,
+    isLocked: coerceBoolean_(row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.IS_LOCKED - 1], false),
+    violationCode: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.VIOLATION_CODE - 1] || '',
+    answerOrders: parseJson(row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.ANSWER_ORDERS - 1], {}),
+    answerChoiceMap: parseJson(row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.ANSWER_CHOICE_MAP - 1], {}),
+    timeAdjustmentMinutes: Number(row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.TIME_ADJUSTMENT_MINUTES - 1]) || 0,
+    pauseDurationMs: Number(row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.PAUSE_DURATION_MS - 1]) || 0,
+    lastHeartbeatMs: Number(row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.LAST_HEARTBEAT_MS - 1]) || 0,
+    connectionHealth: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.CONNECTION_HEALTH - 1] || 'UNKNOWN',
+    proctorStatus: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.PROCTOR_STATUS - 1] || '',
+    additionalMetadata: parseJson(row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.ADDITIONAL_METADATA_JSON - 1], {}),
+    rowIndex: index
+  };
+}
+
 // Also make DataAccess object available for backward compatibility
 var DataAccess = {
   roster: {

@@ -50,19 +50,33 @@ Veritas.TeacherApi.getTeacherDashboardData = function() {
     Veritas.TeacherApi.assertTeacher();
 
     var classes = Veritas.Models.Poll.getClasses();
-    var polls = DataAccess.polls.getAll()
-      .map(function(poll) {
-        return {
-          pollId: poll.pollId,
-          pollName: poll.pollName,
-          className: poll.className,
-          questionCount: poll.questions.length,
-          createdAt: poll.createdAt || '',
-          updatedAt: poll.updatedAt || '',
-          sessionType: poll.sessionType,
-          timeLimitMinutes: poll.timeLimitMinutes
-        };
-      });
+
+    // Return the full poll payload so the teacher dashboard can render
+    // question details, secure assessment metadata, and existing session
+    // history. Previously this endpoint trimmed the poll objects down to a
+    // small subset of fields, which meant the UI could not display question
+    // counts, secure access codes, availability windows, or other metadata –
+    // and starting a live poll lacked the poll context it needed. The
+    // dashboard relies on the full poll object (including `questions` and
+    // `secureSettings`) to show those details and launch sessions reliably.
+    var polls = DataAccess.polls.getAll().map(function(poll) {
+      return {
+        pollId: poll.pollId,
+        pollName: poll.pollName,
+        className: poll.className,
+        questions: poll.questions,
+        questionCount: poll.questions.length,
+        createdAt: poll.createdAt || '',
+        updatedAt: poll.updatedAt || '',
+        sessionType: poll.sessionType,
+        timeLimitMinutes: poll.timeLimitMinutes,
+        accessCode: poll.accessCode || '',
+        availableFrom: poll.availableFrom || '',
+        dueBy: poll.dueBy || '',
+        missionControlState: poll.missionControlState || '',
+        secureSettings: poll.secureSettings || {}
+      };
+    });
 
     polls.sort(function(a, b) {
       var aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;

@@ -785,6 +785,228 @@
     });
   }
 
+  // === Combobox Component (Headless UI Style) ===
+  function VeritasCombobox(config) {
+    this.inputId = config.inputId;
+    this.containerId = config.containerId;
+    this.data = config.data || []; // Array of {id, label, subLabel?, value?, onSelect?}
+    this.onSelect = config.onSelect;
+    this.filterFn = config.filterFn || function(item, query) {
+      return (item.label || '').toLowerCase().includes(query.toLowerCase());
+    };
+    this.renderItem = config.renderItem || function(item, selected, active) {
+      var checkIcon = selected ? '<span class="absolute inset-y-0 right-0 flex items-center pr-4 text-veritas-navy"><span class="material-symbols-outlined text-sm">check</span></span>' : '';
+      var activeClass = active ? 'bg-veritas-navy text-white' : 'text-gray-900';
+      var subLabel = item.subLabel ? '<span class="block truncate text-xs opacity-70">' + escapeHtml(item.subLabel) + '</span>' : '';
+      return '<li class="relative cursor-default select-none py-2 pl-3 pr-9 ' + activeClass + '" role="option" aria-selected="' + selected + '" data-index="' + item.index + '">' +
+             '<div class="flex flex-col">' +
+             '<span class="block truncate font-medium">' + escapeHtml(item.label) + '</span>' +
+             subLabel +
+             '</div>' +
+             checkIcon +
+             '</li>';
+    };
+
+    this.input = document.getElementById(this.inputId);
+    this.container = document.getElementById(this.containerId) || (this.input ? this.input.parentElement : null);
+
+    if (!this.input || !this.container) {
+      console.warn('Combobox init failed: missing input or container', this.inputId);
+      return;
+    }
+
+    this.button = this.container.querySelector('button[data-combobox-toggle]');
+    this.optionsList = document.createElement('ul');
+    this.optionsList.className = 'absolute z-[100] mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm hidden';
+    this.container.appendChild(this.optionsList);
+
+    this.isOpen = false;
+    this.activeIndex = -1; // For keyboard navigation
+    this.filteredData = [];
+    this.query = '';
+
+    this.init();
+  }
+
+  VeritasCombobox.prototype.init = function() {
+    var self = this;
+
+    // Input Events
+    this.input.addEventListener('input', function(e) {
+      self.query = e.target.value;
+      self.isOpen = true;
+      self.activeIndex = -1;
+      self.renderOptions();
+      // Trigger native input event if we intercepted it, but we are just listening
+    });
+
+    this.input.addEventListener('focus', function() {
+      // Optional: Open on focus? The snippet implies open on change or button click.
+      // Let's open if there is data
+      if (self.data.length > 0) {
+        // self.isOpen = true;
+        // self.renderOptions();
+        // Actually, let's just let the button toggle it or typing open it
+      }
+    });
+
+    this.input.addEventListener('keydown', function(e) {
+      if (!self.isOpen) {
+        if (e.key === 'ArrowDown') {
+          self.isOpen = true;
+          self.renderOptions();
+          e.preventDefault();
+        }
+        return;
+      }
+
+      switch(e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          self.activeIndex = (self.activeIndex + 1) % self.filteredData.length;
+          self.updateActiveOption();
+          self.scrollActiveIntoView();
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          self.activeIndex = (self.activeIndex - 1 + self.filteredData.length) % self.filteredData.length;
+          self.updateActiveOption();
+          self.scrollActiveIntoView();
+          break;
+        case 'Enter':
+          e.preventDefault();
+          if (self.activeIndex >= 0 && self.filteredData[self.activeIndex]) {
+            self.selectItem(self.filteredData[self.activeIndex]);
+          }
+          break;
+        case 'Escape':
+          self.close();
+          break;
+        case 'Tab':
+          self.close();
+          break;
+      }
+    });
+
+    // Button Event
+    if (this.button) {
+      this.button.addEventListener('click', function(e) {
+        e.stopPropagation(); // Prevent closing immediately
+        self.toggle();
+      });
+    }
+
+    // Option Click Events (Delegated)
+    this.optionsList.addEventListener('click', function(e) {
+      var li = e.target.closest('li');
+      if (li) {
+        var index = parseInt(li.dataset.index, 10);
+        // Find item in filteredData based on index matching?
+        // The filteredData indices might not match filtered array indices if we rely on dataset.index
+        // Let's store the actual filtered index in dataset
+        var item = self.filteredData[index];
+        if (item) {
+          self.selectItem(item);
+        }
+      }
+    });
+
+    // Outside Click
+    document.addEventListener('click', function(e) {
+      if (self.isOpen && !self.container.contains(e.target)) {
+        self.close();
+      }
+    });
+  };
+
+  VeritasCombobox.prototype.updateData = function(newData) {
+    this.data = newData;
+    if (this.isOpen) {
+      this.renderOptions();
+    }
+  };
+
+  VeritasCombobox.prototype.toggle = function() {
+    if (this.isOpen) {
+      this.close();
+    } else {
+      this.open();
+    }
+  };
+
+  VeritasCombobox.prototype.open = function() {
+    this.isOpen = true;
+    this.query = this.input.value; // Reset query to current input
+    this.renderOptions();
+  };
+
+  VeritasCombobox.prototype.close = function() {
+    this.isOpen = false;
+    this.optionsList.classList.add('hidden');
+    this.activeIndex = -1;
+  };
+
+  VeritasCombobox.prototype.renderOptions = function() {
+    var self = this;
+    // Filter data
+    if (this.query === '') {
+      this.filteredData = this.data;
+    } else {
+      this.filteredData = this.data.filter(function(item) {
+        return self.filterFn(item, self.query);
+      });
+    }
+
+    if (this.filteredData.length === 0) {
+      this.optionsList.innerHTML = '<div class="relative cursor-default select-none py-2 px-4 text-gray-700">Nothing found.</div>';
+    } else {
+      this.optionsList.innerHTML = this.filteredData.map(function(item, index) {
+        // Map filtered index to dataset
+        var tempItem = Object.assign({}, item, { index: index });
+        return self.renderItem(tempItem, false, index === self.activeIndex);
+      }).join('');
+    }
+
+    this.optionsList.classList.remove('hidden');
+  };
+
+  VeritasCombobox.prototype.updateActiveOption = function() {
+    var items = this.optionsList.querySelectorAll('li');
+    items.forEach(function(item, idx) {
+      if (idx === this.activeIndex) {
+        item.classList.add('bg-veritas-navy', 'text-white');
+        item.classList.remove('text-gray-900');
+      } else {
+        item.classList.remove('bg-veritas-navy', 'text-white');
+        item.classList.add('text-gray-900');
+      }
+    }.bind(this));
+  };
+
+  VeritasCombobox.prototype.scrollActiveIntoView = function() {
+    var activeItem = this.optionsList.children[this.activeIndex];
+    if (activeItem) {
+      activeItem.scrollIntoView({ block: 'nearest' });
+    }
+  };
+
+  VeritasCombobox.prototype.selectItem = function(item) {
+    this.input.value = item.label;
+    this.query = item.label;
+    this.close();
+    if (this.onSelect) {
+      this.onSelect(item);
+    }
+    // Trigger change event on input
+    var event = new Event('input', { bubbles: true });
+    this.input.dispatchEvent(event);
+  };
+
+  // Global Combobox Instances
+  var pollCombobox = null;
+  var liveStudentCombobox = null;
+  var analyticsStudentCombobox = null;
+
   // === Initialize Enhanced UI Systems ===
   document.addEventListener('DOMContentLoaded', function() {
     // Initialize FAB system
@@ -795,6 +1017,52 @@
 
     // Initialize Keyboard Shortcuts
     initializeKeyboardShortcuts();
+
+    // Initialize Comboboxes
+    // Dashboard Poll Search
+    pollCombobox = new VeritasCombobox({
+      inputId: 'poll-search-input',
+      containerId: 'poll-search-container',
+      onSelect: function(item) {
+        // Selection logic is handled by the input event triggering refreshPollViews
+        // But we can add specific logic here if needed, e.g., jump to item
+        if (item.type === 'class') {
+          // Maybe set filter?
+          var filterSelect = document.getElementById('poll-filter-select');
+          if(filterSelect) {
+             filterSelect.value = item.value;
+             // Trigger change
+             var evt = new Event('change');
+             filterSelect.dispatchEvent(evt);
+             // Clear search query since we used a filter? Or keep it?
+             // Keeping it aligns with "autocomplete" behavior.
+          }
+        }
+      }
+    });
+
+    // Live View Student Search
+    liveStudentCombobox = new VeritasCombobox({
+      inputId: 'student-search-input',
+      containerId: 'student-search-container',
+      onSelect: function(item) {
+        // Trigger filtering
+      }
+    });
+
+    // Analytics Student Search
+    analyticsStudentCombobox = new VeritasCombobox({
+      inputId: 'analytics-student-search',
+      containerId: 'analytics-student-search-container',
+      onSelect: function(item) {
+        if (item.student) {
+          selectStudent(item.student);
+          // Hide suggestions handled by combobox
+          // Clear input?
+          document.getElementById('analytics-student-search').value = '';
+        }
+      }
+    });
 
     console.log('✨ Enhanced UI systems initialized (Phase 3)');
   });
@@ -2557,6 +2825,21 @@
 
   function refreshPollViews(){
     var polls=getFilteredSortedPolls();
+
+    // Update Combobox Data
+    if (pollCombobox) {
+        var comboData = [];
+        // Add Classes
+        ALL_CLASSES.forEach(function(cls) {
+            comboData.push({ label: cls, type: 'class', subLabel: 'Class' });
+        });
+        // Add Polls
+        ALL_POLLS.forEach(function(poll) {
+            comboData.push({ label: poll.pollName, type: 'poll', subLabel: poll.className });
+        });
+        pollCombobox.updateData(comboData);
+    }
+
     renderPollCards(polls);
     renderPollTable(polls);
     updatePollDropdown(polls);
@@ -2856,6 +3139,110 @@
     return html;
   }
 
+  // Dropdown Management
+  var activeDropdown = null;
+
+  function closeActiveDropdown() {
+    if (activeDropdown) {
+      activeDropdown.remove();
+      activeDropdown = null;
+      document.removeEventListener('click', handleGlobalDropdownClick);
+    }
+  }
+
+  function handleGlobalDropdownClick(e) {
+    // If clicking inside the active dropdown, do nothing (let event bubble to button handlers)
+    if (activeDropdown && activeDropdown.contains(e.target)) {
+      return;
+    }
+    // If clicking the trigger button again, it's handled by the toggle logic, but we need to ensure we don't double-close/open
+    // Actually, the trigger button click handler stops propagation, so this global listener only catches clicks *outside* or on *other* elements.
+    closeActiveDropdown();
+  }
+
+  function togglePollDropdown(btn, pollId) {
+    var existing = activeDropdown;
+    closeActiveDropdown(); // Close any open one
+
+    // If we clicked the same button that opened the current dropdown, we just close it (done above) and return
+    if (existing && existing.dataset.triggerId === pollId) {
+      return;
+    }
+
+    var rect = btn.getBoundingClientRect();
+    var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    var scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+
+    var menu = document.createElement('div');
+    menu.className = 'fixed z-[9999] w-52 rounded-xl border border-white/5 bg-gray-800 p-1 text-sm text-white shadow-lg transition duration-100 ease-out origin-top-right';
+    menu.style.top = (rect.bottom + 5) + 'px';
+
+    // Align right edge of menu with right edge of button
+    var menuWidth = 208; // w-52 is 13rem = 208px
+    var leftPos = rect.right - menuWidth;
+
+    // Check if it goes off screen to the left
+    if (leftPos < 10) {
+        leftPos = rect.left; // Align left if no space on right
+    }
+
+    menu.style.left = leftPos + 'px';
+    menu.dataset.triggerId = pollId;
+
+    // Menu Items
+    var items = [
+      { label: 'Edit', icon: 'edit', action: 'edit', kbd: '⌘E' },
+      { label: 'Duplicate', icon: 'content_copy', action: 'duplicate', kbd: '⌘D' },
+      { label: 'Preview', icon: 'visibility', action: 'preview', kbd: '⌘P' },
+      // Divider
+      { type: 'divider' },
+      // Delete
+      { label: 'Delete', icon: 'delete', action: 'delete', kbd: '⌘Del', danger: true }
+    ];
+
+    items.forEach(function(item) {
+      if (item.type === 'divider') {
+        var div = document.createElement('div');
+        div.className = 'my-1 h-px bg-white/5';
+        menu.appendChild(div);
+        return;
+      }
+
+      var btnItem = document.createElement('button');
+      btnItem.className = 'group flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-white/10 text-left transition-colors ' + (item.danger ? 'text-red-400 hover:text-red-300' : 'text-white');
+
+      var iconColorClass = item.danger ? 'text-red-400 group-hover:text-red-300' : 'text-white/60 group-hover:text-white';
+
+      btnItem.innerHTML = `
+        <span class="material-symbols-outlined text-base ${iconColorClass}">${item.icon}</span>
+        <span>${item.label}</span>
+        ${item.kbd ? `<kbd class="ml-auto hidden font-sans text-xs text-white/50 group-hover:inline">${item.kbd}</kbd>` : ''}
+      `;
+
+      btnItem.onclick = function(e) {
+        e.stopPropagation(); // Prevent bubbling to global listener immediately
+        handleDropdownAction(item.action, pollId);
+        closeActiveDropdown();
+      };
+      menu.appendChild(btnItem);
+    });
+
+    document.body.appendChild(menu);
+    activeDropdown = menu;
+
+    // Delay adding the click listener to avoid immediate close from the trigger click bubbling
+    requestAnimationFrame(function() {
+        document.addEventListener('click', handleGlobalDropdownClick);
+    });
+  }
+
+  function handleDropdownAction(action, pollId) {
+    if (action === 'edit') startEditPoll(pollId);
+    else if (action === 'duplicate') handleCopyPoll(pollId);
+    else if (action === 'preview') openPollPreview(pollId);
+    else if (action === 'delete') handleDeletePoll(pollId);
+  }
+
   function renderPollTable(polls){
     polls=polls||getFilteredSortedPolls();
     pollsTableBody.innerHTML='';
@@ -2878,12 +3265,22 @@
       htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">'+(poll.questions?poll.questions.length:0)+'</td>');
       htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">'+buildSessionModeCellHtml(poll)+'</td>');
       htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">'+lastEdited+'</td>');
-      htmlParts.push('<td class="px-4 py-3 align-top">');
-      htmlParts.push('<div class="flex justify-end gap-2">');
+
+      // Actions Column
+      htmlParts.push('<td class="px-4 py-3 align-top text-right">');
+      htmlParts.push('<div class="flex justify-end items-center gap-2">');
+
+      // Primary Action: Select
       htmlParts.push('<button class="poll-select-btn h-8 px-3 rounded-md bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-xs font-semibold hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors" data-poll-id="'+poll.pollId+'">Select</button>');
-      htmlParts.push('<button class="poll-copy-btn h-8 px-3 rounded-md bg-green-600/10 text-green-600 dark:text-green-300 dark:bg-green-500/20 text-xs font-semibold hover:bg-green-600/20 dark:hover:bg-green-500/30 transition-colors" data-poll-id="'+poll.pollId+'" title="Copy this poll">Copy</button>');
-      htmlParts.push('<button class="poll-edit-btn h-8 px-3 rounded-md bg-primary text-brand-white text-xs font-semibold hover:bg-primary/90 transition-colors" data-poll-id="'+poll.pollId+'">Edit</button>');
-      htmlParts.push('<button class="poll-delete-btn h-8 px-3 rounded-md bg-red-600/10 text-red-600 dark:text-red-300 dark:bg-red-500/20 text-xs font-semibold hover:bg-red-600/20 dark:hover:bg-red-500/30 transition-colors" data-poll-id="'+poll.pollId+'">Delete</button>');
+
+      // Options Dropdown Trigger
+      htmlParts.push('<div class="relative inline-block text-left">');
+      htmlParts.push('<button type="button" class="poll-options-btn inline-flex items-center gap-2 rounded-md bg-gray-800 px-3 py-1.5 text-xs font-semibold text-white shadow-inner shadow-white/10 hover:bg-gray-700 focus:outline-none transition-colors" data-poll-id="'+poll.pollId+'" aria-expanded="false" aria-haspopup="true">');
+      htmlParts.push('Options');
+      htmlParts.push('<span class="material-symbols-outlined text-base text-white/60">keyboard_arrow_down</span>');
+      htmlParts.push('</button>');
+      htmlParts.push('</div>');
+
       htmlParts.push('</div>');
       htmlParts.push('</td>');
       row.innerHTML=htmlParts.join('');
@@ -2891,6 +3288,85 @@
     });
 
     attachPollActionHandlers(pollsTableBody);
+  }
+
+  async function handleCopyPoll(pollId) {
+    var poll = ALL_POLLS.find(function(p) { return p.pollId === pollId; });
+    if (!poll) return;
+
+    var newName = await veritasPrompt('Enter a name for the copied poll:', {
+      defaultValue: poll.pollName + ' (Copy)',
+      title: 'Copy poll'
+    });
+    if (newName === null) return;
+
+    newName = newName.trim();
+    if (newName === '') {
+      await veritasAlert('Poll name cannot be empty', { title: 'Copy poll' });
+      return;
+    }
+
+    // Show loading state on UI if triggered from button, but here we might be from dropdown
+    // We can show a global toast or similar, but for now rely on the modal handling
+
+    if (PREVIEW_MODE) {
+      setTimeout(async function() {
+        var clone = deepClone(poll);
+        clone.pollId = poll.pollId + '-copy-' + Date.now();
+        clone.pollName = newName;
+        clone.createdAt = new Date().toISOString();
+        clone.updatedAt = clone.createdAt;
+        ALL_POLLS.push(clone);
+        refreshPollViews();
+        await veritasAlert('Poll copied (preview data only).', { title: 'Poll copied' });
+      }, 140);
+      return;
+    }
+
+    // Since we don't have a button reference to disable easily (detached dropdown), use global loader or modal
+    // Or just let it run. The user sees the modal close.
+
+    google.script.run
+      .withSuccessHandler(async function(result) {
+        if (result.success) {
+          refreshPollData(result.polls);
+          await veritasAlert(result.message, { title: 'Poll copied' });
+        } else {
+          await veritasAlert('Failed to copy poll: ' + (result.error || 'Unknown error'), {
+            title: 'Copy poll failed',
+            destructive: true
+          });
+        }
+      })
+      .withFailureHandler(function(error) {
+        handleError(error);
+      })
+      .copyPoll(pollId, newName, poll.className);
+  }
+
+  async function handleDeletePoll(pollId) {
+    var confirmed = await veritasConfirm('Delete this poll permanently? This will also remove all responses.', {
+      title: 'Delete poll',
+      confirmText: 'Delete',
+      destructive: true
+    });
+    if (!confirmed) return;
+
+    if (PREVIEW_MODE) {
+      setTimeout(function() {
+        ALL_POLLS = ALL_POLLS.filter(function(p) { return p.pollId !== pollId; });
+        refreshPollViews();
+        veritasAlert('Poll deleted (preview data only).', { title: 'Delete poll' });
+      }, 120);
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(function(polls) {
+        refreshPollData(polls);
+      })
+      .withFailureHandler(handleError)
+      .deletePoll(pollId);
   }
 
   function attachPollActionHandlers(root){
@@ -2910,65 +3386,23 @@
       };
     });
 
+    // Dropdown Trigger
+    root.querySelectorAll('.poll-options-btn').forEach(function(btn){
+      btn.onclick=function(e){
+        e.stopPropagation();
+        var id=this.dataset.pollId;
+        togglePollDropdown(this, id);
+      };
+    });
+
+    // Bind card-view specific buttons (cards still use individual buttons for now, or we can update them too?
+    // The request specifically showed a dropdown menu which usually replaces a row of buttons in a table.
+    // The card view has buttons at the bottom. I'll leave card view as is unless requested,
+    // but I must ensure card view handlers still work if they exist.)
+
     root.querySelectorAll('.poll-copy-btn').forEach(function(btn){
-      btn.onclick=async function(){
-        var button=this;
-        var pollId=button.dataset.pollId;
-        var poll=ALL_POLLS.find(function(p){return p.pollId===pollId;});
-        if(!poll)return;
-
-        var newName=await veritasPrompt('Enter a name for the copied poll:',{
-          defaultValue:poll.pollName+' (Copy)',
-          title:'Copy poll'
-        });
-        if(newName===null)return;
-
-        newName=newName.trim();
-        if(newName===''){
-          await veritasAlert('Poll name cannot be empty',{title:'Copy poll'});
-          return;
-        }
-
-        var originalLabel=button.textContent;
-        button.disabled=true;
-        button.textContent='Copying...';
-
-        if(PREVIEW_MODE){
-          setTimeout(async function(){
-            var clone=deepClone(poll);
-            clone.pollId=poll.pollId+'-copy-'+Date.now();
-            clone.pollName=newName;
-            clone.createdAt=new Date().toISOString();
-            clone.updatedAt=clone.createdAt;
-            ALL_POLLS.push(clone);
-            refreshPollViews();
-            button.disabled=false;
-            button.textContent=originalLabel;
-            await veritasAlert('Poll copied (preview data only).',{title:'Poll copied'});
-          },140);
-          return;
-        }
-
-        google.script.run
-          .withSuccessHandler(async function(result){
-            if(result.success){
-              refreshPollData(result.polls);
-              await veritasAlert(result.message,{title:'Poll copied'});
-            } else {
-              await veritasAlert('Failed to copy poll: '+(result.error||'Unknown error'),{
-                title:'Copy poll failed',
-                destructive:true
-              });
-            }
-            button.disabled=false;
-            button.textContent=originalLabel;
-          })
-          .withFailureHandler(function(error){
-            handleError(error);
-            button.disabled=false;
-            button.textContent=originalLabel;
-          })
-          .copyPoll(pollId,newName,poll.className);
+      btn.onclick=function(){
+        handleCopyPoll(this.dataset.pollId);
       };
     });
 
@@ -2985,31 +3419,8 @@
     });
 
     root.querySelectorAll('.poll-delete-btn').forEach(function(btn){
-      btn.onclick=async function(){
-        var button=this;
-        var id=button.dataset.pollId;
-        var confirmed=await veritasConfirm('Delete this poll permanently? This will also remove all responses.',{
-          title:'Delete poll',
-          confirmText:'Delete',
-          destructive:true
-        });
-        if(!confirmed)return;
-
-        if(PREVIEW_MODE){
-          setTimeout(function(){
-            ALL_POLLS=ALL_POLLS.filter(function(p){return p.pollId!==id;});
-            refreshPollViews();
-            veritasAlert('Poll deleted (preview data only).',{title:'Delete poll'});
-          },120);
-          return;
-        }
-
-        google.script.run
-          .withSuccessHandler(function(polls){
-            refreshPollData(polls);
-          })
-          .withFailureHandler(handleError)
-          .deletePoll(id);
+      btn.onclick=function(){
+        handleDeletePoll(this.dataset.pollId);
       };
     });
 
@@ -4410,39 +4821,17 @@
 
     var studentsArray = Object.values(analyticsData.students);
 
-    // Setup student search
-    var searchInput = document.getElementById('analytics-student-search');
-    var suggestions = document.getElementById('analytics-student-suggestions');
-
-    searchInput.oninput = function() {
-      var query = searchInput.value.toLowerCase();
-      if (query.length < 2) {
-        suggestions.classList.add('hidden');
-        return;
-      }
-
-      var matches = studentsArray.filter(function(s) {
-        return s.name.toLowerCase().includes(query) || s.email.toLowerCase().includes(query);
-      }).slice(0, 10);
-
-      if (matches.length > 0) {
-        suggestions.innerHTML = '';
-        matches.forEach(function(student) {
-          var div = document.createElement('div');
-          div.className = 'px-4 py-2 hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/50 cursor-pointer';
-          div.textContent = formatStudentName(student);
-          div.onclick = function() {
-            selectStudent(student);
-            suggestions.classList.add('hidden');
-            searchInput.value = '';
-          };
-          suggestions.appendChild(div);
+    // Update Analytics Combobox Data
+    if (analyticsStudentCombobox) {
+        var analyticsComboData = studentsArray.map(function(s) {
+            return {
+                label: formatStudentName(s),
+                subLabel: s.email,
+                student: s
+            };
         });
-        suggestions.classList.remove('hidden');
-      } else {
-        suggestions.classList.add('hidden');
-      }
-    };
+        analyticsStudentCombobox.updateData(analyticsComboData);
+    }
   }
 
   function selectStudent(student) {
@@ -5456,6 +5845,19 @@
 
     // Update student status
     currentStudentStatusData=data.studentStatusList;
+
+    // Update Live View Combobox Data
+    if (liveStudentCombobox && Array.isArray(currentStudentStatusData)) {
+        var studentData = currentStudentStatusData.map(function(s) {
+            return {
+                label: formatStudentName(s),
+                subLabel: s.status,
+                value: s.email
+            };
+        });
+        liveStudentCombobox.updateData(studentData);
+    }
+
     renderStudentStatus();
 
     if(pollInterval)clearInterval(pollInterval);

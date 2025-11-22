@@ -301,7 +301,7 @@ Veritas.Routing.maybeRedirectForTeacherAccount = function(e, currentUserEmail) {
  * @returns {HtmlOutput} Teacher interface
  */
 Veritas.Routing.serveTeacherView = function() {
-  var template = HtmlService.createTemplateFromFile('src/client/TeacherView');
+  var template = HtmlService.createTemplateFromFile('src/Teacher_View');
 
   return template.evaluate()
     .setTitle("Veritas Live Poll")
@@ -316,7 +316,7 @@ Veritas.Routing.serveTeacherView = function() {
  * @returns {HtmlOutput} Student interface
  */
 Veritas.Routing.serveStudentView = function(studentEmail, token) {
-  var template = HtmlService.createTemplateFromFile('src/client/StudentView');
+  var template = HtmlService.createTemplateFromFile('src/Student_View');
   template.studentEmail = studentEmail;
   template.sessionToken = token || '';
 
@@ -333,15 +333,16 @@ Veritas.Routing.serveStudentView = function(studentEmail, token) {
  */
 Veritas.Routing.include = function(filename) {
   try {
+    // Since all files are now flat in src/, we just use the filename
+    // If using clasp with src/ root, it might prefix. But assuming flat deploy:
     return HtmlService.createHtmlOutputFromFile(filename).getContent();
   } catch (e) {
-    // If the file is not found, try searching in src/client/
-    // This handles the case where files are nested in the source tree but names are referenced relatively
+    // Fallback for local testing or specific deployment structures
     try {
-      return HtmlService.createHtmlOutputFromFile('src/client/' + filename).getContent();
+      return HtmlService.createHtmlOutputFromFile('src/' + filename).getContent();
     } catch (e2) {
-      console.error('Include failed for ' + filename, e2);
-      return 'Error: Could not include ' + filename;
+       console.error('Include failed for ' + filename, e2);
+       return 'Error: Could not include ' + filename;
     }
   }
 };

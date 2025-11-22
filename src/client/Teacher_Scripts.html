@@ -8112,12 +8112,9 @@
     html+='<p class="text-brand-dark-gray dark:text-brand-white text-base font-medium leading-normal pb-2">Question Text</p>';
     html+='<textarea id="question-text-input" class="form-input flex w-full min-w-0 flex-1 resize-y overflow-hidden rounded-lg text-brand-dark-gray dark:text-brand-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 focus:border-primary min-h-36 placeholder:text-brand-dark-gray/50 dark:placeholder:text-brand-white/50 p-[15px] text-base font-normal leading-normal" placeholder="Type your question here...">'+escapeHtml(question.questionText||'')+'</textarea>';
     html+='</label>';
-    html+='<div class="flex mt-4 items-center gap-3 flex-wrap">';
-    html+='<label class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-brand-light-gray dark:bg-brand-dark-gray/40 text-brand-dark-gray dark:text-brand-white gap-2 pl-3 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/60 transition-colors">';
-    html+='<span class="material-symbols-outlined text-xl">image</span>';
-    html+='<span class="truncate">Upload Image</span>';
-    html+='<input type="file" class="hidden" accept="image/*" id="question-image-input">';
-    html+='</label>';
+    html+='<div class="grid w-full max-w-xs items-center gap-1.5 mt-4">';
+    html+='<label for="question-image-input" class="text-sm text-gray-400 font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Question Image</label>';
+    html+='<input id="question-image-input" type="file" accept="image/*" class="flex h-10 w-full rounded-md border border-brand-light-gray dark:border-brand-dark-gray/50 bg-white dark:bg-brand-dark-gray/30 px-3 py-2 text-sm text-gray-400 file:border-0 file:bg-transparent file:text-gray-600 dark:file:text-gray-300 file:text-sm file:font-medium focus:outline-none focus:ring-2 focus:ring-primary/50">';
     html+='</div>';
 
     // Show image preview or uploading state

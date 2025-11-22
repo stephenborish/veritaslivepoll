@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Box Verification</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        "veritas-navy": "#12385d",
+                        "brand-light-gray": "#d9e0e7",
+                        "brand-dark-gray": "#242424",
+                        "primary": "#12385d"
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="p-10 bg-gray-100 space-y-10">
+
+    <h1 class="text-2xl font-bold">Upload Box Verification</h1>
+
+    <section class="bg-white p-6 rounded shadow max-w-lg">
+        <h2 class="text-xl font-bold mb-4">Light Mode</h2>
+
+        <!-- The snippet injected into Teacher_Scripts.html -->
+        <div class="grid w-full max-w-xs items-center gap-1.5 mt-4">
+            <label for="question-image-input-light" class="text-sm text-gray-400 font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Question Image</label>
+            <input id="question-image-input-light" type="file" accept="image/*" class="flex h-10 w-full rounded-md border border-brand-light-gray bg-white px-3 py-2 text-sm text-gray-400 file:border-0 file:bg-transparent file:text-gray-600 file:text-sm file:font-medium focus:outline-none focus:ring-2 focus:ring-primary/50">
+        </div>
+
+    </section>
+
+    <section class="bg-gray-900 p-6 rounded shadow max-w-lg dark">
+        <h2 class="text-xl font-bold mb-4 text-white">Dark Mode</h2>
+
+        <!-- The snippet injected into Teacher_Scripts.html with dark mode simulation -->
+        <div class="grid w-full max-w-xs items-center gap-1.5 mt-4">
+            <label for="question-image-input-dark" class="text-sm text-gray-400 font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Question Image</label>
+            <input id="question-image-input-dark" type="file" accept="image/*" class="flex h-10 w-full rounded-md border border-brand-light-gray dark:border-brand-dark-gray/50 bg-white dark:bg-brand-dark-gray/30 px-3 py-2 text-sm text-gray-400 file:border-0 file:bg-transparent file:text-gray-600 dark:file:text-gray-300 file:text-sm file:font-medium focus:outline-none focus:ring-2 focus:ring-primary/50">
+        </div>
+
+    </section>
+
+</body>
+</html>

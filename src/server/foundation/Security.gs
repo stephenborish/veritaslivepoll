@@ -5,6 +5,8 @@
 // Dependencies: Config, Logging
 // =============================================================================
 
+// Defensive namespace initialization (required for Google Apps Script load order)
+var Veritas = Veritas || {};
 Veritas.Security = Veritas.Security || {};
 
 /**

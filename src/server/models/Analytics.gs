@@ -6,8 +6,10 @@
 // Phase: 2C In Progress - Analytics extraction in batches
 // =============================================================================
 
+// Defensive namespace initialization (required for Google Apps Script load order)
+var Veritas = Veritas || {};
 Veritas.Models = Veritas.Models || {};
-Veritas.Models.Analytics = {};
+Veritas.Models.Analytics = Veritas.Models.Analytics || {};
 
 // =============================================================================
 // ANALYTICS HUB & AGGREGATION FUNCTIONS (Batch 1)

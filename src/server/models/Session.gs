@@ -6,8 +6,10 @@
 // Phase: 2C Complete - All session functions extracted from Code.gs
 // =============================================================================
 
+// Defensive namespace initialization (required for Google Apps Script load order)
+var Veritas = Veritas || {};
 Veritas.Models = Veritas.Models || {};
-Veritas.Models.Session = {};
+Veritas.Models.Session = Veritas.Models.Session || {};
 
 // =============================================================================
 // LIVE POLL SESSION CONTROL

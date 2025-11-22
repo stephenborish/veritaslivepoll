@@ -5,6 +5,8 @@
 // Dependencies: All modules
 // =============================================================================
 
+// Defensive namespace initialization (required for Google Apps Script load order)
+var Veritas = Veritas || {};
 Veritas.DevTools = Veritas.DevTools || {};
 
 /**

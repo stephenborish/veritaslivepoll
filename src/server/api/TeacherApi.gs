@@ -6,7 +6,9 @@
 // Phase: 2D - API/Routing Layer
 // =============================================================================
 
-Veritas.TeacherApi = {};
+// Defensive namespace initialization (required for Google Apps Script load order)
+var Veritas = Veritas || {};
+Veritas.TeacherApi = Veritas.TeacherApi || {};
 
 // =============================================================================
 // SECURITY HELPERS

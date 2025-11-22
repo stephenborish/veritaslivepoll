@@ -5,8 +5,10 @@
 // Dependencies: Config, Logging, DataAccess, Utils
 // =============================================================================
 
+// Defensive namespace initialization (required for Google Apps Script load order)
+var Veritas = Veritas || {};
 Veritas.Models = Veritas.Models || {};
-Veritas.Models.Poll = {};
+Veritas.Models.Poll = Veritas.Models.Poll || {};
 
 // =============================================================================
 // POLL CRUD OPERATIONS

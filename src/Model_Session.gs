@@ -391,6 +391,8 @@ Veritas.Models.Session.resetLiveQuestion = function(pollId, questionIndex, clear
     if (clearResponses) {
       const ss = SpreadsheetApp.getActiveSpreadsheet();
       const responsesSheet = ss.getSheetByName('Responses');
+
+      // NULL CHECK: Responses sheet might not exist yet
       if (responsesSheet) {
         const values = getDataRangeValues_(responsesSheet);
         const keepRows = values.filter(function(row) { return !(row[2] === pollId && row[3] === questionIndex); });
@@ -946,8 +948,15 @@ Veritas.Models.Session.getIndividualTimedSessionTeacherView = function(pollId, s
       throw new Error('Unauthorized');
     }
 
+    // Validate inputs
+    if (!pollId) {
+      throw new Error('Poll ID is required for mission control view');
+    }
+
     const poll = DataAccess.polls.getById(pollId);
     if (!poll) {
+      // More descriptive error for deleted polls
+      Logger.log('Poll not found in getIndividualTimedSessionTeacherView', { pollId: pollId, sessionId: sessionId });
       throw new Error('Poll not found');
     }
 
@@ -956,11 +965,13 @@ Veritas.Models.Session.getIndividualTimedSessionTeacherView = function(pollId, s
     const effectiveSessionId = sessionId || liveMetadata.sessionId || '';
 
     if (!effectiveSessionId) {
+      Logger.log('No session ID found for mission control', { pollId: pollId, providedSessionId: sessionId, metadataSessionId: liveMetadata.sessionId });
       throw new Error('Secure assessment session not found.');
     }
 
     const roster = DataAccess.roster.getByClass(poll.className);
     if (!roster || roster.length === 0) {
+      Logger.log('No roster found for poll class', { pollId: pollId, className: poll.className });
       throw new Error('No students found in roster for class: ' + poll.className);
     }
 
@@ -1427,6 +1438,12 @@ Veritas.Models.Session.resetStudentResponse = function(studentEmail, pollId, que
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName("Responses");
+
+    // NULL CHECK: Responses sheet might not exist yet
+    if (!sheet) {
+      Logger.log('Responses sheet not found in resetStudentResponse', { pollId: pollId, studentEmail: studentEmail });
+      return { success: true, rowsDeleted: 0 };
+    }
 
     if (sheet.getLastRow() < 2) {
       return { success: true, rowsDeleted: 0 };

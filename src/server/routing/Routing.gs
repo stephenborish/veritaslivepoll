@@ -299,7 +299,7 @@ Veritas.Routing.maybeRedirectForTeacherAccount = function(e, currentUserEmail) {
  * @returns {HtmlOutput} Teacher interface
  */
 Veritas.Routing.serveTeacherView = function() {
-  var template = HtmlService.createTemplateFromFile('TeacherView');
+  var template = HtmlService.createTemplateFromFile('src/client/TeacherView');
 
   return template.evaluate()
     .setTitle("Veritas Live Poll")
@@ -314,7 +314,7 @@ Veritas.Routing.serveTeacherView = function() {
  * @returns {HtmlOutput} Student interface
  */
 Veritas.Routing.serveStudentView = function(studentEmail, token) {
-  var template = HtmlService.createTemplateFromFile('StudentView');
+  var template = HtmlService.createTemplateFromFile('src/client/StudentView');
   template.studentEmail = studentEmail;
   template.sessionToken = token || '';
 
@@ -330,7 +330,18 @@ Veritas.Routing.serveStudentView = function(studentEmail, token) {
  * @returns {string} File content
  */
 Veritas.Routing.include = function(filename) {
-  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+  try {
+    return HtmlService.createHtmlOutputFromFile(filename).getContent();
+  } catch (e) {
+    // If the file is not found, try searching in src/client/
+    // This handles the case where files are nested in the source tree but names are referenced relatively
+    try {
+      return HtmlService.createHtmlOutputFromFile('src/client/' + filename).getContent();
+    } catch (e2) {
+      console.error('Include failed for ' + filename, e2);
+      return 'Error: Could not include ' + filename;
+    }
+  }
 };
 
 // =============================================================================

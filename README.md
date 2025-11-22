@@ -136,14 +136,14 @@
    ```
 
 3. **Copy the code files**
-   - Copy contents of `Code.gs` to the default `Code.gs` file
-   - Create new HTML files: `TeacherView.html`, `StudentView.html`
-   - Copy contents from repository
+   - From `src/server`, create matching script files in Apps Script (e.g., `Code`, `foundation/Config`, `api/TeacherApi`).
+   - From `src/client`, create HTML files (`TeacherView`, `StudentView`, shared partials).
+   - Keep file names the same as the repository (folders in Apps Script are optional but recommended).
 
 4. **Configure teacher email**
-   - Edit `TEACHER_EMAIL` constant in `Code.gs` (line ~50)
+   - Edit `Veritas.Config.TEACHER_EMAIL` in `src/server/foundation/Config.gs` before deploying
    ```javascript
-   const TEACHER_EMAIL = "your-email@yourdomain.com";
+   Veritas.Config.TEACHER_EMAIL = "your-email@yourdomain.com";
    ```
 
 5. **Run initial setup**
@@ -197,6 +197,12 @@
 │  UI   │   │   UI   │
 └───────┘   └────────┘
 ```
+
+### Repository Layout
+
+- `src/server` – Google Apps Script backend organized by layer (foundation, data, models, api, routing, devtools, shared helpers).
+- `src/client` – HTML partials for teacher and student UIs plus shared head/style templates.
+- `scripts` – Local-only Node smoke tests for pure utility functions (run with `npm test`).
 
 ### Data Flow
 

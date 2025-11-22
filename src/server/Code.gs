@@ -19,64 +19,56 @@ var Veritas = Veritas || {};
  * Environment metadata
  */
 Veritas.Env = {
-  VERSION: '2.0.0',
-  PHASE: 'Phase 2D Complete - Modular Architecture',
-  LAST_UPDATED: '2025-11-20'
+  VERSION: '2.1.0',
+  PHASE: 'Modular source tree under src/server',
+  LAST_UPDATED: '2025-03-03'
 };
 
 // =============================================================================
 // MODULE ORGANIZATION
 // =============================================================================
 //
-// The Veritas Live Poll system is organized into the following modules:
+// The Veritas Live Poll system is organized into the following modules under
+// src/server:
 //
 // FOUNDATION LAYER
-// - _01_Core.gs (Veritas.Core)
+// - foundation/Core.gs (Veritas.Core)
 //   Namespace initialization and global setup
-//
-// - _02_Config.gs (Veritas.Config)
+// - foundation/Config.gs (Veritas.Config)
 //   Configuration constants, session types, proctoring rules
-//
-// - _03_Logging.gs (Veritas.Logging)
+// - foundation/Logging.gs (Veritas.Logging)
 //   Logging utilities and error tracking
-//
-// - _04_Security.gs (Veritas.Security)
+// - foundation/Security.gs (Veritas.Security)
 //   Authentication, authorization, and teacher verification
-//
-// - _05_Utils.gs (Veritas.Utils)
+// - foundation/Utils.gs (Veritas.Utils)
 //   Utility functions: error handling, caching, logging, rate limiting, tokens
+// - shared/VeritasPure.gs
+//   Pure helpers shared with tests and Utils
 //
-// - _06_DataAccess.gs (DataAccess)
-//   Data access layer for spreadsheet operations (polls, responses, roster, etc.)
+// DATA LAYER
+// - data/DataAccess.gs (DataAccess)
+//   Spreadsheet operations (polls, responses, roster, etc.)
 //
 // MODELS LAYER (Business Logic)
-// - _07_Models_Poll.gs (Veritas.Models.Poll)
+// - models/Poll.gs (Veritas.Models.Poll)
 //   Poll CRUD, roster management, question normalization, image management
-//
-// - _08_Models_Session.gs (Veritas.Models.Session)
+// - models/Session.gs (Veritas.Models.Session)
 //   Live poll sessions, secure assessments, proctoring, timing control
-//
-// - _09_Models_Analytics.gs (Veritas.Models.Analytics)
+// - models/Analytics.gs (Veritas.Models.Analytics)
 //   Analytics hub, psychometrics, insights, interpretations, dashboard summaries
 //
 // API/ROUTING LAYER
-// - _10_TeacherApi.gs (Veritas.TeacherApi)
+// - api/TeacherApi.gs (Veritas.TeacherApi)
 //   Teacher-facing server methods with security enforcement
-//   58 functions: dashboard, analytics, poll management, roster, sessions, setup
-//
-// - _11_StudentApi.gs (Veritas.StudentApi)
+// - api/StudentApi.gs (Veritas.StudentApi)
 //   Student-facing methods with token validation
-//   7 functions: live poll operations, secure assessment operations
-//
-// - _12_Routing.gs (Veritas.Routing)
+// - api/ExposedApi.gs
+//   Centralized registry of functions exposed to google.script.run
+// - routing/Routing.gs (Veritas.Routing)
 //   Web app routing, authentication, template serving, image proxy
 //
-// - _13_ExposedApi.gs
-//   Centralized registry of all 79 functions exposed to google.script.run
-//   Thin wrappers that delegate to TeacherApi, StudentApi, or Routing
-//
 // DEVELOPMENT TOOLS
-// - _14_DevTools.gs (Veritas.DevTools)
+// - devtools/DevTools.gs (Veritas.DevTools)
 //   Development utilities and smoke tests
 //
 // =============================================================================

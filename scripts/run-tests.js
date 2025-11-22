@@ -4,7 +4,7 @@ const path = require('path');
 
 // Treat .gs files as plain JavaScript so Node can load Apps Script modules
 require.extensions['.gs'] = require.extensions['.js'];
-const pure = require(path.join(__dirname, '..', 'src', 'server', 'shared', 'VeritasPure.gs'));
+const pure = require(path.join(__dirname, '..', 'src', 'Shared_Logic.gs'));
 
 function testEscapeHtml() {
   assert.strictEqual(pure.escapeHtml('<script>'), '&lt;script&gt;');

@@ -1175,10 +1175,30 @@ var DataAccess = {
         state.proctorStatus = updates.proctorStatus;
       }
 
+      var metadataUpdated = false;
+
       if (Object.prototype.hasOwnProperty.call(updates, 'additionalMetadata')) {
-        var metadataJson = JSON.stringify(updates.additionalMetadata);
-        sheet.getRange(rowIndex, columns.ADDITIONAL_METADATA_JSON).setValue(metadataJson);
         state.additionalMetadata = updates.additionalMetadata;
+        metadataUpdated = true;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'mergeAdditionalMetadata')) {
+        var currentMetadata = state.additionalMetadata || {};
+        var newMetadata = updates.mergeAdditionalMetadata;
+        if (newMetadata && typeof newMetadata === 'object') {
+          for (var key in newMetadata) {
+            if (Object.prototype.hasOwnProperty.call(newMetadata, key)) {
+              currentMetadata[key] = newMetadata[key];
+            }
+          }
+          state.additionalMetadata = currentMetadata;
+          metadataUpdated = true;
+        }
+      }
+
+      if (metadataUpdated) {
+        var metadataJson = JSON.stringify(state.additionalMetadata);
+        sheet.getRange(rowIndex, columns.ADDITIONAL_METADATA_JSON).setValue(metadataJson);
       }
 
       return state;

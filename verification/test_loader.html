@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loader Verification</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        "veritas-navy": "#12385d",
+                        "veritas-gold": "#c5a05a",
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="p-10 bg-gray-100 space-y-10">
+
+    <h1 class="text-2xl font-bold">Loader Verification</h1>
+
+    <section>
+        <h2 class="text-xl font-bold mb-4">Student Loader (from Student_Body.html)</h2>
+        <div class="bg-white p-6 rounded shadow">
+            <!-- Snippet from Student_Body.html -->
+            <div id="student-loader" class="text-center py-12" style="display: block;">
+                <div class="flex flex-row gap-2 justify-center mb-4">
+                  <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce"></div>
+                  <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.3s]"></div>
+                  <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.5s]"></div>
+                </div>
+                <p class="text-[#12385d] text-lg">Preparing your secure session...</p>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2 class="text-xl font-bold mb-4">Analytics Loader (from Teacher_Body.html)</h2>
+        <div class="bg-white p-6 rounded shadow">
+            <!-- Snippet from Teacher_Body.html -->
+            <div id="analytics-overview-loading" class="text-center py-12">
+                <div class="flex flex-row gap-2 justify-center mb-4">
+                  <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce"></div>
+                  <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.3s]"></div>
+                  <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.5s]"></div>
+                </div>
+                <p class="text-brand-dark-gray/60 dark:text-brand-white/60">Loading analytics...</p>
+              </div>
+        </div>
+    </section>
+
+    <section>
+        <h2 class="text-xl font-bold mb-4">Book View Loader (from Teacher_Body.html)</h2>
+        <div class="bg-white p-6 rounded shadow">
+             <!-- Snippet from Teacher_Body.html -->
+             <div id="book-view-loading" class="p-12 text-center">
+                <div class="flex flex-row gap-2 justify-center mb-4">
+                  <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce"></div>
+                  <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.3s]"></div>
+                  <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.5s]"></div>
+                </div>
+                <p class="mt-4 text-slate-600 dark:text-slate-400">Loading book view data...</p>
+              </div>
+        </div>
+    </section>
+
+</body>
+</html>

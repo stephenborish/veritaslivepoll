@@ -105,6 +105,8 @@ Veritas.Models.Poll.deletePoll = function(pollId) {
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var responsesSheet = ss.getSheetByName('Responses');
+
+    // NULL CHECK: Responses sheet might not exist yet
     if (responsesSheet) {
       var values = Veritas.Models.Poll.getDataRangeValues(responsesSheet);
       for (var i = values.length - 1; i >= 0; i--) {
@@ -1597,6 +1599,12 @@ Veritas.Models.Poll.ensureClassExists = function(className, description) {
  * @returns {Array} 2D array of values
  */
 Veritas.Models.Poll.getDataRangeValues = function(sheet) {
+  // CRITICAL NULL CHECK: getSheetByName can return null if sheet doesn't exist
+  if (!sheet) {
+    Logger.log('getDataRangeValues called with null/undefined sheet');
+    return [];
+  }
+
   if (sheet.getLastRow() < 2) {
     return [];
   }

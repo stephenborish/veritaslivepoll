@@ -86,6 +86,12 @@ Veritas.Data.ensureHeaders = function(sheet, desiredHeaders) {
  * @returns {Array[]} Array of row arrays
  */
 Veritas.Data.getDataRangeValues = function(sheet) {
+  // CRITICAL NULL CHECK: getSheetByName can return null if sheet doesn't exist
+  if (!sheet) {
+    Veritas.Logging.warn('getDataRangeValues called with null/undefined sheet');
+    return [];
+  }
+
   if (sheet.getLastRow() < 2) {
     return [];
   }
@@ -873,6 +879,13 @@ var DataAccess = {
     getByPoll: function(pollId) {
       var ss = Veritas.Data.getSpreadsheet();
       var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.RESPONSES);
+
+      // NULL CHECK: Responses sheet might not exist yet
+      if (!sheet) {
+        Veritas.Logging.warn('Responses sheet not found for getByPoll', { pollId: pollId });
+        return [];
+      }
+
       var values = Veritas.Data.getDataRangeValues(sheet);
       return values.filter(function(r) { return r[2] === pollId; });
     },
@@ -898,6 +911,12 @@ var DataAccess = {
     add: function(responseData) {
       var ss = Veritas.Data.getSpreadsheet();
       var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.RESPONSES);
+
+      // NULL CHECK: Ensure responses sheet exists before adding
+      if (!sheet) {
+        throw new Error('Responses sheet not found. Please run setupSheet() to initialize.');
+      }
+
       sheet.appendRow(responseData);
     }
   },
@@ -1003,6 +1022,13 @@ var DataAccess = {
     getByStudent: function(pollId, sessionId, studentEmail) {
       var ss = Veritas.Data.getSpreadsheet();
       var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
+
+      // NULL CHECK: Sheet may not exist if no secure sessions have been created yet
+      if (!sheet) {
+        Veritas.Logging.warn('IndividualTimedSessions sheet not found for getByStudent', { pollId: pollId, sessionId: sessionId, studentEmail: studentEmail });
+        return null;
+      }
+
       var values = Veritas.Data.getDataRangeValues(sheet);
 
       for (var i = 0; i < values.length; i++) {
@@ -1104,6 +1130,13 @@ var DataAccess = {
     getAllForSession: function(pollId, sessionId) {
       var ss = Veritas.Data.getSpreadsheet();
       var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
+
+      // NULL CHECK: Sheet may not exist if no secure sessions have been created yet
+      if (!sheet) {
+        Veritas.Logging.warn('IndividualTimedSessions sheet not found', { pollId: pollId, sessionId: sessionId });
+        return [];
+      }
+
       var values = Veritas.Data.getDataRangeValues(sheet);
 
       var results = [];
@@ -1118,8 +1151,16 @@ var DataAccess = {
     touchHeartbeat: function(pollId, sessionId, studentEmail, connectionMeta, existingState) {
       var state = existingState || this.getByStudent(pollId, sessionId, studentEmail);
       if (!state) return;
+
       var ss = Veritas.Data.getSpreadsheet();
       var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
+
+      // NULL CHECK: Defensive check before updating
+      if (!sheet) {
+        Veritas.Logging.warn('IndividualTimedSessions sheet not found for touchHeartbeat', { pollId: pollId, sessionId: sessionId, studentEmail: studentEmail });
+        return;
+      }
+
       var nowMs = Date.now();
       sheet.getRange(state.rowIndex, Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.LAST_HEARTBEAT_MS).setValue(nowMs);
       if (connectionMeta && connectionMeta.status) {
@@ -1139,6 +1180,12 @@ var DataAccess = {
 
       var ss = Veritas.Data.getSpreadsheet();
       var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
+
+      // NULL CHECK: Defensive check before updating
+      if (!sheet) {
+        throw new Error('IndividualTimedSessions sheet not found. Cannot update student fields.');
+      }
+
       var rowIndex = state.rowIndex;
       var columns = Veritas.Config.INDIVIDUAL_SESSION_COLUMNS;
 

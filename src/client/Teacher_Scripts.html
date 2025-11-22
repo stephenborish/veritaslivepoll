@@ -2089,6 +2089,14 @@
     clearLiveIntervals();
     isLiveSession=false;
     CURRENT_POLL_DATA={};
+
+    // Clear Mission Control state to prevent polling for non-existent polls
+    currentMissionControlPollId = null;
+    currentSecureSessionId = null;
+    missionControlPollFailures = 0;
+    missionControlBackoffMs = 0;
+    missionControlHeartbeat.stop();
+
     headerDefault.style.display='flex';
     headerLive.style.display='none';
     setMainSection('dashboard');
@@ -2276,6 +2284,13 @@
 
   // --- Initial Data Load ---
   function loadInitialData(){
+    // Clear Mission Control state on initial load to prevent polling for stale polls
+    currentMissionControlPollId = null;
+    currentSecureSessionId = null;
+    missionControlPollFailures = 0;
+    missionControlBackoffMs = 0;
+    missionControlHeartbeat.stop();
+
     if(PREVIEW_MODE&&PREVIEW_PAYLOAD){
       previewBootstrapped=true;
       console.info('Apps Script runtime not detected – rendering preview data.');

@@ -2574,6 +2574,16 @@ function studentConfirmFullscreen(expectedLockVersion, token) {
 }
 
 // Session helpers
+
+/**
+ * Check if an email belongs to an additional teacher (not the primary teacher)
+ * @param {string} email - Email to check
+ * @returns {boolean} True if the email is a teacher email (primary or additional)
+ */
+function isAdditionalTeacher_(email) {
+  return Veritas.Routing.isTeacherEmail(email);
+}
+
 function computeSecureTimingState_(studentState, poll, metadata) {
   return Veritas.Models.Session.computeSecureTimingState(studentState, poll, metadata);
 }

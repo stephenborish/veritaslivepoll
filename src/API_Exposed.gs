@@ -178,11 +178,12 @@ function deletePoll(pollId) {
 /**
  * Copy poll
  * @param {string} pollId - Poll ID
+ * @param {string} newPollName - Name for the new poll
  * @param {string} targetClassName - Target class
  * @returns {Object} Copied poll
  */
-function copyPoll(pollId, targetClassName) {
-  return Veritas.TeacherApi.copyPoll(pollId, targetClassName);
+function copyPoll(pollId, newPollName, targetClassName) {
+  return Veritas.TeacherApi.copyPoll(pollId, newPollName, targetClassName);
 }
 
 /**
@@ -335,10 +336,13 @@ function hideResultsFromStudents() {
 
 /**
  * Reset live question
+ * @param {string} pollId - The poll ID
+ * @param {number} questionIndex - The question index
+ * @param {boolean} clearResponses - Whether to clear existing responses
  * @returns {Object} Session state
  */
-function resetLiveQuestion() {
-  return Veritas.TeacherApi.resetLiveQuestion();
+function resetLiveQuestion(pollId, questionIndex, clearResponses) {
+  return Veritas.TeacherApi.resetLiveQuestion(pollId, questionIndex, clearResponses);
 }
 
 // =============================================================================

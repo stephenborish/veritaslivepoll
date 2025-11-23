@@ -1875,7 +1875,7 @@ Veritas.Models.Analytics.getLivePollData = function(pollId, questionIndex) {
 
     // OPTIMIZATION: Batch load all proctor states in a single operation
     var studentEmails = roster.map(function(s) { return s.email; });
-    var proctorStates = ProctorAccess.getStatesBatch(pollId, studentEmails, currentSessionId);
+    var proctorStates = Veritas.Models.Session.ProctorAccess.getStatesBatch(pollId, studentEmails, currentSessionId);
 
     var studentStatusList = roster.map(function(student) {
       var email = student.email;

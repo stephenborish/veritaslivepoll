@@ -363,15 +363,16 @@ Veritas.TeacherApi.deletePoll = function(pollId) {
 /**
  * Copy poll to another class
  * @param {string} pollId - Poll ID to copy
+ * @param {string} newPollName - Name for the new poll
  * @param {string} targetClassName - Target class name
  * @returns {Object} Copied poll
  */
-Veritas.TeacherApi.copyPoll = function(pollId, targetClassName) {
+Veritas.TeacherApi.copyPoll = function(pollId, newPollName, targetClassName) {
   return withErrorHandling(function() {
     Veritas.TeacherApi.assertTeacher();
 
     // Delegate to Models layer
-    return Veritas.Models.Poll.copyPoll(pollId, targetClassName);
+    return Veritas.Models.Poll.copyPoll(pollId, newPollName, targetClassName);
   })();
 };
 
@@ -605,14 +606,17 @@ Veritas.TeacherApi.hideResultsFromStudents = function() {
 
 /**
  * Reset current live question
+ * @param {string} pollId - The poll ID
+ * @param {number} questionIndex - The question index
+ * @param {boolean} clearResponses - Whether to clear existing responses
  * @returns {Object} Updated session state
  */
-Veritas.TeacherApi.resetLiveQuestion = function() {
+Veritas.TeacherApi.resetLiveQuestion = function(pollId, questionIndex, clearResponses) {
   return withErrorHandling(function() {
     Veritas.TeacherApi.assertTeacher();
 
     // Delegate to Models layer
-    return Veritas.Models.Session.resetLiveQuestion();
+    return Veritas.Models.Session.resetLiveQuestion(pollId, questionIndex, clearResponses);
   })();
 };
 

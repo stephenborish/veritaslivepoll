@@ -82,7 +82,12 @@ Veritas.Logging.withErrorHandling = function(fn) {
       return fn.apply(this, args);
     } catch (e) {
       Veritas.Logging.error('Error in ' + fn.name, e);
-      throw new Error(fn.name + ' failed: ' + e.message);
+      // Avoid nesting "failed:" prefixes - if error already contains "failed:", just re-throw
+      var errorMessage = e.message || e.toString();
+      if (errorMessage.indexOf(' failed:') !== -1) {
+        throw e;
+      }
+      throw new Error(fn.name + ' failed: ' + errorMessage);
     }
   };
 };

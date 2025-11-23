@@ -81,12 +81,18 @@ Veritas.Logging.withErrorHandling = function(fn) {
     try {
       return fn.apply(this, args);
     } catch (e) {
-      Veritas.Logging.error('Error in ' + fn.name, e);
-      // Avoid nesting "failed:" prefixes - if error already contains "failed:", just re-throw
-      var errorMessage = e.message || e.toString();
-      if (errorMessage.indexOf(' failed:') !== -1) {
+      Veritas.Logging.error('Error in ' + (fn.name || 'anonymous function'), e);
+
+      // Extract clean error message
+      var errorMessage = (e && e.message) ? e.message : String(e || 'Unknown error');
+
+      // Don't wrap errors if:
+      // 1. Function name is missing (anonymous function - can't add useful context)
+      // 2. Error already contains "failed:" (already wrapped by another handler)
+      if (!fn.name || errorMessage.indexOf(' failed:') !== -1) {
         throw e;
       }
+
       throw new Error(fn.name + ' failed: ' + errorMessage);
     }
   };

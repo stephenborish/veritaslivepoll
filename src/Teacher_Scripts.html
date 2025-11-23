@@ -9235,7 +9235,15 @@
   async function handleError(error){
     mainLoader.style.display='none';
     console.error('Error:',error);
-    await veritasAlert('Error: '+(error&&error.message?error.message:error),{
+
+    // Extract error message and avoid "Error: Error:" duplication
+    var errorMsg = (error&&error.message?error.message:error) || 'Unknown error';
+    // Remove "Error: " prefix if it exists since title already indicates error
+    if (typeof errorMsg === 'string' && errorMsg.indexOf('Error: ') === 0) {
+      errorMsg = errorMsg.substring(7); // Remove "Error: " prefix
+    }
+
+    await veritasAlert(errorMsg,{
       title:'Something went wrong',
       destructive:true
     });

@@ -2622,10 +2622,18 @@
 
         function handleError(error) {
             console.error('Error:', error);
+
+            // Extract clean error message
+            var errorMsg = (error.message || error) || 'Unknown error';
+            // Remove "Error: " prefix if present to avoid duplication
+            if (typeof errorMsg === 'string' && errorMsg.indexOf('Error: ') === 0) {
+                errorMsg = errorMsg.substring(7);
+            }
+
             showStatusPanel({
                 icon: 'error',
                 iconClass: 'text-veritas-navy',
-                message: 'An error occurred: ' + (error.message || error),
+                message: 'An error occurred: ' + errorMsg,
                 messageClass: 'text-gray-900 text-2xl font-bold',
                 showResume: false,
                 lockScroll: false

@@ -785,6 +785,228 @@
     });
   }
 
+  // === Combobox Component (Headless UI Style) ===
+  function VeritasCombobox(config) {
+    this.inputId = config.inputId;
+    this.containerId = config.containerId;
+    this.data = config.data || []; // Array of {id, label, subLabel?, value?, onSelect?}
+    this.onSelect = config.onSelect;
+    this.filterFn = config.filterFn || function(item, query) {
+      return (item.label || '').toLowerCase().includes(query.toLowerCase());
+    };
+    this.renderItem = config.renderItem || function(item, selected, active) {
+      var checkIcon = selected ? '<span class="absolute inset-y-0 right-0 flex items-center pr-4 text-veritas-navy"><span class="material-symbols-outlined text-sm">check</span></span>' : '';
+      var activeClass = active ? 'bg-veritas-navy text-white' : 'text-gray-900';
+      var subLabel = item.subLabel ? '<span class="block truncate text-xs opacity-70">' + escapeHtml(item.subLabel) + '</span>' : '';
+      return '<li class="relative cursor-default select-none py-2 pl-3 pr-9 ' + activeClass + '" role="option" aria-selected="' + selected + '" data-index="' + item.index + '">' +
+             '<div class="flex flex-col">' +
+             '<span class="block truncate font-medium">' + escapeHtml(item.label) + '</span>' +
+             subLabel +
+             '</div>' +
+             checkIcon +
+             '</li>';
+    };
+
+    this.input = document.getElementById(this.inputId);
+    this.container = document.getElementById(this.containerId) || (this.input ? this.input.parentElement : null);
+
+    if (!this.input || !this.container) {
+      console.warn('Combobox init failed: missing input or container', this.inputId);
+      return;
+    }
+
+    this.button = this.container.querySelector('button[data-combobox-toggle]');
+    this.optionsList = document.createElement('ul');
+    this.optionsList.className = 'absolute z-[100] mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm hidden';
+    this.container.appendChild(this.optionsList);
+
+    this.isOpen = false;
+    this.activeIndex = -1; // For keyboard navigation
+    this.filteredData = [];
+    this.query = '';
+
+    this.init();
+  }
+
+  VeritasCombobox.prototype.init = function() {
+    var self = this;
+
+    // Input Events
+    this.input.addEventListener('input', function(e) {
+      self.query = e.target.value;
+      self.isOpen = true;
+      self.activeIndex = -1;
+      self.renderOptions();
+      // Trigger native input event if we intercepted it, but we are just listening
+    });
+
+    this.input.addEventListener('focus', function() {
+      // Optional: Open on focus? The snippet implies open on change or button click.
+      // Let's open if there is data
+      if (self.data.length > 0) {
+        // self.isOpen = true;
+        // self.renderOptions();
+        // Actually, let's just let the button toggle it or typing open it
+      }
+    });
+
+    this.input.addEventListener('keydown', function(e) {
+      if (!self.isOpen) {
+        if (e.key === 'ArrowDown') {
+          self.isOpen = true;
+          self.renderOptions();
+          e.preventDefault();
+        }
+        return;
+      }
+
+      switch(e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          self.activeIndex = (self.activeIndex + 1) % self.filteredData.length;
+          self.updateActiveOption();
+          self.scrollActiveIntoView();
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          self.activeIndex = (self.activeIndex - 1 + self.filteredData.length) % self.filteredData.length;
+          self.updateActiveOption();
+          self.scrollActiveIntoView();
+          break;
+        case 'Enter':
+          e.preventDefault();
+          if (self.activeIndex >= 0 && self.filteredData[self.activeIndex]) {
+            self.selectItem(self.filteredData[self.activeIndex]);
+          }
+          break;
+        case 'Escape':
+          self.close();
+          break;
+        case 'Tab':
+          self.close();
+          break;
+      }
+    });
+
+    // Button Event
+    if (this.button) {
+      this.button.addEventListener('click', function(e) {
+        e.stopPropagation(); // Prevent closing immediately
+        self.toggle();
+      });
+    }
+
+    // Option Click Events (Delegated)
+    this.optionsList.addEventListener('click', function(e) {
+      var li = e.target.closest('li');
+      if (li) {
+        var index = parseInt(li.dataset.index, 10);
+        // Find item in filteredData based on index matching?
+        // The filteredData indices might not match filtered array indices if we rely on dataset.index
+        // Let's store the actual filtered index in dataset
+        var item = self.filteredData[index];
+        if (item) {
+          self.selectItem(item);
+        }
+      }
+    });
+
+    // Outside Click
+    document.addEventListener('click', function(e) {
+      if (self.isOpen && !self.container.contains(e.target)) {
+        self.close();
+      }
+    });
+  };
+
+  VeritasCombobox.prototype.updateData = function(newData) {
+    this.data = newData;
+    if (this.isOpen) {
+      this.renderOptions();
+    }
+  };
+
+  VeritasCombobox.prototype.toggle = function() {
+    if (this.isOpen) {
+      this.close();
+    } else {
+      this.open();
+    }
+  };
+
+  VeritasCombobox.prototype.open = function() {
+    this.isOpen = true;
+    this.query = this.input.value; // Reset query to current input
+    this.renderOptions();
+  };
+
+  VeritasCombobox.prototype.close = function() {
+    this.isOpen = false;
+    this.optionsList.classList.add('hidden');
+    this.activeIndex = -1;
+  };
+
+  VeritasCombobox.prototype.renderOptions = function() {
+    var self = this;
+    // Filter data
+    if (this.query === '') {
+      this.filteredData = this.data;
+    } else {
+      this.filteredData = this.data.filter(function(item) {
+        return self.filterFn(item, self.query);
+      });
+    }
+
+    if (this.filteredData.length === 0) {
+      this.optionsList.innerHTML = '<div class="relative cursor-default select-none py-2 px-4 text-gray-700">Nothing found.</div>';
+    } else {
+      this.optionsList.innerHTML = this.filteredData.map(function(item, index) {
+        // Map filtered index to dataset
+        var tempItem = Object.assign({}, item, { index: index });
+        return self.renderItem(tempItem, false, index === self.activeIndex);
+      }).join('');
+    }
+
+    this.optionsList.classList.remove('hidden');
+  };
+
+  VeritasCombobox.prototype.updateActiveOption = function() {
+    var items = this.optionsList.querySelectorAll('li');
+    items.forEach(function(item, idx) {
+      if (idx === this.activeIndex) {
+        item.classList.add('bg-veritas-navy', 'text-white');
+        item.classList.remove('text-gray-900');
+      } else {
+        item.classList.remove('bg-veritas-navy', 'text-white');
+        item.classList.add('text-gray-900');
+      }
+    }.bind(this));
+  };
+
+  VeritasCombobox.prototype.scrollActiveIntoView = function() {
+    var activeItem = this.optionsList.children[this.activeIndex];
+    if (activeItem) {
+      activeItem.scrollIntoView({ block: 'nearest' });
+    }
+  };
+
+  VeritasCombobox.prototype.selectItem = function(item) {
+    this.input.value = item.label;
+    this.query = item.label;
+    this.close();
+    if (this.onSelect) {
+      this.onSelect(item);
+    }
+    // Trigger change event on input
+    var event = new Event('input', { bubbles: true });
+    this.input.dispatchEvent(event);
+  };
+
+  // Global Combobox Instances
+  var pollCombobox = null;
+  var liveStudentCombobox = null;
+  var analyticsStudentCombobox = null;
+
   // === Initialize Enhanced UI Systems ===
   document.addEventListener('DOMContentLoaded', function() {
     // Initialize FAB system
@@ -795,6 +1017,52 @@
 
     // Initialize Keyboard Shortcuts
     initializeKeyboardShortcuts();
+
+    // Initialize Comboboxes
+    // Dashboard Poll Search
+    pollCombobox = new VeritasCombobox({
+      inputId: 'poll-search-input',
+      containerId: 'poll-search-container',
+      onSelect: function(item) {
+        // Selection logic is handled by the input event triggering refreshPollViews
+        // But we can add specific logic here if needed, e.g., jump to item
+        if (item.type === 'class') {
+          // Maybe set filter?
+          var filterSelect = document.getElementById('poll-filter-select');
+          if(filterSelect) {
+             filterSelect.value = item.value;
+             // Trigger change
+             var evt = new Event('change');
+             filterSelect.dispatchEvent(evt);
+             // Clear search query since we used a filter? Or keep it?
+             // Keeping it aligns with "autocomplete" behavior.
+          }
+        }
+      }
+    });
+
+    // Live View Student Search
+    liveStudentCombobox = new VeritasCombobox({
+      inputId: 'student-search-input',
+      containerId: 'student-search-container',
+      onSelect: function(item) {
+        // Trigger filtering
+      }
+    });
+
+    // Analytics Student Search
+    analyticsStudentCombobox = new VeritasCombobox({
+      inputId: 'analytics-student-search',
+      containerId: 'analytics-student-search-container',
+      onSelect: function(item) {
+        if (item.student) {
+          selectStudent(item.student);
+          // Hide suggestions handled by combobox
+          // Clear input?
+          document.getElementById('analytics-student-search').value = '';
+        }
+      }
+    });
 
     console.log('✨ Enhanced UI systems initialized (Phase 3)');
   });
@@ -2557,6 +2825,21 @@
 
   function refreshPollViews(){
     var polls=getFilteredSortedPolls();
+
+    // Update Combobox Data
+    if (pollCombobox) {
+        var comboData = [];
+        // Add Classes
+        ALL_CLASSES.forEach(function(cls) {
+            comboData.push({ label: cls, type: 'class', subLabel: 'Class' });
+        });
+        // Add Polls
+        ALL_POLLS.forEach(function(poll) {
+            comboData.push({ label: poll.pollName, type: 'poll', subLabel: poll.className });
+        });
+        pollCombobox.updateData(comboData);
+    }
+
     renderPollCards(polls);
     renderPollTable(polls);
     updatePollDropdown(polls);
@@ -4538,39 +4821,17 @@
 
     var studentsArray = Object.values(analyticsData.students);
 
-    // Setup student search
-    var searchInput = document.getElementById('analytics-student-search');
-    var suggestions = document.getElementById('analytics-student-suggestions');
-
-    searchInput.oninput = function() {
-      var query = searchInput.value.toLowerCase();
-      if (query.length < 2) {
-        suggestions.classList.add('hidden');
-        return;
-      }
-
-      var matches = studentsArray.filter(function(s) {
-        return s.name.toLowerCase().includes(query) || s.email.toLowerCase().includes(query);
-      }).slice(0, 10);
-
-      if (matches.length > 0) {
-        suggestions.innerHTML = '';
-        matches.forEach(function(student) {
-          var div = document.createElement('div');
-          div.className = 'px-4 py-2 hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/50 cursor-pointer';
-          div.textContent = formatStudentName(student);
-          div.onclick = function() {
-            selectStudent(student);
-            suggestions.classList.add('hidden');
-            searchInput.value = '';
-          };
-          suggestions.appendChild(div);
+    // Update Analytics Combobox Data
+    if (analyticsStudentCombobox) {
+        var analyticsComboData = studentsArray.map(function(s) {
+            return {
+                label: formatStudentName(s),
+                subLabel: s.email,
+                student: s
+            };
         });
-        suggestions.classList.remove('hidden');
-      } else {
-        suggestions.classList.add('hidden');
-      }
-    };
+        analyticsStudentCombobox.updateData(analyticsComboData);
+    }
   }
 
   function selectStudent(student) {
@@ -5584,6 +5845,19 @@
 
     // Update student status
     currentStudentStatusData=data.studentStatusList;
+
+    // Update Live View Combobox Data
+    if (liveStudentCombobox && Array.isArray(currentStudentStatusData)) {
+        var studentData = currentStudentStatusData.map(function(s) {
+            return {
+                label: formatStudentName(s),
+                subLabel: s.status,
+                value: s.email
+            };
+        });
+        liveStudentCombobox.updateData(studentData);
+    }
+
     renderStudentStatus();
 
     if(pollInterval)clearInterval(pollInterval);

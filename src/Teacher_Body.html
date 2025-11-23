@@ -228,10 +228,13 @@
                     <option value="all">All classes</option>
                   </select>
                 </label>
-                <div class="relative w-full sm:w-64">
-                  <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-gray-400">search</span>
-                  <input id="poll-search-input" type="search" placeholder="Search polls, questions, or live session terms..." class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-9 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-veritas-gold" aria-label="Search polls" />
-                  <button id="poll-search-clear-btn" type="button" class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none" aria-label="Clear search">
+                <div id="poll-search-container" class="relative w-full sm:w-64">
+                  <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-gray-400 z-10">search</span>
+                  <input id="poll-search-input" type="text" placeholder="Search polls, questions..." class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-8 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-veritas-gold shadow-sm" aria-label="Search polls" autocomplete="off" />
+                  <button type="button" class="absolute inset-y-0 right-0 flex items-center px-2 text-gray-400 hover:text-gray-600 focus:outline-none" data-combobox-toggle>
+                    <span class="material-symbols-outlined text-lg">unfold_more</span>
+                  </button>
+                  <button id="poll-search-clear-btn" type="button" class="hidden absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none" aria-label="Clear search">
                     <span class="material-symbols-outlined text-base leading-none">close</span>
                   </button>
                 </div>
@@ -599,9 +602,12 @@
 
                   <!-- Search & Sort -->
                   <div class="flex items-center gap-2">
-                    <div class="relative flex-1">
-                      <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">search</span>
-                      <input type="text" id="student-search-input" placeholder="Search..." class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 pl-8 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-veritas-navy/50 focus:border-transparent">
+                    <div id="student-search-container" class="relative flex-1">
+                      <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none z-10">search</span>
+                      <input type="text" id="student-search-input" placeholder="Search..." class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 pl-8 pr-8 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-veritas-navy/50 focus:border-transparent shadow-sm" autocomplete="off">
+                      <button type="button" class="absolute inset-y-0 right-0 flex items-center px-2 text-gray-400 hover:text-gray-600 focus:outline-none" data-combobox-toggle>
+                        <span class="material-symbols-outlined text-lg">unfold_more</span>
+                      </button>
                     </div>
                     <select id="student-sort-select" class="text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-2 focus:outline-none focus:ring-2 focus:ring-veritas-navy/50">
                       <option value="name">Name</option>
@@ -1054,11 +1060,11 @@
                 </div>
 
                 <!-- Student Search -->
-                <div class="mb-6">
-                  <input type="text" id="analytics-student-search" placeholder="Search for a student..." class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                  <div id="analytics-student-suggestions" class="hidden mt-2 bg-brand-white dark:bg-brand-dark-gray/40 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 shadow-lg max-h-60 overflow-y-auto">
-                    <!-- Search suggestions -->
-                  </div>
+                <div id="analytics-student-search-container" class="relative mb-6">
+                  <input type="text" id="analytics-student-search" placeholder="Search for a student..." class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 pl-4 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-sm" autocomplete="off" />
+                  <button type="button" class="absolute inset-y-0 right-0 flex items-center px-2 text-gray-400 hover:text-gray-600 focus:outline-none" data-combobox-toggle>
+                    <span class="material-symbols-outlined text-lg">unfold_more</span>
+                  </button>
                 </div>
 
                 <!-- Student Detail -->

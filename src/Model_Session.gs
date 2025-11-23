@@ -22,6 +22,10 @@ Veritas.Models.Session.startPoll = function(pollId) {
   return withErrorHandling(function() {
     if (!pollId) throw new Error('Poll ID is required');
 
+    // CACHE FIX: Invalidate polls cache before fetching to avoid stale data
+    // This ensures we get the latest poll data, especially important if poll was just created
+    CacheManager.invalidate('ALL_POLLS_DATA');
+
     const poll = DataAccess.polls.getById(pollId);
     if (!poll) {
       Logger.log('Poll not found in startPoll', { pollId: pollId });
@@ -449,8 +453,14 @@ Veritas.Models.Session.startIndividualTimedSession = function(pollId) {
   return withErrorHandling(function() {
     if (!pollId) throw new Error('Poll ID is required');
 
+    // CACHE FIX: Invalidate polls cache before fetching to avoid stale data
+    CacheManager.invalidate('ALL_POLLS_DATA');
+
     const poll = DataAccess.polls.getById(pollId);
-    if (!poll) throw new Error('Poll not found');
+    if (!poll) {
+      Logger.log('Poll not found in startIndividualTimedSession', { pollId: pollId });
+      throw new Error('Poll not found: ' + pollId + '. Try refreshing the page.');
+    }
 
     if (!Veritas.Models.Poll.isSecureSessionType(poll.sessionType)) {
       throw new Error('This poll is not configured as a Secure Assessment');

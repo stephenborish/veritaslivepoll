@@ -23,7 +23,10 @@ Veritas.Models.Session.startPoll = function(pollId) {
     if (!pollId) throw new Error('Poll ID is required');
 
     const poll = DataAccess.polls.getById(pollId);
-    if (!poll) throw new Error('Poll not found');
+    if (!poll) {
+      Logger.log('Poll not found in startPoll', { pollId: pollId });
+      throw new Error('Poll not found: ' + pollId + '. Try refreshing the page or checking if the poll still exists.');
+    }
 
     const nowIso = new Date().toISOString();
     const sessionId = pollId + '::' + Utilities.getUuid();

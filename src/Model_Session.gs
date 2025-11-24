@@ -1877,22 +1877,22 @@ Veritas.Models.Session.ProctorAccess = {
 /**
  * Report student violation (student exits fullscreen)
  */
-Veritas.Models.Session.reportStudentViolation = function(reason, token) {
+Veritas.Models.Session.reportStudentViolation = function(pollId, studentEmail, reason) {
   return withErrorHandling(function() {
-    var studentEmail = token ? TokenManager.getStudentEmail(token) : TokenManager.getCurrentStudentEmail();
-
     if (!studentEmail) {
       return { success: false, error: 'Authentication error' };
     }
 
-    var statusValues = DataAccess.liveStatus.get();
-    var pollId = statusValues[0];
-    var metadata = (statusValues && statusValues.metadata) ? statusValues.metadata : {};
-    var currentSessionId = metadata && metadata.sessionId ? metadata.sessionId : null;
-
     if (!pollId) {
-      return { success: false, error: 'No active poll' };
+      return { success: false, error: 'Poll ID required' };
     }
+
+    var statusValues = DataAccess.liveStatus.get();
+    var activePollId = statusValues[0];
+    var metadata = (statusValues && statusValues.metadata) ? statusValues.metadata : {};
+
+    // Only use session ID if the violation is for the currently active poll
+    var currentSessionId = (activePollId === pollId && metadata && metadata.sessionId) ? metadata.sessionId : null;
 
     var currentState = Veritas.Models.Session.ProctorAccess.getState(pollId, studentEmail, currentSessionId);
 
@@ -2562,8 +2562,8 @@ function hydrateProctorBlockFields_(state) {
   return Veritas.Models.Session.hydrateProctorBlockFields(state);
 }
 
-function reportStudentViolation(reason, token) {
-  return Veritas.Models.Session.reportStudentViolation(reason, token);
+function reportStudentViolation(pollId, studentEmail, reason) {
+  return Veritas.Models.Session.reportStudentViolation(pollId, studentEmail, reason);
 }
 
 function getStudentProctorState(token) {

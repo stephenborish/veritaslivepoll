@@ -944,53 +944,56 @@ var DataAccess = {
     },
 
     set: function(pollId, questionIndex, status, metadata) {
-      metadata = metadata || {};
-      var ss = Veritas.Data.getSpreadsheet();
-      var liveSheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.LIVE_STATUS);
-      var statusData = [pollId, questionIndex, status];
-      liveSheet.getRange("A2:C2").setValues([statusData]);
+      return Veritas.Utils.withLock(function() {
+        metadata = metadata || {};
+        var ss = Veritas.Data.getSpreadsheet();
+        var liveSheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.LIVE_STATUS);
+        var statusData = [pollId, questionIndex, status];
+        liveSheet.getRange("A2:C2").setValues([statusData]);
 
-      var sessionPhase = (metadata && metadata.sessionPhase)
-        ? metadata.sessionPhase
-        : (status === 'OPEN'
-            ? 'LIVE'
-            : status === 'PAUSED'
-              ? 'PAUSED'
-              : (questionIndex < 0 ? 'PRE_LIVE' : 'ENDED'));
+        var sessionPhase = (metadata && metadata.sessionPhase)
+          ? metadata.sessionPhase
+          : (status === 'OPEN'
+              ? 'LIVE'
+              : status === 'PAUSED'
+                ? 'PAUSED'
+                : (questionIndex < 0 ? 'PRE_LIVE' : 'ENDED'));
 
-      var enrichedMetadata = {};
-      for (var key in metadata) {
-        if (metadata.hasOwnProperty(key)) {
-          enrichedMetadata[key] = metadata[key];
+        var enrichedMetadata = {};
+        for (var key in metadata) {
+          if (metadata.hasOwnProperty(key)) {
+            enrichedMetadata[key] = metadata[key];
+          }
         }
-      }
-      enrichedMetadata.sessionPhase = sessionPhase;
+        enrichedMetadata.sessionPhase = sessionPhase;
 
-      if (typeof enrichedMetadata.isCollecting !== 'boolean') {
-        enrichedMetadata.isCollecting = (status === 'OPEN');
-      }
-      if (!enrichedMetadata.resultsVisibility) {
-        enrichedMetadata.resultsVisibility = 'HIDDEN';
-      }
-      if (sessionPhase !== 'ENDED' && enrichedMetadata.endedAt === undefined) {
-        enrichedMetadata.endedAt = null;
-      }
+        if (typeof enrichedMetadata.isCollecting !== 'boolean') {
+          enrichedMetadata.isCollecting = (status === 'OPEN');
+        }
+        if (!enrichedMetadata.resultsVisibility) {
+          enrichedMetadata.resultsVisibility = 'HIDDEN';
+        }
+        if (sessionPhase !== 'ENDED' && enrichedMetadata.endedAt === undefined) {
+          enrichedMetadata.endedAt = null;
+        }
 
-      this.setMetadata_(enrichedMetadata);
+        // Use explicit reference since 'this' is lost in callback
+        Veritas.Data.liveStatus.setMetadata_(enrichedMetadata);
 
-      var cache = CacheService.getScriptCache();
-      cache.put('LIVE_POLL_STATUS', JSON.stringify(statusData), Veritas.Utils.CacheManager.CACHE_TIMES.INSTANT);
+        var cache = CacheService.getScriptCache();
+        cache.put('LIVE_POLL_STATUS', JSON.stringify(statusData), Veritas.Utils.CacheManager.CACHE_TIMES.INSTANT);
 
-      var reason = (enrichedMetadata && enrichedMetadata.reason) ? enrichedMetadata.reason : 'STATUS_' + status;
-      Veritas.Utils.StateVersionManager.bump({
-        pollId: pollId || '',
-        questionIndex: typeof questionIndex === 'number' ? questionIndex : -1,
-        status: sessionPhase,
-        reason: reason,
-        metadata: enrichedMetadata,
-        timerRemainingSeconds: (enrichedMetadata && typeof enrichedMetadata.timerRemainingSeconds === 'number')
-          ? enrichedMetadata.timerRemainingSeconds
-          : null
+        var reason = (enrichedMetadata && enrichedMetadata.reason) ? enrichedMetadata.reason : 'STATUS_' + status;
+        Veritas.Utils.StateVersionManager.bump({
+          pollId: pollId || '',
+          questionIndex: typeof questionIndex === 'number' ? questionIndex : -1,
+          status: sessionPhase,
+          reason: reason,
+          metadata: enrichedMetadata,
+          timerRemainingSeconds: (enrichedMetadata && typeof enrichedMetadata.timerRemainingSeconds === 'number')
+            ? enrichedMetadata.timerRemainingSeconds
+            : null
+        });
       });
     },
 

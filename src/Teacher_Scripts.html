@@ -2057,6 +2057,31 @@
   bindClick('header-start-btn',onResumePoll);
   bindClick('header-end-show-btn',onEndQuestionAndShowAnswer);
   bindClick('header-stop-btn',onEndPoll);
+
+  // Live View More Actions Menu
+  bindClick('live-more-actions-btn', function(e) {
+    e.stopPropagation();
+    var menu = document.getElementById('live-more-menu');
+    if (menu) {
+      menu.classList.toggle('hidden');
+    }
+  });
+
+  bindClick('header-edit-poll-btn', function() {
+    if (CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId) {
+      startEditPoll(CURRENT_POLL_DATA.pollId);
+    }
+  });
+
+  // Close live menu on outside click
+  document.addEventListener('click', function(e) {
+    var menu = document.getElementById('live-more-menu');
+    var btn = document.getElementById('live-more-actions-btn');
+    if (menu && !menu.classList.contains('hidden') && !menu.contains(e.target) && (!btn || !btn.contains(e.target))) {
+      menu.classList.add('hidden');
+    }
+  });
+
   bindClick('header-back-btn',onPreviousQuestion);
   bindClick('header-next-btn',onNextQuestion);
   bindClick('header-reset-question-btn',onResetQuestion);
@@ -5649,7 +5674,11 @@
     var isEnded=status==='ENDED';
 
     if(!isLiveSession && !isPreLive){
-      return;
+      if(status==='LIVE'){
+        isLiveSession=true;
+      }else{
+        return;
+      }
     }
 
     if(isPreLive||isEnded){
@@ -6973,7 +7002,7 @@
     if(isPaused||!isLiveSession||isNavigating)return;
     var pollId=CURRENT_POLL_DATA.pollId;
     var questionIndex=CURRENT_POLL_DATA.questionIndex;
-    if(pollId===undefined||questionIndex===undefined)return;
+      if(!pollId||questionIndex===undefined)return;
 
     google.script.run
       .withSuccessHandler(function(data){
@@ -9154,19 +9183,37 @@
           return;
         }
 
-        google.script.run
-          .withSuccessHandler(function(response){
-            if(response&&response.success){
-              // Server now returns fileId instead of url
-              resolve(response.fileId);
-            } else {
-              reject(new Error(response.error||'Upload failed'));
-            }
-          })
-          .withFailureHandler(function(error){
-            reject(new Error('Server error: '+(error.message||error)));
-          })
-          .uploadImageToDrive(dataUrl,file.name);
+        var attempts = 0;
+        var maxAttempts = 3;
+
+        function doUpload() {
+          attempts++;
+          google.script.run
+            .withSuccessHandler(function(response){
+              if(response&&response.success){
+                // Server now returns fileId instead of url
+                resolve(response.fileId);
+              } else {
+                reject(new Error(response.error||'Upload failed'));
+              }
+            })
+            .withFailureHandler(function(error){
+              // Check for retryable errors (NetworkError, 429, etc.)
+              var msg = (error.message || error || '').toString();
+              var isRetryable = msg.includes('NetworkError') || msg.includes('429') || msg.includes('Exceeded memory limit') || msg.includes('Service unavailable');
+
+              if (isRetryable && attempts < maxAttempts) {
+                console.warn('Upload attempt ' + attempts + ' failed. Retrying in ' + (attempts * 2000) + 'ms...', error);
+                setTimeout(doUpload, attempts * 2000); // Exponential-ish backoff: 2s, 4s
+              } else {
+                reject(new Error('Server error: '+(msg||error)));
+              }
+            })
+            .uploadImageToDrive(dataUrl,file.name);
+        }
+
+        doUpload();
+
       }).catch(function(error){
         reject(new Error('File conversion error: '+(error.message||error)));
       });
@@ -10474,6 +10521,7 @@
   window.filterStudentsByFlag = filterStudentsByFlag;
   window.clearStudentFilter = clearStudentFilter;
   window.sortStudentsBy = sortStudentsBy;
+  window.updateLiveView = updateLiveView;
 
 
 })();

@@ -752,6 +752,15 @@
                 if (violationLogged || (isInteractionBlocked && !isTeacherBlocked)) {
                     return;
                 }
+
+                var activePollId = (currentPollState && currentPollState.pollId) ||
+                                   (secureLobbyContext && secureLobbyContext.pollId);
+
+                if (!activePollId) {
+                    console.warn('Cannot report violation: no active poll ID');
+                    return;
+                }
+
                 violationLogged = true;
                 isInteractionBlocked = true;
                 showLockEnforcementUI('Fullscreen required', 'Return to fullscreen and wait for your teacher to resume the assessment.');
@@ -767,7 +776,7 @@
                         console.error('Violation report failed:', error);
                         showLockEnforcementUI('Fullscreen required', 'Please contact your teacher to resume.');
                     })
-                    .reportStudentViolation(reason, SESSION_TOKEN);
+                    .reportStudentViolation(activePollId, SESSION_TOKEN, reason);
             }, 300);
         }
 

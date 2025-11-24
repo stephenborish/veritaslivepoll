@@ -984,10 +984,8 @@ Veritas.Models.Poll.saveRoster = function(className, rosterEntries) {
       });
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var rosterSheet = ss.getSheetByName('Rosters');
-    if (!rosterSheet) {
-      throw new Error('Rosters sheet not found');
-    }
+    var rosterSheet = Veritas.Data.ensureSheet(ss, Veritas.Config.SHEET_NAMES.ROSTERS);
+    Veritas.Data.ensureHeaders(rosterSheet, Veritas.Config.SHEET_HEADERS.ROSTERS);
 
     // OPTIMIZATION: Filter and rewrite instead of row-by-row deletion
     var values = Veritas.Models.Poll.getDataRangeValues(rosterSheet);
@@ -1070,10 +1068,8 @@ Veritas.Models.Poll.bulkAddStudentsToRoster = function(className, studentEntries
     }
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var rosterSheet = ss.getSheetByName('Rosters');
-    if (!rosterSheet) {
-      throw new Error('Rosters sheet not found');
-    }
+    var rosterSheet = Veritas.Data.ensureSheet(ss, Veritas.Config.SHEET_NAMES.ROSTERS);
+    Veritas.Data.ensureHeaders(rosterSheet, Veritas.Config.SHEET_HEADERS.ROSTERS);
 
     // Append new students to the roster
     var rows = newStudents.map(function(entry) {
@@ -1404,10 +1400,8 @@ Veritas.Models.Poll.getPolls = function() {
  */
 Veritas.Models.Poll.writePollRows = function(pollId, pollName, className, questions, createdAt, updatedAt, metadata) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var pollSheet = ss.getSheetByName('Polls');
-  if (!pollSheet) {
-    throw new Error('Polls sheet not found. Run setupSheet() first.');
-  }
+  var pollSheet = Veritas.Data.ensureSheet(ss, Veritas.Config.SHEET_NAMES.POLLS);
+  Veritas.Data.ensureHeaders(pollSheet, Veritas.Config.SHEET_HEADERS.POLLS);
 
   var normalizedMetadata = Veritas.Models.Poll.normalizeSecureMetadata(metadata);
   var finalSessionType = normalizedMetadata.sessionType;
@@ -1566,10 +1560,8 @@ Veritas.Models.Poll.ensureClassExists = function(className, description) {
   }
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var classesSheet = ss.getSheetByName('Classes');
-  if (!classesSheet) {
-    return;
-  }
+  var classesSheet = Veritas.Data.ensureSheet(ss, Veritas.Config.SHEET_NAMES.CLASSES);
+  Veritas.Data.ensureHeaders(classesSheet, Veritas.Config.SHEET_HEADERS.CLASSES);
 
   var trimmedName = className.toString().trim();
   if (trimmedName === '') {

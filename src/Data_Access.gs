@@ -911,12 +911,8 @@ var DataAccess = {
     add: function(responseData) {
       return Veritas.Utils.withLock(function() {
         var ss = Veritas.Data.getSpreadsheet();
-        var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.RESPONSES);
-
-        // NULL CHECK: Ensure responses sheet exists before adding
-        if (!sheet) {
-          throw new Error('Responses sheet not found. Please run setupSheet() to initialize.');
-        }
+        var sheet = Veritas.Data.ensureSheet(ss, Veritas.Config.SHEET_NAMES.RESPONSES);
+        Veritas.Data.ensureHeaders(sheet, Veritas.Config.SHEET_HEADERS.RESPONSES);
 
         sheet.appendRow(responseData);
       });
@@ -947,8 +943,15 @@ var DataAccess = {
       return Veritas.Utils.withLock(function() {
         metadata = metadata || {};
         var ss = Veritas.Data.getSpreadsheet();
-        var liveSheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.LIVE_STATUS);
+        var liveSheet = Veritas.Data.ensureSheet(ss, Veritas.Config.SHEET_NAMES.LIVE_STATUS);
+        Veritas.Data.ensureHeaders(liveSheet, Veritas.Config.SHEET_HEADERS.LIVE_STATUS);
+
         var statusData = [pollId, questionIndex, status];
+        // Header check is handled by ensureHeaders, but we call it explicitly if sheet is empty
+        // to guarantee A2:C2 is valid relative to header row
+        if (liveSheet.getLastRow() < 1) {
+           Veritas.Data.ensureHeaders(liveSheet, Veritas.Config.SHEET_HEADERS.LIVE_STATUS);
+        }
         liveSheet.getRange("A2:C2").setValues([statusData]);
 
         var sessionPhase = (metadata && metadata.sessionPhase)
@@ -978,7 +981,7 @@ var DataAccess = {
         }
 
         // Use explicit reference since 'this' is lost in callback
-        Veritas.Data.liveStatus.setMetadata_(enrichedMetadata);
+        DataAccess.liveStatus.setMetadata_(enrichedMetadata);
 
         var cache = CacheService.getScriptCache();
         cache.put('LIVE_POLL_STATUS', JSON.stringify(statusData), Veritas.Utils.CacheManager.CACHE_TIMES.INSTANT);
@@ -1048,7 +1051,9 @@ var DataAccess = {
       return Veritas.Utils.withLock(function() {
         options = options || {};
         var ss = Veritas.Data.getSpreadsheet();
-        var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
+        var sheet = Veritas.Data.ensureSheet(ss, Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
+        Veritas.Data.ensureHeaders(sheet, Veritas.Config.SHEET_HEADERS.INDIVIDUAL_TIMED_SESSIONS);
+
         var startTime = new Date().toISOString();
         var row = [];
         for (var i = 0; i < Veritas.Config.INDIVIDUAL_SESSION_COLUMN_COUNT; i++) {

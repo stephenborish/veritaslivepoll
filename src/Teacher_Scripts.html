@@ -39,6 +39,7 @@
     lastLockoutTotal:null,
     allRespondedCelebrated:false
   };
+  var lockToastState = {};
 
   // OPTIMIZATION: Adaptive polling with backoff (like student view)
   var pollFailureCount=0;
@@ -6177,61 +6178,62 @@
     });
   }
 
+  function notifyLockoutToasts(flaggedStudents) {
+    if (!Array.isArray(flaggedStudents) || flaggedStudents.length === 0) {
+      lockToastState = {};
+      return;
+    }
+
+    var actionable = flaggedStudents.filter(function(student) {
+      return student && (student.status === 'LOCKED' || student.status === 'AWAITING_FULLSCREEN');
+    });
+
+    var activeEmails = new Set();
+
+    actionable.forEach(function(student) {
+      var email = student.email || '';
+      if (!email) return;
+
+      var lockVersion = parseInt(student.lockVersion, 10);
+      if (isNaN(lockVersion)) {
+        lockVersion = 0;
+      }
+
+      activeEmails.add(email);
+
+      if (lockToastState[email] === lockVersion) {
+        return;
+      }
+
+      lockToastState[email] = lockVersion;
+
+      var studentName = formatStudentName(student);
+      var context = student.status === 'AWAITING_FULLSCREEN'
+        ? 'needs to re-confirm fullscreen before continuing.'
+        : 'exited fullscreen or switched tabs.';
+
+      showToast('warning', 'Approve re-entry', studentName + ' ' + context, 12000, {
+        label: 'Approve',
+        onClick: function() {
+          if (!CURRENT_POLL_DATA || !CURRENT_POLL_DATA.pollId) return;
+          approveStudentUnlock(email, CURRENT_POLL_DATA.pollId, lockVersion, null, { skipConfirm: true });
+        }
+      });
+    });
+
+    Object.keys(lockToastState).forEach(function(email) {
+      if (!activeEmails.has(email)) {
+        delete lockToastState[email];
+      }
+    });
+  }
+
   function updateLockoutBanner() {
     var banner = document.getElementById('lockout-alert-banner');
-    var namesEl = document.getElementById('lockout-student-names');
-    var actionsEl = document.getElementById('lockout-actions');
-
-    if (!banner || !namesEl || !actionsEl) {
-      return;
-    }
-
-    var lockoutStudents = Array.isArray(currentStudentStatusData)
-      ? currentStudentStatusData.filter(function(student) {
-          return student && (student.status === 'LOCKED' || student.status === 'AWAITING_FULLSCREEN');
-        })
-      : [];
-
-    if (lockoutStudents.length === 0) {
+    if (banner) {
       banner.classList.add('hidden');
       banner.setAttribute('aria-hidden','true');
-      namesEl.textContent = '';
-      actionsEl.innerHTML = '';
-      return;
     }
-
-    banner.classList.remove('hidden');
-    banner.setAttribute('aria-hidden','false');
-
-    var descriptions = lockoutStudents.map(function(student) {
-      var description = formatStudentName(student);
-      if (student.status === 'AWAITING_FULLSCREEN') {
-        description += ' (awaiting fullscreen)';
-      } else {
-        description += ' (locked out)';
-      }
-      return description;
-    });
-    namesEl.textContent = descriptions.join(', ');
-
-    actionsEl.innerHTML = '';
-    lockoutStudents.forEach(function(student) {
-      var button = createUnlockButton(student);
-      var label = button.querySelector('span:last-child');
-      if (label) {
-        label.textContent = 'Approve ' + formatStudentName(student);
-      }
-      button.onclick = async function() {
-        var email = this.dataset.email;
-        var pollId = this.dataset.pollId;
-        var lockVersion = parseInt(this.dataset.lockVersion, 10);
-        if (isNaN(lockVersion)) {
-          lockVersion = 0;
-        }
-        await approveStudentUnlock(email, pollId, lockVersion, this);
-      };
-      actionsEl.appendChild(button);
-    });
   }
 
   /**
@@ -6240,62 +6242,9 @@
    */
   function updateExitedStudentsPanel(lockedStudents) {
     var panel = document.getElementById('exited-students-panel');
-    var list = document.getElementById('exited-students-list-inline');
-    var countSpan = document.getElementById('exited-students-count');
-
-    if (!panel || !list || !countSpan) {
-      console.warn('Exited students panel elements missing.');
-      return;
-    }
-
-    // Filter for only LOCKED students (not AWAITING_FULLSCREEN)
-    var exitedStudents = lockedStudents.filter(function(s) {
-      return s.status === 'LOCKED';
-    });
-
-    if (exitedStudents.length === 0) {
+    if (panel) {
       panel.classList.add('hidden');
-      return;
     }
-
-    // Show panel
-    panel.classList.remove('hidden');
-    countSpan.textContent = exitedStudents.length;
-
-    // Render student cards
-    var html = '';
-    exitedStudents.forEach(function(student) {
-      var lockTimeAgo = student.lockedAt ? getTimeAgo(new Date(student.lockedAt)) : 'recently';
-      html += '<div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700/50 rounded-lg p-3 flex items-center justify-between gap-3">';
-      html += '  <div class="flex items-center gap-3 flex-1 min-w-0">';
-      html += '    <div class="flex-shrink-0 w-10 h-10 rounded-full bg-orange-200 dark:bg-orange-700/50 flex items-center justify-center">';
-      html += '      <span class="material-symbols-outlined text-orange-700 dark:text-orange-300 text-xl">person_off</span>';
-      html += '    </div>';
-      html += '    <div class="flex-1 min-w-0">';
-      html += '      <p class="font-semibold text-brand-dark-gray dark:text-brand-white text-sm truncate">' + escapeHtml(formatStudentName(student)) + '</p>';
-      html += '      <p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">Exited ' + lockTimeAgo + '</p>';
-      if (student.lockReason) {
-        html += '      <p class="text-xs text-orange-600 dark:text-orange-400 mt-1">' + escapeHtml(student.lockReason) + '</p>';
-      }
-      html += '    </div>';
-      html += '  </div>';
-      html += '  <button class="exited-approve-btn flex-shrink-0 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5" data-email="' + student.email + '" data-poll-id="' + CURRENT_POLL_DATA.pollId + '" data-lock-version="' + (student.lockVersion || 0) + '" title="Approve ' + escapeHtml(student.name) + ' to re-enter">';
-      html += '    <span class="material-symbols-outlined text-sm">check_circle</span>';
-      html += '    <span>Approve</span>';
-      html += '  </button>';
-      html += '</div>';
-    });
-    list.innerHTML = html;
-
-    // Add event listeners
-    list.querySelectorAll('.exited-approve-btn').forEach(function(btn) {
-      btn.onclick = async function() {
-        var email = this.dataset.email;
-        var pollId = this.dataset.pollId;
-        var lockVersion = parseInt(this.dataset.lockVersion, 10);
-        await approveStudentUnlock(email, pollId, lockVersion, this);
-      };
-    });
   }
 
   /**
@@ -6410,8 +6359,10 @@
     return Math.floor(seconds / 86400) + ' days ago';
   }
 
-  async function approveStudentUnlock(email, pollId, lockVersion, buttonElement) {
+  async function approveStudentUnlock(email, pollId, lockVersion, buttonElement, options) {
     if (!email || !pollId) return;
+
+    options = options || {};
 
     // Ensure lockVersion is a valid number to prevent server errors
     lockVersion = parseInt(lockVersion, 10);
@@ -6419,12 +6370,14 @@
       lockVersion = 0;
     }
 
-    var approved = await veritasConfirm('Approve unlock for ' + email + '?', {
-      title: 'Approve unlock',
-      confirmText: 'Approve'
-    });
-    if (!approved) {
-      return;
+    if (!options.skipConfirm) {
+      var approved = await veritasConfirm('Approve unlock for ' + email + '?', {
+        title: 'Approve unlock',
+        confirmText: 'Approve'
+      });
+      if (!approved) {
+        return;
+      }
     }
 
     if (buttonElement) {
@@ -6970,8 +6923,7 @@
 
     updateLiveOverviewCounts(lockedCount,blockedCount,waitingCount);
     updateViolationsAlert(flaggedStudents);
-    updateLockoutBanner();
-    updateExitedStudentsPanel(lockedStudents);
+    notifyLockoutToasts(flaggedStudents);
 
     if(tbody)tbody.innerHTML='';
     if(grid)grid.innerHTML='';

@@ -296,14 +296,16 @@ Veritas.TeacherApi.getDashboardSummary = function() {
 
 /**
  * Get live poll data for monitoring
+ * @param {string} pollId - Poll ID
+ * @param {number} questionIndex - Question index
  * @returns {Object} Live poll data
  */
-Veritas.TeacherApi.getLivePollData = function() {
+Veritas.TeacherApi.getLivePollData = function(pollId, questionIndex) {
   return withErrorHandling(function() {
     Veritas.TeacherApi.assertTeacher();
 
     // Delegate to Models layer
-    return Veritas.Models.Analytics.getLivePollData();
+    return Veritas.Models.Analytics.getLivePollData(pollId, questionIndex);
   })();
 };
 
@@ -1052,8 +1054,8 @@ function getDashboardSummary() {
 /**
  * Legacy wrapper for getLivePollData
  */
-function getLivePollData() {
-  return Veritas.TeacherApi.getLivePollData();
+function getLivePollData(pollId, questionIndex) {
+  return Veritas.TeacherApi.getLivePollData(pollId, questionIndex);
 }
 
 /**

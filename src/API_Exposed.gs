@@ -656,22 +656,36 @@ function sendPollLinkToClass(className) {
 }
 
 // =============================================================================
+// UTILITIES & DIAGNOSTICS
+// =============================================================================
+
+/**
+ * Clear all caches (diagnostic function for troubleshooting)
+ * @returns {Object} Success result
+ */
+function clearAllCaches() {
+  Veritas.TeacherApi.assertTeacher();
+  CacheManager.invalidate(['ALL_POLLS_DATA', 'CLASSES_LIST', 'LIVE_POLL_STATUS']);
+  return { success: true, message: 'All caches cleared. Please refresh the page.' };
+}
+
+// =============================================================================
 // SUMMARY
 // =============================================================================
 //
-// Total Exposed Functions: 79
+// Total Exposed Functions: 80
 //
 // Routing: 2 functions
 // - doGet, include
 //
-// Teacher API: 58 functions
+// Teacher API: 59 functions
 // - Dashboard & Core: 3 (getTeacherDashboardData, getPollEditorHtml, getStudentLinksForClass)
 // - Analytics: 7 (getAnalyticsData, getPostPollAnalytics, etc.)
 // - Poll Management: 6 (createNewPoll, updatePoll, deletePoll, etc.)
 // - Roster Management: 6 (getRosterManagerData, saveRoster, etc.)
 // - Live Poll Control: 9 (startPoll, nextQuestion, stopPoll, etc.)
 // - Secure Assessment: 15 (startIndividualTimedSession, adjustTime, etc.)
-// - Setup & Utilities: 2 (setupSheet, safeUiAlert)
+// - Setup & Utilities: 3 (setupSheet, safeUiAlert, clearAllCaches)
 //
 // Student API: 7 functions
 // - Live Poll: 2 (getStudentPollStatus, submitLivePollAnswer)

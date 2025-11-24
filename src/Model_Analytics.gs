@@ -1789,11 +1789,20 @@ Veritas.Models.Analytics.getDashboardSummary = function() {
  */
 Veritas.Models.Analytics.getLivePollData = function(pollId, questionIndex) {
   return withErrorHandling(function() {
+    if (!pollId) {
+      throw new Error("Poll ID is required for getLivePollData");
+    }
+
     var poll = DataAccess.polls.getById(pollId);
-    if (!poll) throw new Error("Poll not found");
+    if (!poll) {
+      Logger.log('Poll not found in getLivePollData', { pollId: pollId, questionIndex: questionIndex });
+      throw new Error("Poll not found: " + pollId + ". Try refreshing the page or clearing your cache.");
+    }
 
     var question = poll.questions[questionIndex];
-    if (!question) throw new Error("Question not found");
+    if (!question) {
+      throw new Error("Question " + questionIndex + " not found in poll " + pollId);
+    }
 
     // DEBUG: Log before normalization
     Logger.log('=== BEFORE NORMALIZATION ===');

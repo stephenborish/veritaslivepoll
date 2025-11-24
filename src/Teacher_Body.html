@@ -87,31 +87,35 @@
           </div>
         </div>
 
-        <!-- Center: Timer Control -->
-        <div id="timer-main-container" class="flex items-center gap-2 bg-black/20 rounded-lg p-1 border border-white/10 transition-colors">
-          <button id="subtract-10s-btn" type="button" class="w-8 h-8 flex items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors" title="-10s">
-            <span class="material-symbols-outlined text-lg">remove</span>
-          </button>
-          <input type="text" id="timer-display" class="w-20 bg-transparent text-center text-xl font-bold text-white tabular-nums focus:outline-none focus:ring-1 focus:ring-veritas-gold rounded px-1 cursor-pointer hover:bg-white/5" value="00:00" title="Click to edit time">
-          <button id="add-10s-btn" type="button" class="w-8 h-8 flex items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors" title="+10s">
-            <span class="material-symbols-outlined text-lg">add</span>
-          </button>
+        <!-- Center: Spacer (Timer moved to right) -->
+        <div class="hidden sm:block flex-1"></div>
 
-          <div class="w-px h-5 bg-white/20 mx-1"></div>
+        <!-- Right: Timer & Primary Actions -->
+        <div class="flex items-center gap-3 justify-end">
+          <!-- Timer Control (Moved to Right) -->
+          <div id="timer-main-container" class="flex items-center gap-2 bg-black/20 rounded-lg p-1 border border-white/10 transition-colors">
+            <button id="subtract-10s-btn" type="button" class="w-8 h-8 flex items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors" title="-10s">
+              <span class="material-symbols-outlined text-lg">remove</span>
+            </button>
+            <input type="text" id="timer-display" class="w-20 bg-transparent text-center text-xl font-bold text-white tabular-nums focus:outline-none focus:ring-1 focus:ring-veritas-gold rounded px-1 cursor-pointer hover:bg-white/5" value="00:00" title="Click to edit time">
+            <button id="add-10s-btn" type="button" class="w-8 h-8 flex items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors" title="+10s">
+              <span class="material-symbols-outlined text-lg">add</span>
+            </button>
 
-          <button id="start-btn" type="button" class="w-8 h-8 flex items-center justify-center rounded bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm transition-colors" title="Start (Space)">
-            <span class="material-symbols-outlined text-xl">play_arrow</span>
-          </button>
-          <button id="pause-btn" type="button" class="hidden w-8 h-8 flex items-center justify-center rounded bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition-colors" title="Pause (Space)">
-            <span class="material-symbols-outlined text-xl">pause</span>
-          </button>
-          <button id="reset-btn" type="button" class="w-8 h-8 flex items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors" title="Reset (R)">
-            <span class="material-symbols-outlined text-lg">refresh</span>
-          </button>
-        </div>
+            <div class="w-px h-5 bg-white/20 mx-1"></div>
 
-        <!-- Right: Primary Actions -->
-        <div class="flex items-center gap-2 flex-1 justify-end">
+            <button id="start-btn" type="button" class="w-8 h-8 flex items-center justify-center rounded bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm transition-colors" title="Start (Space)">
+              <span class="material-symbols-outlined text-xl">play_arrow</span>
+            </button>
+            <button id="pause-btn" type="button" class="hidden w-8 h-8 flex items-center justify-center rounded bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition-colors" title="Pause (Space)">
+              <span class="material-symbols-outlined text-xl">pause</span>
+            </button>
+            <button id="reset-btn" type="button" class="w-8 h-8 flex items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors" title="Reset (R)">
+              <span class="material-symbols-outlined text-lg">refresh</span>
+            </button>
+          </div>
+
+          <div class="w-px h-6 bg-white/10 mx-1"></div>
           <button id="header-next-btn" type="button" class="hidden sm:flex items-center gap-2 h-9 px-4 rounded bg-white text-veritas-navy font-bold text-sm shadow hover:bg-gray-100 transition-all" title="Next Question (→)">
             <span>Next</span>
             <span class="material-symbols-outlined text-base">arrow_forward</span>
@@ -447,8 +451,8 @@
 
             <!-- Status Message / Timer Pace (Simplified) -->
             <div class="flex items-center gap-2 text-xs text-gray-500 whitespace-nowrap hidden sm:flex">
-              <span id="timer-status-message" class="italic">Ready</span>
-              <span id="hud-pace-value" class="font-mono font-semibold bg-gray-100 dark:bg-gray-800 px-1.5 rounded">--:--</span>
+              <span id="timer-status-message" class="italic hidden">Ready</span>
+              <span id="hud-pace-value" class="font-mono font-semibold bg-gray-100 dark:bg-gray-800 px-1.5 rounded hidden">--:--</span>
             </div>
 
             <!-- Hidden placeholders for legacy JS compatibility -->
@@ -466,66 +470,68 @@
           <!-- Main Content Wrapper (Scrollable) -->
           <div class="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-800 p-6">
 
-            <!-- Question Display Area -->
-            <div class="mb-6 bg-white dark:bg-brand-dark-gray/30 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-              <div class="flex items-center justify-between gap-4 mb-3">
-                <span id="live-question-info" class="text-sm font-bold text-veritas-navy dark:text-veritas-gold uppercase tracking-wider">Q1 / 10</span>
-                <!-- Future placeholder for question-specific actions like "flag question" -->
-              </div>
-              <h2 id="live-question-text-compact" class="hidden"></h2> <!-- Keep for JS compatibility but hide -->
-              <h2 id="live-question-text" class="text-3xl font-bold text-brand-dark-gray dark:text-brand-white">Question text will appear here...</h2>
-              <div id="question-image-container" class="mt-4" style="display: none;">
-                  <img id="live-question-image" alt="Question" src="" class="max-w-full max-h-96 rounded-lg border border-gray-200 dark:border-gray-700">
-              </div>
-            </div>
+            <div class="flex flex-col lg:flex-row gap-6 h-full">
+              <!-- LEFT COLUMN: Question + Results (65%) -->
+              <div class="w-full lg:w-[65%] flex flex-col gap-6">
 
-            <!-- MAIN SPLIT VIEW: Results (60%) + Students (40%) -->
-            <div class="flex flex-col lg:flex-row gap-6">
-
-              <!-- LEFT PANEL: RESULTS (60%) -->
-              <div class="w-full lg:w-[60%] flex flex-col rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-
-                <!-- Results Header -->
-                <div class="flex-shrink-0 bg-white dark:bg-brand-dark-gray/30 border-b border-gray-200 dark:border-gray-700 px-6 py-3.5">
-                  <div class="flex items-center justify-between">
-                    <h3 class="text-brand-dark-gray dark:text-brand-white text-lg font-bold">Live Results</h3>
-                    <div class="flex items-center gap-3">
-                      <span id="response-count-header" class="text-sm font-semibold text-gray-600 dark:text-gray-400">0 / 0 answered</span>
-                    </div>
+                <!-- Question Display Area -->
+                <div class="bg-white dark:bg-brand-dark-gray/30 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm shrink-0">
+                  <div class="flex items-center justify-between gap-4 mb-3">
+                    <span id="live-question-info" class="text-sm font-bold text-veritas-navy dark:text-veritas-gold uppercase tracking-wider">Q1 / 10</span>
+                    <!-- Future placeholder for question-specific actions like "flag question" -->
+                  </div>
+                  <h2 id="live-question-text-compact" class="hidden"></h2> <!-- Keep for JS compatibility but hide -->
+                  <h2 id="live-question-text" class="text-3xl font-bold text-brand-dark-gray dark:text-brand-white">Question text will appear here...</h2>
+                  <div id="question-image-container" class="mt-4" style="display: none;">
+                      <img id="live-question-image" alt="Question" src="" class="max-w-full max-h-96 rounded-lg border border-gray-200 dark:border-gray-700">
                   </div>
                 </div>
 
-                <!-- Results Content (Scrollable) -->
-                <div class="flex-1 overflow-y-auto bg-white dark:bg-brand-dark-gray/30 px-6 py-4">
-                  <div id="results-bars" class="flex flex-col gap-2" aria-live="polite">
-                    <!-- Results will be populated dynamically with condensed names -->
+                <!-- Results Panel (Flexible Height) -->
+                <div class="flex-1 flex flex-col rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden bg-white dark:bg-brand-dark-gray/30 min-h-0">
+
+                  <!-- Results Header -->
+                  <div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 px-6 py-3.5">
+                    <div class="flex items-center justify-between">
+                      <h3 class="text-brand-dark-gray dark:text-brand-white text-lg font-bold">Live Results</h3>
+                      <div class="flex items-center gap-3">
+                        <span id="response-count-header" class="text-sm font-semibold text-gray-600 dark:text-gray-400">0 / 0 answered</span>
+                      </div>
+                    </div>
                   </div>
 
+                  <!-- Results Content (Scrollable) -->
+                  <div class="flex-1 overflow-y-auto px-6 py-4">
+                    <div id="results-bars" class="flex flex-col gap-2" aria-live="polite">
+                      <!-- Results will be populated dynamically with condensed names -->
+                    </div>
 
-                  <!-- Results Reveal Strip -->
-                  <div id="results-reveal-strip" class="mt-6 hidden">
-                    <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-green-600/20 bg-green-600/5 px-4 py-3">
-                      <div class="min-w-[200px]">
-                        <p class="text-sm font-semibold text-green-700 dark:text-green-400">Answer revealed to students</p>
-                        <p id="results-strip-status" class="text-xs text-green-700/70">Students can now see the correct answer.</p>
-                      </div>
-                      <div class="flex flex-wrap items-center gap-2">
-                        <button id="hide-results-btn" class="flex items-center gap-2 rounded-lg bg-gray-200 text-gray-700 px-4 py-2 text-sm font-semibold hover:bg-gray-300 transition-colors" type="button">
-                          <span class="material-symbols-outlined text-base">visibility_off</span>
-                          <span>Hide</span>
-                        </button>
-                        <button id="strip-next-btn" class="flex items-center gap-2 rounded-lg bg-veritas-navy text-white px-4 py-2 text-sm font-semibold hover:bg-veritas-navy/90 transition-colors" type="button">
-                          <span>Next</span>
-                          <span class="material-symbols-outlined text-base">arrow_forward</span>
-                        </button>
+
+                    <!-- Results Reveal Strip -->
+                    <div id="results-reveal-strip" class="mt-6 hidden">
+                      <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-green-600/20 bg-green-600/5 px-4 py-3">
+                        <div class="min-w-[200px]">
+                          <p class="text-sm font-semibold text-green-700 dark:text-green-400">Answer revealed to students</p>
+                          <p id="results-strip-status" class="text-xs text-green-700/70">Students can now see the correct answer.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                          <button id="hide-results-btn" class="flex items-center gap-2 rounded-lg bg-gray-200 text-gray-700 px-4 py-2 text-sm font-semibold hover:bg-gray-300 transition-colors" type="button">
+                            <span class="material-symbols-outlined text-base">visibility_off</span>
+                            <span>Hide</span>
+                          </button>
+                          <button id="strip-next-btn" class="flex items-center gap-2 rounded-lg bg-veritas-navy text-white px-4 py-2 text-sm font-semibold hover:bg-veritas-navy/90 transition-colors" type="button">
+                            <span>Next</span>
+                            <span class="material-symbols-outlined text-base">arrow_forward</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <!-- RIGHT PANEL: STUDENTS (40%) -->
-              <div class="w-full lg:w-[40%] flex flex-col bg-white dark:bg-brand-dark-gray/30 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+              <!-- RIGHT COLUMN: STUDENTS (35%) -->
+              <div class="w-full lg:w-[35%] flex flex-col bg-white dark:bg-brand-dark-gray/30 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden h-full">
 
                 <!-- Student Header with Status Summary -->
                 <div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 px-5 py-3.5">

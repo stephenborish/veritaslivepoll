@@ -949,42 +949,15 @@ Veritas.TeacherApi.setupSheet = function() {
     }
 
     var headerConfigs = [
-      { name: 'Classes', headers: ['ClassName', 'Description'] },
-      { name: 'Rosters', headers: ['ClassName', 'StudentName', 'StudentEmail'] },
-      {
-        name: 'Polls',
-        headers: [
-          'PollID', 'PollName', 'ClassName', 'QuestionIndex', 'QuestionDataJSON',
-          'CreatedAt', 'UpdatedAt', 'SessionType', 'TimeLimitMinutes', 'AccessCode',
-          'AvailableFrom', 'DueBy', 'MissionControlState', 'SecureSettingsJSON'
-        ]
-      },
-      { name: 'LiveStatus', headers: ['ActivePollID', 'ActiveQuestionIndex', 'PollStatus'] },
-      {
-        name: 'Responses',
-        headers: [
-          'ResponseID', 'Timestamp', 'PollID', 'QuestionIndex', 'StudentEmail',
-          'Answer', 'IsCorrect', 'ConfidenceLevel'
-        ]
-      },
-      {
-        name: 'IndividualSessionState',
-        headers: [
-          'PollID', 'SessionID', 'StudentEmail', 'StudentDisplayName', 'StartTime',
-          'EndTime', 'QuestionOrder', 'QuestionOrderSeed', 'CurrentQuestionIndex',
-          'IsLocked', 'ViolationCode', 'AnswerOrders', 'AnswerChoiceMap',
-          'TimeAdjustmentMinutes', 'PauseDurationMs', 'LastHeartbeatMs',
-          'ConnectionHealth', 'ProctorStatus', 'AdditionalMetadataJSON'
-        ]
-      },
-      {
-        name: 'AssessmentEvents',
-        headers: ['EventID', 'Timestamp', 'PollID', 'SessionID', 'StudentEmail', 'EventType', 'EventPayloadJSON']
-      },
-      {
-        name: 'AssessmentAnalytics',
-        headers: ['PollID', 'ComputedAt', 'MetricType', 'MetricName', 'MetricValue', 'DetailsJSON']
-      }
+      { name: Veritas.Config.SHEET_NAMES.CLASSES, headers: Veritas.Config.SHEET_HEADERS.CLASSES },
+      { name: Veritas.Config.SHEET_NAMES.ROSTERS, headers: Veritas.Config.SHEET_HEADERS.ROSTERS },
+      { name: Veritas.Config.SHEET_NAMES.POLLS, headers: Veritas.Config.SHEET_HEADERS.POLLS },
+      { name: Veritas.Config.SHEET_NAMES.LIVE_STATUS, headers: Veritas.Config.SHEET_HEADERS.LIVE_STATUS },
+      { name: Veritas.Config.SHEET_NAMES.RESPONSES, headers: Veritas.Config.SHEET_HEADERS.RESPONSES },
+      { name: Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS, headers: Veritas.Config.SHEET_HEADERS.INDIVIDUAL_TIMED_SESSIONS },
+      { name: Veritas.Config.SHEET_NAMES.PROCTOR_STATE, headers: Veritas.Config.SHEET_HEADERS.PROCTOR_STATE },
+      { name: Veritas.Config.SHEET_NAMES.ASSESSMENT_EVENTS, headers: Veritas.Config.SHEET_HEADERS.ASSESSMENT_EVENTS },
+      { name: Veritas.Config.SHEET_NAMES.ASSESSMENT_ANALYTICS, headers: Veritas.Config.SHEET_HEADERS.ASSESSMENT_ANALYTICS }
     ];
 
     headerConfigs.forEach(function(config) {

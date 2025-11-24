@@ -83,7 +83,43 @@ Veritas.Config.SHEET_NAMES = {
   RESPONSES: 'Responses',
   LIVE_STATUS: 'LiveStatus',
   INDIVIDUAL_TIMED_SESSIONS: 'IndividualTimedSessions',
+  PROCTOR_STATE: 'ProctorState',
+  ASSESSMENT_EVENTS: 'AssessmentEvents',
+  ASSESSMENT_ANALYTICS: 'AssessmentAnalytics',
   LOGS: 'Logs'
+};
+
+// --- SHEET HEADER DEFINITIONS ---
+Veritas.Config.SHEET_HEADERS = {
+  CLASSES: ['ClassName', 'Description'],
+  ROSTERS: ['ClassName', 'StudentName', 'StudentEmail'],
+  POLLS: [
+    'PollID', 'PollName', 'ClassName', 'QuestionIndex', 'QuestionDataJSON',
+    'CreatedAt', 'UpdatedAt', 'SessionType', 'TimeLimitMinutes', 'AccessCode',
+    'AvailableFrom', 'DueBy', 'MissionControlState', 'SecureSettingsJSON'
+  ],
+  LIVE_STATUS: ['ActivePollID', 'ActiveQuestionIndex', 'PollStatus'],
+  RESPONSES: [
+    'ResponseID', 'Timestamp', 'PollID', 'QuestionIndex', 'StudentEmail',
+    'Answer', 'IsCorrect', 'ConfidenceLevel'
+  ],
+  INDIVIDUAL_TIMED_SESSIONS: [
+    'PollID', 'SessionID', 'StudentEmail', 'StudentDisplayName', 'StartTime',
+    'EndTime', 'QuestionOrder', 'QuestionOrderSeed', 'CurrentQuestionIndex',
+    'IsLocked', 'ViolationCode', 'AnswerOrders', 'AnswerChoiceMap',
+    'TimeAdjustmentMinutes', 'PauseDurationMs', 'LastHeartbeatMs',
+    'ConnectionHealth', 'ProctorStatus', 'AdditionalMetadataJSON'
+  ],
+  PROCTOR_STATE: [
+    'PollID', 'StudentEmail', 'Status', 'LockVersion', 'LockReason',
+    'LockedAt', 'UnlockApproved', 'UnlockApprovedBy', 'UnlockApprovedAt', 'SessionId'
+  ],
+  ASSESSMENT_EVENTS: [
+    'EventID', 'Timestamp', 'PollID', 'SessionID', 'StudentEmail', 'EventType', 'EventPayloadJSON'
+  ],
+  ASSESSMENT_ANALYTICS: [
+    'PollID', 'ComputedAt', 'MetricType', 'MetricName', 'MetricValue', 'DetailsJSON'
+  ]
 };
 
 // --- SCRIPT PROPERTY KEYS ---

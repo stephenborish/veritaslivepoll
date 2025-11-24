@@ -579,12 +579,12 @@ function reportStudentViolation(pollId, token, violationType) {
 
 /**
  * Student confirm fullscreen
- * @param {string} pollId - Poll ID
+ * @param {number} expectedLockVersion - Expected lock version to validate unlock
  * @param {string} token - Session token
  * @returns {Object} Result
  */
-function studentConfirmFullscreen(pollId, token) {
-  return Veritas.StudentApi.studentConfirmFullscreen(pollId, token);
+function studentConfirmFullscreen(expectedLockVersion, token) {
+  return Veritas.StudentApi.studentConfirmFullscreen(expectedLockVersion, token);
 }
 
 /**

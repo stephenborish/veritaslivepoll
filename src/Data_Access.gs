@@ -947,7 +947,8 @@ var DataAccess = {
         Veritas.Data.ensureHeaders(liveSheet, Veritas.Config.SHEET_HEADERS.LIVE_STATUS);
 
         var statusData = [pollId, questionIndex, status];
-        // Ensure we are writing to the correct range even if sheet was just created
+        // Header check is handled by ensureHeaders, but we call it explicitly if sheet is empty
+        // to guarantee A2:C2 is valid relative to header row
         if (liveSheet.getLastRow() < 1) {
            Veritas.Data.ensureHeaders(liveSheet, Veritas.Config.SHEET_HEADERS.LIVE_STATUS);
         }
@@ -980,7 +981,7 @@ var DataAccess = {
         }
 
         // Use explicit reference since 'this' is lost in callback
-        Veritas.Data.liveStatus.setMetadata_(enrichedMetadata);
+        DataAccess.liveStatus.setMetadata_(enrichedMetadata);
 
         var cache = CacheService.getScriptCache();
         cache.put('LIVE_POLL_STATUS', JSON.stringify(statusData), Veritas.Utils.CacheManager.CACHE_TIMES.INSTANT);

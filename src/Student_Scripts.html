@@ -2634,9 +2634,16 @@
 
             // Extract clean error message
             var errorMsg = (error.message || error) || 'Unknown error';
+            var errorString = String(errorMsg);
+
             // Remove "Error: " prefix if present to avoid duplication
             if (typeof errorMsg === 'string' && errorMsg.indexOf('Error: ') === 0) {
                 errorMsg = errorMsg.substring(7);
+            }
+
+            // Handle generic network errors
+            if (errorString.includes('NetworkError') || errorString.includes('HTTP 0') || errorString.includes('Connection failure')) {
+                errorMsg = 'Network connection interrupted. Please check your internet connection and try again.';
             }
 
             showStatusPanel({

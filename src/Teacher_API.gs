@@ -106,10 +106,9 @@ Veritas.TeacherApi.getTeacherDashboardData = function() {
 Veritas.TeacherApi.getPollEditorHtml = function(className) {
   return withErrorHandling(function() {
     Veritas.TeacherApi.assertTeacher();
-
-    var template = HtmlService.createTemplateFromFile('PollEditor.html');
-    template.className = className || '';
-    return template.evaluate().getContent();
+    // PollEditor.html does not exist. The frontend builds the editor dynamically.
+    // Returning a placeholder to prevent runtime errors if this legacy endpoint is called.
+    return '<div class="p-4 text-center text-gray-500">Poll Editor is loaded dynamically.</div>';
   })();
 };
 

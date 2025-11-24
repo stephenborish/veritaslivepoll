@@ -213,6 +213,34 @@ Veritas.Utils.shuffleArray = function(array) {
   return array;
 };
 
+// --- LOCKING UTILITY ---
+
+/**
+ * Execute a function with a lock to prevent concurrency issues
+ * @param {Function} callback - Function to execute
+ * @param {number} timeoutMs - Lock timeout in milliseconds (default 30000)
+ * @returns {*} Result of callback
+ */
+Veritas.Utils.withLock = function(callback, timeoutMs) {
+  var lock = LockService.getScriptLock();
+  var acquired = false;
+  try {
+    lock.waitLock(timeoutMs || 30000);
+    acquired = true;
+    return callback();
+  } catch (e) {
+    if (!acquired) {
+      Veritas.Logging.error('Failed to acquire lock', e);
+      throw new Error('System busy. Please try again.');
+    }
+    throw e;
+  } finally {
+    if (acquired) {
+      lock.releaseLock();
+    }
+  }
+};
+
 // --- UUID GENERATION ---
 
 /**

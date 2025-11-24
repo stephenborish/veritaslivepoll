@@ -69,97 +69,100 @@
       </div>
     </header>
 
-    <!-- Header - Live Poll State (REDESIGNED 3-SECTION LAYOUT) -->
-    <header id="header-live" class="shrink-0 bg-veritas-navy shadow-lg border-b-2 border-veritas-gold" style="display: none;">
-      <!-- Top Bar: 3-Column Grid Layout -->
-      <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-6 px-6 py-2">
+    <!-- Header - Live Poll State (COMPACT REDESIGN) -->
+    <header id="header-live" class="shrink-0 bg-veritas-navy shadow-md border-b border-veritas-gold/30 z-20" style="display: none;">
+      <div class="flex items-center justify-between px-4 py-2 gap-4 h-16">
 
-        <!-- LEFT SECTION: Question Info -->
-        <div class="flex items-center gap-4 min-w-0">
-          <button id="dashboard-sidebar-toggle-live" type="button" class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-brand-white/10 text-brand-white transition-colors hover:bg-brand-white/20 focus:outline-none focus:ring-2 focus:ring-brand-white/60" aria-label="Hide navigation">
-            <span class="material-symbols-outlined text-2xl">menu_open</span>
+        <!-- Left: Poll Context -->
+        <div class="flex items-center gap-3 min-w-0 flex-1">
+          <button id="dashboard-sidebar-toggle-live" type="button" class="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors" aria-label="Toggle navigation">
+            <span class="material-symbols-outlined text-xl">menu</span>
           </button>
-          <div class="min-w-0">
-            <h1 id="header-poll-name" class="text-brand-white text-xl font-semibold truncate">Question 1 of 4 — Question Title</h1>
+          <div class="min-w-0 flex flex-col justify-center">
+            <h1 id="header-poll-name" class="text-white font-bold text-sm sm:text-base truncate leading-tight">Poll Name</h1>
+            <div class="flex items-center gap-2 text-xs text-white/70">
+              <span id="live-question-info" class="font-mono tracking-wider uppercase bg-white/10 px-1.5 py-0.5 rounded">Q1 / 10</span>
+              <span id="question-dots" class="hidden sm:flex gap-1"></span>
+            </div>
           </div>
         </div>
 
-        <!-- CENTER SECTION: Timer (Dominant) - ENHANCED with Larger Touch Targets -->
-        <div class="flex flex-col items-center gap-1">
-          <div id="timer-main-container" class="flex items-center gap-2 rounded-lg border-2 border-brand-white/20 bg-brand-white/10 px-3 py-1.5 transition-all duration-300">
-            <button id="subtract-10s-btn" class="w-9 h-9 flex items-center justify-center rounded-lg bg-brand-white/10 text-brand-white hover:bg-brand-white/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" aria-label="-10 seconds" title="Subtract 10 seconds">
-              <span class="material-symbols-outlined text-xl">remove</span>
-            </button>
-            <input
-              type="text"
-              id="timer-display"
-              class="w-32 rounded bg-transparent text-center text-4xl font-bold text-brand-white transition-all placeholder-brand-white/40 focus:outline-none focus:ring-2 focus:ring-veritas-gold disabled:opacity-70 cursor-pointer"
-              value="01:30"
-              aria-label="Timer display"
-              title="Click to edit time"
-            />
-            <button id="add-10s-btn" class="w-9 h-9 flex items-center justify-center rounded-lg bg-brand-white/10 text-brand-white hover:bg-brand-white/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" aria-label="+10 seconds" title="Add 10 seconds">
-              <span class="material-symbols-outlined text-xl">add</span>
-            </button>
-            <div class="w-px h-8 bg-brand-white/30 mx-1"></div>
-            <button id="start-btn" class="w-9 h-9 flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-brand-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md" aria-label="Start timer" title="Start timer (Space)">
-              <span class="material-symbols-outlined text-2xl">play_arrow</span>
-            </button>
-            <button id="pause-btn" class="w-9 h-9 flex items-center justify-center bg-amber-500 hover:bg-amber-600 text-brand-white rounded-lg transition-colors hidden shadow-md" aria-label="Pause timer" title="Pause timer (Space)">
-              <span class="material-symbols-outlined text-2xl">pause</span>
-            </button>
-            <button id="reset-btn" class="w-9 h-9 flex items-center justify-center bg-brand-white/20 hover:bg-brand-white/30 text-brand-white rounded-lg transition-colors shadow-sm" aria-label="Reset timer" title="Reset timer (R key)">
-              <span class="material-symbols-outlined text-2xl">refresh</span>
-            </button>
-          </div>
-          <!-- Quick Time Presets -->
-          <div class="flex items-center gap-2 mt-2">
-            <button id="add-30s-btn-preset" class="px-3 py-1 text-xs font-semibold rounded-full bg-brand-white/10 text-brand-white hover:bg-brand-white/20 transition-colors" title="Add 30 seconds">+30s</button>
-            <button id="add-60s-btn-preset" class="px-3 py-1 text-xs font-semibold rounded-full bg-brand-white/10 text-brand-white hover:bg-brand-white/20 transition-colors" title="Add 1 minute">+1m</button>
-          </div>
+        <!-- Center: Timer Control -->
+        <div id="timer-main-container" class="flex items-center gap-2 bg-black/20 rounded-lg p-1 border border-white/10 transition-colors">
+          <button id="subtract-10s-btn" class="w-8 h-8 flex items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors" title="-10s">
+            <span class="material-symbols-outlined text-lg">remove</span>
+          </button>
+          <input type="text" id="timer-display" class="w-20 bg-transparent text-center text-xl font-bold text-white tabular-nums focus:outline-none focus:ring-1 focus:ring-veritas-gold rounded px-1 cursor-pointer hover:bg-white/5" value="00:00" title="Click to edit time">
+          <button id="add-10s-btn" class="w-8 h-8 flex items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors" title="+10s">
+            <span class="material-symbols-outlined text-lg">add</span>
+          </button>
+
+          <div class="w-px h-5 bg-white/20 mx-1"></div>
+
+          <button id="start-btn" class="w-8 h-8 flex items-center justify-center rounded bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm transition-colors" title="Start (Space)">
+            <span class="material-symbols-outlined text-xl">play_arrow</span>
+          </button>
+          <button id="pause-btn" class="hidden w-8 h-8 flex items-center justify-center rounded bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition-colors" title="Pause (Space)">
+            <span class="material-symbols-outlined text-xl">pause</span>
+          </button>
+          <button id="reset-btn" class="w-8 h-8 flex items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors" title="Reset (R)">
+            <span class="material-symbols-outlined text-lg">refresh</span>
+          </button>
         </div>
 
-        <!-- RIGHT SECTION: Action Cluster (REDESIGNED FOR CONSISTENCY & CLARITY) -->
-        <div class="flex items-center justify-end gap-2 flex-wrap">
-            <!-- Primary Action Buttons -->
-            <button id="header-next-btn" class="flex items-center gap-2 h-12 px-6 rounded-lg bg-veritas-gold text-white text-sm font-bold hover:bg-veritas-gold/90 transition-all shadow-lg hover:shadow-xl transform hover:scale-105" title="Advance to next question (→ / N)">
-                <span>Next Question</span>
-                <span class="material-symbols-outlined text-lg">arrow_forward</span>
-            </button>
-            <button id="header-end-show-btn" class="hidden items-center gap-2 h-12 px-6 rounded-lg bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105" title="Close responses and reveal answer to students (E)">
-                <span class="material-symbols-outlined text-lg">check_circle</span>
-                <span>End & Reveal</span>
-            </button>
+        <!-- Right: Primary Actions -->
+        <div class="flex items-center gap-2 flex-1 justify-end">
+          <button id="header-next-btn" class="hidden sm:flex items-center gap-2 h-9 px-4 rounded bg-white text-veritas-navy font-bold text-sm shadow hover:bg-gray-100 transition-all" title="Next Question (→)">
+            <span>Next</span>
+            <span class="material-symbols-outlined text-base">arrow_forward</span>
+          </button>
+          <button id="header-end-show-btn" class="flex items-center gap-2 h-9 px-4 rounded bg-veritas-gold text-white font-bold text-sm shadow hover:bg-veritas-gold/90 transition-all" title="End & Reveal (E)">
+            <span class="material-symbols-outlined text-base">visibility</span>
+            <span class="hidden sm:inline">Reveal</span>
+          </button>
 
-            <!-- Secondary Action Buttons (Standardized Size & Style) -->
-            <div class="h-8 w-px bg-white/20 mx-1"></div>
-
-            <button id="header-back-btn" class="flex items-center justify-center h-9 w-9 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors" title="Previous Question (← / B)">
-                <span class="material-symbols-outlined text-xl">arrow_back</span>
+          <!-- More Actions Dropdown Trigger -->
+          <div class="relative">
+            <button id="live-more-actions-btn" class="h-9 w-9 flex items-center justify-center rounded text-white hover:bg-white/10 transition-colors" aria-label="More actions" aria-haspopup="true">
+              <span class="material-symbols-outlined text-xl">more_vert</span>
             </button>
-            <button id="header-reset-question-btn" class="flex items-center justify-center h-9 w-9 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors" title="Reset Question (R)">
-                <span class="material-symbols-outlined text-xl">replay</span>
-            </button>
-            <button id="header-send-link-btn" class="flex items-center justify-center h-9 w-9 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors" title="Send Links to Students">
-                <span class="material-symbols-outlined text-xl">mail</span>
-            </button>
-            <button id="header-view-links-btn" class="flex items-center justify-center h-9 w-9 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors" title="View Student Links">
-                <span class="material-symbols-outlined text-xl">visibility</span>
-            </button>
-
-            <!-- Danger Action (Isolated) -->
-            <div class="h-8 w-px bg-white/20 mx-1"></div>
-
-            <button id="header-stop-btn" class="flex items-center gap-2 h-9 px-4 rounded-lg bg-rose-600/90 text-white text-sm font-bold hover:bg-rose-600 transition-colors" title="End the entire session">
-                <span class="material-symbols-outlined text-base">stop</span>
-                <span class="hidden md:inline">Finish</span>
-            </button>
+            <!-- Dropdown Menu -->
+            <div id="live-more-menu" class="hidden absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-50 origin-top-right ring-1 ring-black ring-opacity-5 focus:outline-none" role="menu">
+              <button id="header-edit-poll-btn" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2" role="menuitem">
+                <span class="material-symbols-outlined text-base">edit</span> Edit Poll
+              </button>
+              <div class="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
+              <button id="header-back-btn" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2" role="menuitem">
+                <span class="material-symbols-outlined text-base">arrow_back</span> Previous Question
+              </button>
+              <button id="header-reset-question-btn" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2" role="menuitem">
+                <span class="material-symbols-outlined text-base">replay</span> Reset Question
+              </button>
+              <div class="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
+              <button id="add-30s-btn-preset" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2" role="menuitem">
+                <span class="material-symbols-outlined text-base">av_timer</span> Add 30 Seconds
+              </button>
+              <button id="add-60s-btn-preset" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2" role="menuitem">
+                <span class="material-symbols-outlined text-base">av_timer</span> Add 1 Minute
+              </button>
+              <div class="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
+              <button id="header-send-link-btn" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2" role="menuitem">
+                <span class="material-symbols-outlined text-base">mail</span> Send Links
+              </button>
+              <button id="header-view-links-btn" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2" role="menuitem">
+                <span class="material-symbols-outlined text-base">link</span> View Links
+              </button>
+              <div class="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
+              <button id="header-stop-btn" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2" role="menuitem">
+                <span class="material-symbols-outlined text-base">stop_circle</span> End Session
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Hidden elements for compatibility -->
+      <!-- Hidden legacy buttons to prevent JS errors -->
       <button id="header-start-btn" class="hidden"></button>
-      <div id="question-dots" class="hidden"></div>
     </header>
 
     <div class="flex flex-grow overflow-hidden">
@@ -421,85 +424,53 @@
             </div>
           </div>
 
-          <!-- ⚡ Rapid-Glance Session HUD (REMOVED per user request) -->
-          <div id="session-hud-container" class="flex-shrink-0 session-hud-surface border-b border-brand-light-gray/60 dark:border-white/10" style="display: none;">
-            <div class="max-w-7xl mx-auto px-6 py-4 session-hud-grid">
-              <article id="hud-responses-card" class="hud-card hud-card-enhanced" aria-live="polite">
-                <div class="hud-card-progress">
-                  <div class="progress-ring-container">
-                    <svg class="progress-ring" viewBox="0 0 52 52">
-                      <circle class="progress-ring-circle-bg" cx="26" cy="26" r="22"></circle>
-                      <circle id="hud-response-ring" class="progress-ring-circle" cx="26" cy="26" r="22"
-                              stroke-dasharray="138.23" stroke-dashoffset="138.23"></circle>
-                    </svg>
-                    <div id="hud-response-percent" class="progress-ring-text">0%</div>
-                  </div>
-                </div>
-                <div class="hud-card-info">
-                  <div class="hud-card-label text-brand-dark-gray/80 dark:text-brand-white/70">
-                    <span class="material-symbols-outlined text-base">how_to_vote</span>
-                    Responses
-                  </div>
-                  <div id="hud-response-count" class="hud-card-value">0 / 0</div>
-                  <p id="hud-response-caption" class="hud-card-caption">Awaiting roster data</p>
-                </div>
-              </article>
-
-              <article id="hud-accuracy-card" class="hud-card hud-card-enhanced" aria-live="polite">
-                <div class="hud-card-progress">
-                  <div class="progress-ring-container">
-                    <svg class="progress-ring" viewBox="0 0 52 52">
-                      <circle class="progress-ring-circle-bg" cx="26" cy="26" r="22"></circle>
-                      <circle id="hud-accuracy-ring" class="progress-ring-circle ring-success" cx="26" cy="26" r="22"
-                              stroke-dasharray="138.23" stroke-dashoffset="138.23"></circle>
-                    </svg>
-                    <div id="hud-accuracy-percent" class="progress-ring-text">--</div>
-                  </div>
-                </div>
-                <div class="hud-card-info">
-                  <div class="hud-card-label text-brand-dark-gray/80 dark:text-brand-white/70">
-                    <span class="material-symbols-outlined text-base">verified</span>
-                    Accuracy
-                  </div>
-                  <div id="hud-accuracy-value" class="hud-card-value">--%</div>
-                  <p id="hud-accuracy-caption" class="hud-card-caption">Waiting for responses</p>
-                </div>
-              </article>
-
-              <article id="hud-lockouts-card" class="hud-card" aria-live="polite">
-                <div class="hud-card-label text-brand-dark-gray/80 dark:text-brand-white/70">
-                  <span class="material-symbols-outlined text-base">lock_clock</span>
-                  Approvals
-                </div>
-                <div class="flex items-center justify-between gap-3">
-                  <div>
-                    <div id="hud-lockouts-value" class="hud-card-value">0</div>
-                    <p id="hud-lockouts-caption" class="hud-card-caption">No approvals pending</p>
-                  </div>
-                  <button id="hud-focus-lockouts-btn" type="button" class="inline-flex items-center gap-1.5 rounded-full bg-veritas-navy/10 text-veritas-navy dark:bg-brand-white/10 dark:text-brand-white px-3 py-2 text-[0.7rem] font-semibold tracking-[0.14em] uppercase transition-all disabled:opacity-40" disabled title="Jump to students needing unlock">
-                    <span class="material-symbols-outlined text-sm">target</span>
-                    Focus
-                  </button>
-                </div>
-              </article>
-
-              <article id="hud-pace-card" class="hud-card" aria-live="polite">
-                <div class="hud-card-label text-brand-dark-gray/80 dark:text-brand-white/70">
-                  <span class="material-symbols-outlined text-base">speed</span>
-                  Session Pace
-                </div>
-                <div class="flex items-center justify-between gap-3">
-                  <div>
-                    <div id="hud-pace-value" class="hud-card-value">--:--</div>
-                    <p id="hud-pace-caption" class="hud-card-caption">Timer ready</p>
-                  </div>
-                  <span id="hud-pace-chip" class="hud-chip" data-variant="ready">
-                    <span id="hud-pace-chip-icon" class="material-symbols-outlined text-sm">pause_circle</span>
-                    <span id="hud-pace-chip-label">Ready</span>
-                  </span>
-                </div>
-              </article>
+          <!-- New Status Bar (Replaces Session HUD) -->
+          <div id="live-status-bar" class="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex items-center gap-4 sm:gap-6 overflow-x-auto text-sm shadow-sm z-10 h-12">
+            <!-- Responses Metric -->
+            <div class="flex items-center gap-2 whitespace-nowrap">
+              <span class="material-symbols-outlined text-veritas-navy dark:text-gray-400 text-lg">group</span>
+              <span class="font-bold text-gray-900 dark:text-white text-base" id="hud-response-count">0 / 0</span>
+              <span class="text-gray-500 text-xs uppercase tracking-wide font-semibold">Responded</span>
             </div>
+
+            <div class="w-px h-4 bg-gray-300 dark:bg-gray-700"></div>
+
+            <!-- Accuracy Metric -->
+            <div class="flex items-center gap-2 whitespace-nowrap">
+              <span class="material-symbols-outlined text-emerald-600 text-lg">check_circle</span>
+              <span class="font-bold text-gray-900 dark:text-white text-base" id="hud-accuracy-value">--%</span>
+              <span class="text-gray-500 text-xs uppercase tracking-wide font-semibold">Accuracy</span>
+            </div>
+
+            <div class="w-px h-4 bg-gray-300 dark:bg-gray-700"></div>
+
+            <!-- Locked Metric -->
+            <div class="flex items-center gap-2 whitespace-nowrap">
+              <span class="material-symbols-outlined text-amber-500 text-lg">lock_person</span>
+              <span class="font-bold text-gray-900 dark:text-white text-base" id="hud-lockouts-value">0</span>
+              <span class="text-gray-500 text-xs uppercase tracking-wide font-semibold">Locked</span>
+              <button id="hud-focus-lockouts-btn" class="text-xs text-blue-600 hover:underline ml-1 font-semibold" disabled>VIEW</button>
+            </div>
+
+            <!-- Spacer -->
+            <div class="flex-1"></div>
+
+            <!-- Status Message / Timer Pace (Simplified) -->
+            <div class="flex items-center gap-2 text-xs text-gray-500 whitespace-nowrap hidden sm:flex">
+              <span id="timer-status-message" class="italic">Ready</span>
+              <span id="hud-pace-value" class="font-mono font-semibold bg-gray-100 dark:bg-gray-800 px-1.5 rounded">--:--</span>
+            </div>
+
+            <!-- Hidden placeholders for legacy JS compatibility -->
+            <div id="hud-response-ring" class="hidden"></div>
+            <div id="hud-response-percent" class="hidden"></div>
+            <div id="hud-response-caption" class="hidden"></div>
+            <div id="hud-accuracy-ring" class="hidden"></div>
+            <div id="hud-accuracy-percent" class="hidden"></div>
+            <div id="hud-accuracy-caption" class="hidden"></div>
+            <div id="hud-lockouts-caption" class="hidden"></div>
+            <div id="hud-pace-caption" class="hidden"></div>
+            <div id="hud-pace-chip" class="hidden"></div>
           </div>
 
           <!-- Main Content Wrapper (Scrollable) -->

@@ -2041,7 +2041,7 @@ Veritas.Models.Session.teacherApproveUnlock = function(studentEmail, pollId, exp
   return withErrorHandling(function() {
     var teacherEmail = Session.getActiveUser().getEmail();
 
-    if (teacherEmail !== TEACHER_EMAIL) {
+    if (teacherEmail !== Veritas.Config.TEACHER_EMAIL) {
       throw new Error('Unauthorized');
     }
 
@@ -2094,7 +2094,7 @@ Veritas.Models.Session.teacherBlockStudent = function(studentEmail, pollId, reas
   return withErrorHandling(function() {
     var teacherEmail = Session.getActiveUser().getEmail();
 
-    if (teacherEmail !== TEACHER_EMAIL) {
+    if (teacherEmail !== Veritas.Config.TEACHER_EMAIL) {
       throw new Error('Unauthorized');
     }
 
@@ -2163,7 +2163,7 @@ Veritas.Models.Session.teacherUnblockStudent = function(studentEmail, pollId) {
   return withErrorHandling(function() {
     var teacherEmail = Session.getActiveUser().getEmail();
 
-    if (teacherEmail !== TEACHER_EMAIL) {
+    if (teacherEmail !== Veritas.Config.TEACHER_EMAIL) {
       throw new Error('Unauthorized');
     }
 

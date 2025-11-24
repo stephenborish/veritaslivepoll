@@ -120,7 +120,7 @@
      ======================================== */
 
   // === Toast Notification System ===
-  function showToast(type, title, message, duration = 5000) {
+  function showToast(type, title, message, duration = 5000, action = null) {
     const container = document.getElementById('toast-container');
     if (!container) return;
 
@@ -134,17 +134,34 @@
       info: 'info'
     };
 
+    let actionHtml = '';
+    if (action && action.label) {
+      actionHtml = `<button class="toast-action-btn">${action.label}</button>`;
+    }
+
     toast.innerHTML = `
       <span class="material-symbols-outlined toast-icon">${icons[type] || 'notifications'}</span>
       <div class="toast-content">
         <div class="toast-title">${title}</div>
         <div class="toast-message">${message}</div>
+        ${actionHtml}
       </div>
       <button class="toast-close" onclick="this.closest('.toast').remove()">
         <span class="material-symbols-outlined" style="font-size: 18px">close</span>
       </button>
       <div class="toast-progress"></div>
     `;
+
+    if (action && action.onClick) {
+      const btn = toast.querySelector('.toast-action-btn');
+      if (btn) {
+        btn.onclick = function(e) {
+          e.stopPropagation();
+          action.onClick();
+          toast.remove();
+        };
+      }
+    }
 
     container.appendChild(toast);
 
@@ -5425,14 +5442,25 @@
 
     if(allResponded){
         if(!sessionHudState.allRespondedCelebrated){
-          // showToast('success', 'All Students Responded!', 'You can now move to the next question.');
+          // Trigger toast with action instead of intrusive banner
+          showToast('success', 'All Students Responded!', 'Everyone has submitted their answer.', 10000, {
+            label: 'Reveal Answer',
+            onClick: function() {
+              var endShowBtn = document.getElementById('header-end-show-btn');
+              if (endShowBtn) endShowBtn.click();
+            }
+          });
+
+          // Ensure banner stays hidden (legacy cleanup)
           if (allRespondedBanner) {
-            allRespondedBanner.classList.remove('hidden');
-            allRespondedBanner.setAttribute('aria-hidden', 'false');
+            allRespondedBanner.classList.add('hidden');
+            allRespondedBanner.setAttribute('aria-hidden', 'true');
           }
+
           sessionHudState.allRespondedCelebrated=true;
         }
     }else{
+        // Ensure banner stays hidden
         if (allRespondedBanner) {
           allRespondedBanner.classList.add('hidden');
           allRespondedBanner.setAttribute('aria-hidden', 'true');

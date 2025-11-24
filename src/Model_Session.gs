@@ -20,38 +20,40 @@ Veritas.Models.Session = Veritas.Models.Session || {};
  */
 Veritas.Models.Session.startPoll = function(pollId) {
   return withErrorHandling(function() {
-    if (!pollId) throw new Error('Poll ID is required');
+    return Veritas.Utils.withLock(function() {
+      if (!pollId) throw new Error('Poll ID is required');
 
-    // CACHE FIX: Invalidate polls cache before fetching to avoid stale data
-    // This ensures we get the latest poll data, especially important if poll was just created
-    CacheManager.invalidate('ALL_POLLS_DATA');
+      // CACHE FIX: Invalidate polls cache before fetching to avoid stale data
+      // This ensures we get the latest poll data, especially important if poll was just created
+      CacheManager.invalidate('ALL_POLLS_DATA');
 
-    const poll = DataAccess.polls.getById(pollId);
-    if (!poll) {
-      Logger.log('Poll not found in startPoll', { pollId: pollId });
-      throw new Error('Poll not found: ' + pollId + '. Try refreshing the page or checking if the poll still exists.');
-    }
+      const poll = DataAccess.polls.getById(pollId);
+      if (!poll) {
+        Logger.log('Poll not found in startPoll', { pollId: pollId });
+        throw new Error('Poll not found: ' + pollId + '. Try refreshing the page or checking if the poll still exists.');
+      }
 
-    const nowIso = new Date().toISOString();
-    const sessionId = pollId + '::' + Utilities.getUuid();
-    DataAccess.liveStatus.set(pollId, 0, "OPEN", {
-      reason: 'RUNNING',
-      sessionPhase: 'LIVE',
-      startedAt: nowIso,
-      endedAt: null,
-      timer: null,
-      isCollecting: true,
-      resultsVisibility: 'HIDDEN',
-      responsesClosedAt: null,
-      revealedAt: null,
-      sessionId: sessionId
+      const nowIso = new Date().toISOString();
+      const sessionId = pollId + '::' + Utilities.getUuid();
+      DataAccess.liveStatus.set(pollId, 0, "OPEN", {
+        reason: 'RUNNING',
+        sessionPhase: 'LIVE',
+        startedAt: nowIso,
+        endedAt: null,
+        timer: null,
+        isCollecting: true,
+        resultsVisibility: 'HIDDEN',
+        responsesClosedAt: null,
+        revealedAt: null,
+        sessionId: sessionId
+      });
+
+      Veritas.Models.Session.ProctorAccess.resetForNewSession(pollId, sessionId);
+
+      Logger.log('Poll started', { pollId: pollId, pollName: poll.pollName });
+
+      return getLivePollData(pollId, 0);
     });
-
-    Veritas.Models.Session.ProctorAccess.resetForNewSession(pollId, sessionId);
-
-    Logger.log('Poll started', { pollId: pollId, pollName: poll.pollName });
-
-    return getLivePollData(pollId, 0);
   })();
 };
 
@@ -60,38 +62,40 @@ Veritas.Models.Session.startPoll = function(pollId) {
  */
 Veritas.Models.Session.nextQuestion = function() {
   return withErrorHandling(function() {
-    const currentStatus = DataAccess.liveStatus.get();
-    const pollId = currentStatus[0];
+    return Veritas.Utils.withLock(function() {
+      const currentStatus = DataAccess.liveStatus.get();
+      const pollId = currentStatus[0];
 
-    if (!pollId) return Veritas.Models.Session.stopPoll();
+      if (!pollId) return Veritas.Models.Session.stopPoll();
 
-    let newIndex = currentStatus[1] + 1;
-    const poll = DataAccess.polls.getById(pollId);
+      let newIndex = currentStatus[1] + 1;
+      const poll = DataAccess.polls.getById(pollId);
 
-    if (!poll || newIndex >= poll.questions.length) {
-      Logger.log('Poll completed', { pollId: pollId });
-      return Veritas.Models.Session.stopPoll();
-    }
+      if (!poll || newIndex >= poll.questions.length) {
+        Logger.log('Poll completed', { pollId: pollId });
+        return Veritas.Models.Session.stopPoll();
+      }
 
-    const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
-    const nowIso = new Date().toISOString();
-    DataAccess.liveStatus.set(pollId, newIndex, "OPEN", {
-      ...previousMetadata,
-      reason: 'RUNNING',
-      advancedAt: nowIso,
-      timer: null,
-      startedAt: previousMetadata.startedAt || nowIso,
-      endedAt: null,
-      sessionPhase: 'LIVE',
-      isCollecting: true,
-      resultsVisibility: 'HIDDEN',
-      responsesClosedAt: null,
-      revealedAt: null
+      const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
+      const nowIso = new Date().toISOString();
+      DataAccess.liveStatus.set(pollId, newIndex, "OPEN", {
+        ...previousMetadata,
+        reason: 'RUNNING',
+        advancedAt: nowIso,
+        timer: null,
+        startedAt: previousMetadata.startedAt || nowIso,
+        endedAt: null,
+        sessionPhase: 'LIVE',
+        isCollecting: true,
+        resultsVisibility: 'HIDDEN',
+        responsesClosedAt: null,
+        revealedAt: null
+      });
+
+      Logger.log('Next question', { pollId: pollId, questionIndex: newIndex });
+
+      return getLivePollData(pollId, newIndex);
     });
-
-    Logger.log('Next question', { pollId: pollId, questionIndex: newIndex });
-
-    return getLivePollData(pollId, newIndex);
   })();
 };
 
@@ -100,39 +104,41 @@ Veritas.Models.Session.nextQuestion = function() {
  */
 Veritas.Models.Session.previousQuestion = function() {
   return withErrorHandling(function() {
-    const currentStatus = DataAccess.liveStatus.get();
-    const pollId = currentStatus[0];
+    return Veritas.Utils.withLock(function() {
+      const currentStatus = DataAccess.liveStatus.get();
+      const pollId = currentStatus[0];
 
-    if (!pollId) {
-      throw new Error('No active poll');
-    }
+      if (!pollId) {
+        throw new Error('No active poll');
+      }
 
-    let newIndex = currentStatus[1] - 1;
-    const poll = DataAccess.polls.getById(pollId);
+      let newIndex = currentStatus[1] - 1;
+      const poll = DataAccess.polls.getById(pollId);
 
-    if (!poll || newIndex < 0) {
-      throw new Error('Already at first question');
-    }
+      if (!poll || newIndex < 0) {
+        throw new Error('Already at first question');
+      }
 
-    const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
-    const nowIso = new Date().toISOString();
-    DataAccess.liveStatus.set(pollId, newIndex, "OPEN", {
-      ...previousMetadata,
-      reason: 'RUNNING',
-      movedBackAt: nowIso,
-      timer: null,
-      startedAt: previousMetadata.startedAt || nowIso,
-      endedAt: null,
-      sessionPhase: 'LIVE',
-      isCollecting: true,
-      resultsVisibility: 'HIDDEN',
-      responsesClosedAt: null,
-      revealedAt: null
+      const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
+      const nowIso = new Date().toISOString();
+      DataAccess.liveStatus.set(pollId, newIndex, "OPEN", {
+        ...previousMetadata,
+        reason: 'RUNNING',
+        movedBackAt: nowIso,
+        timer: null,
+        startedAt: previousMetadata.startedAt || nowIso,
+        endedAt: null,
+        sessionPhase: 'LIVE',
+        isCollecting: true,
+        resultsVisibility: 'HIDDEN',
+        responsesClosedAt: null,
+        revealedAt: null
+      });
+
+      Logger.log('Previous question', { pollId: pollId, questionIndex: newIndex });
+
+      return getLivePollData(pollId, newIndex);
     });
-
-    Logger.log('Previous question', { pollId: pollId, questionIndex: newIndex });
-
-    return getLivePollData(pollId, newIndex);
   })();
 };
 
@@ -141,28 +147,30 @@ Veritas.Models.Session.previousQuestion = function() {
  */
 Veritas.Models.Session.stopPoll = function() {
   return withErrorHandling(function() {
-    const currentStatus = DataAccess.liveStatus.get();
-    const pollId = currentStatus[0];
-    const questionIndex = currentStatus[1];
+    return Veritas.Utils.withLock(function() {
+      const currentStatus = DataAccess.liveStatus.get();
+      const pollId = currentStatus[0];
+      const questionIndex = currentStatus[1];
 
-    const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
-    const nowIso = new Date().toISOString();
-    DataAccess.liveStatus.set(pollId, questionIndex, "PAUSED", {
-      ...previousMetadata,
-      reason: 'RESPONSES_CLOSED',
-      pausedAt: nowIso,
-      startedAt: previousMetadata.startedAt || nowIso,
-      endedAt: null,
-      sessionPhase: 'RESULTS_HOLD',
-      isCollecting: false,
-      resultsVisibility: 'HIDDEN',
-      responsesClosedAt: nowIso,
-      revealedAt: null
+      const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
+      const nowIso = new Date().toISOString();
+      DataAccess.liveStatus.set(pollId, questionIndex, "PAUSED", {
+        ...previousMetadata,
+        reason: 'RESPONSES_CLOSED',
+        pausedAt: nowIso,
+        startedAt: previousMetadata.startedAt || nowIso,
+        endedAt: null,
+        sessionPhase: 'RESULTS_HOLD',
+        isCollecting: false,
+        resultsVisibility: 'HIDDEN',
+        responsesClosedAt: nowIso,
+        revealedAt: null
+      });
+
+      Logger.log('Responses closed for question', { pollId: pollId, questionIndex: questionIndex });
+
+      return getLivePollData(pollId, questionIndex);
     });
-
-    Logger.log('Responses closed for question', { pollId: pollId, questionIndex: questionIndex });
-
-    return getLivePollData(pollId, questionIndex);
   })();
 };
 
@@ -171,32 +179,34 @@ Veritas.Models.Session.stopPoll = function() {
  */
 Veritas.Models.Session.resumePoll = function() {
   return withErrorHandling(function() {
-    const currentStatus = DataAccess.liveStatus.get();
-    const pollId = currentStatus[0];
-    const questionIndex = currentStatus[1];
+    return Veritas.Utils.withLock(function() {
+      const currentStatus = DataAccess.liveStatus.get();
+      const pollId = currentStatus[0];
+      const questionIndex = currentStatus[1];
 
-    if (!pollId || questionIndex < 0) {
-      throw new Error('No poll to resume');
-    }
+      if (!pollId || questionIndex < 0) {
+        throw new Error('No poll to resume');
+      }
 
-    const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
-    const nowIso = new Date().toISOString();
-    DataAccess.liveStatus.set(pollId, questionIndex, "OPEN", {
-      ...previousMetadata,
-      reason: 'RUNNING',
-      resumedAt: nowIso,
-      startedAt: previousMetadata.startedAt || nowIso,
-      endedAt: null,
-      sessionPhase: 'LIVE',
-      isCollecting: true,
-      resultsVisibility: 'HIDDEN',
-      responsesClosedAt: null,
-      revealedAt: null
+      const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
+      const nowIso = new Date().toISOString();
+      DataAccess.liveStatus.set(pollId, questionIndex, "OPEN", {
+        ...previousMetadata,
+        reason: 'RUNNING',
+        resumedAt: nowIso,
+        startedAt: previousMetadata.startedAt || nowIso,
+        endedAt: null,
+        sessionPhase: 'LIVE',
+        isCollecting: true,
+        resultsVisibility: 'HIDDEN',
+        responsesClosedAt: null,
+        revealedAt: null
+      });
+
+      Logger.log('Poll resumed', { pollId: pollId, questionIndex: questionIndex });
+
+      return getLivePollData(pollId, questionIndex);
     });
-
-    Logger.log('Poll resumed', { pollId: pollId, questionIndex: questionIndex });
-
-    return getLivePollData(pollId, questionIndex);
   })();
 };
 
@@ -205,26 +215,28 @@ Veritas.Models.Session.resumePoll = function() {
  */
 Veritas.Models.Session.closePoll = function() {
   return withErrorHandling(function() {
-    const currentStatus = DataAccess.liveStatus.get();
-    const pollId = currentStatus[0];
+    return Veritas.Utils.withLock(function() {
+      const currentStatus = DataAccess.liveStatus.get();
+      const pollId = currentStatus[0];
 
-    const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
-    const nowIso = new Date().toISOString();
-    DataAccess.liveStatus.set("", -1, "CLOSED", {
-      ...previousMetadata,
-      reason: 'COMPLETED',
-      sessionPhase: 'ENDED',
-      endedAt: nowIso,
-      startedAt: previousMetadata.startedAt || null,
-      isCollecting: false,
-      resultsVisibility: 'HIDDEN',
-      responsesClosedAt: previousMetadata.responsesClosedAt || nowIso,
-      revealedAt: null
+      const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
+      const nowIso = new Date().toISOString();
+      DataAccess.liveStatus.set("", -1, "CLOSED", {
+        ...previousMetadata,
+        reason: 'COMPLETED',
+        sessionPhase: 'ENDED',
+        endedAt: nowIso,
+        startedAt: previousMetadata.startedAt || null,
+        isCollecting: false,
+        resultsVisibility: 'HIDDEN',
+        responsesClosedAt: previousMetadata.responsesClosedAt || nowIso,
+        revealedAt: null
+      });
+
+      Logger.log('Poll closed completely', { pollId: pollId });
+
+      return { status: "ENDED" };
     });
-
-    Logger.log('Poll closed completely', { pollId: pollId });
-
-    return { status: "ENDED" };
   })();
 };
 
@@ -233,32 +245,34 @@ Veritas.Models.Session.closePoll = function() {
  */
 Veritas.Models.Session.pausePollForTimerExpiry = function() {
   return withErrorHandling(function() {
-    const currentStatus = DataAccess.liveStatus.get();
-    const pollId = currentStatus[0];
-    const questionIndex = currentStatus[1];
+    return Veritas.Utils.withLock(function() {
+      const currentStatus = DataAccess.liveStatus.get();
+      const pollId = currentStatus[0];
+      const questionIndex = currentStatus[1];
 
-    if (!pollId || questionIndex < 0) {
-      throw new Error('No active question to pause');
-    }
+      if (!pollId || questionIndex < 0) {
+        throw new Error('No active question to pause');
+      }
 
-    const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
-    const nowIso = new Date().toISOString();
-    DataAccess.liveStatus.set(pollId, questionIndex, "PAUSED", {
-      ...previousMetadata,
-      reason: 'TIMER_EXPIRED',
-      pausedAt: nowIso,
-      startedAt: previousMetadata.startedAt || nowIso,
-      endedAt: null,
-      sessionPhase: 'RESULTS_HOLD',
-      isCollecting: false,
-      resultsVisibility: 'HIDDEN',
-      responsesClosedAt: nowIso,
-      revealedAt: null
+      const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
+      const nowIso = new Date().toISOString();
+      DataAccess.liveStatus.set(pollId, questionIndex, "PAUSED", {
+        ...previousMetadata,
+        reason: 'TIMER_EXPIRED',
+        pausedAt: nowIso,
+        startedAt: previousMetadata.startedAt || nowIso,
+        endedAt: null,
+        sessionPhase: 'RESULTS_HOLD',
+        isCollecting: false,
+        resultsVisibility: 'HIDDEN',
+        responsesClosedAt: nowIso,
+        revealedAt: null
+      });
+
+      Logger.log('Responses closed due to timer expiry', { pollId: pollId, questionIndex: questionIndex });
+
+      return getLivePollData(pollId, questionIndex);
     });
-
-    Logger.log('Responses closed due to timer expiry', { pollId: pollId, questionIndex: questionIndex });
-
-    return getLivePollData(pollId, questionIndex);
   })();
 };
 
@@ -378,67 +392,69 @@ Veritas.Models.Session.endQuestionAndRevealResults = function() {
  */
 Veritas.Models.Session.resetLiveQuestion = function(pollId, questionIndex, clearResponses) {
   return withErrorHandling(function() {
-    if (!pollId) {
-      throw new Error('Poll ID is required');
-    }
+    return Veritas.Utils.withLock(function() {
+      if (!pollId) {
+        throw new Error('Poll ID is required');
+      }
 
-    if (typeof questionIndex !== 'number' || questionIndex < 0) {
-      throw new Error('Valid question index is required');
-    }
+      if (typeof questionIndex !== 'number' || questionIndex < 0) {
+        throw new Error('Valid question index is required');
+      }
 
-    const poll = DataAccess.polls.getById(pollId);
-    if (!poll) {
-      throw new Error('Poll not found');
-    }
+      const poll = DataAccess.polls.getById(pollId);
+      if (!poll) {
+        throw new Error('Poll not found');
+      }
 
-    if (!poll.questions[questionIndex]) {
-      throw new Error('Question not found');
-    }
+      if (!poll.questions[questionIndex]) {
+        throw new Error('Question not found');
+      }
 
-    if (clearResponses) {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      const responsesSheet = ss.getSheetByName('Responses');
+      if (clearResponses) {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const responsesSheet = ss.getSheetByName('Responses');
 
-      // NULL CHECK: Responses sheet might not exist yet
-      if (responsesSheet) {
-        const values = getDataRangeValues_(responsesSheet);
-        const keepRows = values.filter(function(row) { return !(row[2] === pollId && row[3] === questionIndex); });
+        // NULL CHECK: Responses sheet might not exist yet
+        if (responsesSheet) {
+          const values = getDataRangeValues_(responsesSheet);
+          const keepRows = values.filter(function(row) { return !(row[2] === pollId && row[3] === questionIndex); });
 
-        if (keepRows.length < values.length) {
-          if (values.length > 0) {
-            responsesSheet.getRange(2, 1, values.length, responsesSheet.getLastColumn()).clearContent();
-          }
-          if (keepRows.length > 0) {
-            responsesSheet.getRange(2, 1, keepRows.length, keepRows[0].length).setValues(keepRows);
+          if (keepRows.length < values.length) {
+            if (values.length > 0) {
+              responsesSheet.getRange(2, 1, values.length, responsesSheet.getLastColumn()).clearContent();
+            }
+            if (keepRows.length > 0) {
+              responsesSheet.getRange(2, 1, keepRows.length, keepRows[0].length).setValues(keepRows);
+            }
           }
         }
       }
-    }
 
-    const currentStatus = DataAccess.liveStatus.get();
-    const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
-    const nowIso = new Date().toISOString();
-    DataAccess.liveStatus.set(pollId, questionIndex, "OPEN", {
-      ...previousMetadata,
-      reason: 'RUNNING',
-      resetAt: nowIso,
-      clearedResponses: !!clearResponses,
-      startedAt: previousMetadata.startedAt || nowIso,
-      endedAt: null,
-      sessionPhase: 'LIVE',
-      isCollecting: true,
-      resultsVisibility: 'HIDDEN',
-      responsesClosedAt: null,
-      revealedAt: null
+      const currentStatus = DataAccess.liveStatus.get();
+      const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
+      const nowIso = new Date().toISOString();
+      DataAccess.liveStatus.set(pollId, questionIndex, "OPEN", {
+        ...previousMetadata,
+        reason: 'RUNNING',
+        resetAt: nowIso,
+        clearedResponses: !!clearResponses,
+        startedAt: previousMetadata.startedAt || nowIso,
+        endedAt: null,
+        sessionPhase: 'LIVE',
+        isCollecting: true,
+        resultsVisibility: 'HIDDEN',
+        responsesClosedAt: null,
+        revealedAt: null
+      });
+
+      Logger.log('Question reset', {
+        pollId: pollId,
+        questionIndex: questionIndex,
+        cleared: !!clearResponses
+      });
+
+      return getLivePollData(pollId, questionIndex);
     });
-
-    Logger.log('Question reset', {
-      pollId: pollId,
-      questionIndex: questionIndex,
-      cleared: !!clearResponses
-    });
-
-    return getLivePollData(pollId, questionIndex);
   })();
 };
 
@@ -1778,53 +1794,58 @@ Veritas.Models.Session.ProctorAccess = {
    * Set proctoring state with validation
    */
   setState: function(state) {
-    var validStatuses = Veritas.Config.PROCTOR_STATUS_VALUES;
-    if (!validStatuses.includes(state.status)) {
-      throw new Error('Invalid proctor status: ' + state.status + '. Must be one of: ' + validStatuses.join(', '));
-    }
+    return Veritas.Utils.withLock(function() {
+      var validStatuses = Veritas.Config.PROCTOR_STATUS_VALUES;
+      if (!validStatuses.includes(state.status)) {
+        throw new Error('Invalid proctor status: ' + state.status + '. Must be one of: ' + validStatuses.join(', '));
+      }
 
-    if (typeof state.lockVersion !== 'number' || state.lockVersion < 0) {
-      throw new Error('Invalid lockVersion: ' + state.lockVersion + '. Must be non-negative number.');
-    }
+      if (typeof state.lockVersion !== 'number' || state.lockVersion < 0) {
+        throw new Error('Invalid lockVersion: ' + state.lockVersion + '. Must be non-negative number.');
+      }
 
-    if (state.status === 'AWAITING_FULLSCREEN' && !state.unlockApproved) {
-      throw new Error('State AWAITING_FULLSCREEN requires unlockApproved=true (teacher must approve first)');
-    }
+      if (state.status === 'AWAITING_FULLSCREEN' && !state.unlockApproved) {
+        throw new Error('State AWAITING_FULLSCREEN requires unlockApproved=true (teacher must approve first)');
+      }
 
-    if (state.status === 'LOCKED' && state.unlockApproved) {
-      throw new Error('State LOCKED requires unlockApproved=false (approval must be cleared on new violation)');
-    }
+      if (state.status === 'LOCKED' && state.unlockApproved) {
+        throw new Error('State LOCKED requires unlockApproved=false (approval must be cleared on new violation)');
+      }
 
-    if (state.status === 'BLOCKED') {
-      state.unlockApproved = false;
-    }
+      if (state.status === 'BLOCKED') {
+        state.unlockApproved = false;
+      }
 
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName('ProctorState');
+      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      var sheet = ss.getSheetByName('ProctorState');
 
-    if (!sheet) {
-      this.getState(state.pollId, state.studentEmail);
-      sheet = ss.getSheetByName('ProctorState');
-    }
+      if (!sheet) {
+        // This call might be redundant if called within a lock, but ensures sheet exists
+        // Note: this.getState is not locked, but ensures sheet creation
+        // Since we are inside a lock, concurrent creation is prevented if they use withLock
+        Veritas.Models.Session.ProctorAccess.getState(state.pollId, state.studentEmail);
+        sheet = ss.getSheetByName('ProctorState');
+      }
 
-    var rowData = [
-      state.pollId,
-      state.studentEmail,
-      state.status || 'OK',
-      state.lockVersion,
-      state.lockReason || '',
-      state.lockedAt || '',
-      state.unlockApproved || false,
-      state.unlockApprovedBy || '',
-      state.unlockApprovedAt || '',
-      state.sessionId || ''
-    ];
+      var rowData = [
+        state.pollId,
+        state.studentEmail,
+        state.status || 'OK',
+        state.lockVersion,
+        state.lockReason || '',
+        state.lockedAt || '',
+        state.unlockApproved || false,
+        state.unlockApprovedBy || '',
+        state.unlockApprovedAt || '',
+        state.sessionId || ''
+      ];
 
-    if (state.rowIndex) {
-      sheet.getRange(state.rowIndex, 1, 1, 10).setValues([rowData]);
-    } else {
-      sheet.appendRow(rowData);
-    }
+      if (state.rowIndex) {
+        sheet.getRange(state.rowIndex, 1, 1, 10).setValues([rowData]);
+      } else {
+        sheet.appendRow(rowData);
+      }
+    });
   },
 
   /**

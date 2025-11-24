@@ -622,6 +622,42 @@ Veritas.TeacherApi.resetLiveQuestion = function(pollId, questionIndex, clearResp
   })();
 };
 
+/**
+ * End current question and reveal results
+ * @returns {Object} Updated session state
+ */
+Veritas.TeacherApi.endQuestionAndRevealResults = function() {
+  return withErrorHandling(function() {
+    Veritas.TeacherApi.assertTeacher();
+    return Veritas.Models.Session.endQuestionAndRevealResults();
+  })();
+};
+
+/**
+ * Pause poll for timer expiry
+ * @returns {Object} Updated session state
+ */
+Veritas.TeacherApi.pausePollForTimerExpiry = function() {
+  return withErrorHandling(function() {
+    Veritas.TeacherApi.assertTeacher();
+    return Veritas.Models.Session.pausePollForTimerExpiry();
+  })();
+};
+
+/**
+ * Reset student response
+ * @param {string} studentEmail - Student email
+ * @param {string} pollId - Poll ID
+ * @param {number} questionIndex - Question index
+ * @returns {Object} Result
+ */
+Veritas.TeacherApi.resetStudentResponse = function(studentEmail, pollId, questionIndex) {
+  return withErrorHandling(function() {
+    Veritas.TeacherApi.assertTeacher();
+    return Veritas.Models.Session.resetStudentResponse(studentEmail, pollId, questionIndex);
+  })();
+};
+
 // =============================================================================
 // SECURE ASSESSMENT MANAGEMENT (Security Wrappers)
 // =============================================================================
@@ -822,6 +858,43 @@ Veritas.TeacherApi.teacherUnblockStudent = function(pollId, studentEmail) {
 // =============================================================================
 // SETUP & UTILITIES
 // =============================================================================
+
+/**
+ * Upload image to Drive
+ * @param {string} dataUrl - Base64 data URL
+ * @param {string} fileName - File name
+ * @returns {Object} Result with fileId
+ */
+Veritas.TeacherApi.uploadImageToDrive = function(dataUrl, fileName) {
+  return withErrorHandling(function() {
+    Veritas.TeacherApi.assertTeacher();
+    return Veritas.Models.Poll.uploadImageToDrive(dataUrl, fileName);
+  })();
+};
+
+/**
+ * Get secure assessment book view
+ * @param {string} pollId - Poll ID
+ * @returns {Object} Book view data
+ */
+Veritas.TeacherApi.getSecureAssessmentBookView = function(pollId) {
+  return withErrorHandling(function() {
+    Veritas.TeacherApi.assertTeacher();
+    return Veritas.Models.Poll.getSecureAssessmentBookView(pollId);
+  })();
+};
+
+/**
+ * Clear all caches (diagnostic function for troubleshooting)
+ * @returns {Object} Success result
+ */
+Veritas.TeacherApi.clearAllCaches = function() {
+  return withErrorHandling(function() {
+    Veritas.TeacherApi.assertTeacher();
+    CacheManager.invalidate(['ALL_POLLS_DATA', 'CLASSES_LIST', 'LIVE_POLL_STATUS']);
+    return { success: true, message: 'All caches cleared. Please refresh the page.' };
+  })();
+};
 
 /**
  * UI alert helper for spreadsheet operations

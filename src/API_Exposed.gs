@@ -606,7 +606,7 @@ function getStudentProctorState(token) {
  * @returns {Object} {success: true, fileId, proxyUrl} or {success: false, error}
  */
 function uploadImageToDrive(dataUrl, fileName) {
-  return Veritas.Models.Poll.uploadImageToDrive(dataUrl, fileName);
+  return Veritas.TeacherApi.uploadImageToDrive(dataUrl, fileName);
 }
 
 /**
@@ -615,7 +615,7 @@ function uploadImageToDrive(dataUrl, fileName) {
  * @returns {Object} Book view data
  */
 function getSecureAssessmentBookView(pollId) {
-  return Veritas.Models.Poll.getSecureAssessmentBookView(pollId);
+  return Veritas.TeacherApi.getSecureAssessmentBookView(pollId);
 }
 
 /**
@@ -623,7 +623,7 @@ function getSecureAssessmentBookView(pollId) {
  * @returns {Object} Result
  */
 function pausePollForTimerExpiry() {
-  return Veritas.Models.Session.pausePollForTimerExpiry();
+  return Veritas.TeacherApi.pausePollForTimerExpiry();
 }
 
 /**
@@ -634,7 +634,7 @@ function pausePollForTimerExpiry() {
  * @returns {Object} Result
  */
 function resetStudentResponse(studentEmail, pollId, questionIndex) {
-  return Veritas.Models.Session.resetStudentResponse(studentEmail, pollId, questionIndex);
+  return Veritas.TeacherApi.resetStudentResponse(studentEmail, pollId, questionIndex);
 }
 
 /**
@@ -642,7 +642,7 @@ function resetStudentResponse(studentEmail, pollId, questionIndex) {
  * @returns {Object} Result
  */
 function endQuestionAndRevealResults() {
-  return Veritas.Models.Session.endQuestionAndRevealResults();
+  return Veritas.TeacherApi.endQuestionAndRevealResults();
 }
 
 /**
@@ -666,9 +666,7 @@ function sendPollLinkToClass(className) {
  * @returns {Object} Success result
  */
 function clearAllCaches() {
-  Veritas.TeacherApi.assertTeacher();
-  CacheManager.invalidate(['ALL_POLLS_DATA', 'CLASSES_LIST', 'LIVE_POLL_STATUS']);
-  return { success: true, message: 'All caches cleared. Please refresh the page.' };
+  return Veritas.TeacherApi.clearAllCaches();
 }
 
 // =============================================================================

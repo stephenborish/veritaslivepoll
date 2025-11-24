@@ -1778,53 +1778,58 @@ Veritas.Models.Session.ProctorAccess = {
    * Set proctoring state with validation
    */
   setState: function(state) {
-    var validStatuses = Veritas.Config.PROCTOR_STATUS_VALUES;
-    if (!validStatuses.includes(state.status)) {
-      throw new Error('Invalid proctor status: ' + state.status + '. Must be one of: ' + validStatuses.join(', '));
-    }
+    return Veritas.Utils.withLock(function() {
+      var validStatuses = Veritas.Config.PROCTOR_STATUS_VALUES;
+      if (!validStatuses.includes(state.status)) {
+        throw new Error('Invalid proctor status: ' + state.status + '. Must be one of: ' + validStatuses.join(', '));
+      }
 
-    if (typeof state.lockVersion !== 'number' || state.lockVersion < 0) {
-      throw new Error('Invalid lockVersion: ' + state.lockVersion + '. Must be non-negative number.');
-    }
+      if (typeof state.lockVersion !== 'number' || state.lockVersion < 0) {
+        throw new Error('Invalid lockVersion: ' + state.lockVersion + '. Must be non-negative number.');
+      }
 
-    if (state.status === 'AWAITING_FULLSCREEN' && !state.unlockApproved) {
-      throw new Error('State AWAITING_FULLSCREEN requires unlockApproved=true (teacher must approve first)');
-    }
+      if (state.status === 'AWAITING_FULLSCREEN' && !state.unlockApproved) {
+        throw new Error('State AWAITING_FULLSCREEN requires unlockApproved=true (teacher must approve first)');
+      }
 
-    if (state.status === 'LOCKED' && state.unlockApproved) {
-      throw new Error('State LOCKED requires unlockApproved=false (approval must be cleared on new violation)');
-    }
+      if (state.status === 'LOCKED' && state.unlockApproved) {
+        throw new Error('State LOCKED requires unlockApproved=false (approval must be cleared on new violation)');
+      }
 
-    if (state.status === 'BLOCKED') {
-      state.unlockApproved = false;
-    }
+      if (state.status === 'BLOCKED') {
+        state.unlockApproved = false;
+      }
 
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName('ProctorState');
+      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      var sheet = ss.getSheetByName('ProctorState');
 
-    if (!sheet) {
-      this.getState(state.pollId, state.studentEmail);
-      sheet = ss.getSheetByName('ProctorState');
-    }
+      if (!sheet) {
+        // This call might be redundant if called within a lock, but ensures sheet exists
+        // Note: this.getState is not locked, but ensures sheet creation
+        // Since we are inside a lock, concurrent creation is prevented if they use withLock
+        Veritas.Models.Session.ProctorAccess.getState(state.pollId, state.studentEmail);
+        sheet = ss.getSheetByName('ProctorState');
+      }
 
-    var rowData = [
-      state.pollId,
-      state.studentEmail,
-      state.status || 'OK',
-      state.lockVersion,
-      state.lockReason || '',
-      state.lockedAt || '',
-      state.unlockApproved || false,
-      state.unlockApprovedBy || '',
-      state.unlockApprovedAt || '',
-      state.sessionId || ''
-    ];
+      var rowData = [
+        state.pollId,
+        state.studentEmail,
+        state.status || 'OK',
+        state.lockVersion,
+        state.lockReason || '',
+        state.lockedAt || '',
+        state.unlockApproved || false,
+        state.unlockApprovedBy || '',
+        state.unlockApprovedAt || '',
+        state.sessionId || ''
+      ];
 
-    if (state.rowIndex) {
-      sheet.getRange(state.rowIndex, 1, 1, 10).setValues([rowData]);
-    } else {
-      sheet.appendRow(rowData);
-    }
+      if (state.rowIndex) {
+        sheet.getRange(state.rowIndex, 1, 1, 10).setValues([rowData]);
+      } else {
+        sheet.appendRow(rowData);
+      }
+    });
   },
 
   /**

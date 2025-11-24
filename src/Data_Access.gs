@@ -909,15 +909,17 @@ var DataAccess = {
     },
 
     add: function(responseData) {
-      var ss = Veritas.Data.getSpreadsheet();
-      var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.RESPONSES);
+      return Veritas.Utils.withLock(function() {
+        var ss = Veritas.Data.getSpreadsheet();
+        var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.RESPONSES);
 
-      // NULL CHECK: Ensure responses sheet exists before adding
-      if (!sheet) {
-        throw new Error('Responses sheet not found. Please run setupSheet() to initialize.');
-      }
+        // NULL CHECK: Ensure responses sheet exists before adding
+        if (!sheet) {
+          throw new Error('Responses sheet not found. Please run setupSheet() to initialize.');
+        }
 
-      sheet.appendRow(responseData);
+        sheet.appendRow(responseData);
+      });
     }
   },
 
@@ -1040,91 +1042,99 @@ var DataAccess = {
     },
 
     initStudent: function(pollId, sessionId, studentEmail, questionOrder, answerOrders, options) {
-      options = options || {};
-      var ss = Veritas.Data.getSpreadsheet();
-      var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
-      var startTime = new Date().toISOString();
-      var row = [];
-      for (var i = 0; i < Veritas.Config.INDIVIDUAL_SESSION_COLUMN_COUNT; i++) {
-        row.push('');
-      }
-      var heartbeatMs = Date.now();
-      var seed = (options && options.questionOrderSeed)
-        ? options.questionOrderSeed
-        : questionOrder.join('-');
-      var answerChoiceMap = (options && options.answerChoiceMap) || {};
+      return Veritas.Utils.withLock(function() {
+        options = options || {};
+        var ss = Veritas.Data.getSpreadsheet();
+        var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
+        var startTime = new Date().toISOString();
+        var row = [];
+        for (var i = 0; i < Veritas.Config.INDIVIDUAL_SESSION_COLUMN_COUNT; i++) {
+          row.push('');
+        }
+        var heartbeatMs = Date.now();
+        var seed = (options && options.questionOrderSeed)
+          ? options.questionOrderSeed
+          : questionOrder.join('-');
+        var answerChoiceMap = (options && options.answerChoiceMap) || {};
 
-      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.POLL_ID - 1] = pollId;
-      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.SESSION_ID - 1] = sessionId;
-      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.STUDENT_EMAIL - 1] = studentEmail;
-      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.STUDENT_DISPLAY_NAME - 1] = (options && options.displayName) || '';
-      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.START_TIME - 1] = startTime;
-      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.END_TIME - 1] = null;
-      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.QUESTION_ORDER - 1] = JSON.stringify(questionOrder);
-      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.QUESTION_ORDER_SEED - 1] = seed;
-      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.CURRENT_QUESTION_INDEX - 1] = 0;
-      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.IS_LOCKED - 1] = false;
-      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.VIOLATION_CODE - 1] = null;
-      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.ANSWER_ORDERS - 1] = JSON.stringify(answerOrders);
-      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.ANSWER_CHOICE_MAP - 1] = JSON.stringify(answerChoiceMap);
-      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.TIME_ADJUSTMENT_MINUTES - 1] = (options && options.timeAdjustmentMinutes) || 0;
-      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.PAUSE_DURATION_MS - 1] = (options && options.pauseDurationMs) || 0;
-      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.LAST_HEARTBEAT_MS - 1] = heartbeatMs;
-      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.CONNECTION_HEALTH - 1] = 'GREEN';
-      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.PROCTOR_STATUS - 1] = 'ACTIVE';
-      row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.ADDITIONAL_METADATA_JSON - 1] = (options && options.additionalMetadata)
-        ? JSON.stringify(options.additionalMetadata)
-        : '';
+        row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.POLL_ID - 1] = pollId;
+        row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.SESSION_ID - 1] = sessionId;
+        row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.STUDENT_EMAIL - 1] = studentEmail;
+        row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.STUDENT_DISPLAY_NAME - 1] = (options && options.displayName) || '';
+        row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.START_TIME - 1] = startTime;
+        row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.END_TIME - 1] = null;
+        row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.QUESTION_ORDER - 1] = JSON.stringify(questionOrder);
+        row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.QUESTION_ORDER_SEED - 1] = seed;
+        row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.CURRENT_QUESTION_INDEX - 1] = 0;
+        row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.IS_LOCKED - 1] = false;
+        row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.VIOLATION_CODE - 1] = null;
+        row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.ANSWER_ORDERS - 1] = JSON.stringify(answerOrders);
+        row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.ANSWER_CHOICE_MAP - 1] = JSON.stringify(answerChoiceMap);
+        row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.TIME_ADJUSTMENT_MINUTES - 1] = (options && options.timeAdjustmentMinutes) || 0;
+        row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.PAUSE_DURATION_MS - 1] = (options && options.pauseDurationMs) || 0;
+        row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.LAST_HEARTBEAT_MS - 1] = heartbeatMs;
+        row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.CONNECTION_HEALTH - 1] = 'GREEN';
+        row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.PROCTOR_STATUS - 1] = 'ACTIVE';
+        row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.ADDITIONAL_METADATA_JSON - 1] = (options && options.additionalMetadata)
+          ? JSON.stringify(options.additionalMetadata)
+          : '';
 
-      sheet.appendRow(row);
+        sheet.appendRow(row);
 
-      return {
-        pollId: pollId,
-        sessionId: sessionId,
-        studentEmail: studentEmail,
-        studentDisplayName: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.STUDENT_DISPLAY_NAME - 1],
-        startTime: startTime,
-        endTime: null,
-        questionOrder: questionOrder,
-        questionOrderSeed: seed,
-        currentQuestionIndex: 0,
-        isLocked: false,
-        answerOrders: answerOrders,
-        answerChoiceMap: answerChoiceMap,
-        timeAdjustmentMinutes: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.TIME_ADJUSTMENT_MINUTES - 1],
-        pauseDurationMs: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.PAUSE_DURATION_MS - 1],
-        lastHeartbeatMs: heartbeatMs,
-        connectionHealth: 'GREEN',
-        rowIndex: sheet.getLastRow()
-      };
+        return {
+          pollId: pollId,
+          sessionId: sessionId,
+          studentEmail: studentEmail,
+          studentDisplayName: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.STUDENT_DISPLAY_NAME - 1],
+          startTime: startTime,
+          endTime: null,
+          questionOrder: questionOrder,
+          questionOrderSeed: seed,
+          currentQuestionIndex: 0,
+          isLocked: false,
+          answerOrders: answerOrders,
+          answerChoiceMap: answerChoiceMap,
+          timeAdjustmentMinutes: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.TIME_ADJUSTMENT_MINUTES - 1],
+          pauseDurationMs: row[Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.PAUSE_DURATION_MS - 1],
+          lastHeartbeatMs: heartbeatMs,
+          connectionHealth: 'GREEN',
+          rowIndex: sheet.getLastRow()
+        };
+      });
     },
 
     updateProgress: function(pollId, sessionId, studentEmail, newIndex) {
-      var studentState = this.getByStudent(pollId, sessionId, studentEmail);
-      if (studentState) {
-        var ss = Veritas.Data.getSpreadsheet();
-        var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
-        sheet.getRange(studentState.rowIndex, Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.CURRENT_QUESTION_INDEX).setValue(newIndex);
-      }
+      return Veritas.Utils.withLock(function() {
+        var studentState = Veritas.Data.individualSessionState.getByStudent(pollId, sessionId, studentEmail);
+        if (studentState) {
+          var ss = Veritas.Data.getSpreadsheet();
+          var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
+          sheet.getRange(studentState.rowIndex, Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.CURRENT_QUESTION_INDEX).setValue(newIndex);
+        }
+      });
     },
 
     lockStudent: function(pollId, sessionId, studentEmail) {
-      var studentState = this.getByStudent(pollId, sessionId, studentEmail);
-      if (studentState) {
-        var ss = Veritas.Data.getSpreadsheet();
-        var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
-        sheet.getRange(studentState.rowIndex, Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.IS_LOCKED).setValue(true);
-        sheet.getRange(studentState.rowIndex, Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.END_TIME).setValue(new Date().toISOString());
-      }
+      return Veritas.Utils.withLock(function() {
+        var studentState = Veritas.Data.individualSessionState.getByStudent(pollId, sessionId, studentEmail);
+        if (studentState) {
+          var ss = Veritas.Data.getSpreadsheet();
+          var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
+          sheet.getRange(studentState.rowIndex, Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.IS_LOCKED).setValue(true);
+          sheet.getRange(studentState.rowIndex, Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.END_TIME).setValue(new Date().toISOString());
+        }
+      });
     },
 
     setAnswerOrders: function(pollId, sessionId, studentEmail, answerOrders) {
-      var studentState = this.getByStudent(pollId, sessionId, studentEmail);
-      if (studentState) {
-        var ss = Veritas.Data.getSpreadsheet();
-        var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
-        sheet.getRange(studentState.rowIndex, Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.ANSWER_ORDERS).setValue(JSON.stringify(answerOrders));
-      }
+      return Veritas.Utils.withLock(function() {
+        var studentState = Veritas.Data.individualSessionState.getByStudent(pollId, sessionId, studentEmail);
+        if (studentState) {
+          var ss = Veritas.Data.getSpreadsheet();
+          var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
+          sheet.getRange(studentState.rowIndex, Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.ANSWER_ORDERS).setValue(JSON.stringify(answerOrders));
+        }
+      });
     },
 
     getAllForSession: function(pollId, sessionId) {
@@ -1169,88 +1179,90 @@ var DataAccess = {
     },
 
     updateFields: function(pollId, sessionId, studentEmail, updates) {
-      if (!updates || typeof updates !== 'object') {
-        throw new Error('Updates object required');
-      }
+      return Veritas.Utils.withLock(function() {
+        if (!updates || typeof updates !== 'object') {
+          throw new Error('Updates object required');
+        }
 
-      var state = this.getByStudent(pollId, sessionId, studentEmail);
-      if (!state) {
-        throw new Error('Student session not initialized');
-      }
+        var state = Veritas.Data.individualSessionState.getByStudent(pollId, sessionId, studentEmail);
+        if (!state) {
+          throw new Error('Student session not initialized');
+        }
 
-      var ss = Veritas.Data.getSpreadsheet();
-      var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
+        var ss = Veritas.Data.getSpreadsheet();
+        var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
 
-      // NULL CHECK: Defensive check before updating
-      if (!sheet) {
-        throw new Error('IndividualTimedSessions sheet not found. Cannot update student fields.');
-      }
+        // NULL CHECK: Defensive check before updating
+        if (!sheet) {
+          throw new Error('IndividualTimedSessions sheet not found. Cannot update student fields.');
+        }
 
-      var rowIndex = state.rowIndex;
-      var columns = Veritas.Config.INDIVIDUAL_SESSION_COLUMNS;
+        var rowIndex = state.rowIndex;
+        var columns = Veritas.Config.INDIVIDUAL_SESSION_COLUMNS;
 
-      if (Object.prototype.hasOwnProperty.call(updates, 'timeAdjustmentMinutes')) {
-        sheet.getRange(rowIndex, columns.TIME_ADJUSTMENT_MINUTES).setValue(updates.timeAdjustmentMinutes);
-        state.timeAdjustmentMinutes = updates.timeAdjustmentMinutes;
-      }
+        if (Object.prototype.hasOwnProperty.call(updates, 'timeAdjustmentMinutes')) {
+          sheet.getRange(rowIndex, columns.TIME_ADJUSTMENT_MINUTES).setValue(updates.timeAdjustmentMinutes);
+          state.timeAdjustmentMinutes = updates.timeAdjustmentMinutes;
+        }
 
-      if (Object.prototype.hasOwnProperty.call(updates, 'pauseDurationMs')) {
-        sheet.getRange(rowIndex, columns.PAUSE_DURATION_MS).setValue(updates.pauseDurationMs);
-        state.pauseDurationMs = updates.pauseDurationMs;
-      }
+        if (Object.prototype.hasOwnProperty.call(updates, 'pauseDurationMs')) {
+          sheet.getRange(rowIndex, columns.PAUSE_DURATION_MS).setValue(updates.pauseDurationMs);
+          state.pauseDurationMs = updates.pauseDurationMs;
+        }
 
-      if (Object.prototype.hasOwnProperty.call(updates, 'currentQuestionIndex')) {
-        sheet.getRange(rowIndex, columns.CURRENT_QUESTION_INDEX).setValue(updates.currentQuestionIndex);
-        state.currentQuestionIndex = updates.currentQuestionIndex;
-      }
+        if (Object.prototype.hasOwnProperty.call(updates, 'currentQuestionIndex')) {
+          sheet.getRange(rowIndex, columns.CURRENT_QUESTION_INDEX).setValue(updates.currentQuestionIndex);
+          state.currentQuestionIndex = updates.currentQuestionIndex;
+        }
 
-      if (Object.prototype.hasOwnProperty.call(updates, 'endTime')) {
-        sheet.getRange(rowIndex, columns.END_TIME).setValue(updates.endTime);
-        state.endTime = updates.endTime;
-      }
+        if (Object.prototype.hasOwnProperty.call(updates, 'endTime')) {
+          sheet.getRange(rowIndex, columns.END_TIME).setValue(updates.endTime);
+          state.endTime = updates.endTime;
+        }
 
-      if (Object.prototype.hasOwnProperty.call(updates, 'isLocked')) {
-        sheet.getRange(rowIndex, columns.IS_LOCKED).setValue(updates.isLocked);
-        state.isLocked = updates.isLocked;
-      }
+        if (Object.prototype.hasOwnProperty.call(updates, 'isLocked')) {
+          sheet.getRange(rowIndex, columns.IS_LOCKED).setValue(updates.isLocked);
+          state.isLocked = updates.isLocked;
+        }
 
-      if (Object.prototype.hasOwnProperty.call(updates, 'violationCode')) {
-        sheet.getRange(rowIndex, columns.VIOLATION_CODE).setValue(updates.violationCode);
-        state.violationCode = updates.violationCode;
-      }
+        if (Object.prototype.hasOwnProperty.call(updates, 'violationCode')) {
+          sheet.getRange(rowIndex, columns.VIOLATION_CODE).setValue(updates.violationCode);
+          state.violationCode = updates.violationCode;
+        }
 
-      if (Object.prototype.hasOwnProperty.call(updates, 'proctorStatus')) {
-        sheet.getRange(rowIndex, columns.PROCTOR_STATUS).setValue(updates.proctorStatus);
-        state.proctorStatus = updates.proctorStatus;
-      }
+        if (Object.prototype.hasOwnProperty.call(updates, 'proctorStatus')) {
+          sheet.getRange(rowIndex, columns.PROCTOR_STATUS).setValue(updates.proctorStatus);
+          state.proctorStatus = updates.proctorStatus;
+        }
 
-      var metadataUpdated = false;
+        var metadataUpdated = false;
 
-      if (Object.prototype.hasOwnProperty.call(updates, 'additionalMetadata')) {
-        state.additionalMetadata = updates.additionalMetadata;
-        metadataUpdated = true;
-      }
-
-      if (Object.prototype.hasOwnProperty.call(updates, 'mergeAdditionalMetadata')) {
-        var currentMetadata = state.additionalMetadata || {};
-        var newMetadata = updates.mergeAdditionalMetadata;
-        if (newMetadata && typeof newMetadata === 'object') {
-          for (var key in newMetadata) {
-            if (Object.prototype.hasOwnProperty.call(newMetadata, key)) {
-              currentMetadata[key] = newMetadata[key];
-            }
-          }
-          state.additionalMetadata = currentMetadata;
+        if (Object.prototype.hasOwnProperty.call(updates, 'additionalMetadata')) {
+          state.additionalMetadata = updates.additionalMetadata;
           metadataUpdated = true;
         }
-      }
 
-      if (metadataUpdated) {
-        var metadataJson = JSON.stringify(state.additionalMetadata);
-        sheet.getRange(rowIndex, columns.ADDITIONAL_METADATA_JSON).setValue(metadataJson);
-      }
+        if (Object.prototype.hasOwnProperty.call(updates, 'mergeAdditionalMetadata')) {
+          var currentMetadata = state.additionalMetadata || {};
+          var newMetadata = updates.mergeAdditionalMetadata;
+          if (newMetadata && typeof newMetadata === 'object') {
+            for (var key in newMetadata) {
+              if (Object.prototype.hasOwnProperty.call(newMetadata, key)) {
+                currentMetadata[key] = newMetadata[key];
+              }
+            }
+            state.additionalMetadata = currentMetadata;
+            metadataUpdated = true;
+          }
+        }
 
-      return state;
+        if (metadataUpdated) {
+          var metadataJson = JSON.stringify(state.additionalMetadata);
+          sheet.getRange(rowIndex, columns.ADDITIONAL_METADATA_JSON).setValue(metadataJson);
+        }
+
+        return state;
+      });
     }
   }
 };

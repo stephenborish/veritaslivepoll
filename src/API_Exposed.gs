@@ -131,10 +131,12 @@ function getDashboardSummary() {
 
 /**
  * Get live poll data
+ * @param {string} pollId - Poll ID
+ * @param {number} questionIndex - Question index
  * @returns {Object} Live poll monitoring data
  */
-function getLivePollData() {
-  return Veritas.TeacherApi.getLivePollData();
+function getLivePollData(pollId, questionIndex) {
+  return Veritas.TeacherApi.getLivePollData(pollId, questionIndex);
 }
 
 // =============================================================================

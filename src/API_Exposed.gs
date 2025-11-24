@@ -450,12 +450,13 @@ function forceSubmitSecureAssessmentStudent(pollId, studentEmail) {
 
 /**
  * Approve unlock request
- * @param {string} pollId - Poll ID
  * @param {string} studentEmail - Student email
+ * @param {string} pollId - Poll ID
+ * @param {number} expectedLockVersion - Expected lock version
  * @returns {Object} Result
  */
-function teacherApproveUnlock(pollId, studentEmail) {
-  return Veritas.TeacherApi.teacherApproveUnlock(pollId, studentEmail);
+function teacherApproveUnlock(studentEmail, pollId, expectedLockVersion) {
+  return Veritas.TeacherApi.teacherApproveUnlock(studentEmail, pollId, expectedLockVersion);
 }
 
 /**

@@ -810,16 +810,17 @@ Veritas.TeacherApi.forceSubmitSecureAssessmentStudent = function(pollId, student
 
 /**
  * Approve unlock request from student
- * @param {string} pollId - Poll ID
  * @param {string} studentEmail - Student email
+ * @param {string} pollId - Poll ID
+ * @param {number} expectedLockVersion - Expected lock version
  * @returns {Object} Result
  */
-Veritas.TeacherApi.teacherApproveUnlock = function(pollId, studentEmail) {
+Veritas.TeacherApi.teacherApproveUnlock = function(studentEmail, pollId, expectedLockVersion) {
   return withErrorHandling(function() {
     Veritas.TeacherApi.assertTeacher();
 
     // Delegate to Models layer
-    return Veritas.Models.Session.teacherApproveUnlock(pollId, studentEmail);
+    return Veritas.Models.Session.teacherApproveUnlock(studentEmail, pollId, expectedLockVersion);
   })();
 };
 

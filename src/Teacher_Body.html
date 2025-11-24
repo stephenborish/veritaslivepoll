@@ -371,49 +371,7 @@
         <!-- Live Poll View (REDESIGNED FOR OPTIMAL TEACHER WORKFLOW) -->
         <div id="live-view" class="flex flex-col h-full overflow-hidden" style="display: none;">
 
-          <!-- 🚨 ATTENTION ZONE - Appears only when teacher action needed -->
-          <div id="attention-banner-container" class="flex-shrink-0">
-
-            <!-- Lockout Alert (ENHANCED - High Visibility!) -->
-            <div id="lockout-alert-banner" class="hidden bg-gradient-to-r from-red-600 to-red-700 border-b-4 border-red-800 px-6 py-4 shadow-lg animate-fade-up" role="alert" aria-live="assertive" aria-hidden="true">
-              <div class="flex items-center justify-between gap-4">
-                <div class="flex items-center gap-6 flex-1 min-w-0">
-                  <span class="material-symbols-outlined text-white text-5xl flex-shrink-0 animate-pulse">lock_person</span>
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-3 mb-1">
-                      <h3 class="text-white text-2xl font-bold">🔒 Students Locked Out</h3>
-                      <span class="px-3 py-1 bg-white/25 rounded-full text-white text-sm font-bold uppercase tracking-wide">Action Required</span>
-                    </div>
-                    <p id="lockout-student-names" class="text-white/95 text-lg mb-3 font-semibold">Loading...</p>
-                    <div id="lockout-actions" class="flex flex-wrap gap-2.5">
-                      <!-- Individual unlock buttons will be populated here with larger touch targets -->
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-
-            <!-- Exited Students Panel (moved to top for visibility) -->
-            <div id="exited-students-panel" class="hidden bg-gradient-to-r from-orange-500 to-orange-600 border-b-4 border-orange-700 px-6 py-4">
-              <div class="flex items-center justify-between gap-4">
-                <div class="flex items-center gap-4 flex-1">
-                  <span class="material-symbols-outlined text-white text-3xl">exit_to_app</span>
-                  <div class="flex-1">
-                    <h3 class="text-white text-lg font-bold mb-1">Students Exited Poll</h3>
-                    <p class="text-white/95 text-sm mb-3"><span id="exited-students-count">0</span> student(s) awaiting re-entry approval</p>
-                    <div id="exited-students-list-inline" class="flex flex-wrap gap-2">
-                      <!-- Inline student buttons will be populated here -->
-                    </div>
-                  </div>
-                </div>
-                <button id="approve-all-unlocks-btn" class="px-5 py-2.5 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-bold transition-colors flex items-center gap-2 border-2 border-white/30" title="Approve all students for re-entry">
-                  <span class="material-symbols-outlined text-lg">check_circle</span>
-                  <span>UNLOCK ALL</span>
-                </button>
-              </div>
-            </div>
-          </div>
+          <!-- 🚨 Proctoring notifications now use lightweight toasts. Legacy banners removed for a calmer experience. -->
 
           <!-- New Status Bar (Replaces Session HUD) -->
           <div id="live-status-bar" class="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex items-center gap-4 sm:gap-6 overflow-x-auto text-sm shadow-sm z-10 h-12">

@@ -552,17 +552,17 @@ Veritas.StudentApi.reportStudentViolation = function(pollId, token, violationTyp
 
 /**
  * Student confirms fullscreen mode
- * @param {string} pollId - Poll ID
+ * @param {number} expectedLockVersion - Expected lock version to validate unlock
  * @param {string} token - Session token
  * @returns {Object} Result
  */
-Veritas.StudentApi.studentConfirmFullscreen = function(pollId, token) {
+Veritas.StudentApi.studentConfirmFullscreen = function(expectedLockVersion, token) {
   return withErrorHandling(function() {
     var tokenData = Veritas.StudentApi.validateToken(token);
     var studentEmail = tokenData.email;
 
     // Delegate to Models layer
-    return Veritas.Models.Session.studentConfirmFullscreen(pollId, studentEmail);
+    return Veritas.Models.Session.studentConfirmFullscreen(expectedLockVersion, token);
   })();
 };
 

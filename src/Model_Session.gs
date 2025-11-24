@@ -1660,6 +1660,13 @@ Veritas.Models.Session.ProctorAccess = {
         if (currentSessionId) {
           var needsReset = !stateSessionId || stateSessionId === '' || stateSessionId !== currentSessionId;
           if (needsReset) {
+            // Preserve any active lock/block state while syncing to the current session ID so
+            // violations are not cleared when session metadata updates mid-run.
+            if (status === 'LOCKED' || status === 'AWAITING_FULLSCREEN' || status === 'BLOCKED') {
+              baseState.sessionId = currentSessionId;
+              return Veritas.Models.Session.hydrateProctorBlockFields(baseState);
+            }
+
             return Veritas.Models.Session.hydrateProctorBlockFields({
               pollId: pollId,
               studentEmail: studentEmail,
@@ -1745,19 +1752,26 @@ Veritas.Models.Session.ProctorAccess = {
         if (currentSessionId) {
           var needsReset = !stateSessionId || stateSessionId === '' || stateSessionId !== currentSessionId;
           if (needsReset) {
-            existingStates.set(email, Veritas.Models.Session.hydrateProctorBlockFields({
-              pollId: pollId,
-              studentEmail: email,
-              status: 'OK',
-              lockVersion: 0,
-              lockReason: '',
-              lockedAt: '',
-              unlockApproved: false,
-              unlockApprovedBy: null,
-              unlockApprovedAt: null,
-              sessionId: currentSessionId,
-              rowIndex: i + 1
-            }));
+            // When session metadata shifts, keep any active lock state instead of clearing it so
+            // violations remain enforced and visible to teachers.
+            if (status === 'LOCKED' || status === 'AWAITING_FULLSCREEN' || status === 'BLOCKED') {
+              baseState.sessionId = currentSessionId;
+              existingStates.set(email, Veritas.Models.Session.hydrateProctorBlockFields(baseState));
+            } else {
+              existingStates.set(email, Veritas.Models.Session.hydrateProctorBlockFields({
+                pollId: pollId,
+                studentEmail: email,
+                status: 'OK',
+                lockVersion: 0,
+                lockReason: '',
+                lockedAt: '',
+                unlockApproved: false,
+                unlockApprovedBy: null,
+                unlockApprovedAt: null,
+                sessionId: currentSessionId,
+                rowIndex: i + 1
+              }));
+            }
           } else {
             existingStates.set(email, Veritas.Models.Session.hydrateProctorBlockFields(baseState));
           }

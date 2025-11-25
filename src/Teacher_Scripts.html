@@ -2133,10 +2133,21 @@
     dashboardSidebar.style.display='flex';
   }
   function focusLockoutsSection(){
-    var panel=document.getElementById('exited-students-panel');
+    var panel=document.getElementById('student-status-grid');
     if(panel){
-      panel.classList.remove('hidden');
-      panel.scrollIntoView({behavior:'smooth',block:'start'});
+      // Scroll the students panel into view
+      var studentsPanel=panel.closest('.bg-white, .dark\\:bg-brand-dark-gray\\/30');
+      if(studentsPanel){
+        studentsPanel.scrollIntoView({behavior:'smooth',block:'start'});
+      }
+      // Highlight locked students temporarily
+      var lockedTiles=panel.querySelectorAll('.student-tile-locked, [data-status="LOCKED"]');
+      lockedTiles.forEach(function(tile){
+        tile.style.boxShadow='0 0 0 3px rgba(245, 158, 11, 0.5)';
+        setTimeout(function(){
+          tile.style.boxShadow='';
+        },2000);
+      });
     }
   }
   bindClick('focus-lockouts-btn',focusLockoutsSection);
@@ -6706,11 +6717,11 @@
     // Top row: Status emoji + Name + Approve button (for locked students)
     html+='<div class="flex items-center gap-1">';
     html+='<span class="material-symbols-outlined text-sm '+iconClass+'">'+iconName+'</span>';
-    html+='<span class="text-[11px] font-semibold '+textClass+' truncate flex-1">'+escapeHtml(formatStudentName(student))+'</span>';
+    html+='<span class="text-sm font-semibold '+textClass+' truncate flex-1">'+escapeHtml(formatStudentName(student))+'</span>';
 
     // Add approve button for locked students
     if(status==='LOCKED'){
-      html+='<button class="approve-reentry-btn flex-shrink-0 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-green-600 hover:bg-green-700 text-white transition-colors" title="Approve re-entry" data-email="'+escapeHtml(student.email)+'" data-lock-version="'+(student.lockVersion||0)+'">✓</button>';
+      html+='<button class="approve-reentry-btn flex-shrink-0 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-green-600 hover:bg-green-700 text-white transition-colors" title="Approve re-entry" data-email="'+escapeHtml(student.email)+'" data-lock-version="'+(student.lockVersion||0)+'"><span>✓</span></button>';
     }
 
     html+='</div>';
@@ -6736,7 +6747,7 @@
     }
 
     if(detailParts.length>0){
-      html+='<div class="text-[9px] '+textClass+' opacity-70 truncate">'+detailParts.join(' ')+'</div>';
+      html+='<div class="text-xs '+textClass+' opacity-70 truncate">'+detailParts.join(' ')+'</div>';
     }
 
     html+='</div>';

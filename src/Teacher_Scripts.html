@@ -1083,6 +1083,27 @@
     });
 
     console.log('✨ Enhanced UI systems initialized (Phase 3)');
+
+    // Image zoom functionality (student-view-style)
+    window.expandImage = function(imgElement) {
+      var imgSrc = imgElement.src;
+      var modalHtml = '<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="this.remove()">';
+      modalHtml += '<img src="' + imgSrc + '" style="max-width:90%;max-height:90%;"/>';
+      modalHtml += '</div>';
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+    };
+
+    // Add click handler to live question image for zoom
+    var liveQuestionImage = document.getElementById('live-question-image');
+    if (liveQuestionImage) {
+      liveQuestionImage.addEventListener('click', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        if (this.src && this.style.display !== 'none') {
+          window.expandImage(this);
+        }
+      });
+    }
   });
 
   function describeConfidence(value){
@@ -5846,8 +5867,14 @@
     // Handle question image with cache-busting
     var questionImageContainer=document.getElementById('question-image-container');
     var questionImageEl=document.getElementById('live-question-image');
+    var questionLayoutContainer=document.getElementById('question-layout-container');
     if(data.questionImageURL){
-      questionImageContainer.style.display='block';
+      questionImageContainer.style.display='flex';
+
+      // Remove no-image class from grid
+      if(questionLayoutContainer){
+        questionLayoutContainer.classList.remove('no-image');
+      }
 
       // Add cache-busting query parameter based on question index
       // This ensures the browser re-fetches when switching questions
@@ -5862,6 +5889,11 @@
     } else {
       questionImageContainer.style.display='none';
       questionImageEl.src='';
+
+      // Add no-image class to grid when no image present
+      if(questionLayoutContainer){
+        questionLayoutContainer.classList.add('no-image');
+      }
     }
 
     // Update response count
@@ -5985,33 +6017,33 @@
       var borderColor = isCorrect ? 'border-green-500 dark:border-green-400' : 'border-gray-200 dark:border-gray-700';
       var bgColor = isCorrect ? 'bg-green-50/50 dark:bg-green-900/20' : 'bg-white dark:bg-brand-dark-gray/30';
 
-      card.className='relative rounded-xl border-2 '+borderColor+' '+bgColor+' overflow-hidden transition-all hover:shadow-md';
+      card.className='relative rounded-xl border '+borderColor+' '+bgColor+' overflow-hidden transition-all hover:shadow-sm';
 
-      var cardHtml='<div class="flex items-start gap-3 p-4">';
+      var cardHtml='<div class="flex items-start gap-2.5 p-3">';
 
-      // Letter badge (student view style)
+      // Letter badge (student view style - smaller 32px)
       var badgeBg = isCorrect ? 'bg-green-500 dark:bg-green-600' : 'bg-gray-600 dark:bg-gray-500';
-      cardHtml+='<div class="flex-shrink-0 w-10 h-10 '+badgeBg+' rounded-lg flex items-center justify-center">';
-      cardHtml+='<span class="text-white text-lg font-bold">'+letter+'</span>';
+      cardHtml+='<div class="flex-shrink-0 w-8 h-8 '+badgeBg+' rounded-lg flex items-center justify-center">';
+      cardHtml+='<span class="text-white text-base font-bold">'+letter+'</span>';
       cardHtml+='</div>';
 
       // Answer content
       cardHtml+='<div class="flex-1 min-w-0">';
 
       if(answerText){
-        cardHtml+='<p class="text-base font-medium text-brand-dark-gray dark:text-brand-white break-words">'+escapeHtml(answerText)+'</p>';
+        cardHtml+='<p class="text-sm font-medium text-brand-dark-gray dark:text-brand-white break-words leading-tight">'+escapeHtml(answerText)+'</p>';
       } else if(!imageURL){
-        cardHtml+='<p class="text-base font-medium text-gray-400 dark:text-gray-500">(No content)</p>';
+        cardHtml+='<p class="text-sm font-medium text-gray-400 dark:text-gray-500">(No content)</p>';
       }
 
       if(imageURL){
-        cardHtml+='<div class="mt-2"><img src="'+escapeHtml(imageURL)+'" class="max-w-full max-h-32 rounded-lg border border-gray-200 dark:border-gray-700" alt="Answer '+letter+' image" referrerpolicy="no-referrer"/></div>';
+        cardHtml+='<div class="mt-1.5"><img src="'+escapeHtml(imageURL)+'" class="max-w-full max-h-24 rounded-lg border border-gray-200 dark:border-gray-700" alt="Answer '+letter+' image" referrerpolicy="no-referrer"/></div>';
       }
 
       // Student names with confidence (compact, below answer text)
       var studentsWithAnswer=Array.isArray(studentsList)?studentsList.filter(function(s){return s.answer===answerText;}):[];
       if(studentsWithAnswer.length>0){
-        cardHtml+='<div class="mt-2 flex flex-wrap gap-1.5">';
+        cardHtml+='<div class="mt-1.5 flex flex-wrap gap-1">';
         studentsWithAnswer.forEach(function(student){
           var confidenceText=describeConfidence(student.confidence);
           var style=CONFIDENCE_LEVEL_STYLES[student.confidence]||{};
@@ -6021,18 +6053,18 @@
             var emoji = style.emoji || '';
             displayText = emoji + ' ' + displayText;
           }
-          cardHtml+='<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium '+badgeClass+'">'+escapeHtml(displayText)+'</span>';
+          cardHtml+='<span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[11px] font-medium '+badgeClass+'">'+escapeHtml(displayText)+'</span>';
         });
         cardHtml+='</div>';
       }
 
       cardHtml+='</div>';
 
-      // Percentage badge (top right corner)
+      // Percentage badge (top right corner - smaller)
       var percentageBg = isCorrect ? 'bg-green-500 dark:bg-green-600' : 'bg-gray-700 dark:bg-gray-600';
-      cardHtml+='<div class="flex-shrink-0 '+percentageBg+' text-white rounded-lg px-3 py-1.5 flex flex-col items-center">';
-      cardHtml+='<span class="text-xl font-bold leading-none">'+percentage+'%</span>';
-      cardHtml+='<span class="text-xs opacity-90 mt-0.5">'+count+'</span>';
+      cardHtml+='<div class="flex-shrink-0 '+percentageBg+' text-white rounded-lg px-2 py-1 flex flex-col items-center">';
+      cardHtml+='<span class="text-lg font-bold leading-none">'+percentage+'%</span>';
+      cardHtml+='<span class="text-[10px] opacity-90 mt-0.5">'+count+'</span>';
       cardHtml+='</div>';
 
       cardHtml+='</div>';
@@ -6605,8 +6637,8 @@
     var isCorrect=student.isCorrect===true;
     var isIncorrect=student.isCorrect===false;
 
-    // Determine tile styling based on status
-    var tileClasses='relative p-2 rounded-lg border transition-all duration-200 hover:shadow-md';
+    // Determine tile styling based on status (more compact)
+    var tileClasses='relative p-1.5 rounded-md border transition-all duration-200 hover:shadow-sm';
     var iconName='person';
     var iconClass='text-gray-500';
     var borderClass='border-gray-200 dark:border-gray-700';
@@ -6668,13 +6700,13 @@
 
     tile.className=tileClasses+' '+borderClass+' '+bgClass;
 
-    // Build tile content
-    var html='<div class="flex flex-col gap-1">';
+    // Build tile content (more compact)
+    var html='<div class="flex flex-col gap-0.5">';
 
     // Top row: Status emoji + Name
-    html+='<div class="flex items-center gap-1.5">';
-    html+='<span class="material-symbols-outlined text-base '+iconClass+'">'+iconName+'</span>';
-    html+='<span class="text-xs font-semibold '+textClass+' truncate flex-1">'+escapeHtml(formatStudentName(student))+'</span>';
+    html+='<div class="flex items-center gap-1">';
+    html+='<span class="material-symbols-outlined text-sm '+iconClass+'">'+iconName+'</span>';
+    html+='<span class="text-[11px] font-semibold '+textClass+' truncate flex-1">'+escapeHtml(formatStudentName(student))+'</span>';
     html+='</div>';
 
     // Bottom row: Answer + Confidence (compact)
@@ -6698,7 +6730,7 @@
     }
 
     if(detailParts.length>0){
-      html+='<div class="text-[10px] '+textClass+' opacity-75 truncate">'+detailParts.join(' ')+'</div>';
+      html+='<div class="text-[9px] '+textClass+' opacity-70 truncate">'+detailParts.join(' ')+'</div>';
     }
 
     html+='</div>';

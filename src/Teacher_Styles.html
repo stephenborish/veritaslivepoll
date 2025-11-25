@@ -133,7 +133,7 @@
 
     .question-stem-text {
       font-family: "Noto Serif", serif;
-      font-size: 1.6rem;
+      font-size: 1.4rem;
       line-height: 1.6;
       font-weight: 400;
       color: #000000;
@@ -2333,6 +2333,12 @@
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
       gap: 0.5rem;
+    }
+
+    #student-status-grid > div {
+      min-height: 48px;
+      max-height: 48px;
+      overflow: hidden;
     }
 
     /* Gentle pulse animation for locked students */

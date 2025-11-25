@@ -431,21 +431,26 @@
 
                 <!-- Question Display Area -->
                 <div class="bg-white dark:bg-brand-dark-gray/30 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm shrink-0">
-                  <div class="flex items-center justify-between gap-4 mb-3">
-                    <span id="live-question-info" class="text-sm font-bold text-veritas-navy dark:text-veritas-gold uppercase tracking-wider">Q1 / 10</span>
-                    <span id="response-count-header" class="text-sm font-semibold text-gray-600 dark:text-gray-400">0 / 0 answered</span>
-                  </div>
-                  <h2 id="live-question-text-compact" class="hidden"></h2> <!-- Keep for JS compatibility but hide -->
-                  <h2 id="live-question-text" class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white leading-snug">Question text will appear here...</h2>
-                  <div id="question-image-container" class="mt-4" style="display: none;">
-                      <img id="live-question-image" alt="Question" src="" class="max-w-full max-h-64 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <!-- Hidden elements for JS compatibility -->
+                  <h2 id="live-question-text-compact" class="hidden"></h2>
+                  <span id="live-question-info" class="hidden">Q1 / 10</span>
+                  <span id="response-count-header" class="hidden">0 / 0 answered</span>
+
+                  <!-- Student-view-style layout: text on left, image on right -->
+                  <div id="question-layout-container" class="question-layout-grid">
+                    <div class="question-text-area">
+                      <h2 id="live-question-text" class="question-stem-text">Question text will appear here...</h2>
+                    </div>
+                    <div id="question-image-container" class="question-image-area" style="display: none;">
+                      <img id="live-question-image" alt="Question" src="" class="question-image-clickable">
+                    </div>
                   </div>
                 </div>
 
                 <!-- Answer Choices (Student View Style) -->
                 <div class="flex-1 flex flex-col min-h-0">
                   <div class="flex-1 overflow-y-auto">
-                    <div id="results-bars" class="flex flex-col gap-3" aria-live="polite">
+                    <div id="results-bars" class="flex flex-col gap-2" aria-live="polite">
                       <!-- Answer choices will be populated dynamically in student-view style -->
                     </div>
 

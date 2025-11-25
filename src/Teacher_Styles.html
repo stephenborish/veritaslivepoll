@@ -112,6 +112,68 @@
       outline-offset: 2px;
     }
 
+    /* Student-view-style question layout */
+    .question-layout-grid {
+      display: grid;
+      grid-template-columns: 3fr 1fr;
+      gap: 24px;
+      align-items: flex-start;
+      width: 100%;
+    }
+
+    .question-layout-grid.no-image {
+      grid-template-columns: 1fr;
+    }
+
+    .question-text-area {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .question-stem-text {
+      font-family: "Noto Serif", serif;
+      font-size: 1.6rem;
+      line-height: 1.6;
+      font-weight: 400;
+      color: #000000;
+      margin: 0;
+      text-align: left;
+    }
+
+    .dark .question-stem-text {
+      color: #ffffff;
+    }
+
+    .question-image-area {
+      display: flex;
+      justify-content: flex-end;
+      width: 100%;
+    }
+
+    .question-image-clickable {
+      max-height: 300px;
+      width: 100%;
+      object-fit: contain;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      padding: 8px;
+      background: #ffffff;
+      cursor: zoom-in;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .question-image-clickable:hover {
+      transform: scale(1.02);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    .dark .question-image-clickable {
+      background: rgba(36, 36, 36, 0.5);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
     .teacher-result-card {
       position: relative;
       overflow: hidden;

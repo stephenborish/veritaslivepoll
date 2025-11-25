@@ -2265,6 +2265,27 @@
     .toast-action-btn:active {
       transform: translateY(0);
     }
+
+    /* Student Grid Layout */
+    #student-status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 0.5rem;
+    }
+
+    /* Gentle pulse animation for locked students */
+    @keyframes pulse-gentle {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.85;
+      }
+    }
+
+    .animate-pulse-gentle {
+      animation: pulse-gentle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
   </style>
   </style>
 </head>

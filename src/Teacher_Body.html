@@ -1532,3 +1532,113 @@
       </div>
     </div>
   </div>
+
+  <!-- Poll Creation Wizard Modal -->
+  <div id="poll-wizard-modal" class="modal-overlay hidden" role="dialog" aria-labelledby="wizard-title" aria-modal="true" style="position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-center; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
+    <div class="modal-content-wizard">
+      <div class="wizard-header">
+        <h2 id="wizard-title" class="wizard-main-title">Create New Poll</h2>
+        <button type="button" class="modal-close-btn" onclick="closePollWizard()" aria-label="Close wizard">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="wizard-progress">
+        <div class="progress-step active" data-step="1">
+          <div class="progress-circle">1</div>
+          <span class="progress-label">Mode</span>
+        </div>
+        <div class="progress-connector"></div>
+        <div class="progress-step" data-step="2">
+          <div class="progress-circle">2</div>
+          <span class="progress-label">Configure</span>
+        </div>
+        <div class="progress-connector"></div>
+        <div class="progress-step" data-step="3">
+          <div class="progress-circle">3</div>
+          <span class="progress-label">Questions</span>
+        </div>
+        <div class="progress-connector"></div>
+        <div class="progress-step" data-step="4">
+          <div class="progress-circle">4</div>
+          <span class="progress-label">Review</span>
+        </div>
+      </div>
+
+      <div class="wizard-body">
+        <div id="wizard-step-1" class="wizard-step active">
+          <h3 class="step-title">Choose Your Poll Mode</h3>
+          <p class="step-description">Select the type of assessment you want to create</p>
+
+          <div class="mode-cards">
+            <button type="button" class="mode-card" data-mode="live" onclick="selectPollMode('live')">
+              <div class="mode-icon"><span class="material-symbols-outlined">groups</span></div>
+              <h4 class="mode-title">Live Poll</h4>
+              <p class="mode-description">Synchronous, teacher-paced questions for real-time class engagement.</p>
+              <div class="mode-features">
+                <span class="mode-badge">Real-time</span>
+                <span class="mode-badge">Teacher-Paced</span>
+              </div>
+            </button>
+
+            <button type="button" class="mode-card" data-mode="secure" onclick="selectPollMode('secure')">
+              <div class="mode-icon"><span class="material-symbols-outlined">lock</span></div>
+              <h4 class="mode-title">Secure Assessment</h4>
+              <p class="mode-description">Asynchronous, timed exam with proctoring features.</p>
+              <div class="mode-features">
+                <span class="mode-badge">Timed</span>
+                <span class="mode-badge">Proctored</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <div id="wizard-step-2" class="wizard-step hidden">
+          <h3 class="step-title">Configure Your <span id="config-mode-label">Poll</span></h3>
+          <div class="form-group">
+            <label for="wizard-poll-name" class="form-label required">Poll Name</label>
+            <input type="text" id="wizard-poll-name" class="form-input" placeholder="e.g., Chapter 5 Review" maxlength="100">
+          </div>
+          <div class="form-group">
+            <label for="wizard-class-select" class="form-label required">Class</label>
+            <select id="wizard-class-select" class="form-select"><option value="">-- Select a class --</option></select>
+          </div>
+          <div id="secure-config-section" class="config-section hidden">
+            <div class="form-group">
+              <label for="wizard-time-limit" class="form-label required">Time Limit (minutes)</label>
+              <input type="number" id="wizard-time-limit" class="form-input" min="1" placeholder="45">
+            </div>
+          </div>
+        </div>
+
+        <div id="wizard-step-3" class="wizard-step hidden">
+          <h3 class="step-title">Build Your Questions</h3>
+          <div id="wizard-questions-list" class="questions-list"></div>
+          <button type="button" class="btn-add-question" onclick="addWizardQuestion()">
+            <span class="material-symbols-outlined">add_circle</span> Add Question
+          </button>
+        </div>
+
+        <div id="wizard-step-4" class="wizard-step hidden">
+          <h3 class="step-title">Review Your Poll</h3>
+          <div class="review-section">
+            <div class="review-card">
+              <h4 class="review-heading">Basic Information</h4>
+              <dl class="review-details">
+                <dt>Mode:</dt><dd id="review-mode">-</dd>
+                <dt>Name:</dt><dd id="review-name">-</dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wizard-footer">
+        <button type="button" class="btn-secondary" id="wizard-back-btn" onclick="wizardGoBack()" disabled>Back</button>
+        <div class="footer-spacer"></div>
+        <button type="button" class="btn-secondary" onclick="closePollWizard()">Cancel</button>
+        <button type="button" class="btn-primary" id="wizard-next-btn" onclick="wizardGoNext()">Next</button>
+        <button type="button" class="btn-primary hidden" id="wizard-publish-btn" onclick="publishWizardPoll()">Publish</button>
+      </div>
+    </div>
+  </div>

@@ -172,7 +172,10 @@
             setSecureChromeState(true);
             hideSecureOverlay();
             setSecureConnectionIndicatorVisible(true);
+            attachProctorVisibilityListeners();
             secureQuestionState = state;
+            if (entryScreen) entryScreen.style.display = 'none';
+            if (secureLobbyCard) secureLobbyCard.style.display = 'none';
             var nextQuestionKey = deriveSecureQuestionKey(state);
             var isNewQuestion = secureCurrentQuestionKey !== nextQuestionKey;
             secureCurrentQuestionKey = nextQuestionKey;
@@ -182,6 +185,15 @@
             secureSubmitting = false;
             secureTimeExpired = false;
             disableSecureOptions(false);
+            if (questionProgressEl) {
+                var progressIdx = typeof state.progressIndex === 'number'
+                    ? state.progressIndex
+                    : (typeof state.currentQuestionIndex === 'number' ? state.currentQuestionIndex : 0);
+                var totalCount = typeof state.totalQuestions === 'number'
+                    ? state.totalQuestions
+                    : (state.question && state.question.options ? state.question.options.length : '?');
+                questionProgressEl.textContent = 'QUESTION ' + (progressIdx + 1) + ' OF ' + totalCount;
+            }
             renderSecureQuestion(state);
             startSecureCountdown(state.timeRemainingSeconds || 0);
             updateSecureConnectionIndicators(state);
@@ -189,10 +201,14 @@
 
         function renderSecureQuestion(state) {
             if (!state) return;
+            var progressValue = typeof state.progressIndex === 'number'
+                ? state.progressIndex
+                : (typeof state.currentQuestionIndex === 'number' ? state.currentQuestionIndex : 0);
+            var totalValue = typeof state.totalQuestions === 'number' ? state.totalQuestions : (state.question && state.question.options ? state.question.options.length : 0);
             if (secureProgressLabel) {
-                secureProgressLabel.textContent = `Question ${state.progressIndex + 1} of ${state.totalQuestions}`;
+                secureProgressLabel.textContent = 'Question ' + (progressValue + 1) + ' of ' + totalValue;
             }
-            updateQuestionProgress(state.progressIndex, state.totalQuestions);
+            updateQuestionProgress(progressValue, totalValue);
             if (secureQuestionText) {
                 secureQuestionText.textContent = state.question.questionText || '';
             }
@@ -350,7 +366,12 @@
                             pollForIndividualSessionState();
                         }, 100);
                     } else {
-                        handleError((response && response.error) || 'Failed to submit answer.');
+                        // If server says non-current question, resync immediately
+                        var errorMessage = (response && response.error) || 'Failed to submit answer.';
+                        if (/non-current question/i.test(errorMessage)) {
+                            pollForIndividualSessionState();
+                        }
+                        handleError(errorMessage);
                     }
                 })
                 .withFailureHandler(function(error) {
@@ -358,7 +379,14 @@
                     disableSecureOptions(false);
                     handleError(error);
                 })
-                .submitIndividualTimedAnswer(answerDetails.pollId, answerDetails.actualQuestionIndex, answerDetails.answer, SESSION_TOKEN, answerDetails.confidenceLevel);
+                .submitIndividualTimedAnswer(
+                    answerDetails.pollId,
+                    answerDetails.sessionId,
+                    answerDetails.actualQuestionIndex,
+                    answerDetails.answer,
+                    SESSION_TOKEN,
+                    answerDetails.confidenceLevel
+                );
         }
 
         function stopSecureCountdown() {
@@ -766,6 +794,8 @@
         var secureRulesList = document.getElementById('secure-rules-list');
         var secureLobbyContext = null;
         var secureWindowAutoReloaded = false;
+        var blurListenerAttached = false;
+        var liveSessionActive = false;
 
         function reportViolationDebounced(reason) {
             if (violationDebounceTimer) {
@@ -801,6 +831,21 @@
                     })
                     .reportStudentViolation(activePollId, SESSION_TOKEN, reason);
             }, 300);
+        }
+
+        function attachProctorVisibilityListeners() {
+            if (blurListenerAttached) { return; }
+            blurListenerAttached = true;
+            window.addEventListener('blur', function() {
+                if ((secureSessionActive || liveSessionActive) && !isInteractionBlocked && !violationLogged) {
+                    reportViolationDebounced('window-blur');
+                }
+            });
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden && (secureSessionActive || liveSessionActive) && !isInteractionBlocked && !violationLogged) {
+                    reportViolationDebounced('tab-hidden');
+                }
+            });
         }
 
         var VeritasModal = null;
@@ -1001,6 +1046,7 @@
             if (preLiveCard) preLiveCard.style.display = 'none';
             if (statusContainer) statusContainer.style.display = 'none';
             if (questionContainer) questionContainer.style.display = 'none';
+            // Explicitly hide secure assessment canvas until we begin
             if (secureFocusContainer) secureFocusContainer.style.display = 'none';
             toggleSecureLayout(false);
             if (questionProgressEl) {
@@ -1817,6 +1863,7 @@
             }
 
             if (data.status === 'PRE_LIVE') {
+                liveSessionActive = false;
                 hasAnsweredCurrent = false;
                 pendingSubmission = false;
                 currentQuestionKey = null;
@@ -1852,6 +1899,7 @@
             }
 
             if (data.status === 'LIVE' && typeof data.questionIndex === 'number' && data.questionIndex >= 0) {
+                liveSessionActive = true;
                 resetResultDecorations();
                 lastUnlockedState = data;
                 var resetTimestamp = (data.metadata && data.metadata.resetAt) ? data.metadata.resetAt : '';
@@ -1976,6 +2024,7 @@
             }
 
             if (data.status === 'RESULTS_HOLD' || data.status === 'RESULTS_REVEALED') {
+                liveSessionActive = false;
                 renderResultsStage(data);
                 return;
             }

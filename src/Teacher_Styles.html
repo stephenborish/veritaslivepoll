@@ -2328,17 +2328,216 @@
       transform: translateY(0);
     }
 
+    /* Live view spacing adjustments */
+    .live-view-shell {
+      padding-top: 6px;
+    }
+    .live-view-grid {
+      gap: 1rem !important;
+    }
+    .live-question-card {
+      margin-top: 0;
+      padding-top: 14px;
+      padding-bottom: 14px;
+    }
+    .live-question-card .question-stem-text {
+      margin-top: 0;
+    }
+    .live-student-panel {
+      box-shadow: 0 8px 20px rgba(18, 56, 93, 0.06);
+    }
+
     /* Student Grid Layout */
     #student-status-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      gap: 0.5rem;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 0.75rem;
+      padding-top: 2px;
     }
 
-    #student-status-grid > div {
-      min-height: 48px;
-      max-height: 48px;
+    .student-tile {
+      min-height: 82px;
+      border: 1px solid #e5e7eb;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 10px 12px;
+      box-shadow: 0 8px 18px rgba(18, 56, 93, 0.05);
+      transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .student-tile:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px rgba(18, 56, 93, 0.08);
+      border-color: #cbd5e1;
+    }
+    .dark .student-tile {
+      background: rgba(18, 56, 93, 0.35);
+      border-color: rgba(255, 255, 255, 0.08);
+      box-shadow: none;
+    }
+    .student-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,0.05);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+    .student-name {
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.25;
+      color: #0f172a;
+    }
+    .dark .student-name {
+      color: #f8fafc;
+    }
+    .student-sub {
+      font-size: 12px;
+      color: #475569;
+      line-height: 1.2;
+    }
+    .dark .student-sub {
+      color: #e2e8f0;
+      opacity: 0.75;
+    }
+    .student-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .student-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid #e2e8f0;
+      color: #0f172a;
+      background: #f8fafc;
+    }
+    .dark .student-badge {
+      border-color: rgba(255,255,255,0.08);
+      color: #e2e8f0;
+      background: rgba(255,255,255,0.05);
+    }
+    .student-actions {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .student-action-btn {
+      height: 26px;
+      width: 26px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      color: #0f172a;
+      transition: background-color 120ms ease, border-color 120ms ease;
+    }
+    .student-action-btn:hover {
+      background: #eef2ff;
+      border-color: #c7d2fe;
+    }
+    .dark .student-action-btn {
+      background: rgba(255,255,255,0.05);
+      border-color: rgba(255,255,255,0.1);
+      color: #e2e8f0;
+    }
+    .student-tile.locked {
+      border-color: #f87171;
+      box-shadow: 0 10px 22px rgba(239, 68, 68, 0.18);
+    }
+    .student-tile.submitted.correct {
+      border-color: #34d399;
+      box-shadow: 0 10px 22px rgba(16, 185, 129, 0.2);
+    }
+    .student-tile.submitted.incorrect {
+      border-color: #fbbf24;
+      box-shadow: 0 10px 22px rgba(251, 191, 36, 0.16);
+    }
+    .student-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .student-status-icon {
+      height: 34px;
+      width: 34px;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .student-status-icon .material-symbols-outlined {
+      font-size: 20px;
+      font-variation-settings: 'FILL' 0, 'wght' 600, 'GRAD' 0, 'opsz' 20;
+      line-height: 1;
+    }
+    .student-status-icon.waiting { background: #eef2ff; color: #334155; border: 1px solid #e2e8f0; }
+    .student-status-icon.correct { background: #ecfdf3; color: #059669; border: 1px solid #bbf7d0; }
+    .student-status-icon.incorrect { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+    .student-status-icon.locked { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+    .student-status-icon.blocked { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
+    .student-status-icon.fullscreen { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+    .badge-violation {
+      background: #fef2f2;
+      border-color: #fecdd3;
+      color: #b91c1c;
+    }
+    .dark .badge-violation {
+      background: rgba(248, 113, 113, 0.12);
+      border-color: rgba(248, 113, 113, 0.3);
+      color: #fecdd3;
+    }
+    .student-name {
+      white-space: nowrap;
       overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .student-top {
+      align-items: center;
+    }
+
+    /* Confidence pulse card */
+    #live-metacognition-card {
+      box-shadow: 0 8px 20px rgba(18, 56, 93, 0.06);
+    }
+    .confidence-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(15, 23, 42, 0.06);
+      background: #f8fafc;
+    }
+    .dark .confidence-row {
+      border-color: rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+    }
+    .confidence-bar-track {
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.06);
+      overflow: hidden;
+    }
+    .confidence-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 180ms ease;
     }
 
     /* Gentle pulse animation for locked students */

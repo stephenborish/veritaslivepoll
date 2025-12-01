@@ -423,14 +423,14 @@
           </div>
 
           <!-- Main Content Wrapper (Scrollable) -->
-          <div class="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-800 p-3">
+          <div class="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-800 px-4 pt-2 pb-4 live-view-shell">
 
-            <div class="flex flex-col lg:flex-row gap-6 h-full">
+            <div class="flex flex-col lg:flex-row gap-4 h-full live-view-grid">
               <!-- LEFT COLUMN: Question + Answer Choices (60%) -->
               <div class="w-full lg:w-[60%] flex flex-col gap-4">
 
                 <!-- Question Display Area -->
-                <div class="bg-white dark:bg-brand-dark-gray/30 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm shrink-0">
+                <div class="bg-white dark:bg-brand-dark-gray/30 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm shrink-0 live-question-card">
                   <!-- Hidden elements for JS compatibility -->
                   <h2 id="live-question-text-compact" class="hidden"></h2>
                   <span id="live-question-info" class="hidden">Q1 / 10</span>
@@ -481,7 +481,7 @@
               <div class="w-full lg:w-[40%] flex flex-col gap-4 h-full overflow-hidden">
 
                 <!-- STUDENTS PANEL -->
-                <div class="flex-1 flex flex-col bg-white dark:bg-brand-dark-gray/30 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden min-h-0">
+                <div class="flex-1 flex flex-col bg-white dark:bg-brand-dark-gray/30 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden min-h-0 live-student-panel">
 
                 <!-- Student Header with Status Summary -->
                 <div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 px-4 py-2.5">
@@ -1191,11 +1191,9 @@
             <div class="overflow-x-auto p-4">
               <table class="w-full text-xs">
                 <thead>
-                  <tr>
+                  <tr id="book-matrix-header-row">
                     <th class="sticky left-0 bg-slate-100 dark:bg-brand-dark-gray/50 px-3 py-2 text-left font-semibold border-r border-slate-300 dark:border-brand-dark-gray/60">Student</th>
-                    <tbody id="book-matrix-questions-header">
-                      <!-- Question headers will be inserted here -->
-                    </tbody>
+                    <!-- Question headers will be injected here -->
                     <th class="bg-slate-100 dark:bg-brand-dark-gray/50 px-3 py-2 text-center font-semibold">Total</th>
                   </tr>
                 </thead>
@@ -1534,4 +1532,3 @@
       </div>
     </div>
   </div>
-

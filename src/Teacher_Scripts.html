@@ -6089,62 +6089,68 @@
     card.id = 'live-metacognition-card';
     card.className = 'bg-white dark:bg-brand-dark-gray/30 p-3 rounded-xl border border-purple-200 dark:border-purple-700 shadow-sm';
 
-    var html = '<div class="flex items-center justify-between gap-2 mb-2">';
-    html += '<div class="flex items-center gap-1.5">';
-    html += '<span class="material-symbols-outlined text-purple-600 dark:text-purple-300 text-lg">psychology</span>';
-    html += '<h4 class="text-brand-dark-gray dark:text-brand-white font-semibold text-sm">Confidence Pulse</h4>';
-    html += '</div>';
-    html += '<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">';
-    if (metacognition.totalResponses > 0) {
-      html += escapeHtml(metacognition.totalResponses + ' • ' + metacognition.responseRate + '%');
-    } else {
-      html += 'Waiting...';
-    }
-    html += '</div>';
-    html += '</div>';
+    var totalResponses = metacognition.totalResponses || 0;
+    var participation = metacognition.responseRate || 0;
+    var flagged = Array.isArray(metacognition.flaggedStudents) ? metacognition.flaggedStudents : [];
 
-    // Always show the matrix grid structure (stationary layout)
+    var statusLabel = totalResponses > 0
+      ? totalResponses + ' responses • ' + participation + '% participation'
+      : 'Waiting for responses';
+
     var matrixDefs=[
-      {key:'confidentCorrect',emoji:'💯',label:'Sure & Right',bgClass:'bg-green-500/10',borderClass:'border-green-500/30',textClass:'text-green-700 dark:text-green-300'},
-      {key:'confidentIncorrect',emoji:'⚠️',label:'Sure & Wrong',bgClass:'bg-red-500/10',borderClass:'border-red-500/30',textClass:'text-red-700 dark:text-red-300'},
-      {key:'uncertainCorrect',emoji:'🤔',label:'Unsure & Right',bgClass:'bg-amber-500/10',borderClass:'border-amber-500/30',textClass:'text-amber-700 dark:text-amber-300'},
-      {key:'uncertainIncorrect',emoji:'🤷',label:'Unsure & Wrong',bgClass:'bg-blue-500/10',borderClass:'border-blue-500/30',textClass:'text-blue-700 dark:text-blue-300'}
+      {key:'confidentCorrect',emoji:'💯',label:'Sure & Right',barClass:'bg-emerald-500',textClass:'text-emerald-700 dark:text-emerald-200'},
+      {key:'confidentIncorrect',emoji:'⚠️',label:'Sure & Wrong',barClass:'bg-rose-500',textClass:'text-rose-700 dark:text-rose-200'},
+      {key:'uncertainCorrect',emoji:'🤔',label:'Unsure & Right',barClass:'bg-amber-500',textClass:'text-amber-700 dark:text-amber-200'},
+      {key:'uncertainIncorrect',emoji:'🤷',label:'Unsure & Wrong',barClass:'bg-blue-500',textClass:'text-blue-700 dark:text-blue-200'}
     ];
 
-    html+='<div class="grid grid-cols-2 gap-1.5">';
+    var html = '<div class="flex items-start justify-between gap-3 mb-2">';
+    html += '<div class="flex items-start gap-2">';
+    html += '<span class="material-symbols-outlined text-purple-600 dark:text-purple-300 text-xl">psychology</span>';
+    html += '<div><h4 class="text-brand-dark-gray dark:text-brand-white font-semibold text-sm leading-tight">Confidence Pulse</h4>';
+    html += '<p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">Certainty vs. accuracy snapshot</p></div>';
+    html += '</div>';
+    html += '<div class="text-xs px-2 py-1 rounded-md bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-200 font-semibold">'+escapeHtml(statusLabel)+'</div>';
+    html += '</div>';
+
+    // Quick stats chips
+    html+='<div class="flex flex-wrap gap-2 mb-3 text-xs font-semibold">';
+    html+='<span class="px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200">✓ Correct: '+(metacognition.correctCount||0)+'</span>';
+    html+='<span class="px-2 py-1 rounded-md bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-200">✗ Incorrect: '+(metacognition.incorrectCount||0)+'</span>';
+    html+='<span class="px-2 py-1 rounded-md bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-200">⊘ Unanswered: '+(metacognition.unansweredCount||0)+'</span>';
+    html+='</div>';
+
+    html+='<div class="grid grid-cols-2 gap-2">';
     matrixDefs.forEach(function(def){
       var pct=metacognition.matrixPercentages&&typeof metacognition.matrixPercentages[def.key]==='number'?metacognition.matrixPercentages[def.key]:0;
       var count=metacognition.matrixCounts&&typeof metacognition.matrixCounts[def.key]==='number'?metacognition.matrixCounts[def.key]:0;
-      html+='<div class="rounded-lg border '+def.borderClass+' '+def.bgClass+' p-1.5">';
-      html+='<div class="flex items-center gap-1 mb-0.5">';
-      html+='<span class="text-sm">'+def.emoji+'</span>';
-      html+='<span class="text-xs font-medium '+def.textClass+'">'+def.label+'</span>';
+      html+='<div class="confidence-row">';
+      html+='<div class="flex items-center justify-between gap-2">';
+      html+='<div class="flex items-center gap-1.5"><span class="text-sm">'+def.emoji+'</span><span class="text-xs font-semibold '+def.textClass+'">'+def.label+'</span></div>';
+      html+='<span class="text-sm font-bold '+def.textClass+'">'+pct+'%</span>';
       html+='</div>';
-      html+='<div class="flex items-baseline gap-1">';
-      html+='<span class="text-xl font-bold '+def.textClass+'">'+pct+'%</span>';
-      html+='<span class="text-[10px] '+def.textClass+' opacity-70">('+count+')</span>';
+      html+='<div class="confidence-bar-track"><div class="confidence-bar-fill '+def.barClass+'" style="width:'+pct+'%"></div></div>';
+      html+='<div class="flex items-center justify-between text-[11px] text-brand-dark-gray/60 dark:text-brand-white/60">';
+      html+='<span>'+count+' students</span>';
+      html+='<span>live</span>';
       html+='</div>';
       html+='</div>';
     });
     html+='</div>';
 
-    // Only show flagged students section if there are any
-    if(metacognition.totalResponses > 0){
-      var flagged=Array.isArray(metacognition.flaggedStudents)?metacognition.flaggedStudents:[];
-      if(flagged.length>0){
-        html+='<div class="rounded-lg border border-red-500/40 bg-red-500/10 p-1.5 mt-1.5">';
-        html+='<div class="flex items-center gap-1 mb-1">';
-        html+='<span class="material-symbols-outlined text-sm text-red-600 dark:text-red-300">report</span>';
-        html+='<span class="text-xs font-semibold text-red-700 dark:text-red-200">⚠️ '+flagged.length+' Confidently Wrong</span>';
-        html+='</div>';
-        html+='<div class="flex flex-wrap gap-1">';
-        flagged.forEach(function(student){
-          var display=escapeHtml(student.name||student.email||'Student');
-          html+='<span class="px-1.5 py-0.5 rounded bg-red-600/20 text-xs font-medium text-red-700 dark:text-red-200">'+display+'</span>';
-        });
-        html+='</div>';
-        html+='</div>';
-      }
+    if(flagged.length>0){
+      html+='<div class="rounded-lg border border-rose-500/40 bg-rose-500/10 p-2 mt-2">';
+      html+='<div class="flex items-center gap-1 mb-1">';
+      html+='<span class="material-symbols-outlined text-sm text-rose-700 dark:text-rose-200">report</span>';
+      html+='<span class="text-xs font-semibold text-rose-700 dark:text-rose-200">'+flagged.length+' confidently wrong</span>';
+      html+='</div>';
+      html+='<div class="flex flex-wrap gap-1">';
+      flagged.forEach(function(student){
+        var display=escapeHtml(student.name||student.email||'Student');
+        html+='<span class="px-1.5 py-0.5 rounded bg-white/70 text-xs font-medium text-rose-700 dark:bg-rose-900/40 dark:text-rose-100">'+display+'</span>';
+      });
+      html+='</div>';
+      html+='</div>';
     }
 
     card.innerHTML = html;
@@ -6636,114 +6642,85 @@
     var status=student.status||'Unknown';
     var isCorrect=student.isCorrect===true;
     var isIncorrect=student.isCorrect===false;
+    var name=formatStudentName(student);
+    var violationCount=(student.sessionViolations||0)+(student.sessionExits||0);
 
-    // Determine tile styling based on status (more compact)
-    var tileClasses='relative p-1.5 rounded-md border transition-all duration-200 hover:shadow-sm';
-    var iconName='person';
-    var iconClass='text-gray-500';
-    var borderClass='border-gray-200 dark:border-gray-700';
-    var bgClass='bg-white dark:bg-brand-dark-gray/30';
-    var textClass='text-brand-dark-gray dark:text-brand-white';
-    var statusEmoji='';
-    var confidenceEmoji='';
-
-    if(status==='Submitted'){
-      if(isCorrect){
-        iconName='check_circle';
-        iconClass='text-green-600 dark:text-green-400';
-        borderClass='border-green-400 dark:border-green-500';
-        bgClass='bg-green-50/50 dark:bg-green-900/20';
-        statusEmoji='✓';
-      }else if(isIncorrect){
-        iconName='cancel';
-        iconClass='text-red-600 dark:text-red-400';
-        borderClass='border-red-400 dark:border-red-500';
-        bgClass='bg-red-50/50 dark:bg-red-900/20';
-        statusEmoji='✗';
-      }else{
-        iconName='task_alt';
-        iconClass='text-blue-600 dark:text-blue-400';
-        borderClass='border-blue-400 dark:border-blue-500';
-        bgClass='bg-blue-50/50 dark:bg-blue-900/20';
-        statusEmoji='•';
+    var statusStyles={
+      'Submitted':{
+        icon:isCorrect?'check':'close',
+        iconClass:isCorrect?'correct':'incorrect',
+        tileClass:isCorrect?'submitted correct':'submitted incorrect',
+        aria:isCorrect?'Submitted and correct':'Submitted and incorrect'
+      },
+      'LOCKED':{
+        icon:'lock',
+        iconClass:'locked',
+        tileClass:'locked animate-pulse-gentle',
+        aria:'Locked after violation'
+      },
+      'BLOCKED':{
+        icon:'block',
+        iconClass:'blocked',
+        tileClass:'blocked',
+        aria:'Blocked after violation'
+      },
+      'AWAITING_FULLSCREEN':{
+        icon:'fullscreen',
+        iconClass:'fullscreen',
+        tileClass:'awaiting',
+        aria:'Needs fullscreen'
+      },
+      'Waiting...':{
+        icon:'schedule',
+        iconClass:'waiting',
+        tileClass:'',
+        aria:'Waiting for response'
+      },
+      'default':{
+        icon:'person',
+        iconClass:'waiting',
+        tileClass:'',
+        aria:status||'Status pending'
       }
+    };
 
-      // Get confidence emoji
-      if(student.confidence){
-        var style=CONFIDENCE_LEVEL_STYLES[student.confidence]||{};
-        confidenceEmoji=style.emoji||'';
-      }
-    }else if(status==='LOCKED'){
-      iconName='lock';
-      iconClass='text-red-700 dark:text-red-400';
-      borderClass='border-red-500 dark:border-red-600';
-      bgClass='bg-red-100 dark:bg-red-900/40';
-      statusEmoji='🔒';
-      tileClasses+=' animate-pulse-gentle';
-    }else if(status==='AWAITING_FULLSCREEN'){
-      iconName='hourglass_empty';
-      iconClass='text-blue-600 dark:text-blue-400';
-      borderClass='border-blue-400 dark:border-blue-500';
-      bgClass='bg-blue-50 dark:bg-blue-900/20';
-      statusEmoji='⏳';
-    }else if(status==='BLOCKED'){
-      iconName='block';
-      iconClass='text-amber-600 dark:text-amber-400';
-      borderClass='border-amber-400 dark:border-amber-500';
-      bgClass='bg-amber-50 dark:bg-amber-900/20';
-      statusEmoji='⚠';
-    }else if(status==='Waiting...'){
-      iconName='pending';
-      iconClass='text-gray-500 dark:text-gray-400';
-      statusEmoji='⏳';
+    var style=statusStyles[status]||statusStyles.default;
+    tile.className='student-tile '+style.tileClass;
+
+    var badges=[];
+    if(student.confidence){
+      var cStyle=CONFIDENCE_LEVEL_STYLES[student.confidence]||{};
+      var confLabel=cStyle.label||describeConfidence(student.confidence)||'Confidence noted';
+      var confBadgeClass=cStyle.badgeClass||'bg-slate-100 text-slate-700';
+      badges.push('<span class="student-badge '+confBadgeClass+'">'+(cStyle.emoji||'🧠')+' '+escapeHtml(confLabel)+'</span>');
+    }
+    if(violationCount>0){
+      badges.push('<span class="student-badge badge-violation" title="Proctoring violations">'+
+        '<span class="material-symbols-outlined text-sm">gavel</span>'+
+        '<span>'+violationCount+' issue'+(violationCount===1?'':'s')+'</span>'+
+      '</span>');
     }
 
-    tile.className=tileClasses+' '+borderClass+' '+bgClass;
-
-    // Build tile content (more compact)
-    var html='<div class="flex flex-col gap-0.5">';
-
-    // Top row: Status emoji + Name + Approve button (for locked students)
-    html+='<div class="flex items-center gap-1">';
-    html+='<span class="material-symbols-outlined text-sm '+iconClass+'">'+iconName+'</span>';
-    html+='<span class="text-[11px] font-semibold '+textClass+' truncate flex-1">'+escapeHtml(formatStudentName(student))+'</span>';
-
-    // Add approve button for locked students
-    if(status==='LOCKED'){
-      html+='<button class="approve-reentry-btn flex-shrink-0 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-green-600 hover:bg-green-700 text-white transition-colors" title="Approve re-entry" data-email="'+escapeHtml(student.email)+'" data-lock-version="'+(student.lockVersion||0)+'">✓</button>';
+    var html='<div class="student-top">';
+    html+='<span class="student-status-icon '+style.iconClass+'" aria-label="'+escapeHtml(style.aria||'Status')+'"><span class="material-symbols-outlined">'+style.icon+'</span></span>';
+    html+='<div class="flex-1 min-w-0">';
+    html+='<div class="student-name">'+escapeHtml(name)+'</div>';
+    if(badges.length>0){
+      html+='<div class="student-badges">'+badges.join('')+'</div>';
     }
-
     html+='</div>';
-
-    // Bottom row: Answer + Confidence (compact)
-    var detailParts=[];
-    if(status==='Submitted'){
-      if(student.answer){
-        detailParts.push(statusEmoji+' '+escapeHtml(student.answer));
-      }
-      if(confidenceEmoji){
-        detailParts.push(confidenceEmoji);
-      }
-    }else if(status==='LOCKED'){
-      var lockInfo='🔒 v'+(student.lockVersion||0);
-      detailParts.push(lockInfo);
-    }else if(status==='BLOCKED'){
-      detailParts.push('⚠ Blocked');
-    }else if(status==='AWAITING_FULLSCREEN'){
-      detailParts.push('⏳ Fullscreen');
-    }else if(status==='Waiting...'){
-      detailParts.push('⏳ Waiting');
+    html+='<div class="student-actions">';
+    if(status==='LOCKED'){
+      html+='<button class="approve-reentry-btn student-action-btn" title="Approve re-entry" data-email="'+escapeHtml(student.email)+'" data-lock-version="'+(student.lockVersion||0)+'"><span class="material-symbols-outlined text-base text-rose-600">lock_open</span></button>';
     }
-
-    if(detailParts.length>0){
-      html+='<div class="text-[9px] '+textClass+' opacity-70 truncate">'+detailParts.join(' ')+'</div>';
+    if(status==='BLOCKED' || violationCount>0){
+      html+='<button class="resume-access-btn student-action-btn" title="Allow student to resume" data-email="'+escapeHtml(student.email||'')+'"><span class="material-symbols-outlined text-base text-emerald-600">door_open</span></button>';
     }
-
+    html+='</div>';
     html+='</div>';
 
     tile.innerHTML=html;
 
-    // Add click handler for approve button if it's a locked student
     if(status==='LOCKED'){
       var approveBtn=tile.querySelector('.approve-reentry-btn');
       if(approveBtn){
@@ -6756,6 +6733,16 @@
         });
       }
     }
+
+    var resumeBtn=tile.querySelector('.resume-access-btn');
+    if(resumeBtn){
+      resumeBtn.addEventListener('click',async function(e){
+        e.stopPropagation();
+        var email=this.getAttribute('data-email');
+        await requestTeacherUnblock(email,this);
+      });
+    }
+
     return tile;
   }
 
@@ -10308,18 +10295,28 @@
   }
 
   function renderResponseMatrix(students, questionCount) {
-    var headerBody = document.getElementById('book-matrix-questions-header');
+    var headerRow = document.getElementById('book-matrix-header-row');
     var tbody = document.getElementById('book-matrix-table-body');
-    if (!headerBody || !tbody) return;
+    if (!headerRow || !tbody) return;
 
-    // Create question headers
-    headerBody.innerHTML = '';
+    // Rebuild header row: Student | Q1..Qn | Total
+    headerRow.innerHTML = '';
+    var studentHeader = document.createElement('th');
+    studentHeader.className = 'sticky left-0 bg-slate-100 dark:bg-brand-dark-gray/50 px-3 py-2 text-left font-semibold border-r border-slate-300 dark:border-brand-dark-gray/60';
+    studentHeader.textContent = 'Student';
+    headerRow.appendChild(studentHeader);
+
     for (var i = 0; i < questionCount; i++) {
       var th = document.createElement('th');
       th.className = 'bg-slate-100 dark:bg-brand-dark-gray/50 px-3 py-2 text-center font-semibold border-l border-slate-300 dark:border-brand-dark-gray/60';
       th.textContent = 'Q' + (i + 1);
-      headerBody.appendChild(th);
+      headerRow.appendChild(th);
     }
+
+    var totalHeader = document.createElement('th');
+    totalHeader.className = 'bg-slate-100 dark:bg-brand-dark-gray/50 px-3 py-2 text-center font-semibold';
+    totalHeader.textContent = 'Total';
+    headerRow.appendChild(totalHeader);
 
     // Create student rows
     tbody.innerHTML = '';
@@ -10573,4 +10570,3 @@
 
 })();
   </script>
-

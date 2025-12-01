@@ -53,11 +53,11 @@
     .page-shell {
       max-width: 1200px;
       margin: 0 auto;
-      padding: 96px clamp(16px, 4vw, 40px) 88px;
+      padding: 96px clamp(16px, 4vw, 40px) 48px;
       display: flex;
       flex-direction: column;
       gap: 24px;
-      min-height: 100vh;
+      min-height: 90vh;
     }
 
     .hud-bar {
@@ -205,6 +205,7 @@
       border: none;
       box-shadow: none;
       padding: 0;
+      overflow: visible;
     }
 
     .student-card-body,
@@ -370,6 +371,16 @@
       flex-direction: column;
       gap: 24px;
       width: 100%;
+      overflow: visible;
+      padding-bottom: 8px;
+    }
+
+    #secure-options-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow: visible;
+      padding-bottom: 4px;
     }
 
     .secure-session-footer {
@@ -389,7 +400,13 @@
     }
 
     body.secure-mode-active .page-shell {
-      padding-bottom: 180px;
+      padding-bottom: 56px;
+    }
+
+    /* Hide non-secure entry surfaces when secure mode is active */
+    body.secure-mode-active #entry-screen,
+    body.secure-mode-active #pre-live-card {
+      display: none !important;
     }
 
     .student-card {
@@ -447,7 +464,7 @@
       flex-direction: column;
       gap: 12px;
       max-width: 100%;
-      overflow-x: hidden;
+      overflow: visible;
     }
 
     .student-pre-live-card {
@@ -565,7 +582,7 @@
 
     .secure-connection-indicator {
       position: fixed;
-      top: clamp(18px, 4vw, 48px);
+      top: clamp(48px, 6vw, 88px);
       right: clamp(18px, 4vw, 64px);
       display: flex;
       align-items: center;
@@ -1661,4 +1678,3 @@
 
     </div>
   </main>
-

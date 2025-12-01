@@ -61,6 +61,8 @@
         var secureSubmitting = false;
         var secureTimeExpired = false;
         var securePollInFlight = false;
+        var secureMetacognitionEnabled = false;
+        var securePendingAnswerText = null;
 
         function getModeName() {
             return secureSessionActive ? 'Assessment' : 'Poll';
@@ -80,6 +82,10 @@
             }
             if (secureTopbarTimer) {
                 secureTopbarTimer.classList.toggle('hidden', !isActive);
+                // Defensive: Ensure timer is visible and has initial content
+                if (isActive && secureCountdownEl) {
+                    secureCountdownEl.textContent = lastTimerDisplay || '00:00';
+                }
             }
         }
 
@@ -204,6 +210,8 @@
 
         function renderSecureQuestion(state) {
             if (!state) return;
+            // Capture metacognition setting for this question
+            secureMetacognitionEnabled = !!(state.question && state.question.metacognitionEnabled);
             var progressValue = typeof state.progressIndex === 'number'
                 ? state.progressIndex
                 : (typeof state.currentQuestionIndex === 'number' ? state.currentQuestionIndex : 0);

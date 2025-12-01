@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+  <?!= include('Common_Head'); ?>
+  <title>Veritas Live Poll - Student</title>
+
+  <?!= include('Common_TailwindConfig'); ?>
+  <?!= include('Proctoring_Shared'); ?>
+
+  <script>window.SESSION_TOKEN = '<?= sessionToken ?>';</script>
+
+  <?!= include('Common_Styles'); ?>
+  <?!= include('Student_Styles'); ?>
+</head>
+<body class="light">
+  <?!= include('Student_Body'); ?>
+  <?!= include('Student_Scripts'); ?>
+</body>
+</html>

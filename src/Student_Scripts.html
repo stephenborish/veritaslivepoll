@@ -1,0 +1,2731 @@
+  <script>
+    (function() {
+        var secureFocusContainer = document.getElementById('individual-timed-session');
+        var secureProgressLabel = document.getElementById('secure-progress-label');
+        var secureCountdownEl = document.getElementById('secure-countdown');
+        var secureTopbarTimer = document.getElementById('secure-topbar-timer');
+        var timerVisibilityToggle = document.getElementById('timer-visibility-toggle');
+        var questionProgressEl = document.getElementById('question-progress');
+        var studentModeLabel = document.getElementById('student-mode-label');
+        var questionLayout = document.getElementById('question-content');
+        var questionVisual = document.getElementById('question-visual');
+        var secureQuestionLayout = document.getElementById('secure-question-layout');
+        var secureQuestionVisual = document.getElementById('secure-question-visual');
+        var secureConnectionDot = document.getElementById('secure-connection-dot');
+        var secureConnectionIndicator = document.getElementById('secure-connection-indicator');
+        var secureConnectionStatus = document.getElementById('secure-connection-status');
+        var secureConnectionWarning = document.getElementById('secure-connection-warning');
+        var secureQuestionText = document.getElementById('secure-question-text');
+        var secureQuestionSubline = document.getElementById('secure-question-subline');
+        var secureQuestionImage = document.getElementById('secure-question-image');
+        var secureOptionsList = document.getElementById('secure-options-list');
+        var secureSubmitBtn = document.getElementById('secure-submit-btn');
+        var secureSubmitLabel = document.getElementById('secure-submit-label');
+        var secureSubmitHint = document.getElementById('secure-submit-hint');
+        var timerHidden = false;
+        var lastTimerDisplay = '00:00';
+        var secureCountdownTotal = 0;
+        var bodyEl = document.body;
+        var secureCloseTimer = null;
+
+        var secureCountdownController = window.SecureAssessmentShared.createCountdown({
+            onTick: function(seconds) {
+                updateSecureTimerDisplay(seconds);
+            },
+            onExpire: function() {
+                handleSecureTimeExpiry();
+            }
+        });
+        var secureSessionHeartbeat = window.SecureAssessmentShared.createHeartbeat({
+            intervalMs: 3500,
+            onBeat: function() {
+                pollForIndividualSessionState();
+            }
+        });
+        var secureFullscreenManager = window.SecureAssessmentShared.createFullscreenManager(document, {
+            onChange: handleSecureFullscreenChange
+        });
+
+        if (timerVisibilityToggle) {
+            timerVisibilityToggle.addEventListener('click', function() {
+                timerHidden = !timerHidden;
+                applyTimerVisibility();
+            });
+        }
+
+        applyTimerVisibility();
+        var secureSessionActive = false;
+        var secureQuestionState = null;
+        var secureSelectedOptionIndex = null;
+        var secureCurrentQuestionKey = null;
+        var secureSubmitting = false;
+        var secureTimeExpired = false;
+        var securePollInFlight = false;
+
+        function getModeName() {
+            return secureSessionActive ? 'Assessment' : 'Poll';
+        }
+
+        function getModeNameLowerCase() {
+            return secureSessionActive ? 'assessment' : 'poll';
+        }
+
+        function getFullModeName() {
+            return secureSessionActive ? 'Secure Assessment' : 'Live Poll';
+        }
+
+        function setSecureChromeState(isActive) {
+            if (studentModeLabel) {
+                studentModeLabel.textContent = isActive ? 'Secure Assessment' : 'Live Poll';
+            }
+            if (secureTopbarTimer) {
+                secureTopbarTimer.classList.toggle('hidden', !isActive);
+            }
+        }
+
+        function formatTime(seconds) {
+            var minutes = Math.floor(seconds / 60);
+            var remainingSeconds = seconds % 60;
+            return ('0' + minutes).slice(-2) + ':' + ('0' + remainingSeconds).slice(-2);
+        }
+
+        function updateQuestionProgress(currentIndex, totalQuestions) {
+            if (!questionProgressEl) return;
+            var parsedIndex = typeof currentIndex === 'number' ? currentIndex : parseInt(currentIndex, 10);
+            var parsedTotal = typeof totalQuestions === 'number' ? totalQuestions : parseInt(totalQuestions, 10);
+            var safeIndex = isNaN(parsedIndex) ? 0 : Math.max(0, parsedIndex);
+            var safeTotal = isNaN(parsedTotal) ? '?' : Math.max(1, parsedTotal);
+            questionProgressEl.textContent = 'QUESTION ' + (safeIndex + 1) + ' OF ' + safeTotal;
+        }
+
+        function deriveSecureQuestionKey(state) {
+            if (!state || !state.question) {
+                return null;
+            }
+            if (state.question.id) {
+                return state.question.id;
+            }
+            if (state.question.questionId) {
+                return state.question.questionId;
+            }
+            if (typeof state.actualQuestionIndex === 'number') {
+                return (state.pollId || 'poll') + ':' + state.actualQuestionIndex;
+            }
+            return (state.pollId || 'poll') + ':' + (state.progressIndex || 0);
+        }
+
+        function toggleSecureLayout(active) {
+            if (!bodyEl) return;
+            bodyEl.classList.toggle('secure-mode-active', !!active);
+        }
+
+        function hideExitControls() {
+            if (!secureExitControls) return;
+            secureExitControls.classList.add('hidden');
+        }
+
+        function showExitControls(label, description) {
+            if (!secureExitControls) return;
+            secureExitControls.classList.remove('hidden');
+            if (secureExitLabel) {
+                secureExitLabel.textContent = label || 'Exit Session';
+            }
+            if (secureExitDescription) {
+                secureExitDescription.textContent = description || 'Exit fullscreen and close this tab when you are finished.';
+            }
+        }
+
+        function setSecureConnectionIndicatorVisible(visible) {
+            if (!secureConnectionIndicator) return;
+            if (visible) {
+                secureConnectionIndicator.classList.remove('hidden');
+            } else {
+                secureConnectionIndicator.classList.add('hidden');
+            }
+        }
+
+        function syncSecureOptionSelection() {
+            if (!secureOptionsList) return;
+            var buttons = secureOptionsList.querySelectorAll('button.secure-answer-option');
+            buttons.forEach(function(btn) {
+                var btnIndex = parseInt(btn.dataset.optionIndex, 10);
+                var selected = btnIndex === secureSelectedOptionIndex;
+                btn.classList.toggle('answer-option-selected', selected);
+                btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
+            });
+        }
+
+        function showIndividualTimedView(state) {
+            hideSecureLobby();
+            if (studentLoader) studentLoader.style.display = 'none';
+            if (entryScreen) entryScreen.style.display = 'none';
+            studentContainer.style.display = 'block';
+            questionContainer.style.display = 'none';
+            statusContainer.style.display = 'none';
+            if (preLiveCard) preLiveCard.style.display = 'none';
+            if (secureFocusContainer) secureFocusContainer.style.display = 'block';
+            toggleSecureLayout(true);
+            if (!secureSessionActive) {
+                secureSessionActive = true;
+                secureSessionHeartbeat.start(true);
+            }
+            setSecureChromeState(true);
+            hideSecureOverlay();
+            setSecureConnectionIndicatorVisible(true);
+            attachProctorVisibilityListeners();
+            secureQuestionState = state;
+            if (entryScreen) entryScreen.style.display = 'none';
+            if (secureLobbyCard) secureLobbyCard.style.display = 'none';
+            var nextQuestionKey = deriveSecureQuestionKey(state);
+            var isNewQuestion = secureCurrentQuestionKey !== nextQuestionKey;
+            secureCurrentQuestionKey = nextQuestionKey;
+            if (isNewQuestion) {
+                secureSelectedOptionIndex = null;
+            }
+            secureSubmitting = false;
+            secureTimeExpired = false;
+            disableSecureOptions(false);
+            if (questionProgressEl) {
+                var progressIdx = typeof state.progressIndex === 'number'
+                    ? state.progressIndex
+                    : (typeof state.currentQuestionIndex === 'number' ? state.currentQuestionIndex : 0);
+                var totalCount = typeof state.totalQuestions === 'number'
+                    ? state.totalQuestions
+                    : (state.question && state.question.options ? state.question.options.length : '?');
+                questionProgressEl.textContent = 'QUESTION ' + (progressIdx + 1) + ' OF ' + totalCount;
+            }
+            renderSecureQuestion(state);
+            startSecureCountdown(state.timeRemainingSeconds || 0);
+            updateSecureConnectionIndicators(state);
+        }
+
+        function renderSecureQuestion(state) {
+            if (!state) return;
+            var progressValue = typeof state.progressIndex === 'number'
+                ? state.progressIndex
+                : (typeof state.currentQuestionIndex === 'number' ? state.currentQuestionIndex : 0);
+            var totalValue = typeof state.totalQuestions === 'number' ? state.totalQuestions : (state.question && state.question.options ? state.question.options.length : 0);
+            if (secureProgressLabel) {
+                secureProgressLabel.textContent = 'Question ' + (progressValue + 1) + ' of ' + totalValue;
+            }
+            updateQuestionProgress(progressValue, totalValue);
+            if (secureQuestionText) {
+                secureQuestionText.textContent = state.question.questionText || '';
+            }
+            if (secureQuestionSubline) {
+                secureQuestionSubline.classList.add('hidden');
+                secureQuestionSubline.textContent = '';
+            }
+            if (secureQuestionImage) {
+                if (state.question.questionImageURL) {
+                    secureQuestionImage.src = state.question.questionImageURL;
+                    secureQuestionImage.style.display = 'block';
+                } else {
+                    secureQuestionImage.style.display = 'none';
+                }
+            }
+            var secureHasImage = !!state.question.questionImageURL;
+            if (secureQuestionLayout) {
+                secureQuestionLayout.classList.toggle('no-image', !secureHasImage);
+            }
+            if (secureQuestionVisual) {
+                secureQuestionVisual.style.display = secureHasImage ? 'flex' : 'none';
+            }
+            if (secureOptionsList) {
+                secureOptionsList.innerHTML = '';
+                var letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+                var options = Array.isArray(state.question.options) ? state.question.options : [];
+                options.forEach(function(option, index) {
+                    secureOptionsList.appendChild(buildSecureOption(option, index, letters.charAt(index) || '#'));
+                });
+                syncSecureOptionSelection();
+            }
+            updateSecureSubmitState();
+        }
+
+        function buildSecureOption(option, index, letter) {
+            var li = document.createElement('li');
+            var button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'answer-option secure-answer-option relative w-full text-left';
+            button.dataset.optionIndex = index;
+            button.setAttribute('aria-pressed', 'false');
+            var displayText = (option && option.text) ? option.text.toString() : '';
+            var cleanText = displayText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            var content = '';
+            if (option && option.imageURL) {
+                content += '<img src="' + escapeHtml(option.imageURL) + '" alt="Answer ' + letter + '" class="option-image" referrerpolicy="no-referrer">';
+            }
+            content += '<div class="option-leading">';
+            content += '<div class="letter-badge" aria-hidden="true">' + letter + '</div>';
+            content += '<div class="option-body">';
+            content += '<div class="option-text-wrapper">';
+            if (cleanText) {
+                content += '<p class="option-text">' + escapeHtml(cleanText).replace(/\n/g, '<br>') + '</p>';
+            }
+            content += '<span class="result-ribbon"></span>';
+            content += '<span class="sr-only secure-selection-announcement"></span>';
+            content += '</div>';
+            content += '<span class="percentage-bubble"></span>';
+            content += '</div>';
+            content += '</div>';
+            content += '<span class="result-indicator" aria-hidden="true"></span>';
+            button.innerHTML = content;
+            button.addEventListener('click', function(event) {
+                if (event && event.target && event.target.closest('.option-image')) {
+                    return;
+                }
+                handleSecureOptionSelect(index);
+            });
+            li.appendChild(button);
+            return li;
+        }
+
+        function handleSecureOptionSelect(index) {
+            if (!secureOptionsList) return;
+            secureSelectedOptionIndex = index;
+            syncSecureOptionSelection();
+            updateSecureSubmitState();
+        }
+
+        function updateSecureSubmitState() {
+            if (!secureSubmitBtn) return;
+            var hasState = !!secureQuestionState;
+            var disabled = !hasState || secureSubmitting || secureTimeExpired;
+            secureSubmitBtn.disabled = disabled;
+            secureSubmitBtn.classList.toggle('opacity-60', disabled);
+            if (secureSubmitLabel && hasState && !secureSubmitting) {
+                var onLastQuestion = secureQuestionState.progressIndex >= secureQuestionState.totalQuestions - 1;
+                secureSubmitLabel.textContent = onLastQuestion ? 'Submit Exam' : 'Submit & Next';
+            }
+            if (secureSubmitHint) {
+                if (!hasState) {
+                    secureSubmitHint.textContent = '';
+                } else if (typeof secureSelectedOptionIndex === 'number') {
+                    var letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+                    var letter = letters.charAt(secureSelectedOptionIndex) || '#';
+                    secureSubmitHint.textContent = 'Selected ' + letter + '. Submit when ready.';
+                } else {
+                    secureSubmitHint.textContent = 'No answer selected — submitting will record this as blank.';
+                }
+            }
+        }
+
+        function setSecureSubmitLoading(isLoading) {
+            secureSubmitting = isLoading;
+            if (!secureSubmitBtn) return;
+            secureSubmitBtn.disabled = isLoading;
+            secureSubmitBtn.classList.toggle('opacity-60', isLoading);
+            if (secureSubmitLabel && isLoading) {
+                secureSubmitLabel.textContent = 'Saving...';
+            }
+            if (!isLoading) {
+                updateSecureSubmitState();
+            }
+        }
+
+        function disableSecureOptions(disabled) {
+            if (!secureOptionsList) return;
+            secureOptionsList.querySelectorAll('button.secure-answer-option').forEach(function(btn) {
+                btn.disabled = disabled;
+                btn.classList.toggle('answer-option-disabled', disabled);
+            });
+        }
+
+        function submitIndividualAnswer(state, answerText) {
+            if (!state || secureSubmitting) return;
+            setSecureSubmitLoading(true);
+            disableSecureOptions(true);
+            var answerDetails = {
+                pollId: state.pollId,
+                sessionId: state.sessionId,
+                actualQuestionIndex: state.actualQuestionIndex,
+                answer: answerText || '',
+                confidenceLevel: null
+            };
+            google.script.run
+                .withSuccessHandler(function(response) {
+                    setSecureSubmitLoading(false);
+                    disableSecureOptions(false);
+                    if (response && response.success) {
+                        // Clear current question state immediately to prevent re-display
+                        var previousQuestionKey = secureCurrentQuestionKey;
+                        secureSelectedOptionIndex = null;
+                        secureQuestionState = null;
+                        secureCurrentQuestionKey = null;
+
+                        // Show loading state instead of blank screen
+                        if (secureQuestionText) {
+                            secureQuestionText.innerHTML = '<div style="display: flex; align-items: center; gap: 12px; padding: 20px 0;"><div style="width: 24px; height: 24px; border: 3px solid rgba(18, 56, 93, 0.2); border-top-color: #12385d; border-radius: 50%; animation: veritas-spin 0.7s linear infinite;"></div><span style="color: #4b5563; font-size: 1.1rem;">Loading next question...</span></div>';
+                        }
+                        if (secureQuestionImage) secureQuestionImage.style.display = 'none';
+                        if (secureOptionsList) secureOptionsList.innerHTML = '';
+
+                        // Immediate polling to load next question faster
+                        setTimeout(function() {
+                            pollForIndividualSessionState();
+                        }, 100);
+                    } else {
+                        // If server says non-current question, resync immediately
+                        var errorMessage = (response && response.error) || 'Failed to submit answer.';
+                        if (/non-current question/i.test(errorMessage)) {
+                            pollForIndividualSessionState();
+                        }
+                        handleError(errorMessage);
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    setSecureSubmitLoading(false);
+                    disableSecureOptions(false);
+                    handleError(error);
+                })
+                .submitIndividualTimedAnswer(
+                    answerDetails.pollId,
+                    answerDetails.sessionId,
+                    answerDetails.actualQuestionIndex,
+                    answerDetails.answer,
+                    SESSION_TOKEN,
+                    answerDetails.confidenceLevel
+                );
+        }
+
+        function stopSecureCountdown() {
+            secureCountdownController.stop();
+        }
+
+        function applyTimerVisibility() {
+            if (!secureCountdownEl || !secureTopbarTimer) return;
+            secureCountdownEl.textContent = timerHidden ? '••:••' : lastTimerDisplay;
+            secureTopbarTimer.classList.toggle('timer-hidden', timerHidden);
+            if (timerVisibilityToggle) {
+                timerVisibilityToggle.setAttribute('aria-pressed', timerHidden ? 'true' : 'false');
+                timerVisibilityToggle.setAttribute('aria-label', timerHidden ? 'Show timer' : 'Hide timer');
+                var icon = timerVisibilityToggle.querySelector('.material-symbols-outlined');
+                if (icon) {
+                    icon.textContent = timerHidden ? 'visibility_off' : 'visibility';
+                }
+            }
+        }
+
+        function updateSecureTimerDisplay(seconds) {
+            if (!secureCountdownEl || !secureTopbarTimer) return;
+            var safeSeconds = Math.max(0, seconds);
+            lastTimerDisplay = formatTime(safeSeconds);
+            secureTopbarTimer.classList.remove('alert-warning', 'alert-danger');
+            var ratio = secureCountdownTotal > 0 ? Math.max(0, Math.min(1, safeSeconds / secureCountdownTotal)) : 1;
+            if (ratio <= 0.1) {
+                secureTopbarTimer.classList.add('alert-danger');
+            } else if (ratio <= 0.25) {
+                secureTopbarTimer.classList.add('alert-warning');
+            }
+            applyTimerVisibility();
+        }
+
+        function startSecureCountdown(timeRemainingSeconds) {
+            var remaining = Math.max(0, Math.floor(timeRemainingSeconds || 0));
+            secureCountdownTotal = remaining || secureCountdownTotal;
+            lastTimerDisplay = formatTime(remaining);
+            applyTimerVisibility();
+            secureCountdownController.start(remaining);
+        }
+
+        function handleSecureTimeExpiry() {
+            if (secureTimeExpired) return;
+            secureTimeExpired = true;
+            showSecureOverlay('TIME_UP', "Time's up!", 'Hold tight while we finalize your work.');
+            autoSubmitSecureAnswer(false);
+            scheduleSecureWindowClose(4000);
+        }
+
+        function autoSubmitSecureAnswer(forceBlank) {
+            if (!secureQuestionState || secureSubmitting) return;
+            var answerText = '';
+            if (!forceBlank && typeof secureSelectedOptionIndex === 'number') {
+                var option = (secureQuestionState.question.options || [])[secureSelectedOptionIndex];
+                if (option && typeof option.text === 'string') {
+                    answerText = option.text;
+                }
+            }
+            submitIndividualAnswer(secureQuestionState, answerText);
+        }
+
+        function attemptSecureWindowClose() {
+            try {
+                if (document && document.fullscreenElement && document.exitFullscreen) {
+                    document.exitFullscreen().catch(function(err) {
+                        console.warn('Error exiting fullscreen:', err);
+                    });
+                }
+            } catch (err) {
+                console.warn('Unable to exit fullscreen', err);
+            }
+            try {
+                if (google && google.script && google.script.host && typeof google.script.host.close === 'function') {
+                    google.script.host.close();
+                    return;
+                }
+            } catch (err) {
+                console.warn('Unable to close Apps Script host', err);
+            }
+            if (typeof window !== 'undefined' && typeof window.close === 'function') {
+                window.close();
+            }
+        }
+
+        function clearSecureCloseTimer() {
+            if (secureCloseTimer) {
+                clearTimeout(secureCloseTimer);
+                secureCloseTimer = null;
+            }
+        }
+
+        function scheduleSecureWindowClose(delayMs) {
+            if (secureCloseTimer) return;
+            var timeout = Math.max(500, Number(delayMs) || 2500);
+            secureCloseTimer = setTimeout(function() {
+                secureCloseTimer = null;
+                attemptSecureWindowClose();
+            }, timeout);
+        }
+
+        function exitSecureSessionNow() {
+            clearSecureCloseTimer();
+            attemptSecureWindowClose();
+        }
+
+        function finalizeSecureSession(statusType, message, subtext) {
+            stopSecureCountdown();
+            setSecureConnectionIndicatorVisible(false);
+            if (secureSessionActive) {
+                secureSessionHeartbeat.stop();
+                secureSessionActive = false;
+            }
+            setSecureChromeState(false);
+            secureQuestionState = null;
+            secureCurrentQuestionKey = null;
+            secureSelectedOptionIndex = null;
+            secureSubmitting = false;
+            showSecureOverlay(statusType, message, subtext);
+            scheduleSecureWindowClose(2500);
+        }
+
+        function showSecureOverlay(type, message, subtext) {
+            var icon = 'lock';
+            var iconClass = 'text-red-300';
+            var messageClass = 'text-white text-2xl font-semibold';
+            var subClass = 'text-white/80 text-base mt-4';
+            var showExitAction = type === 'COMPLETED' || type === 'ENDED';
+            var exitLabel = type === 'ENDED' ? 'Exit Session' : 'Exit Secure Session';
+            var exitDescription = 'Use the button below to leave fullscreen and close the secure window when dismissed.';
+            if (type === 'COMPLETED') {
+                icon = 'task_alt';
+                iconClass = 'text-green-300';
+                messageClass = 'text-green-200 text-2xl font-semibold';
+            } else if (type === 'TIME_UP') {
+                icon = 'hourglass_bottom';
+                showExitAction = false;
+            } else if (type === 'ENDED') {
+                icon = 'info';
+            } else if (type === 'LOCKED') {
+                iconClass = 'text-red-300';
+                messageClass = 'text-red-300 text-xl font-semibold';
+                subClass = 'text-red-200 text-base mt-4';
+                showExitAction = false;
+            }
+            showStatusPanel({
+                icon: icon,
+                iconClass: iconClass,
+                message: message || '',
+                messageClass: messageClass,
+                subtext: subtext || '',
+                subClass: subClass,
+                showExitAction: showExitAction,
+                exitActionLabel: exitLabel,
+                exitActionDescription: exitDescription,
+                showResume: false,
+                lockScroll: true
+            });
+        }
+
+        function hideSecureOverlay() {
+            if (document && document.body) {
+                document.body.classList.remove('secure-overlay-active');
+            }
+            if (statusContainer && !isInteractionBlocked) {
+                statusContainer.style.display = 'none';
+            }
+            if (statusSubMessage) {
+                statusSubMessage.style.display = 'none';
+                statusSubMessage.textContent = '';
+            }
+        }
+
+        function showSecureLockout(message, subtext) {
+            stopSecureCountdown();
+            setSecureConnectionIndicatorVisible(true);
+            if (secureFocusContainer) {
+                secureFocusContainer.style.display = 'block';
+            }
+            disableSecureOptions(true);
+            showSecureOverlay('LOCKED', message || 'Your session has been paused.', subtext || 'Wait for your teacher to unlock you.');
+        }
+
+        function updateSecureConnectionIndicators(state) {
+            if (!state || !secureConnectionDot) return;
+            var health = (state.connectionHealth || '').toUpperCase();
+            var dotClasses = ['bg-emerald-400', 'bg-amber-400', 'bg-red-500'];
+            dotClasses.forEach(function(cls) { secureConnectionDot.classList.remove(cls); });
+            var label = 'Synced';
+            var warningText = '';
+            if (health === 'RED') {
+                secureConnectionDot.classList.add('bg-red-500');
+                label = 'Connection issue';
+                warningText = 'We are reconnecting and saving your work...';
+            } else if (health === 'YELLOW') {
+                secureConnectionDot.classList.add('bg-amber-400');
+                label = 'Reconnecting';
+                warningText = 'Syncing your progress...';
+            } else {
+                secureConnectionDot.classList.add('bg-emerald-400');
+                label = 'Synced';
+            }
+            var lagSeconds = state.heartbeatLagMs ? Math.max(0, Math.round(state.heartbeatLagMs / 1000)) : 0;
+            if (secureConnectionStatus) {
+                var srLabel = label;
+                if (lagSeconds > 0) {
+                    srLabel += ' • ' + lagSeconds + ' second lag';
+                }
+                secureConnectionStatus.textContent = srLabel;
+            }
+            if (secureConnectionWarning) {
+                if (warningText) {
+                    secureConnectionWarning.textContent = warningText;
+                    secureConnectionWarning.classList.remove('hidden');
+                } else {
+                    secureConnectionWarning.textContent = '';
+                    secureConnectionWarning.classList.add('hidden');
+                }
+            }
+        }
+
+        function pollForIndividualSessionState() {
+            if (securePollInFlight) return;
+            securePollInFlight = true;
+            google.script.run
+                .withSuccessHandler(function(state) {
+                    securePollInFlight = false;
+                    if (studentLoader) {
+                        studentLoader.style.display = 'none';
+                    }
+                    if (!state) {
+                        return;
+                    }
+                    if (state.status === 'LOBBY') {
+                        showSecureLobby(state);
+                        return;
+                    }
+                    if (state.sessionType === 'INDIVIDUAL_TIMED' || state.sessionType === 'SECURE_ASSESSMENT') {
+                        hideSecureLobby();
+                        var lockReason = (state.lockReason || '').toString().toUpperCase();
+                        var lockMessage = (state.message || '').toString().toLowerCase();
+                        var isTerminalLock = state.locked === true || lockReason === 'FORCED_SUBMIT' || lockReason === 'TIME_EXPIRED' || lockMessage.indexOf('ended') >= 0 || lockMessage.indexOf('submitted') >= 0;
+                        if (state.completed || state.status === 'COMPLETED') {
+                            updateSecureConnectionIndicators(state);
+                            finalizeSecureSession('COMPLETED', state.message || 'Assessment submitted!', 'Stay in fullscreen until released.');
+                        } else if (state.status === 'ENDED') {
+                            updateSecureConnectionIndicators(state);
+                            finalizeSecureSession('ENDED', state.message || 'This assessment is no longer active.', 'You may exit once your teacher confirms.');
+                        } else if (isTerminalLock) {
+                            updateSecureConnectionIndicators(state);
+                            finalizeSecureSession('ENDED', state.message || 'This assessment has been closed.', 'Your responses have been secured.');
+                        } else if (state.status === 'LOCKED') {
+                            if (secureFocusContainer) secureFocusContainer.style.display = 'block';
+                            secureQuestionState = null;
+                            secureCurrentQuestionKey = null;
+                            secureSelectedOptionIndex = null;
+                            updateSecureConnectionIndicators(state);
+                            showSecureLockout(state.message || 'Your session has been paused.', 'Wait for your teacher to unlock you.');
+                        } else if (isInteractionBlocked) {
+                            updateSecureConnectionIndicators(state);
+                            setSecureConnectionIndicatorVisible(true);
+                            showSecureLockout(state.message || 'Your session has been paused.', 'Wait for your teacher to unlock you.');
+                        } else if (state.question && (state.status === 'ACTIVE' || !state.status)) {
+                            showIndividualTimedView(state);
+                        } else {
+                            console.log('Secure session state', state);
+                        }
+                    } else {
+                        updateStudentView(state);
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    securePollInFlight = false;
+                    handleError(error);
+                })
+                .getIndividualTimedSessionState(SESSION_TOKEN);
+        }
+
+        if (secureSubmitBtn) {
+            secureSubmitBtn.addEventListener('click', function() {
+                if (!secureQuestionState || secureSubmitting) return;
+                var answerText = '';
+                if (typeof secureSelectedOptionIndex === 'number') {
+                    var option = (secureQuestionState.question.options || [])[secureSelectedOptionIndex];
+                    if (option && typeof option.text === 'string') {
+                        answerText = option.text;
+                    }
+                }
+                submitIndividualAnswer(secureQuestionState, answerText);
+            });
+        }
+
+        // Add click handler to secure assessment question image for zoom
+        if (secureQuestionImage) {
+            secureQuestionImage.addEventListener('click', function(e) {
+                e.stopPropagation();
+                e.preventDefault();
+                if (window.expandImage) {
+                    window.expandImage(this);
+                }
+            });
+        }
+
+        console.log('Student poll script initializing...');
+        var studentLoader = document.getElementById('student-loader');
+        var preLiveCard = document.getElementById('pre-live-card');
+        var statusContainer = document.getElementById('status-container');
+        var statusMessage = document.getElementById('status-message');
+        var questionContainer = document.getElementById('question-container');
+        var optionsList = document.getElementById('options-list');
+        var questionTextEl = document.getElementById('question-text');
+        var questionImageEl = document.getElementById('question-image');
+        var questionSublineEl = document.getElementById('question-subline');
+        var noResponsesMessageEl = document.getElementById('no-responses-message');
+        var entryScreen = document.getElementById('entry-screen');
+        var startSessionBtn = document.getElementById('start-session-btn');
+        var studentContainer = document.getElementById('student-container');
+        // Simple image zoom function (same approach as teacher panel)
+        window.expandImage = function(imgElement) {
+            var imgSrc = imgElement.src;
+            var modalHtml = '<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="this.remove()">';
+            modalHtml += '<img src="' + imgSrc + '" style="max-width:90%;max-height:90%;"/>';
+            modalHtml += '</div>';
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        };
+
+        // Add click handler to question image
+        if (questionImageEl) {
+            questionImageEl.addEventListener('click', function(e) {
+                e.stopPropagation();
+                e.preventDefault();
+                window.expandImage(this);
+            });
+        }
+
+        // Event delegation for dynamically created option images
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('option-image')) {
+                e.stopPropagation();
+                e.preventDefault();
+                window.expandImage(e.target);
+            }
+        });
+        var preLivePrimary = document.getElementById('pre-live-primary');
+        var preLiveSubline = document.getElementById('pre-live-subline');
+        var preLiveReconnectLine = document.getElementById('pre-live-reconnect-line');
+
+        console.log('Start session button found:', startSessionBtn ? 'YES' : 'NO');
+        console.log('Entry screen found:', entryScreen ? 'YES' : 'NO');
+        var resumeControls = document.getElementById('resume-controls');
+        var resumeSessionBtn = document.getElementById('resume-session-btn');
+        var secureExitControls = document.getElementById('secure-exit-controls');
+        var secureExitDescription = document.getElementById('secure-exit-description');
+        var secureExitButton = document.getElementById('secure-exit-btn');
+        var secureExitLabel = document.getElementById('secure-exit-label');
+        var statusSubMessage = document.getElementById('status-submessage');
+        var connectivityBanner = document.getElementById('connectivity-banner');
+        var connectivityIcon = document.getElementById('connectivity-icon');
+        var connectivityMessage = document.getElementById('connectivity-message');
+        var connectivitySubMessage = document.getElementById('connectivity-submessage');
+
+        var currentPollState = {};
+        var lastUnlockedState = null;
+        var pollTimerId = null;
+        var defaultPollInterval = 2500;
+        var maxPollInterval = 12000;
+        var pollFailureCount = 0;
+        var proctorPollInterval = null;
+        var isInteractionBlocked = false;
+        var isTeacherBlocked = false;
+        var currentLockVersion = 0;
+        var hasAnsweredCurrent = false;
+        var violationLogged = false;
+        var violationDebounceTimer = null;
+        var fullscreenEnteredOnce = false; // Track if fullscreen has been entered to prevent false violations
+        var pendingSubmission = false;
+        var currentQuestionKey = null;
+        var pendingAnswerText = null; // Store answer while waiting for confidence
+        var currentMetacognitionEnabled = false; // Track if current question has metacognition
+        var lastStateVersion = null;
+        var lastSuccessfulPollAt = 0;
+        var pollInFlight = false;
+        var recoveringFromOutage = false;
+        var connectivityHideTimer = null;
+        var lastAdvisedInterval = defaultPollInterval;
+        var optionBaseClass = 'answer-option relative w-full text-left';
+        var optionSelectedClass = optionBaseClass + ' answer-option-selected';
+        var optionDisabledClass = optionBaseClass + ' answer-option-disabled';
+        var SECURE_RULES_FALLBACK = [
+            'Stay in fullscreen for the entire assessment',
+            'No tab or app switching is allowed',
+            'Mission Control monitors your progress in real time'
+        ];
+        var secureLobbyCard = document.getElementById('secure-lobby');
+        var secureLobbyTitle = document.getElementById('secure-lobby-title');
+        var secureLobbySummary = document.getElementById('secure-lobby-summary');
+        var secureLobbyTime = document.getElementById('secure-lobby-time');
+        var secureLobbyQuestions = document.getElementById('secure-lobby-questions');
+        var secureWindowMessage = document.getElementById('secure-window-message');
+        var secureAccessCodeGroup = document.getElementById('secure-access-code-group');
+        var secureAccessCodeInput = document.getElementById('secure-access-code');
+        var secureAccessCodeError = document.getElementById('secure-access-code-error');
+        var secureBeginBtn = document.getElementById('secure-begin-btn');
+        var secureBeginLabel = document.getElementById('secure-begin-label');
+        var secureRulesList = document.getElementById('secure-rules-list');
+        var secureLobbyContext = null;
+        var secureWindowAutoReloaded = false;
+        var blurListenerAttached = false;
+        var liveSessionActive = false;
+
+        function reportViolationDebounced(reason) {
+            if (violationDebounceTimer) {
+                clearTimeout(violationDebounceTimer);
+            }
+            violationDebounceTimer = setTimeout(function() {
+                if (violationLogged || (isInteractionBlocked && !isTeacherBlocked)) {
+                    return;
+                }
+
+                var activePollId = (currentPollState && currentPollState.pollId) ||
+                                   (secureLobbyContext && secureLobbyContext.pollId);
+
+                if (!activePollId) {
+                    console.warn('Cannot report violation: no active poll ID');
+                    return;
+                }
+
+                violationLogged = true;
+                isInteractionBlocked = true;
+                showLockEnforcementUI('Fullscreen required', 'Return to fullscreen and wait for your teacher to resume the assessment.');
+                google.script.run
+                    .withSuccessHandler(function(response) {
+                        if (response.success) {
+                            currentLockVersion = response.lockVersion;
+                            showLockEnforcementUI('Fullscreen required', 'Your teacher will let you back in once they confirm fullscreen.');
+                            startProctorPolling();
+                        }
+                    })
+                    .withFailureHandler(function(error) {
+                        console.error('Violation report failed:', error);
+                        showLockEnforcementUI('Fullscreen required', 'Please contact your teacher to resume.');
+                    })
+                    .reportStudentViolation(activePollId, SESSION_TOKEN, reason);
+            }, 300);
+        }
+
+        function attachProctorVisibilityListeners() {
+            if (blurListenerAttached) { return; }
+            blurListenerAttached = true;
+            window.addEventListener('blur', function() {
+                if ((secureSessionActive || liveSessionActive) && !isInteractionBlocked && !violationLogged) {
+                    reportViolationDebounced('window-blur');
+                }
+            });
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden && (secureSessionActive || liveSessionActive) && !isInteractionBlocked && !violationLogged) {
+                    reportViolationDebounced('tab-hidden');
+                }
+            });
+        }
+
+        var VeritasModal = null;
+        var veritasModalReady = new Promise(function(resolve) {
+            function initializeModal() {
+                VeritasModal = window.VeritasModal || createVeritasModal();
+                window.VeritasModal = VeritasModal;
+                resolve(VeritasModal);
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initializeModal, { once: true });
+            } else {
+                initializeModal();
+            }
+        });
+
+        function withVeritasModal(callback) {
+            return veritasModalReady.then(function(controller) {
+                return callback(controller);
+            });
+        }
+
+        function veritasAlert(message, options) {
+            return withVeritasModal(function(modal) {
+                return modal.alert(Object.assign({ message: message }, options || {}));
+            });
+        }
+
+        function veritasConfirm(message, options) {
+            return withVeritasModal(function(modal) {
+                return modal.confirm(Object.assign({ message: message }, options || {}));
+            });
+        }
+
+        function veritasPrompt(message, options) {
+            return withVeritasModal(function(modal) {
+                return modal.prompt(Object.assign({ message: message }, options || {}));
+            });
+        }
+
+        function describeSecureTimeLimit(minutes) {
+            if (!minutes || minutes <= 0) {
+                return 'Untimed';
+            }
+            if (minutes >= 60) {
+                var hours = Math.floor(minutes / 60);
+                var remainder = minutes % 60;
+                if (remainder === 0) {
+                    return hours + (hours === 1 ? ' hour' : ' hours');
+                }
+                return hours + ' hr ' + remainder + ' min';
+            }
+            return minutes + ' min';
+        }
+
+        function describeSecureQuestionCount(count) {
+            if (typeof count !== 'number' || count <= 0) {
+                return '—';
+            }
+            return count + (count === 1 ? ' Question' : ' Questions');
+        }
+
+        function renderSecureRules(rules) {
+            if (!secureRulesList) return;
+            secureRulesList.innerHTML = '';
+            var appliedRules = Array.isArray(rules) && rules.length ? rules : SECURE_RULES_FALLBACK;
+            appliedRules.forEach(function(rule) {
+                var li = document.createElement('li');
+                var icon = document.createElement('span');
+                icon.className = 'material-symbols-outlined text-base text-veritas-navy mt-0.5';
+                icon.textContent = 'shield_person';
+                var text = document.createElement('span');
+                text.textContent = rule;
+                li.appendChild(icon);
+                li.appendChild(text);
+                secureRulesList.appendChild(li);
+            });
+        }
+
+        function setSecureAccessError(message) {
+            if (!secureAccessCodeError) return;
+            if (message) {
+                secureAccessCodeError.textContent = message;
+                secureAccessCodeError.classList.remove('hidden');
+            } else {
+                secureAccessCodeError.textContent = '';
+                secureAccessCodeError.classList.add('hidden');
+            }
+        }
+
+        function computeSecureBeginLabel(windowStatus) {
+            if (windowStatus === 'NOT_YET_OPEN') {
+                return 'Opens Soon';
+            }
+            if (windowStatus === 'PAST_DUE') {
+                return 'Window Closed';
+            }
+            return 'Begin Assessment';
+        }
+
+        function isSecureWindowBlocked(status) {
+            return status === 'NOT_YET_OPEN' || status === 'PAST_DUE';
+        }
+
+        function updateSecureBeginButton() {
+            if (!secureBeginBtn) return;
+            var windowStatus = secureLobbyContext ? secureLobbyContext.windowStatus : 'OPEN';
+            var label = computeSecureBeginLabel(windowStatus);
+            var blocked = isSecureWindowBlocked(windowStatus);
+            var loading = secureBeginBtn.dataset.loading === '1';
+            if (secureLobbyContext) {
+                secureLobbyContext.beginLabel = label;
+            }
+            secureBeginBtn.disabled = blocked || loading;
+            secureBeginBtn.classList.toggle('opacity-60', blocked || loading);
+            if (secureBeginLabel && !loading) {
+                secureBeginLabel.textContent = label;
+            }
+        }
+
+        function setSecureBeginLoading(isLoading) {
+            if (!secureBeginBtn) return;
+            secureBeginBtn.dataset.loading = isLoading ? '1' : '0';
+            if (isLoading) {
+                secureBeginBtn.disabled = true;
+                secureBeginBtn.classList.add('opacity-60');
+                if (secureBeginLabel) {
+                    secureBeginLabel.textContent = 'Preparing...';
+                }
+            } else {
+                secureBeginBtn.classList.remove('opacity-60');
+                updateSecureBeginButton();
+            }
+        }
+
+        function hideSecureLobby() {
+            if (secureLobbyCard) {
+                secureLobbyCard.style.display = 'none';
+            }
+            secureLobbyContext = null;
+            setSecureAccessError('');
+        }
+
+        function shouldAutoReloadForSecureWindow(previousStatus, nextStatus) {
+            if (!previousStatus || !nextStatus) {
+                return false;
+            }
+            var wasBlocked = isSecureWindowBlocked(previousStatus);
+            var isBlockedNow = isSecureWindowBlocked(nextStatus);
+            return wasBlocked && !isBlockedNow;
+        }
+
+        function triggerSecureWindowReload() {
+            if (secureWindowAutoReloaded) {
+                return;
+            }
+            secureWindowAutoReloaded = true;
+            if (secureBeginBtn) {
+                secureBeginBtn.disabled = true;
+                secureBeginBtn.classList.add('opacity-60');
+            }
+            if (secureBeginLabel) {
+                secureBeginLabel.textContent = 'Refreshing...';
+            }
+            setTimeout(function() {
+                window.location.reload();
+            }, 750);
+        }
+
+        function showSecureLobby(state) {
+            var previousContext = secureLobbyContext;
+            var previousLobbyKey = previousContext && previousContext.lobbyKey
+                ? previousContext.lobbyKey
+                : (previousContext ? (previousContext.pollId + '|' + previousContext.sessionId) : null);
+            var nextLobbyKey = (state.pollId || 'poll') + '|' + (state.sessionId || '');
+            var isNewLobbyContext = previousLobbyKey !== nextLobbyKey;
+            var previousWindowStatus = previousContext ? previousContext.windowStatus : null;
+            setSecureConnectionIndicatorVisible(false);
+            setSecureChromeState(true);
+
+            secureLobbyContext = {
+                pollId: state.pollId,
+                sessionId: state.sessionId,
+                requiresAccessCode: !!state.requiresAccessCode,
+                windowStatus: (state.availability && state.availability.windowStatus) || state.windowStatus || 'OPEN',
+                lobbyKey: nextLobbyKey
+            };
+
+            if (shouldAutoReloadForSecureWindow(previousWindowStatus, secureLobbyContext.windowStatus)) {
+                triggerSecureWindowReload();
+                return;
+            }
+
+            if (entryScreen) entryScreen.style.display = 'none';
+            if (studentContainer) studentContainer.style.display = 'block';
+            if (studentLoader) studentLoader.style.display = 'none';
+            if (preLiveCard) preLiveCard.style.display = 'none';
+            if (statusContainer) statusContainer.style.display = 'none';
+            if (questionContainer) questionContainer.style.display = 'none';
+            // Explicitly hide secure assessment canvas until we begin
+            if (secureFocusContainer) secureFocusContainer.style.display = 'none';
+            toggleSecureLayout(false);
+            if (questionProgressEl) {
+                questionProgressEl.textContent = 'WAITING TO BEGIN';
+            }
+            if (secureLobbyCard) secureLobbyCard.style.display = 'block';
+
+            if (secureLobbyTitle) {
+                secureLobbyTitle.textContent = state.pollName || 'Secure Assessment';
+            }
+            if (secureLobbySummary) {
+                if (state.className) {
+                    secureLobbySummary.textContent = 'Class: ' + state.className;
+                    secureLobbySummary.style.display = 'block';
+                } else {
+                    secureLobbySummary.textContent = '';
+                    secureLobbySummary.style.display = 'none';
+                }
+            }
+            if (secureLobbyTime) {
+                secureLobbyTime.textContent = describeSecureTimeLimit(state.timeLimitMinutes);
+            }
+            if (secureLobbyQuestions) {
+                secureLobbyQuestions.textContent = describeSecureQuestionCount(state.questionCount);
+            }
+
+            var availability = state.availability || {};
+            var availabilityMessage = availability.message || 'Available now';
+            if (availability.blockingMessage) {
+                availabilityMessage += ' • ' + availability.blockingMessage;
+            }
+            if (secureWindowMessage) {
+                secureWindowMessage.textContent = availabilityMessage;
+            }
+
+            if (secureAccessCodeGroup) {
+                secureAccessCodeGroup.style.display = secureLobbyContext.requiresAccessCode ? 'block' : 'none';
+            }
+            if (secureAccessCodeInput && isNewLobbyContext) {
+                secureAccessCodeInput.value = '';
+            }
+            if (isNewLobbyContext) {
+                setSecureAccessError('');
+            }
+            renderSecureRules(state.proctoringRules);
+            updateSecureBeginButton();
+        }
+
+        function requestFullscreenForSecureAssessment() {
+            if (!secureFullscreenManager) {
+                return Promise.resolve();
+            }
+            if (secureFullscreenManager.isFullscreen()) {
+                return Promise.resolve();
+            }
+            return secureFullscreenManager.request().catch(function() {
+                return Promise.resolve();
+            });
+        }
+
+        function handleSecureFullscreenChange(event) {
+            // Proctoring is now active for ALL sessions (live polls and secure assessments)
+            if (event.hidden && !isInteractionBlocked && !violationLogged) {
+                reportViolationDebounced('tab-blur');
+                return;
+            }
+            if (event.isFullscreen) {
+                fullscreenEnteredOnce = true;
+                return;
+            }
+            if (fullscreenEnteredOnce && !isInteractionBlocked && !violationLogged) {
+                reportViolationDebounced('exit-fullscreen');
+            }
+        }
+
+        function handleSecureBeginClick() {
+            if (!secureLobbyContext || !secureBeginBtn || secureBeginBtn.disabled) {
+                return;
+            }
+            setSecureAccessError('');
+            var providedCode = secureAccessCodeInput ? secureAccessCodeInput.value.trim() : '';
+            if (secureLobbyContext.requiresAccessCode && !providedCode) {
+                setSecureAccessError('Access code is required.');
+                if (secureAccessCodeInput) {
+                    secureAccessCodeInput.focus();
+                }
+                return;
+            }
+
+            requestFullscreenForSecureAssessment()
+                .then(function() {
+                    setSecureBeginLoading(true);
+                    google.script.run
+                        .withSuccessHandler(function(response) {
+                            setSecureBeginLoading(false);
+                            if (response && response.success) {
+                                pollForIndividualSessionState();
+                            } else {
+                                veritasAlert('Unable to begin the assessment right now.', { title: 'Secure Assessment' });
+                            }
+                        })
+                        .withFailureHandler(function(error) {
+                            setSecureBeginLoading(false);
+                            var message = (error && error.message) ? error.message : 'Unable to begin assessment.';
+                            if (/access code/i.test(message)) {
+                                setSecureAccessError(message);
+                                if (secureAccessCodeInput) {
+                                    secureAccessCodeInput.focus();
+                                }
+                            } else {
+                                veritasAlert(message, { title: 'Secure Assessment' });
+                            }
+                        })
+                        .beginIndividualTimedAttempt(
+                            secureLobbyContext.pollId,
+                            secureLobbyContext.sessionId,
+                            SESSION_TOKEN,
+                            { accessCode: providedCode }
+                        );
+                })
+                .catch(function(err) {
+                    console.warn('Fullscreen request was rejected', err);
+                    veritasAlert('Fullscreen permission is required to begin the assessment.', { title: 'Secure Assessment' });
+                });
+        }
+
+        function ensureVeritasModalRoot() {
+            var existing = document.getElementById('veritas-modal-root');
+            if (existing) {
+                return existing;
+            }
+
+            var root = document.createElement('div');
+            root.id = 'veritas-modal-root';
+            root.className = 'veritas-modal-root';
+            root.setAttribute('aria-hidden', 'true');
+            root.innerHTML = '' +
+                '<div class="veritas-modal-backdrop"></div>' +
+                '<div class="veritas-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="veritas-modal-title" aria-describedby="veritas-modal-message">' +
+                    '<div class="veritas-modal-header">' +
+                        '<h2 id="veritas-modal-title">Notice</h2>' +
+                    '</div>' +
+                    '<div class="veritas-modal-body">' +
+                        '<p id="veritas-modal-message"></p>' +
+                        '<div id="veritas-modal-subtext" class="veritas-modal-subtext"></div>' +
+                        '<div id="veritas-modal-input" class="veritas-modal-input" style="display: none;">' +
+                            '<label for="veritas-modal-input-field" class="sr-only">Input</label>' +
+                            '<input id="veritas-modal-input-field" type="text" autocomplete="off" />' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="veritas-modal-actions">' +
+                        '<button type="button" class="veritas-modal-button secondary" data-action="cancel">Cancel</button>' +
+                        '<button type="button" class="veritas-modal-button primary" data-action="confirm">' +
+                            '<span class="veritas-modal-spinner" aria-hidden="true"></span>' +
+                            '<span>Confirm</span>' +
+                        '</button>' +
+                    '</div>' +
+                '</div>';
+
+            (document.body || document.documentElement).appendChild(root);
+            return root;
+        }
+
+        function createVeritasModal() {
+            var root = ensureVeritasModalRoot();
+
+            var dialog = root.querySelector('.veritas-modal-dialog');
+            var titleEl = root.querySelector('#veritas-modal-title');
+            var messageEl = root.querySelector('#veritas-modal-message');
+            var subtextEl = root.querySelector('#veritas-modal-subtext');
+            var inputWrap = root.querySelector('#veritas-modal-input');
+            var inputField = root.querySelector('#veritas-modal-input-field');
+            var confirmBtn = root.querySelector('[data-action="confirm"]');
+            var cancelBtn = root.querySelector('[data-action="cancel"]');
+            var confirmLabel = confirmBtn.querySelector('span:not(.veritas-modal-spinner)');
+            var active = false;
+            var currentConfig = null;
+            var resolveFn = null;
+            var previousFocus = null;
+            var allowEscape = true;
+            var hiddenNodes = [];
+
+            function toggleBackground(state) {
+                var siblings = [].slice.call(document.body.children);
+                if (state) {
+                    hiddenNodes = [];
+                    siblings.forEach(function(node) {
+                        if (node === root) return;
+                        hiddenNodes.push({
+                            node: node,
+                            ariaHidden: node.getAttribute('aria-hidden'),
+                            inert: ('inert' in node) ? node.inert : null
+                        });
+                        node.setAttribute('aria-hidden', 'true');
+                        if ('inert' in node) {
+                            node.inert = true;
+                        }
+                    });
+                } else {
+                    hiddenNodes.forEach(function(record) {
+                        if (record.ariaHidden === null) {
+                            record.node.removeAttribute('aria-hidden');
+                        } else {
+                            record.node.setAttribute('aria-hidden', record.ariaHidden);
+                        }
+                        if ('inert' in record.node) {
+                            if (record.inert !== null) {
+                                record.node.inert = record.inert;
+                            } else {
+                                record.node.inert = false;
+                            }
+                        }
+                    });
+                    hiddenNodes = [];
+                }
+            }
+
+            function setPending(state) {
+                if (state) {
+                    confirmBtn.classList.add('loading');
+                    confirmBtn.setAttribute('disabled', 'disabled');
+                    if (cancelBtn.style.display !== 'none') {
+                        cancelBtn.setAttribute('disabled', 'disabled');
+                    }
+                } else {
+                    confirmBtn.classList.remove('loading');
+                    confirmBtn.removeAttribute('disabled');
+                    cancelBtn.removeAttribute('disabled');
+                }
+            }
+
+            function getFocusable() {
+                var selectors = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+                var nodes = [].slice.call(dialog.querySelectorAll(selectors));
+                return nodes.filter(function(node) {
+                    return !node.hasAttribute('disabled') && node.offsetParent !== null;
+                });
+            }
+
+            function focusFirst() {
+                var focusable = getFocusable();
+                if (focusable.length > 0) {
+                    focusable[0].focus();
+                } else {
+                    dialog.focus();
+                }
+            }
+
+            function trapKey(event) {
+                if (!active) return;
+                if (event.key === 'Escape') {
+                    if (!allowEscape) return;
+                    event.preventDefault();
+                    handleCancel();
+                } else if (event.key === 'Tab') {
+                    var focusable = getFocusable();
+                    if (focusable.length === 0) {
+                        event.preventDefault();
+                        return;
+                    }
+                    var index = focusable.indexOf(document.activeElement);
+                    if (event.shiftKey) {
+                        if (index <= 0) {
+                            focusable[focusable.length - 1].focus();
+                            event.preventDefault();
+                        }
+                    } else {
+                        if (index === focusable.length - 1) {
+                            focusable[0].focus();
+                            event.preventDefault();
+                        }
+                    }
+                } else if (event.key === 'Enter' && currentConfig && currentConfig.mode === 'prompt') {
+                    if (document.activeElement === inputField) {
+                        event.preventDefault();
+                        handleConfirm();
+                    }
+                }
+            }
+
+            function enforceFocus(event) {
+                if (!active) return;
+                if (!dialog.contains(event.target)) {
+                    event.stopPropagation();
+                    focusFirst();
+                }
+            }
+
+            function closeModal(result) {
+                active = false;
+                root.classList.remove('is-active');
+                root.setAttribute('aria-hidden', 'true');
+                document.body.classList.remove('veritas-modal-open');
+                root.removeEventListener('keydown', trapKey, true);
+                document.removeEventListener('focus', enforceFocus, true);
+                toggleBackground(false);
+                setPending(false);
+                if (previousFocus && typeof previousFocus.focus === 'function') {
+                    setTimeout(function() { previousFocus.focus(); }, 0);
+                }
+                if (resolveFn) {
+                    resolveFn(result);
+                }
+                currentConfig = null;
+                resolveFn = null;
+            }
+
+            function handleConfirm() {
+                if (!active) return;
+                setPending(true);
+                var mode = currentConfig ? currentConfig.mode : 'alert';
+                var result;
+                if (mode === 'prompt') {
+                    result = inputField.value;
+                } else if (mode === 'confirm') {
+                    result = true;
+                }
+                closeModal(result);
+            }
+
+            function handleCancel() {
+                if (!active) return;
+                var mode = currentConfig ? currentConfig.mode : 'alert';
+                if (mode === 'alert') {
+                    closeModal(undefined);
+                    return;
+                }
+                if (mode === 'confirm') {
+                    closeModal(false);
+                } else if (mode === 'prompt') {
+                    closeModal(null);
+                }
+            }
+
+            function openModal(mode, options) {
+                options = options || {};
+                currentConfig = Object.assign({}, options, { mode: mode });
+                allowEscape = options.allowEscape !== false;
+                titleEl.textContent = options.title || (mode === 'confirm' ? 'Please Confirm' : (mode === 'prompt' ? 'Enter Response' : 'Notice'));
+                if (options.html) {
+                    messageEl.innerHTML = options.html;
+                } else {
+                    messageEl.textContent = options.message || '';
+                }
+                if (options.subtext) {
+                    subtextEl.style.display = 'block';
+                    subtextEl.textContent = options.subtext;
+                } else {
+                    subtextEl.style.display = 'none';
+                    subtextEl.textContent = '';
+                }
+                if (mode === 'prompt') {
+                    inputWrap.style.display = 'flex';
+                    inputField.value = options.defaultValue || '';
+                    if (options.placeholder) {
+                        inputField.placeholder = options.placeholder;
+                    } else {
+                        inputField.removeAttribute('placeholder');
+                    }
+                } else {
+                    inputWrap.style.display = 'none';
+                    inputField.value = '';
+                    inputField.removeAttribute('placeholder');
+                }
+                confirmLabel.textContent = options.confirmText || (mode === 'confirm' ? 'Confirm' : (mode === 'prompt' ? 'Submit' : 'OK'));
+                if (options.destructive) {
+                    confirmBtn.classList.add('destructive');
+                } else {
+                    confirmBtn.classList.remove('destructive');
+                }
+                cancelBtn.style.display = mode === 'alert' ? 'none' : 'inline-flex';
+                cancelBtn.textContent = options.cancelText || 'Cancel';
+                setPending(false);
+                previousFocus = document.activeElement;
+                root.classList.add('is-active');
+                root.setAttribute('aria-hidden', 'false');
+                document.body.classList.add('veritas-modal-open');
+                toggleBackground(true);
+                active = true;
+                root.addEventListener('keydown', trapKey, true);
+                document.addEventListener('focus', enforceFocus, true);
+
+                return new Promise(function(resolve) {
+                    resolveFn = resolve;
+                    setTimeout(function() {
+                        if (mode === 'prompt') {
+                            inputField.focus();
+                            inputField.select();
+                        } else if (mode === 'confirm' && options.focusCancel) {
+                            cancelBtn.focus();
+                        } else {
+                            confirmBtn.focus();
+                        }
+                    }, 0);
+                });
+            }
+
+            confirmBtn.addEventListener('click', handleConfirm);
+            cancelBtn.addEventListener('click', handleCancel);
+            root.addEventListener('click', function(event) {
+                if (event.target === root || event.target.classList.contains('veritas-modal-backdrop')) {
+                    if (!currentConfig || currentConfig.allowBackdropClose === false) {
+                        return;
+                    }
+                    handleCancel();
+                }
+            });
+
+            return {
+                alert: function(options) {
+                    return openModal('alert', options).then(function() { return; });
+                },
+                confirm: function(options) {
+                    return openModal('confirm', options).then(function(result) { return result !== false; });
+                },
+                prompt: function(options) {
+                    return openModal('prompt', options).then(function(result) { return result; });
+                }
+            };
+        }
+        var currentOptionLayout = [];
+
+        var connectivityThemes = {
+            connecting: ['border-amber-300', 'bg-amber-50', 'text-amber-800', 'dark:border-amber-500', 'dark:bg-amber-900/20', 'dark:text-amber-100'],
+            offline: ['border-red-300', 'bg-red-50', 'text-red-800', 'dark:border-red-600', 'dark:bg-red-900/20', 'dark:text-red-200'],
+            recovered: ['border-green-300', 'bg-green-50', 'text-green-800', 'dark:border-green-600', 'dark:bg-green-900/20', 'dark:text-green-100']
+        };
+        var allConnectivityClasses = connectivityThemes.connecting.concat(connectivityThemes.offline, connectivityThemes.recovered);
+
+        function isPreLiveVisible() {
+            return preLiveCard && preLiveCard.style.display !== 'none';
+        }
+
+        function setPreLiveReconnectMessage(text) {
+            // Disabled for student view - students don't need to see sync notifications
+            return;
+        }
+
+        function applyConnectivityTheme(theme) {
+            if (!connectivityBanner) return;
+            for (var i = 0; i < allConnectivityClasses.length; i++) {
+                connectivityBanner.classList.remove(allConnectivityClasses[i]);
+            }
+            var themeClasses = connectivityThemes[theme] || connectivityThemes.connecting;
+            for (var j = 0; j < themeClasses.length; j++) {
+                connectivityBanner.classList.add(themeClasses[j]);
+            }
+        }
+
+        function showConnectivityState(state, options) {
+            // Disabled for student view - students don't need to see sync notifications
+            // Background sync continues to work normally
+            return;
+        }
+
+        function hideConnectivityBanner() {
+            if (!connectivityBanner) return;
+            clearTimeout(connectivityHideTimer);
+            connectivityBanner.classList.add('hidden');
+            if (connectivitySubMessage) {
+                connectivitySubMessage.textContent = '';
+                connectivitySubMessage.classList.remove('opacity-0');
+            }
+            setPreLiveReconnectMessage('');
+        }
+
+        function stopPolling() {
+            if (pollTimerId) {
+                clearTimeout(pollTimerId);
+                pollTimerId = null;
+            }
+            pollInFlight = false;
+        }
+
+        function scheduleNextPoll(delay) {
+            if (isInteractionBlocked) return;
+            stopPolling();
+            var boundedDelay = Math.min(maxPollInterval, Math.max(1000, delay));
+            var jitter = Math.random() * 0.15 * boundedDelay;
+            pollTimerId = setTimeout(function() {
+                pollTimerId = null;
+                pollForStatus();
+            }, boundedDelay + jitter);
+        }
+
+        function startPolling(immediate) {
+            pollFailureCount = 0;
+            recoveringFromOutage = false;
+            if (immediate) {
+                stopPolling();
+                pollForStatus(true);
+            } else {
+                scheduleNextPoll(defaultPollInterval);
+            }
+        }
+
+        function handlePostPollSuccess(data, hadFailures) {
+            if (typeof data.stateVersion === 'number') {
+                lastStateVersion = data.stateVersion;
+            }
+            if (typeof data.advisedPollIntervalMs === 'number') {
+                lastAdvisedInterval = data.advisedPollIntervalMs;
+            } else {
+                lastAdvisedInterval = defaultPollInterval;
+            }
+
+            if (hadFailures || data.connectionHealth === 'RECOVERED_AFTER_OUTAGE') {
+                showConnectivityState('recovered', {
+                    message: 'Back on track - synced with your teacher.',
+                    icon: 'cloud_done',
+                    autoHide: 2400
+                });
+            } else if (data.connectionHealth === 'RECOVERING') {
+                hideConnectivityBanner();
+                if (isPreLiveVisible()) {
+                    setPreLiveReconnectMessage('Syncing back up — we will take off in a moment.');
+                }
+            } else if (!recoveringFromOutage && !hadFailures) {
+                hideConnectivityBanner();
+            }
+
+            updateStudentView(data);
+            var delay = Math.max(1200, Math.min(maxPollInterval, lastAdvisedInterval));
+            scheduleNextPoll(delay);
+        }
+
+        function handlePollingFailure(error) {
+            var messageText = (error && error.message) ? error.message : (typeof error === 'string' ? error : '');
+            if (messageText && /Authentication|not enrolled|Invalid link/i.test(messageText)) {
+                stopPolling();
+                handleError(error);
+                return;
+            }
+
+            recoveringFromOutage = true;
+            var backoffMultiplier = Math.pow(1.6, Math.max(1, pollFailureCount));
+            var retryDelay = Math.min(maxPollInterval, Math.round((lastAdvisedInterval || defaultPollInterval) * backoffMultiplier));
+            var seconds = Math.max(1, Math.round(retryDelay / 1000));
+
+            var online = typeof navigator !== 'undefined' ? navigator.onLine : true;
+            showConnectivityState(online ? 'connecting' : 'offline', {
+                message: online ? 'Reconnecting... your poll data is catching up.' : 'Offline detected - we will hold your spot and resync when you are back.',
+                icon: online ? 'sync_problem' : 'signal_wifi_off',
+                submessage: online ? ('Retrying in ' + seconds + 's...') : '',
+                preLiveMessage: online ? 'Reconnecting… syncing you back into place.' : 'Offline detected — we will hold your spot and sync when you are back.'
+            });
+
+            scheduleNextPoll(retryDelay);
+        }
+
+        function pollForStatus() {
+            if (isInteractionBlocked || pollInFlight) return;
+            pollInFlight = true;
+            var context = {
+                lastStateVersion: lastStateVersion,
+                lastSuccessAt: lastSuccessfulPollAt,
+                failureCount: pollFailureCount,
+                advisedInterval: lastAdvisedInterval
+            };
+
+            google.script.run
+                .withSuccessHandler(function(data) {
+                    pollInFlight = false;
+                    var hadFailures = pollFailureCount > 0 || recoveringFromOutage;
+                    pollFailureCount = 0;
+                    recoveringFromOutage = false;
+                    lastSuccessfulPollAt = Date.now();
+                    handlePostPollSuccess(data || {}, hadFailures);
+                })
+                .withFailureHandler(function(error) {
+                    pollInFlight = false;
+                    pollFailureCount += 1;
+                    console.error('Polling error', error);
+                    handlePollingFailure(error);
+                })
+                .getStudentPollStatus(SESSION_TOKEN, context);
+        }
+
+        function isSessionActive() {
+            return studentContainer && studentContainer.style.display !== 'none' && entryScreen && entryScreen.style.display === 'none';
+        }
+
+        window.addEventListener('offline', function() {
+            if (!isSessionActive()) return;
+            recoveringFromOutage = true;
+            showConnectivityState('offline', {
+                message: 'Offline detected - we will hold your spot and resync when you are back.',
+                icon: 'signal_wifi_off'
+            });
+        });
+
+        window.addEventListener('online', function() {
+            if (!isSessionActive()) return;
+            showConnectivityState('connecting', {
+                message: 'Reconnecting... your poll data is catching up.',
+                icon: 'sync',
+                submessage: 'Syncing now...'
+            });
+            startPolling(true);
+        });
+
+        if (resumeSessionBtn) {
+            resumeSessionBtn.onclick = function() {
+                console.log('Resume button clicked - attempting fullscreen');
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen()
+                        .then(function() {
+                            console.log('Fullscreen entered - confirming with server');
+                            // Call studentConfirmFullscreen with the current lockVersion
+                            google.script.run
+                                .withSuccessHandler(function(response) {
+                                    if (response.success && response.status === 'OK') {
+                                        console.log('Server confirmed unlock - resuming poll');
+                                        isInteractionBlocked = false;
+                                        violationLogged = false;
+                                        fullscreenEnteredOnce = false; // Reset for new fullscreen session
+                                        if (proctorPollInterval) {
+                                            clearInterval(proctorPollInterval);
+                                            proctorPollInterval = null;
+                                        }
+                                        if (resumeControls) {
+                                            resumeControls.style.display = 'none';
+                                        }
+                                        hideConnectivityBanner();
+                                        startPolling(true);
+                                        if (lastUnlockedState && lastUnlockedState.status && lastUnlockedState.status !== 'LOCKED' && lastUnlockedState.status !== 'AWAITING_FULLSCREEN') {
+                                            updateStudentView(lastUnlockedState);
+                                        }
+                                    } else {
+                                        console.error('Failed to confirm fullscreen:', response);
+                                        statusMessage.textContent = 'Failed to resume. Please try again.';
+                                    }
+                                })
+                                .withFailureHandler(function(error) {
+                                    console.error('Error confirming fullscreen:', error);
+                                    statusMessage.textContent = 'Error resuming session.';
+                                })
+                                .studentConfirmFullscreen(currentLockVersion, SESSION_TOKEN);
+                        })
+                        .catch(function(e) {
+                            console.warn('Fullscreen denied on resume:', e);
+                            statusMessage.textContent = 'Fullscreen is required. Please allow fullscreen and try again.';
+                        });
+                }
+            };
+        }
+
+        if (secureExitButton) {
+            secureExitButton.addEventListener('click', function() {
+                exitSecureSessionNow();
+            });
+        }
+
+        if (startSessionBtn) {
+            console.log('Attaching onclick handler to start session button');
+            startSessionBtn.onclick = function() {
+                console.log('!!! BEGIN SESSION BUTTON CLICKED !!!');
+                console.log('Hiding entry screen, showing student container');
+                entryScreen.style.display = 'none';
+                studentContainer.style.display = 'block';
+                isInteractionBlocked = false;
+                isTeacherBlocked = false;
+                violationLogged = false;
+                fullscreenEnteredOnce = false; // Reset for new session
+                if (resumeControls) {
+                    resumeControls.style.display = 'none';
+                }
+
+                try {
+                    if (document.documentElement.requestFullscreen) {
+                        document.documentElement.requestFullscreen().catch(function(e) {
+                            console.warn('Fullscreen denied:', e);
+                        });
+                    }
+                } catch (e) {
+                    console.error('Fullscreen error:', e);
+                }
+
+                hideConnectivityBanner();
+                startPolling(true);
+            };
+        } else {
+            console.error('Start session button not found!');
+        }
+
+        function startProctorPolling() {
+            stopPolling();
+            if (proctorPollInterval) {
+                clearInterval(proctorPollInterval);
+            }
+            proctorPollInterval = setInterval(checkProctorState, 2500);
+            checkProctorState();
+        }
+
+        function checkProctorState() {
+            google.script.run
+                .withSuccessHandler(function(response) {
+                    if (!response.success) {
+                        console.error('Proctor state check failed:', response.error);
+                        return;
+                    }
+
+                    // Check if status is AWAITING_FULLSCREEN and lockVersion matches
+                    if (response.status === 'AWAITING_FULLSCREEN' && response.lockVersion === currentLockVersion) {
+                        if (proctorPollInterval) {
+                            clearInterval(proctorPollInterval);
+                            proctorPollInterval = null;
+                        }
+                        showResumePrompt();
+                    } else if (response.status === 'LOCKED' && response.lockVersion !== currentLockVersion) {
+                        // New violation or version mismatch - update lockVersion
+                        currentLockVersion = response.lockVersion;
+                        showLockEnforcementUI();
+                    } else if (response.status === 'BLOCKED') {
+                        isTeacherBlocked = true;
+                        if (response.lockVersion && response.lockVersion !== currentLockVersion) {
+                            currentLockVersion = response.lockVersion;
+                        }
+                        showTeacherBlockedMessage();
+                    } else if (response.status === 'OK') {
+                        // Unlocked - resume normal polling
+                        if (proctorPollInterval) {
+                            clearInterval(proctorPollInterval);
+                            proctorPollInterval = null;
+                        }
+                        isInteractionBlocked = false;
+                        isTeacherBlocked = false;
+                        violationLogged = false;
+                        hideConnectivityBanner();
+                        startPolling(true);
+                        if (lastUnlockedState && lastUnlockedState.status && lastUnlockedState.status !== 'LOCKED' && lastUnlockedState.status !== 'AWAITING_FULLSCREEN') {
+                            updateStudentView(lastUnlockedState);
+                        }
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    console.error('Proctor state check error:', error);
+                })
+                .getStudentProctorState(SESSION_TOKEN);
+        }
+
+        function updateStudentView(data) {
+            data = data || {};
+            if (studentLoader) studentLoader.style.display = 'none';
+            if (data.sessionType === 'INDIVIDUAL_TIMED' || data.sessionType === 'SECURE_ASSESSMENT') {
+                if (!secureSessionActive) {
+                    secureSessionActive = true;
+                    secureSessionHeartbeat.start(true);
+                }
+                setSecureChromeState(true);
+                return;
+            }
+            if (secureSessionActive) {
+                secureSessionActive = false;
+                secureSessionHeartbeat.stop();
+                setSecureConnectionIndicatorVisible(false);
+                setSecureChromeState(false);
+            }
+            console.log('Status update:', data.status);
+
+            // Only clear any existing status submessage content when
+            // we're not showing the metacognition confidence prompt.
+            if (statusSubMessage && pendingAnswerText === null) {
+                statusSubMessage.style.display = 'none';
+                statusSubMessage.textContent = '';
+                statusSubMessage.innerHTML = '';
+            }
+            setPreLiveReconnectMessage('');
+
+            currentPollState = data || {};
+            hideExitControls();
+
+            if (data.status === 'LOCKED' || data.status === 'AWAITING_FULLSCREEN' || data.status === 'BLOCKED') {
+                console.log('Server confirmed lock status on page load:', data.status);
+                isInteractionBlocked = true;
+                if (data.status === 'BLOCKED') {
+                    isTeacherBlocked = true;
+                    showTeacherBlockedMessage();
+                }
+                google.script.run
+                    .withSuccessHandler(function(proctorResponse) {
+                        if (proctorResponse.success) {
+                            currentLockVersion = proctorResponse.lockVersion;
+                            if (proctorResponse.status === 'AWAITING_FULLSCREEN') {
+                                showResumePrompt();
+                            } else if (proctorResponse.status === 'LOCKED') {
+                                isTeacherBlocked = false;
+                                showLockEnforcementUI();
+                                startProctorPolling();
+                            } else if (proctorResponse.status === 'BLOCKED') {
+                                isTeacherBlocked = true;
+                                showTeacherBlockedMessage();
+                                startProctorPolling();
+                            }
+                        }
+                    })
+                    .withFailureHandler(handleError)
+                    .getStudentProctorState(SESSION_TOKEN);
+                return;
+            }
+
+            isTeacherBlocked = false;
+
+            if (preLiveCard) {
+                preLiveCard.style.display = 'none';
+            }
+
+            if (data.status !== 'LOCKED' && data.status !== 'AWAITING_FULLSCREEN' && data.status !== 'BLOCKED') {
+                lastUnlockedState = data;
+            }
+
+            if (resumeControls) {
+                resumeControls.style.display = 'none';
+            }
+
+            if (data.status === 'PRE_LIVE') {
+                liveSessionActive = false;
+                hasAnsweredCurrent = false;
+                pendingSubmission = false;
+                currentQuestionKey = null;
+                toggleSecureLayout(false);
+                if (questionProgressEl) {
+                    questionProgressEl.textContent = 'QUESTION --';
+                }
+                questionContainer.style.display = 'none';
+                if (statusContainer) {
+                    statusContainer.style.display = 'none';
+                }
+                if (preLiveCard) {
+                    preLiveCard.style.display = 'block';
+                    if (preLivePrimary) {
+                        preLivePrimary.textContent = data.message || 'Waiting for your teacher to begin the poll...';
+                    }
+                    if (preLiveSubline) {
+                        preLiveSubline.textContent = 'This page will update automatically.';
+                        preLiveSubline.style.display = 'block';
+                        preLiveSubline.classList.remove('hidden');
+                    }
+                } else {
+                    statusContainer.style.display = 'block';
+                    statusMessage.textContent = data.message || 'Waiting for your teacher to begin the poll...';
+                    statusMessage.className = 'text-gray-900 text-2xl font-semibold';
+                    if (statusSubMessage) {
+                        statusSubMessage.textContent = 'This page will update automatically.';
+                        statusSubMessage.style.display = 'block';
+                        statusSubMessage.className = 'text-gray-700 text-base mt-4';
+                    }
+                }
+                return;
+            }
+
+            if (data.status === 'LIVE' && typeof data.questionIndex === 'number' && data.questionIndex >= 0) {
+                liveSessionActive = true;
+                resetResultDecorations();
+                lastUnlockedState = data;
+                var resetTimestamp = (data.metadata && data.metadata.resetAt) ? data.metadata.resetAt : '';
+                var questionKey = data.pollId + ':' + data.questionIndex + ':' + resetTimestamp;
+                var isNewQuestion = questionKey !== currentQuestionKey;
+                toggleSecureLayout(false);
+
+                if (isNewQuestion) {
+                    currentQuestionKey = questionKey;
+                    hasAnsweredCurrent = !!data.hasSubmitted;
+                    pendingSubmission = false;
+                    pendingAnswerText = null;
+                    currentMetacognitionEnabled = !!data.metacognitionEnabled;
+                    currentPollState = data;
+                    statusContainer.style.display = hasAnsweredCurrent ? 'block' : 'none';
+                    questionContainer.style.display = hasAnsweredCurrent ? 'none' : 'block';
+
+                    // Request fullscreen for live polls to enable proctoring
+                    if (secureFullscreenManager && !secureFullscreenManager.isFullscreen()) {
+                        secureFullscreenManager.request().catch(function(err) {
+                            console.log('Fullscreen request declined or not supported:', err);
+                        });
+                    }
+
+                    var qNum = (data.questionIndex || 0) + 1;
+                    var qTotal = data.totalQuestions || '?';
+                    updateQuestionProgress(data.questionIndex, data.totalQuestions);
+
+                    if (questionTextEl) {
+                        questionTextEl.textContent = data.questionText || '';
+                    }
+
+                    if (questionSublineEl) {
+                        questionSublineEl.classList.add('hidden');
+                        questionSublineEl.textContent = '';
+                    }
+
+                    var hasQuestionImage = !!data.questionImageURL;
+                    if (questionImageEl) {
+                        if (hasQuestionImage) {
+                            questionImageEl.src = data.questionImageURL;
+                            questionImageEl.style.display = 'block';
+                        } else {
+                            questionImageEl.style.display = 'none';
+                        }
+                    }
+                    if (questionLayout) {
+                        questionLayout.classList.toggle('no-image', !hasQuestionImage);
+                    }
+                    if (questionVisual) {
+                        questionVisual.style.display = hasQuestionImage ? 'flex' : 'none';
+                    }
+
+                    if (noResponsesMessageEl) {
+                        noResponsesMessageEl.classList.add('hidden');
+                        noResponsesMessageEl.textContent = '';
+                    }
+
+                    optionsList.innerHTML = "";
+                    var shuffled = shuffle(data.options || []);
+                    var letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+
+                    // DEBUG: Log what we received
+                    console.log('=== STUDENT RECEIVED DATA ===');
+                    console.log('questionImageURL:', data.questionImageURL);
+                    console.log('metacognitionEnabled:', data.metacognitionEnabled);
+                    console.log('currentMetacognitionEnabled will be set to:', !!data.metacognitionEnabled);
+                    console.log('options:', data.options);
+                    if (data.options && data.options.length > 0) {
+                        data.options.forEach(function(opt, idx) {
+                            console.log('  Option ' + idx + ':', 'text="' + opt.text + '", imageURL=' + opt.imageURL);
+                        });
+                    }
+
+                    currentOptionLayout = [];
+                    shuffled.forEach(function(option, index) {
+                        var letter = letters[index] || (index + 1).toString();
+                        var btn = createOptionButton(option, letter, data.pollId, data.questionIndex);
+                        var listItem = document.createElement('li');
+                        listItem.appendChild(btn);
+                        optionsList.appendChild(listItem);
+                        currentOptionLayout.push({
+                            text: option.text || '',
+                            imageURL: option.imageURL || ''
+                        });
+                    });
+                }
+
+                if (pendingSubmission && !data.hasSubmitted) {
+                    return;
+                }
+
+                // Only update hasAnsweredCurrent if we've actually attempted to submit
+                // This prevents premature hiding of options due to stale server data
+                if (data.hasSubmitted && (pendingSubmission || hasAnsweredCurrent)) {
+                    hasAnsweredCurrent = true;
+                    pendingSubmission = false;
+                }
+
+                if (hasAnsweredCurrent) {
+                    questionContainer.style.display = 'none';
+                    statusContainer.style.display = 'block';
+                    statusMessage.textContent = data.hasSubmitted ? (data.message || 'Answer received - nice work.') : 'Answer received - nice work.';
+                    statusMessage.className = 'text-green-600 text-2xl font-semibold';
+                    if (statusSubMessage) {
+                        statusSubMessage.textContent = 'Your teacher will reveal the answer shortly...';
+                        statusSubMessage.style.display = 'block';
+                        statusSubMessage.className = 'text-gray-600 text-lg mt-4';
+                    }
+                    var iconEl = statusContainer.querySelector('.material-symbols-outlined');
+                    if (iconEl) {
+                        iconEl.textContent = 'check_circle';
+                        iconEl.className = 'material-symbols-outlined text-6xl text-green-300 mb-4 inline-block';
+                    }
+                } else if (pendingAnswerText === null) {
+                    // Only show question if we're not waiting for confidence input
+                    questionContainer.style.display = 'block';
+                    statusContainer.style.display = 'none';
+                }
+                // If pendingAnswerText is not null, we're showing confidence question - don't change display
+                return;
+            }
+
+            if (data.status === 'RESULTS_HOLD' || data.status === 'RESULTS_REVEALED') {
+                liveSessionActive = false;
+                renderResultsStage(data);
+                return;
+            }
+
+            // Non-live states
+            resetResultDecorations();
+            questionContainer.style.display = 'none';
+            pendingSubmission = false;
+            if (data.status !== 'PRE_LIVE') {
+                hasAnsweredCurrent = !!data.hasSubmitted;
+            } else {
+                currentPollState = {};
+                questionContainer.style.display = 'none';
+                if (preLiveCard) {
+                    preLiveCard.style.display = 'none';
+                }
+                statusContainer.style.display = 'block';
+                var statusIcon = 'schedule';
+                var statusClass = 'text-veritas-navy';
+                var statusTextClass = 'text-gray-900 text-2xl font-semibold';
+
+                if (data.status === 'PRE_LIVE') {
+                    hasAnsweredCurrent = false;
+                    statusMessage.textContent = data.message || 'Waiting for your teacher to begin the poll...';
+                    statusIcon = 'schedule';
+                    statusClass = 'text-veritas-navy';
+                    if (statusSubMessage) {
+                        statusSubMessage.textContent = 'This page will update automatically.';
+                        statusSubMessage.style.display = 'block';
+                        statusSubMessage.className = 'text-gray-700 text-base mt-4';
+                    }
+                } else if (data.status === 'PAUSED') {
+                    hasAnsweredCurrent = false;
+                    statusMessage.textContent = data.message || 'Intermission! Your teacher’s cooking up the next one.';
+                    statusIcon = 'hourglass_top';
+                    statusClass = 'text-veritas-navy';
+                    if (statusSubMessage) {
+                        statusSubMessage.style.display = 'none';
+                        statusSubMessage.textContent = '';
+                    }
+                } else if (data.status === 'ENDED') {
+                    hasAnsweredCurrent = false;
+                    statusMessage.textContent = data.message || "That's a wrap! You just finished the poll — nicely done.";
+                    statusIcon = 'emoji_events';
+                    statusClass = 'text-yellow-600';
+                    showExitControls('Exit Poll', 'Leave fullscreen and close this tab now that the poll is complete.');
+                    if (statusSubMessage) {
+                        statusSubMessage.style.display = 'none';
+                        statusSubMessage.textContent = '';
+                    }
+                    // Exit fullscreen when poll ends
+                    if (document.fullscreenElement) {
+                        document.exitFullscreen().catch(function(err) {
+                            console.log('Error exiting fullscreen:', err);
+                        });
+                    }
+                } else if (data.status === 'NOT_ENROLLED') {
+                    hasAnsweredCurrent = false;
+                    statusMessage.textContent = data.message || "You are not enrolled.";
+                    statusTextClass = 'text-red-700 text-2xl font-bold';
+                    statusIcon = 'error';
+                    statusClass = 'text-red-700';
+                    if (statusSubMessage) {
+                        statusSubMessage.style.display = 'none';
+                        statusSubMessage.textContent = '';
+                    }
+                    stopPolling();
+                } else if (data.status === 'ERROR') {
+                    hasAnsweredCurrent = false;
+                    statusMessage.textContent = data.message || "We hit a snag. Try again soon.";
+                    statusTextClass = 'text-red-700 text-2xl font-bold';
+                    statusIcon = 'error';
+                    statusClass = 'text-red-700';
+                    if (statusSubMessage) {
+                        statusSubMessage.style.display = 'none';
+                        statusSubMessage.textContent = '';
+                    }
+                } else {
+                    hasAnsweredCurrent = false;
+                    statusMessage.textContent = data.message || 'Hang tight — your teacher’s loading the next challenge.';
+                    statusIcon = 'hourglass_top';
+                    statusClass = 'text-veritas-navy';
+                    if (statusSubMessage) {
+                        statusSubMessage.style.display = 'none';
+                        statusSubMessage.textContent = '';
+                    }
+                }
+                if (preLivePrimary) {
+                    preLivePrimary.textContent = data.message || 'Showtime is moments away.';
+                }
+                if (preLiveSubline) {
+                    preLiveSubline.textContent = data.submessage || 'Your teacher is lining up the first challenge now — stay focused and we’ll launch together.';
+                }
+                return;
+            }
+
+            if (preLiveCard) {
+                preLiveCard.style.display = 'none';
+            }
+
+            statusContainer.style.display = 'block';
+            var statusIcon = 'schedule';
+            var statusClass = 'text-veritas-navy';
+            var statusTextClass = 'text-gray-900 text-2xl font-semibold';
+
+            if (data.status === 'PAUSED') {
+                statusMessage.textContent = data.message || 'Poll is paused for a quick breather.';
+                statusIcon = 'pause_circle';
+                statusClass = 'text-veritas-navy';
+                if (statusSubMessage) {
+                    statusSubMessage.textContent = data.submessage || 'Stay ready — we will resume as soon as your teacher unlocks the next prompt.';
+                    statusSubMessage.style.display = 'block';
+                    statusSubMessage.className = 'text-gray-700 text-lg mt-4';
+                }
+            } else if (data.status === 'ENDED') {
+                statusMessage.textContent = data.message || 'That is a wrap! You just finished the poll - nicely done.';
+                statusIcon = 'emoji_events';
+                statusClass = 'text-yellow-600';
+                showExitControls('Exit Poll', 'Exit fullscreen and close this tab. Thank you for participating!');
+                if (statusSubMessage) {
+                    statusSubMessage.style.display = 'none';
+                }
+            } else if (data.status === 'NOT_ENROLLED') {
+                statusMessage.textContent = data.message || 'You are not enrolled.';
+                statusTextClass = 'text-red-700 text-2xl font-bold';
+                statusIcon = 'error';
+                statusClass = 'text-red-700';
+                stopPolling();
+            } else if (data.status === 'ERROR') {
+                statusMessage.textContent = data.message || 'We hit a snag. Try again soon.';
+                statusTextClass = 'text-red-700 text-2xl font-bold';
+                statusIcon = 'error';
+                statusClass = 'text-red-700';
+            } else {
+                statusMessage.textContent = data.message || 'Hang tight - your teacher is loading the next challenge.';
+                statusIcon = 'hourglass_top';
+                statusClass = 'text-veritas-navy';
+            }
+
+            statusMessage.className = statusTextClass;
+            var iconEl = statusContainer.querySelector('.material-symbols-outlined');
+            if (iconEl) {
+                iconEl.textContent = statusIcon;
+                iconEl.className = 'material-symbols-outlined text-6xl mb-4 inline-block ' + statusClass;
+            }
+        }
+
+        function submitAnswer(pollId, questionIndex, answerText) {
+            console.log('=== SUBMIT ANSWER CALLED ===');
+            console.log('currentMetacognitionEnabled:', currentMetacognitionEnabled);
+            console.log('answerText:', answerText);
+
+            if (isInteractionBlocked) {
+                return;
+            }
+            if (hasAnsweredCurrent) {
+                return;
+            }
+
+            var buttons = optionsList.querySelectorAll('button');
+            for (var i = 0; i < buttons.length; i++) {
+                buttons[i].disabled = true;
+                if (buttons[i].dataset.answerText === answerText) {
+                    buttons[i].className = optionSelectedClass;
+                } else {
+                    buttons[i].className = optionDisabledClass;
+                }
+            }
+
+            // Check if metacognition is enabled for this question
+            if (currentMetacognitionEnabled) {
+                console.log('Metacognition is enabled - showing confidence question');
+                pendingAnswerText = answerText;
+                questionContainer.style.display = 'none';
+                showConfidenceQuestion(pollId, questionIndex);
+            } else {
+                console.log('Metacognition is NOT enabled - submitting answer directly');
+                hasAnsweredCurrent = true;
+                pendingSubmission = true;
+                statusContainer.style.display = 'block';
+                questionContainer.style.display = 'none';
+                submitAnswerToServer(pollId, questionIndex, answerText, null);
+            }
+        }
+
+        function showConfidenceQuestion(pollId, questionIndex) {
+            statusContainer.style.display = 'block';
+            questionContainer.style.display = 'none';
+
+            statusMessage.textContent = 'How confident are you in your answer?';
+            statusMessage.className = 'text-gray-800 text-xl font-semibold mb-4';
+
+            if (statusSubMessage) {
+                statusSubMessage.innerHTML = '<div class="confidence-selector mt-6 flex flex-col gap-3">' +
+                    '<button class="confidence-btn h-14 px-6 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-gray-900 border-2 border-red-500/40 hover:border-red-500/60 transition-all font-semibold text-lg" data-confidence="guessing">' +
+                    '<span class="mr-2">🤔</span> Guessing' +
+                    '</button>' +
+                    '<button class="confidence-btn h-14 px-6 rounded-xl bg-yellow-500/20 hover:bg-yellow-500/30 text-gray-900 border-2 border-yellow-500/40 hover:border-yellow-500/60 transition-all font-semibold text-lg" data-confidence="somewhat-sure">' +
+                    '<span class="mr-2">🤷</span> Somewhat Sure' +
+                    '</button>' +
+                    '<button class="confidence-btn h-14 px-6 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-gray-900 border-2 border-blue-500/40 hover:border-blue-500/60 transition-all font-semibold text-lg" data-confidence="very-sure">' +
+                    '<span class="mr-2">👍</span> Very Sure' +
+                    '</button>' +
+                    '<button class="confidence-btn h-14 px-6 rounded-xl bg-green-500/20 hover:bg-green-500/30 text-gray-900 border-2 border-green-500/40 hover:border-green-500/60 transition-all font-semibold text-lg" data-confidence="certain">' +
+                    '<span class="mr-2">💯</span> Absolutely Certain' +
+                    '</button>' +
+                    '</div>';
+                statusSubMessage.style.display = 'block';
+                statusSubMessage.className = 'text-gray-700 text-base mt-4';
+
+                var confidenceBtns = statusSubMessage.querySelectorAll('.confidence-btn');
+                for (var i = 0; i < confidenceBtns.length; i++) {
+                    confidenceBtns[i].addEventListener('click', function(event) {
+                        event.preventDefault();
+                        var confidence = this.dataset.confidence;
+                        submitAnswerWithConfidence(pollId, questionIndex, pendingAnswerText, confidence);
+                    });
+                }
+            }
+        }
+
+        if (secureBeginBtn) {
+            secureBeginBtn.addEventListener('click', handleSecureBeginClick);
+        }
+
+        if (secureAccessCodeInput) {
+            secureAccessCodeInput.addEventListener('input', function() {
+                setSecureAccessError('');
+            });
+        }
+
+        function submitAnswerWithConfidence(pollId, questionIndex, answerText, confidence) {
+            hasAnsweredCurrent = true;
+            pendingSubmission = true;
+            statusMessage.textContent = 'Transmitting your response...';
+            statusMessage.className = 'text-gray-900 text-2xl font-semibold';
+            if (statusSubMessage) {
+                statusSubMessage.innerHTML = '';
+                statusSubMessage.style.display = 'none';
+            }
+            submitAnswerToServer(pollId, questionIndex, answerText, confidence);
+        }
+
+        function submitAnswerToServer(pollId, questionIndex, answerText, confidence) {
+             // Live Poll
+            google.script.run
+                .withSuccessHandler(function(response) {
+                    if (!response.success) {
+                        hasAnsweredCurrent = false;
+                        pendingSubmission = false;
+                        pendingAnswerText = null;
+                        statusMessage.textContent = response.error || 'We hit a hiccup. Try again?';
+                        statusMessage.className = 'text-red-700 text-2xl font-semibold';
+                        if (statusSubMessage) {
+                            statusSubMessage.style.display = 'none';
+                            statusSubMessage.textContent = '';
+                        }
+                        setTimeout(function() {
+                            if (!isInteractionBlocked) {
+                                questionContainer.style.display = 'block';
+                                statusContainer.style.display = 'none';
+                                var buttons = optionsList.querySelectorAll('button');
+                                for (var i = 0; i < buttons.length; i++) {
+                                    buttons[i].disabled = false;
+                                    buttons[i].className = optionBaseClass;
+                                }
+                            }
+                        }, 2000);
+                    } else {
+                        pendingAnswerText = null;
+                        statusMessage.textContent = 'Answer received - nice work.';
+                        statusMessage.className = 'text-green-700 text-2xl font-semibold';
+                        if (statusSubMessage) {
+                            statusSubMessage.textContent = 'Your teacher will reveal the answer shortly...';
+                            statusSubMessage.style.display = 'block';
+                            statusSubMessage.className = 'text-gray-700 text-lg mt-4';
+                        }
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    hasAnsweredCurrent = false;
+                    pendingSubmission = false;
+                    pendingAnswerText = null;
+                    handleError(error);
+                })
+                .submitLivePollAnswer(pollId, questionIndex, answerText, SESSION_TOKEN, confidence);
+        }
+
+        function shuffle(array) {
+            var arr = array.slice();
+            for (var i = arr.length - 1; i > 0; i--) {
+                var j = Math.floor(Math.random() * (i + 1));
+                var temp = arr[i];
+                arr[i] = arr[j];
+                arr[j] = temp;
+            }
+            return arr;
+        }
+
+        function createOptionButton(option, letter, pollId, questionIndex) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = optionBaseClass;
+            btn.dataset.answerText = option.text || '';
+
+            var displayText = (option.text || '').trim();
+
+            var content = '';
+            if (option.imageURL) {
+                content += '<img src="' + escapeHtml(option.imageURL) + '" alt="Answer ' + letter + '" class="option-image" referrerpolicy="no-referrer">';
+            }
+            content += '<div class="option-leading">';
+            content += '<div class="letter-badge" aria-hidden="true">' + letter + '</div>';
+            content += '<div class="option-body">';
+            content += '<div class="option-text-wrapper">';
+            if (displayText) {
+                // Remove carriage returns and normalize line endings before converting to <br>
+                var cleanText = displayText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+                content += '<p class="option-text">' + escapeHtml(cleanText).replace(/\n/g, '<br>') + '</p>';
+            }
+            content += '<span class="result-ribbon"></span>';
+            content += '<span class="sr-only result-announcement"></span>';
+            content += '</div>';
+            content += '<span class="percentage-bubble"></span>';
+            content += '</div>';
+            content += '</div>';
+            content += '<span class="result-indicator" aria-hidden="true"></span>';
+            btn.innerHTML = content;
+            btn.addEventListener('click', function(event) {
+                if (event && event.target && event.target.closest('.option-image')) {
+                    return;
+                }
+                submitAnswer(pollId, questionIndex, option.text);
+            });
+
+            return btn;
+        }
+
+        function resetResultDecorations() {
+            if (questionContainer) {
+                questionContainer.classList.remove('results-stage');
+                questionContainer.classList.remove('showing-results');
+            }
+            if (questionSublineEl) {
+                questionSublineEl.classList.add('hidden');
+                questionSublineEl.textContent = '';
+            }
+            if (noResponsesMessageEl) {
+                noResponsesMessageEl.classList.add('hidden');
+                noResponsesMessageEl.textContent = '';
+            }
+            if (!optionsList) return;
+            var buttons = optionsList.querySelectorAll('button');
+            buttons.forEach(function(btn) {
+                btn.disabled = false;
+                btn.className = optionBaseClass;
+                btn.classList.remove('result-readonly', 'result-correct', 'result-incorrect', 'result-your-choice');
+                var ribbon = btn.querySelector('.result-ribbon');
+                if (ribbon) {
+                    ribbon.textContent = '';
+                    ribbon.classList.remove('is-visible');
+                }
+                var indicator = btn.querySelector('.result-indicator');
+                if (indicator) {
+                    indicator.textContent = '';
+                }
+                var srOnly = btn.querySelector('.result-announcement');
+                if (srOnly) {
+                    srOnly.textContent = '';
+                }
+            });
+        }
+
+        function ensureOptionsRenderedForResults(data) {
+            if (!optionsList) return;
+            if (optionsList.children.length > 0) {
+                return;
+            }
+
+            var baseOptions = currentOptionLayout.length > 0 ? currentOptionLayout : (data.options || []);
+            var letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+            optionsList.innerHTML = '';
+            currentOptionLayout = [];
+
+            baseOptions.forEach(function(option, index) {
+                var normalized = {
+                    text: option.text || option,
+                    imageURL: option.imageURL || option.imageUrl || ''
+                };
+                var letter = letters[index] || (index + 1).toString();
+                var btn = createOptionButton(normalized, letter, data.pollId, data.questionIndex);
+                btn.disabled = true;
+                btn.classList.add('result-readonly');
+                var listItem = document.createElement('li');
+                listItem.appendChild(btn);
+                optionsList.appendChild(listItem);
+                currentOptionLayout.push({
+                    text: normalized.text || '',
+                    imageURL: normalized.imageURL || ''
+                });
+            });
+        }
+
+        function decorateOptionsForResults(data) {
+            if (!optionsList) return;
+            var totalResponses = typeof data.totalResponses === 'number' ? data.totalResponses : 0;
+            var percentages = data.resultPercentages || {};
+            var buttons = optionsList.querySelectorAll('button');
+
+            buttons.forEach(function(btn) {
+                var answerText = btn.dataset.answerText || '';
+                btn.disabled = true;
+                btn.className = optionBaseClass + ' result-readonly';
+                btn.classList.remove('result-correct', 'result-incorrect', 'result-your-choice');
+
+                var ribbon = btn.querySelector('.result-ribbon');
+                if (ribbon) {
+                    ribbon.textContent = '';
+                    ribbon.classList.remove('is-visible');
+                }
+
+                var indicator = btn.querySelector('.result-indicator');
+                if (indicator) {
+                    indicator.textContent = '';
+                }
+
+                var srOnly = btn.querySelector('.result-announcement');
+                if (srOnly) {
+                    srOnly.textContent = '';
+                }
+
+                if (data.status !== 'RESULTS_REVEALED') {
+                    return;
+                }
+
+                var percentage = typeof percentages[answerText] === 'number' ? percentages[answerText] : 0;
+
+                // Update percentage bubble
+                var percentageBubble = btn.querySelector('.percentage-bubble');
+                if (percentageBubble) {
+                    if (totalResponses > 0) {
+                        percentageBubble.textContent = percentage + '%';
+                    } else {
+                        percentageBubble.textContent = '';
+                    }
+                }
+
+                var isCorrect = data.correctAnswer && answerText === data.correctAnswer;
+                var hasStudentAnswer = data.studentAnswer !== undefined && data.studentAnswer !== null && data.studentAnswer !== '';
+                var isStudentChoice = hasStudentAnswer && answerText === data.studentAnswer;
+                var studentIsCorrect = (data.studentIsCorrect === null || data.studentIsCorrect === undefined)
+                    ? null
+                    : !!data.studentIsCorrect;
+
+                if (isCorrect) {
+                    btn.classList.add('result-correct');
+                } else {
+                    btn.classList.add('result-incorrect');
+                }
+
+                if (isStudentChoice && (studentIsCorrect === false || !isCorrect)) {
+                    btn.classList.add('result-your-choice');
+                }
+
+                if (indicator) {
+                    if (isCorrect) {
+                        indicator.textContent = '✓';
+                    } else if (isStudentChoice && studentIsCorrect === false) {
+                        indicator.textContent = '✕';
+                    } else {
+                        indicator.textContent = '';
+                    }
+                }
+
+                if (srOnly) {
+                    var srParts = [];
+                    if (isCorrect) {
+                        srParts.push('Correct answer');
+                    }
+                    if (isStudentChoice) {
+                        srParts.push('Your selection');
+                    }
+                    if (totalResponses > 0) {
+                        srParts.push(percentage + '% of class selected this choice');
+                    } else {
+                        srParts.push('No responses recorded');
+                    }
+                    srOnly.textContent = srParts.join('. ') + '.';
+                }
+            });
+        }
+
+        function renderResultsStage(data) {
+            currentPollState = data;
+            var resetTimestamp = (data.metadata && data.metadata.resetAt) ? data.metadata.resetAt : '';
+            currentQuestionKey = data.pollId + ':' + data.questionIndex + ':' + resetTimestamp;
+            hasAnsweredCurrent = !!data.hasSubmitted;
+            questionContainer.style.display = 'block';
+            statusContainer.style.display = 'none';
+
+            var qNum = (data.questionIndex || 0) + 1;
+            var qTotal = data.totalQuestions || '?';
+            updateQuestionProgress(data.questionIndex, data.totalQuestions);
+            if (questionTextEl) {
+                questionTextEl.textContent = data.questionText || '';
+            }
+            var hasQuestionImage = !!data.questionImageURL;
+            if (questionImageEl) {
+                if (hasQuestionImage) {
+                    questionImageEl.src = data.questionImageURL;
+                    questionImageEl.style.display = 'block';
+                } else {
+                    questionImageEl.style.display = 'none';
+                }
+            }
+            if (questionLayout) {
+                questionLayout.classList.toggle('no-image', !hasQuestionImage);
+            }
+            if (questionVisual) {
+                questionVisual.style.display = hasQuestionImage ? 'flex' : 'none';
+            }
+
+            if (questionSublineEl) {
+                questionSublineEl.textContent = 'Shown after responses closed.';
+                questionSublineEl.classList.remove('hidden');
+            }
+
+            if (data.status === 'RESULTS_REVEALED' && noResponsesMessageEl) {
+                if ((data.totalResponses || 0) === 0) {
+                    noResponsesMessageEl.textContent = 'No responses recorded for this question.';
+                    noResponsesMessageEl.classList.remove('hidden');
+                } else {
+                    noResponsesMessageEl.classList.add('hidden');
+                    noResponsesMessageEl.textContent = '';
+                }
+            } else if (noResponsesMessageEl) {
+                noResponsesMessageEl.classList.add('hidden');
+                noResponsesMessageEl.textContent = '';
+            }
+
+            ensureOptionsRenderedForResults(data);
+
+            questionContainer.classList.add('results-stage');
+            questionContainer.classList.remove('showing-results');
+            if (data.status === 'RESULTS_REVEALED') {
+                requestAnimationFrame(function() {
+                    questionContainer.classList.add('showing-results');
+                });
+            }
+
+            decorateOptionsForResults(data);
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            var div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showStatusPanel(options) {
+            options = options || {};
+            hideConnectivityBanner();
+            hideSecureLobby();
+            if (studentContainer) studentContainer.style.display = 'block';
+            if (entryScreen) entryScreen.style.display = 'none';
+            if (questionContainer) questionContainer.style.display = 'none';
+            if (secureFocusContainer) secureFocusContainer.style.display = 'none';
+            if (studentLoader) studentLoader.style.display = 'none';
+            if (statusContainer) statusContainer.style.display = 'block';
+            if (statusMessage) {
+                statusMessage.textContent = options.message || '';
+                statusMessage.className = options.messageClass || 'text-white text-2xl font-semibold';
+            }
+            if (statusSubMessage) {
+                if (options.subtext) {
+                    statusSubMessage.style.display = 'block';
+                    statusSubMessage.textContent = options.subtext;
+                    statusSubMessage.className = options.subClass || 'text-white/70 text-base mt-4';
+                } else {
+                    statusSubMessage.style.display = 'none';
+                    statusSubMessage.textContent = '';
+                }
+            }
+            var iconEl = statusContainer ? statusContainer.querySelector('.material-symbols-outlined') : null;
+            if (iconEl) {
+                iconEl.textContent = options.icon || 'info';
+                iconEl.className = 'material-symbols-outlined text-6xl mb-4 inline-block ' + (options.iconClass || 'text-white');
+            }
+            if (resumeControls) {
+                resumeControls.style.display = options.showResume ? 'block' : 'none';
+            }
+            if (secureExitControls) {
+                if (options.showExitAction) {
+                    secureExitControls.classList.remove('hidden');
+                    if (secureExitDescription) {
+                        secureExitDescription.textContent = options.exitActionDescription || 'Click below to exit fullscreen and close the secure window.';
+                    }
+                    if (secureExitLabel) {
+                        secureExitLabel.textContent = options.exitActionLabel || 'Exit Secure Session';
+                    }
+                } else {
+                    secureExitControls.classList.add('hidden');
+                }
+            }
+            if (document && document.body) {
+                if (options.lockScroll) {
+                    document.body.classList.add('secure-overlay-active');
+                } else {
+                    document.body.classList.remove('secure-overlay-active');
+                }
+            }
+        }
+
+        function showLockedMessage(message, subMessage) {
+            console.log('Showing locked message');
+            stopPolling();
+            recoveringFromOutage = false;
+            var modeName = getModeNameLowerCase();
+            showStatusPanel({
+                icon: 'lock',
+                iconClass: 'text-veritas-navy',
+                message: message || 'Oops - you left fullscreen. Your ' + modeName + ' has been paused until your teacher lets you back in.',
+                messageClass: 'text-gray-900 text-xl font-semibold',
+                subtext: subMessage || '',
+                subClass: 'text-gray-700 text-base mt-4',
+                showResume: false,
+                lockScroll: true
+            });
+            isTeacherBlocked = false;
+        }
+
+        function showLockEnforcementUI(message, subtext) {
+            if (secureSessionActive) {
+                showSecureLockout(message, subtext);
+            } else {
+                showLockedMessage(message, subtext);
+            }
+        }
+
+        function showTeacherBlockedMessage() {
+            console.log('Showing teacher block message');
+            stopPolling();
+            isInteractionBlocked = true;
+            isTeacherBlocked = true;
+            showStatusPanel({
+                icon: 'block',
+                iconClass: 'text-veritas-navy',
+                message: 'Your teacher has paused responses for this question.',
+                messageClass: 'text-gray-900 text-xl font-semibold',
+                subtext: 'Stay in fullscreen and wait for your teacher to unblock you.',
+                subClass: 'text-gray-700 text-base mt-4',
+                showResume: false,
+                lockScroll: true
+            });
+        }
+
+        function showResumePrompt() {
+            console.log('Showing resume prompt');
+            stopPolling();
+            var modeName = getFullModeName();
+            var resumeLabel = document.getElementById('resume-session-label');
+            if (resumeLabel) {
+                resumeLabel.textContent = 'Resume ' + modeName;
+            }
+            showStatusPanel({
+                icon: 'fullscreen',
+                iconClass: 'text-veritas-navy',
+                message: 'You are cleared for re-entry. Go fullscreen to get back in.',
+                messageClass: 'text-gray-900 text-xl font-semibold',
+                showResume: true,
+                lockScroll: true
+            });
+        }
+
+        function handleError(error) {
+            console.error('Error:', error);
+
+            // Extract clean error message
+            var errorMsg = (error.message || error) || 'Unknown error';
+            var errorString = String(errorMsg);
+
+            // Remove "Error: " prefix if present to avoid duplication
+            if (typeof errorMsg === 'string' && errorMsg.indexOf('Error: ') === 0) {
+                errorMsg = errorMsg.substring(7);
+            }
+
+            // Handle generic network errors
+            if (errorString.includes('NetworkError') || errorString.includes('HTTP 0') || errorString.includes('Connection failure')) {
+                errorMsg = 'Network connection interrupted. Please check your internet connection and try again.';
+            }
+
+            showStatusPanel({
+                icon: 'error',
+                iconClass: 'text-veritas-navy',
+                message: 'An error occurred: ' + errorMsg,
+                messageClass: 'text-gray-900 text-2xl font-bold',
+                showResume: false,
+                lockScroll: false
+            });
+            if (resumeControls) resumeControls.style.display = 'none';
+        }
+    })();
+    </script>

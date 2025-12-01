@@ -10559,9 +10559,352 @@
 
   updateBulkControlsState();
 
+  // ===========================
+  // POLL WIZARD - GLOBAL STATE
+  // ===========================
+
+  var wizardState = {
+    currentStep: 1,
+    mode: null,
+    pollName: '',
+    className: '',
+    timeLimitMinutes: null,
+    accessCode: '',
+    availabilityStart: null,
+    availabilityEnd: null,
+    proctoringRules: [],
+    questions: [],
+    showResultsImmediately: false
+  };
+
+  var wizardQuestionIdCounter = 0;
+
+  // ===========================
+  // WIZARD LIFECYCLE
+  // ===========================
+
+  function openPollWizard() {
+    wizardState = {
+      currentStep: 1,
+      mode: null,
+      pollName: '',
+      className: '',
+      timeLimitMinutes: null,
+      accessCode: '',
+      availabilityStart: null,
+      availabilityEnd: null,
+      proctoringRules: ['FULLSCREEN_REQUIRED', 'DETECT_TAB_SWITCH'],
+      questions: [],
+      showResultsImmediately: false
+    };
+    wizardQuestionIdCounter = 0;
+
+    var modal = document.getElementById('poll-wizard-modal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      goToWizardStep(1);
+    }
+  }
+
+  function closePollWizard() {
+    var modal = document.getElementById('poll-wizard-modal');
+    if (modal) {
+      if (wizardState.pollName || wizardState.questions.length > 0) {
+        if (!confirm('You have unsaved changes. Are you sure you want to close?')) {
+          return;
+        }
+      }
+      modal.classList.add('hidden');
+    }
+  }
+
+  // ===========================
+  // STEP NAVIGATION
+  // ===========================
+
+  function goToWizardStep(stepNumber) {
+    if (stepNumber < 1 || stepNumber > 4) return;
+
+    for (var i = 1; i <= 4; i++) {
+      var step = document.getElementById('wizard-step-' + i);
+      var progressStep = document.querySelector('.progress-step[data-step="' + i + '"]');
+      if (step) step.classList.remove('active');
+      if (progressStep) {
+        progressStep.classList.remove('active');
+        if (i < stepNumber) {
+          progressStep.classList.add('completed');
+        } else {
+          progressStep.classList.remove('completed');
+        }
+      }
+    }
+
+    var targetStep = document.getElementById('wizard-step-' + stepNumber);
+    var targetProgressStep = document.querySelector('.progress-step[data-step="' + stepNumber + '"]');
+    if (targetStep) targetStep.classList.add('active');
+    if (targetProgressStep) targetProgressStep.classList.add('active');
+
+    wizardState.currentStep = stepNumber;
+    updateWizardFooter();
+
+    if (stepNumber === 4) {
+      renderReviewSummary();
+    }
+  }
+
+  function wizardGoNext() {
+    if (!validateWizardStep(wizardState.currentStep)) {
+      return;
+    }
+
+    saveWizardStepData(wizardState.currentStep);
+
+    if (wizardState.currentStep < 4) {
+      goToWizardStep(wizardState.currentStep + 1);
+    }
+  }
+
+  function wizardGoBack() {
+    if (wizardState.currentStep > 1) {
+      goToWizardStep(wizardState.currentStep - 1);
+    }
+  }
+
+  function updateWizardFooter() {
+    var backBtn = document.getElementById('wizard-back-btn');
+    var nextBtn = document.getElementById('wizard-next-btn');
+    var publishBtn = document.getElementById('wizard-publish-btn');
+
+    if (!backBtn || !nextBtn || !publishBtn) return;
+
+    backBtn.disabled = wizardState.currentStep === 1;
+
+    if (wizardState.currentStep === 4) {
+      nextBtn.classList.add('hidden');
+      publishBtn.classList.remove('hidden');
+    } else {
+      nextBtn.classList.remove('hidden');
+      publishBtn.classList.add('hidden');
+    }
+  }
+
+  // ===========================
+  // STEP 1: MODE SELECTION
+  // ===========================
+
+  function selectPollMode(mode) {
+    wizardState.mode = mode;
+
+    var cards = document.querySelectorAll('.mode-card');
+    cards.forEach(function(card) {
+      if (card.getAttribute('data-mode') === mode) {
+        card.classList.add('selected');
+      } else {
+        card.classList.remove('selected');
+      }
+    });
+
+    var nextBtn = document.getElementById('wizard-next-btn');
+    if (nextBtn) nextBtn.disabled = false;
+  }
+
+  // ===========================
+  // VALIDATION & DATA SAVE
+  // ===========================
+
+  function saveWizardStepData(stepNumber) {
+    if (stepNumber === 2) {
+      wizardState.pollName = document.getElementById('wizard-poll-name')?.value || '';
+      wizardState.className = document.getElementById('wizard-class-select')?.value || '';
+
+      if (wizardState.mode === 'secure') {
+        wizardState.timeLimitMinutes = parseInt(document.getElementById('wizard-time-limit')?.value) || null;
+        wizardState.accessCode = document.getElementById('wizard-access-code')?.value || '';
+      }
+    }
+  }
+
+  function validateWizardStep(stepNumber) {
+    if (stepNumber === 1) {
+      if (!wizardState.mode) {
+        alert('Please select a poll mode.');
+        return false;
+      }
+
+      var liveSection = document.getElementById('live-config-section');
+      var secureSection = document.getElementById('secure-config-section');
+      var modeLabel = document.getElementById('config-mode-label');
+
+      if (wizardState.mode === 'live') {
+        if (liveSection) liveSection.classList.remove('hidden');
+        if (secureSection) secureSection.classList.add('hidden');
+        if (modeLabel) modeLabel.textContent = 'Live Poll';
+      } else {
+        if (liveSection) liveSection.classList.add('hidden');
+        if (secureSection) secureSection.classList.remove('hidden');
+        if (modeLabel) modeLabel.textContent = 'Secure Assessment';
+      }
+
+      return true;
+    }
+
+    if (stepNumber === 2) {
+      var pollName = document.getElementById('wizard-poll-name')?.value.trim();
+      var className = document.getElementById('wizard-class-select')?.value;
+
+      if (!pollName) {
+        alert('Please enter a poll name.');
+        return false;
+      }
+
+      if (!className) {
+        alert('Please select a class.');
+        return false;
+      }
+
+      if (wizardState.mode === 'secure') {
+        var timeLimit = parseInt(document.getElementById('wizard-time-limit')?.value);
+        if (!timeLimit || timeLimit <= 0) {
+          alert('Time limit is required for Secure Assessments.');
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    if (stepNumber === 3) {
+      if (wizardState.questions.length === 0) {
+        alert('Please add at least one question.');
+        return false;
+      }
+      return true;
+    }
+
+    return true;
+  }
+
+  // ===========================
+  // STEP 3: QUESTIONS
+  // ===========================
+
+  function addWizardQuestion() {
+    var container = document.getElementById('wizard-questions-list');
+    if (!container) return;
+
+    wizardState.questions.push({
+      questionText: '',
+      options: ['', ''],
+      correctAnswer: null,
+      metacognitionEnabled: false
+    });
+
+    renderWizardQuestions();
+  }
+
+  function removeWizardQuestion(index) {
+    if (confirm('Are you sure you want to remove this question?')) {
+      wizardState.questions.splice(index, 1);
+      renderWizardQuestions();
+    }
+  }
+
+  function renderWizardQuestions() {
+    var container = document.getElementById('wizard-questions-list');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    wizardState.questions.forEach(function(q, index) {
+      var questionDiv = document.createElement('div');
+      questionDiv.className = 'question-card';
+      questionDiv.innerHTML = '<div class="question-card-header">' +
+        '<span class="question-number">Question ' + (index + 1) + '</span>' +
+        '<button type="button" class="btn-icon-danger" onclick="removeWizardQuestion(' + index + ')">' +
+        '<span class="material-symbols-outlined">delete</span></button></div>' +
+        '<div class="question-card-body">' +
+        '<div class="form-group">' +
+        '<label class="form-label required">Question Text</label>' +
+        '<textarea class="form-textarea" rows="3" placeholder="Enter your question" data-q-index="' + index + '"></textarea>' +
+        '</div></div>';
+
+      container.appendChild(questionDiv);
+
+      var textarea = questionDiv.querySelector('textarea');
+      if (textarea) {
+        textarea.value = q.questionText || '';
+        textarea.addEventListener('input', function() {
+          wizardState.questions[index].questionText = this.value;
+        });
+      }
+    });
+  }
+
+  // ===========================
+  // STEP 4: REVIEW
+  // ===========================
+
+  function renderReviewSummary() {
+    document.getElementById('review-mode').textContent = wizardState.mode === 'live' ? 'Live Poll' : 'Secure Assessment';
+    document.getElementById('review-name').textContent = wizardState.pollName || '(Not set)';
+  }
+
+  function publishWizardPoll() {
+    var payload = {
+      pollName: wizardState.pollName,
+      className: wizardState.className,
+      sessionType: wizardState.mode === 'secure' ? 'individual-timed' : 'live',
+      questions: wizardState.questions,
+      showResultsImmediately: wizardState.showResultsImmediately
+    };
+
+    if (wizardState.mode === 'secure') {
+      payload.timeLimitMinutes = wizardState.timeLimitMinutes;
+      payload.accessCode = wizardState.accessCode;
+    }
+
+    var publishBtn = document.getElementById('wizard-publish-btn');
+    if (publishBtn) {
+      publishBtn.disabled = true;
+      publishBtn.innerHTML = '<span class="material-symbols-outlined">hourglass_empty</span> Publishing...';
+    }
+
+    google.script.run
+      .withSuccessHandler(function(response) {
+        if (response && response.success) {
+          alert('Poll published successfully!');
+          closePollWizard();
+          location.reload();
+        } else {
+          alert('Failed to publish: ' + (response.error || 'Unknown error'));
+          if (publishBtn) {
+            publishBtn.disabled = false;
+            publishBtn.innerHTML = '<span class="material-symbols-outlined">publish</span> Publish';
+          }
+        }
+      })
+      .withFailureHandler(function(error) {
+        alert('Error: ' + error);
+        if (publishBtn) {
+          publishBtn.disabled = false;
+          publishBtn.innerHTML = '<span class="material-symbols-outlined">publish</span> Publish';
+        }
+      })
+      .createNewPoll(payload);
+  }
+
   // Expose functions used by inline HTML handlers
   window.showDashboard = showDashboard;
   window.openPollCreator = openPollCreator;
+  window.openPollWizard = openPollWizard;
+  window.closePollWizard = closePollWizard;
+  window.selectPollMode = selectPollMode;
+  window.wizardGoNext = wizardGoNext;
+  window.wizardGoBack = wizardGoBack;
+  window.goToWizardStep = goToWizardStep;
+  window.addWizardQuestion = addWizardQuestion;
+  window.removeWizardQuestion = removeWizardQuestion;
+  window.publishWizardPoll = publishWizardPoll;
   window.filterStudentsByFlag = filterStudentsByFlag;
   window.clearStudentFilter = clearStudentFilter;
   window.sortStudentsBy = sortStudentsBy;

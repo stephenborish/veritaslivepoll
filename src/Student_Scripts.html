@@ -93,8 +93,11 @@
             if (!questionProgressEl) return;
             var parsedIndex = typeof currentIndex === 'number' ? currentIndex : parseInt(currentIndex, 10);
             var parsedTotal = typeof totalQuestions === 'number' ? totalQuestions : parseInt(totalQuestions, 10);
+
+            // Fix: Handle '?' and ensure 1-based indexing
             var safeIndex = isNaN(parsedIndex) ? 0 : Math.max(0, parsedIndex);
-            var safeTotal = isNaN(parsedTotal) ? '?' : Math.max(1, parsedTotal);
+            var safeTotal = isNaN(parsedTotal) || parsedTotal <= 0 ? '?' : Math.max(1, parsedTotal);
+
             questionProgressEl.textContent = 'QUESTION ' + (safeIndex + 1) + ' OF ' + safeTotal;
         }
 
@@ -369,7 +372,9 @@
                         // If server says non-current question, resync immediately
                         var errorMessage = (response && response.error) || 'Failed to submit answer.';
                         if (/non-current question/i.test(errorMessage)) {
+                            console.warn('Sync mismatch detected (non-current question). Force resyncing state.');
                             pollForIndividualSessionState();
+                            return; // Skip handleError to avoid alerting user during auto-recovery
                         }
                         handleError(errorMessage);
                     }
@@ -1790,7 +1795,11 @@
 
         function updateStudentView(data) {
             data = data || {};
+
+            // Fix: UI Overlap - Ensure proper container visibility
             if (studentLoader) studentLoader.style.display = 'none';
+
+            // If data indicates a secure session, delegate and return early
             if (data.sessionType === 'INDIVIDUAL_TIMED' || data.sessionType === 'SECURE_ASSESSMENT') {
                 if (!secureSessionActive) {
                     secureSessionActive = true;
@@ -1799,12 +1808,26 @@
                 setSecureChromeState(true);
                 return;
             }
+
+            // Otherwise, we are in a normal Live Poll or standard state.
+            // Explicitly hide secure lobby and entry screen to prevent overlap.
+            if (entryScreen) entryScreen.style.display = 'none';
+            if (studentContainer) studentContainer.style.display = 'block';
+            hideSecureLobby();
+            if (secureFocusContainer) secureFocusContainer.style.display = 'none';
+
             if (secureSessionActive) {
                 secureSessionActive = false;
                 secureSessionHeartbeat.stop();
                 setSecureConnectionIndicatorVisible(false);
                 setSecureChromeState(false);
             }
+
+            // Ensure proctoring listeners are attached for live polls too
+            if (data.status === 'LIVE' || data.status === 'OPEN') {
+                attachProctorVisibilityListeners();
+            }
+
             console.log('Status update:', data.status);
 
             // Only clear any existing status submessage content when

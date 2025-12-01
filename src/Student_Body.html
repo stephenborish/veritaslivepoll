@@ -208,6 +208,27 @@
           <div class="answer-area">
             <ul id="secure-options-list" class="student-choices"></ul>
           </div>
+
+          <!-- Metacognition Confidence Selector -->
+          <div id="secure-confidence-prompt" class="secure-confidence-prompt hidden" style="display: none;">
+            <div class="confidence-wrapper">
+              <h3 class="confidence-title">How confident are you in your answer?</h3>
+              <div class="confidence-buttons">
+                <button type="button" class="confidence-btn confidence-guessing" data-confidence="guessing">
+                  <span class="confidence-emoji">🤔</span>
+                  <span class="confidence-label">Guessing</span>
+                </button>
+                <button type="button" class="confidence-btn confidence-somewhat" data-confidence="somewhat-sure">
+                  <span class="confidence-emoji">🤷</span>
+                  <span class="confidence-label">Somewhat Sure</span>
+                </button>
+                <button type="button" class="confidence-btn confidence-very" data-confidence="very-sure">
+                  <span class="confidence-emoji">✅</span>
+                  <span class="confidence-label">Very Sure</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="secure-session-footer">
           <button id="secure-submit-btn" class="secure-submit-btn" type="button">

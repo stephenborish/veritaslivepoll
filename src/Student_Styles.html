@@ -1461,6 +1461,119 @@
     .waiting-dots .dot:nth-child(1) { animation-delay: 0s; }
     .waiting-dots .dot:nth-child(2) { animation-delay: 0.2s; }
     .waiting-dots .dot:nth-child(3) { animation-delay: 0.4s; }
+
+    /* =========================
+       METACOGNITION CONFIDENCE
+       ========================= */
+
+    .secure-confidence-prompt {
+      padding: 2rem;
+      background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+      border-radius: 12px;
+      margin-top: 1.5rem;
+      animation: fadeInUp 0.3s ease-out;
+    }
+
+    .confidence-wrapper {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .confidence-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1f2937;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .confidence-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .confidence-btn {
+      flex: 1;
+      min-width: 140px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1.25rem 1rem;
+      border: 2px solid transparent;
+      border-radius: 10px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .confidence-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .confidence-guessing {
+      border-color: #ef4444;
+    }
+
+    .confidence-guessing:hover {
+      background: #fef2f2;
+      border-color: #dc2626;
+    }
+
+    .confidence-somewhat {
+      border-color: #f59e0b;
+    }
+
+    .confidence-somewhat:hover {
+      background: #fffbeb;
+      border-color: #d97706;
+    }
+
+    .confidence-very {
+      border-color: #10b981;
+    }
+
+    .confidence-very:hover {
+      background: #f0fdf4;
+      border-color: #059669;
+    }
+
+    .confidence-emoji {
+      font-size: 2rem;
+      line-height: 1;
+    }
+
+    .confidence-label {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Mobile responsiveness for confidence buttons */
+    @media (max-width: 640px) {
+      .confidence-buttons {
+        flex-direction: column;
+      }
+
+      .confidence-btn {
+        min-width: 100%;
+      }
+    }
 </style>
 </head>
 <body class="font-display bg-white text-black min-h-screen">

@@ -22,6 +22,7 @@
         var secureSubmitBtn = document.getElementById('secure-submit-btn');
         var secureSubmitLabel = document.getElementById('secure-submit-label');
         var secureSubmitHint = document.getElementById('secure-submit-hint');
+        var secureConfidencePrompt = document.getElementById('secure-confidence-prompt');
         var timerHidden = false;
         var lastTimerDisplay = '00:00';
         var secureCountdownTotal = 0;
@@ -190,6 +191,9 @@
             secureCurrentQuestionKey = nextQuestionKey;
             if (isNewQuestion) {
                 secureSelectedOptionIndex = null;
+                securePendingAnswerText = null;
+                secureMetacognitionEnabled = false;
+                hideSecureConfidencePrompt();
             }
             secureSubmitting = false;
             secureTimeExpired = false;
@@ -345,6 +349,20 @@
 
         function submitIndividualAnswer(state, answerText) {
             if (!state || secureSubmitting) return;
+
+            // Check if metacognition is enabled for this question
+            if (secureMetacognitionEnabled) {
+                console.log('Metacognition enabled - showing confidence prompt');
+                showSecureConfidencePrompt(answerText);
+                return; // Don't submit yet, wait for confidence selection
+            }
+
+            // No metacognition, submit directly
+            submitIndividualAnswerWithConfidence(state, answerText, null);
+        }
+
+        function submitIndividualAnswerWithConfidence(state, answerText, confidenceLevel) {
+            if (!state || secureSubmitting) return;
             setSecureSubmitLoading(true);
             disableSecureOptions(true);
             var answerDetails = {
@@ -352,12 +370,13 @@
                 sessionId: state.sessionId,
                 actualQuestionIndex: state.actualQuestionIndex,
                 answer: answerText || '',
-                confidenceLevel: null
+                confidenceLevel: confidenceLevel
             };
             google.script.run
                 .withSuccessHandler(function(response) {
                     setSecureSubmitLoading(false);
                     disableSecureOptions(false);
+                    hideSecureConfidencePrompt(); // Ensure hidden on success
                     if (response && response.success) {
                         // Clear current question state immediately to prevent re-display
                         var previousQuestionKey = secureCurrentQuestionKey;
@@ -390,6 +409,7 @@
                 .withFailureHandler(function(error) {
                     setSecureSubmitLoading(false);
                     disableSecureOptions(false);
+                    hideSecureConfidencePrompt(); // Ensure hidden on error
                     handleError(error);
                 })
                 .submitIndividualTimedAnswer(
@@ -448,6 +468,57 @@
             showSecureOverlay('TIME_UP', "Time's up!", 'Hold tight while we finalize your work.');
             autoSubmitSecureAnswer(false);
             scheduleSecureWindowClose(4000);
+        }
+
+        function showSecureConfidencePrompt(answerText) {
+            if (!secureConfidencePrompt) return;
+
+            securePendingAnswerText = answerText;
+
+            // Hide question content, show confidence prompt
+            if (secureQuestionText) secureQuestionText.style.display = 'none';
+            if (secureQuestionImage) secureQuestionImage.style.display = 'none';
+            if (secureOptionsList) secureOptionsList.style.display = 'none';
+            if (secureSubmitBtn) secureSubmitBtn.style.display = 'none';
+
+            secureConfidencePrompt.style.display = 'block';
+            secureConfidencePrompt.classList.remove('hidden');
+
+            // Attach confidence button handlers
+            var confidenceBtns = secureConfidencePrompt.querySelectorAll('.confidence-btn');
+            confidenceBtns.forEach(function(btn) {
+                btn.onclick = function() {
+                    var confidenceLevel = btn.getAttribute('data-confidence');
+                    handleSecureConfidenceSelection(confidenceLevel);
+                };
+            });
+        }
+
+        function hideSecureConfidencePrompt() {
+            if (!secureConfidencePrompt) return;
+            secureConfidencePrompt.style.display = 'none';
+            secureConfidencePrompt.classList.add('hidden');
+
+            // Restore question display
+            if (secureQuestionText) secureQuestionText.style.display = 'block';
+            if (secureOptionsList) secureOptionsList.style.display = 'block';
+            if (secureSubmitBtn) secureSubmitBtn.style.display = 'block';
+        }
+
+        function handleSecureConfidenceSelection(confidenceLevel) {
+            if (!securePendingAnswerText || !secureQuestionState) return;
+
+            hideSecureConfidencePrompt();
+
+            // Submit answer with confidence
+            submitIndividualAnswerWithConfidence(
+                secureQuestionState,
+                securePendingAnswerText,
+                confidenceLevel
+            );
+
+            // Clear pending state
+            securePendingAnswerText = null;
         }
 
         function autoSubmitSecureAnswer(forceBlank) {

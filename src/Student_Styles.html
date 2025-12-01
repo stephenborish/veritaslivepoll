@@ -536,6 +536,9 @@
       flex: 1;
       max-width: 100%;
       overflow-x: hidden;
+      /* Fix: Answer Choices Layout Collapse */
+      min-height: 0;
+      padding-bottom: 24px;
     }
 
     .secure-question-pane,
@@ -562,6 +565,11 @@
       align-items: center;
       gap: 12px;
       z-index: 55;
+    }
+
+    /* Fix: Ensure page shell has enough padding so footer doesn't cover content */
+    body.secure-mode-active .page-shell {
+      padding-bottom: 120px !important;
     }
 
     @media (max-width: 1023px) {

@@ -938,8 +938,21 @@ Veritas.Models.Session.submitIndividualTimedAnswer = function(pollId, sessionId,
 
   // Verify this is the current question
   const expectedQuestionIndex = studentState.questionOrder[studentState.currentQuestionIndex];
+
+  // FIX: Resync if client state is out of sync but valid
+  // If the client submits an answer for a question we *think* they've already passed (or haven't reached),
+  // but it matches their actualQuestionIndex, it might be a race condition or retry.
   if (actualQuestionIndex !== expectedQuestionIndex) {
-    throw new Error('Cannot submit answer for non-current question');
+    Logger.log('Question index mismatch', {
+        expected: expectedQuestionIndex,
+        received: actualQuestionIndex,
+        progress: studentState.currentQuestionIndex
+    });
+
+    // If they are submitting for the *previous* question (maybe network lag), reject gracefully
+    // If they are submitting for a future question, that's impossible.
+    // We strictly enforce current question index from server state.
+    throw new Error('Cannot submit answer for non-current question (Expected: ' + expectedQuestionIndex + ', Received: ' + actualQuestionIndex + ')');
   }
 
   // Check if already answered

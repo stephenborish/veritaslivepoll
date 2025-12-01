@@ -347,17 +347,18 @@
             });
         }
 
-        function submitIndividualAnswer(state, answerText) {
+        function submitIndividualAnswer(state, answerText, isAutoSubmit) {
             if (!state || secureSubmitting) return;
 
             // Check if metacognition is enabled for this question
-            if (secureMetacognitionEnabled) {
+            // Auto-submits (timeout, forced submission) bypass the confidence prompt
+            if (secureMetacognitionEnabled && !isAutoSubmit) {
                 console.log('Metacognition enabled - showing confidence prompt');
                 showSecureConfidencePrompt(answerText);
                 return; // Don't submit yet, wait for confidence selection
             }
 
-            // No metacognition, submit directly
+            // No metacognition or auto-submit, submit directly with null confidence
             submitIndividualAnswerWithConfidence(state, answerText, null);
         }
 
@@ -506,7 +507,8 @@
         }
 
         function handleSecureConfidenceSelection(confidenceLevel) {
-            if (!securePendingAnswerText || !secureQuestionState) return;
+            // Allow empty strings (blank answers), only reject null/undefined
+            if (securePendingAnswerText == null || !secureQuestionState) return;
 
             hideSecureConfidencePrompt();
 
@@ -530,7 +532,8 @@
                     answerText = option.text;
                 }
             }
-            submitIndividualAnswer(secureQuestionState, answerText);
+            // Pass true for isAutoSubmit to bypass confidence prompt on timeout
+            submitIndividualAnswer(secureQuestionState, answerText, true);
         }
 
         function attemptSecureWindowClose() {

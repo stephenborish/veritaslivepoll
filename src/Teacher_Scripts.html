@@ -1911,12 +1911,6 @@
   var sessionToggleButtons=document.querySelectorAll('.builder-session-toggle');
   var secureSettingsPanel=document.getElementById('secure-assessment-settings');
   var secureSessionMeta=document.getElementById('secure-session-meta');
-  var secureSessionTimeRow=document.getElementById('secure-session-time');
-  var secureSessionTimeText=document.getElementById('secure-session-time-text');
-  var secureSessionAccessRow=document.getElementById('secure-session-access');
-  var secureSessionAccessValue=document.getElementById('secure-session-access-value');
-  var secureSessionWindowRow=document.getElementById('secure-session-window');
-  var secureSessionWindowText=document.getElementById('secure-session-window-text');
   var secureTimeLimitInput=document.getElementById('secure-time-limit-input');
   var secureAccessCodeInput=document.getElementById('secure-access-code-input');
   var secureAvailableInput=document.getElementById('secure-available-input');
@@ -2375,6 +2369,10 @@
     var individualTimedView = document.getElementById('individual-timed-view');
     if (individualTimedView) {
       individualTimedView.style.display = section === 'individual-timed' ? 'block' : 'none';
+    }
+    var createPollView = document.getElementById('create-poll-view');
+    if (createPollView) {
+      createPollView.style.display = section === 'create-poll' ? 'flex' : 'none';
     }
 
     var navButtons=document.querySelectorAll('.sidebar-nav-btn[data-section-target]');
@@ -3585,41 +3583,37 @@
     secureSessionMeta.classList.remove('hidden');
     secureSessionMeta.setAttribute('aria-hidden','false');
 
-    var timeLabel=describeSecureTimeLimit(selectedPoll);
-    if(secureSessionTimeRow){
-      if(timeLabel){
-        secureSessionTimeRow.classList.remove('hidden');
-        if(secureSessionTimeText){
-          secureSessionTimeText.textContent=timeLabel;
-        }
-      }else{
-        secureSessionTimeRow.classList.add('hidden');
-      }
+    // Build inline metadata elements
+    var metaItems = [];
+
+    // Time limit
+    var timeLabel = describeSecureTimeLimit(selectedPoll);
+    if (timeLabel) {
+      metaItems.push('<span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-sm opacity-80">timer</span><span>' + escapeHtml(timeLabel) + '</span></span>');
     }
 
-    if(secureSessionAccessRow&&secureSessionAccessValue){
-      secureSessionAccessRow.classList.remove('hidden');
-      var accessCode=getSecureAccessCode(selectedPoll);
-      if(accessCode){
-        secureSessionAccessValue.textContent=accessCode;
-        secureSessionAccessValue.classList.remove('text-brand-white/70');
-      }else{
-        secureSessionAccessValue.textContent='Not required';
-        secureSessionAccessValue.classList.add('text-brand-white/70');
-      }
+    // Access code
+    var accessCode = getSecureAccessCode(selectedPoll);
+    if (accessCode) {
+      metaItems.push('<span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-sm opacity-80">key</span><span>Code: <span class="font-semibold tracking-widest">' + escapeHtml(accessCode) + '</span></span></span>');
+    } else {
+      metaItems.push('<span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-sm opacity-80">key</span><span class="opacity-70">No access code</span></span>');
     }
 
-    var windowLabel=describeSecureAvailability(selectedPoll);
-    if(secureSessionWindowRow){
-      if(windowLabel){
-        secureSessionWindowRow.classList.remove('hidden');
-        if(secureSessionWindowText){
-          secureSessionWindowText.textContent=windowLabel;
-        }
-      }else{
-        secureSessionWindowRow.classList.add('hidden');
-      }
+    // Availability window
+    var windowLabel = describeSecureAvailability(selectedPoll);
+    if (windowLabel) {
+      metaItems.push('<span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-sm opacity-80">calendar_month</span><span>' + escapeHtml(windowLabel) + '</span></span>');
     }
+
+    // Join with separators
+    secureSessionMeta.innerHTML = metaItems.join('<span class="opacity-50">|</span>');
+  }
+
+  function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
   }
 
   // --- Roster Management ---
@@ -10617,25 +10611,19 @@
       });
     }
 
-    var modal = document.getElementById('poll-wizard-modal');
-    if (modal) {
-      modal.classList.remove('hidden');
-      modal.style.display = 'flex';
-      goToWizardStep(1);
-    }
+    // Switch to create-poll-view (hide other views)
+    setMainSection('create-poll');
+    goToWizardStep(1);
   }
 
   function closePollWizard() {
-    var modal = document.getElementById('poll-wizard-modal');
-    if (modal) {
-      if (wizardState.pollName || wizardState.questions.length > 0) {
-        if (!confirm('You have unsaved changes. Are you sure you want to close?')) {
-          return;
-        }
+    if (wizardState.pollName || wizardState.questions.length > 0) {
+      if (!confirm('You have unsaved changes. Are you sure you want to close?')) {
+        return;
       }
-      modal.classList.add('hidden');
-      modal.style.display = 'none';
     }
+    // Return to dashboard
+    setMainSection('dashboard');
   }
 
   // ===========================

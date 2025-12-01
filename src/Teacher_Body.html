@@ -42,22 +42,8 @@
               <span>View Links</span>
             </button>
           </div>
-          <div id="secure-session-meta" class="hidden rounded-xl border border-brand-white/30 bg-brand-white/5 px-3 py-2 text-xs text-brand-white/90 leading-snug" aria-live="polite" aria-hidden="true">
-            <div id="secure-session-time" class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-sm opacity-80">timer</span>
-              <span id="secure-session-time-text"></span>
-            </div>
-            <div id="secure-session-access" class="mt-1 flex items-center gap-2">
-              <span class="material-symbols-outlined text-sm opacity-80">key</span>
-              <div class="flex items-center gap-1">
-                <span>Access Code:</span>
-                <span id="secure-session-access-value" class="font-semibold tracking-widest"></span>
-              </div>
-            </div>
-            <div id="secure-session-window" class="mt-1 flex items-center gap-2">
-              <span class="material-symbols-outlined text-sm opacity-80">calendar_month</span>
-              <span id="secure-session-window-text"></span>
-            </div>
+          <div id="secure-session-meta" class="hidden flex flex-row items-center gap-6 text-xs text-brand-white/90 bg-white/10 rounded-lg px-3 py-1.5 border border-white/20" aria-live="polite" aria-hidden="true">
+            <!-- Content dynamically populated by updateSecureSessionMeta() -->
           </div>
         </div>
       </div>
@@ -1533,9 +1519,9 @@
     </div>
   </div>
 
-  <!-- Poll Creation Wizard Modal -->
-  <div id="poll-wizard-modal" class="modal-overlay hidden" role="dialog" aria-labelledby="wizard-title" aria-modal="true" style="position: fixed; inset: 0; z-index: 9999; display: none; align-items: center; justify-center; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
-    <div class="modal-content-wizard">
+  <!-- Poll Creation Wizard View -->
+  <div id="create-poll-view" class="p-6 hidden h-full flex flex-col">
+    <div class="max-w-5xl mx-auto w-full flex-1 flex flex-col">
       <div class="wizard-header">
         <h2 id="wizard-title" class="wizard-main-title">Create New Poll</h2>
         <button type="button" class="modal-close-btn" onclick="closePollWizard()" aria-label="Close wizard">

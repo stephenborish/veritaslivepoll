@@ -10599,9 +10599,28 @@
     };
     wizardQuestionIdCounter = 0;
 
+    // Populate class dropdown from ALL_CLASSES
+    var classSelect = document.getElementById('wizard-class-select');
+    if (classSelect) {
+      classSelect.innerHTML = '<option value="">-- Select a class --</option>';
+
+      if (!window.ALL_CLASSES || window.ALL_CLASSES.length === 0) {
+        alert('Please wait for the dashboard to finish loading before creating a poll.');
+        return;
+      }
+
+      window.ALL_CLASSES.forEach(function(cls) {
+        var option = document.createElement('option');
+        option.value = cls.className;
+        option.textContent = cls.className;
+        classSelect.appendChild(option);
+      });
+    }
+
     var modal = document.getElementById('poll-wizard-modal');
     if (modal) {
       modal.classList.remove('hidden');
+      modal.style.display = 'flex';
       goToWizardStep(1);
     }
   }
@@ -10615,6 +10634,7 @@
         }
       }
       modal.classList.add('hidden');
+      modal.style.display = 'none';
     }
   }
 

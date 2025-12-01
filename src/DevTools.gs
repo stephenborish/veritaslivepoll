@@ -467,8 +467,8 @@ function buildWorkflowMockEnvironment_() {
       syncSessionToLiveStatus_();
       return { pollId: pollId, sessionPhase: 'ENDED' };
     },
-    getIndividualTimedSessionState: function(pollId) {
-      return { pollId: pollId, sessionPhase: sessionState.phase };
+    getIndividualTimedSessionState: function() {
+      return { pollId: sessionState.pollId, sessionPhase: sessionState.phase };
     },
     getIndividualTimedSessionTeacherView: function(pollId) {
       return { pollId: pollId, students: [] };
@@ -485,8 +485,8 @@ function buildWorkflowMockEnvironment_() {
     getStudentProctorState: function() {
       return { status: 'READY', version: mockStateVersionManager.version };
     },
-    submitIndividualTimedAnswer: function(pollId, questionIndex, answerText, token, confidenceLevel) {
-      return Veritas.StudentApi.submitLivePollAnswer(pollId, questionIndex, answerText, token, confidenceLevel);
+    submitIndividualTimedAnswer: function(pollId, sessionId, questionIndex, answerText, token, confidenceLevel) {
+      return Veritas.StudentApi.submitIndividualTimedAnswer(pollId, sessionId, questionIndex, answerText, token, confidenceLevel);
     }
   };
 

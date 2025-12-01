@@ -575,7 +575,7 @@ Veritas.Utils.TokenManager = {
     }
 
     try {
-      var email = Session.getActiveUser().getEmail();
+      var email = Veritas.Dev.getCurrentUser();
       if (email && email !== '') return email;
     } catch (e) {
       Veritas.Logging.info('No active user session');

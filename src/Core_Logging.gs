@@ -22,7 +22,7 @@ Veritas.Logging.info = function(message, data) {
       level: 'INFO',
       message: message,
       data: data,
-      user: Session.getActiveUser().getEmail() || 'anonymous'
+      user: Veritas.Dev.getCurrentUser() || 'anonymous'
     }));
   } catch (err) {
     // Fallback if JSON serialization fails
@@ -43,7 +43,7 @@ Veritas.Logging.warn = function(message, data) {
       level: 'WARN',
       message: message,
       data: data,
-      user: Session.getActiveUser().getEmail() || 'anonymous'
+      user: Veritas.Dev.getCurrentUser() || 'anonymous'
     }));
   } catch (err) {
     console.warn(message, data);
@@ -63,7 +63,7 @@ Veritas.Logging.error = function(message, error) {
       message: message,
       error: error ? error.toString() : '',
       stack: error && error.stack ? error.stack : '',
-      user: Session.getActiveUser().getEmail() || 'anonymous'
+      user: Veritas.Dev.getCurrentUser() || 'anonymous'
     }));
   } catch (err) {
     console.error(message, error);

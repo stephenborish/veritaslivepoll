@@ -20,7 +20,7 @@ Veritas.TeacherApi = Veritas.TeacherApi || {};
  * @returns {string} Teacher email
  */
 Veritas.TeacherApi.assertTeacher = function() {
-  var userEmail = (Session.getActiveUser().getEmail() || '').trim();
+  var userEmail = (Veritas.Dev.getCurrentUser() || '').trim();
   if (!Veritas.Routing.isTeacherEmail(userEmail)) {
     throw new Error('Unauthorized: Teacher access required');
   }
@@ -690,121 +690,130 @@ Veritas.TeacherApi.endIndividualTimedSession = function(pollId) {
 };
 
 /**
- * Get individual timed session state
+ * Get individual timed session state (teacher view wrapper)
  * @param {string} pollId - Poll ID
- * @returns {Object} Session state
+ * @param {string} sessionId - Session ID
+ * @returns {Object} Session state with roster/proctor data
  */
-Veritas.TeacherApi.getIndividualTimedSessionState = function(pollId) {
+Veritas.TeacherApi.getIndividualTimedSessionState = function(pollId, sessionId) {
   return withErrorHandling(function() {
     Veritas.TeacherApi.assertTeacher();
 
     // Delegate to Models layer
-    return Veritas.Models.Session.getIndividualTimedSessionState(pollId);
+    return Veritas.Models.Session.getIndividualTimedSessionTeacherView(pollId, sessionId);
   })();
 };
 
 /**
  * Get teacher view for individual timed session
  * @param {string} pollId - Poll ID
+ * @param {string} sessionId - Session ID
  * @returns {Object} Teacher view data with proctoring info
  */
-Veritas.TeacherApi.getIndividualTimedSessionTeacherView = function(pollId) {
+Veritas.TeacherApi.getIndividualTimedSessionTeacherView = function(pollId, sessionId) {
   return withErrorHandling(function() {
     Veritas.TeacherApi.assertTeacher();
 
     // Delegate to Models layer
-    return Veritas.Models.Session.getIndividualTimedSessionTeacherView(pollId);
+    return Veritas.Models.Session.getIndividualTimedSessionTeacherView(pollId, sessionId);
   })();
 };
 
 /**
  * Adjust time for a student
  * @param {string} pollId - Poll ID
+ * @param {string} sessionId - Session ID
  * @param {string} studentEmail - Student email
  * @param {number} adjustmentMinutes - Time adjustment in minutes
  * @returns {Object} Result
  */
-Veritas.TeacherApi.adjustSecureAssessmentTime = function(pollId, studentEmail, adjustmentMinutes) {
+Veritas.TeacherApi.adjustSecureAssessmentTime = function(pollId, sessionId, studentEmail, adjustmentMinutes) {
   return withErrorHandling(function() {
     Veritas.TeacherApi.assertTeacher();
 
     // Delegate to Models layer
-    return Veritas.Models.Session.adjustSecureAssessmentTime(pollId, studentEmail, adjustmentMinutes);
+    return Veritas.Models.Session.adjustSecureAssessmentTime(pollId, sessionId, studentEmail, adjustmentMinutes);
   })();
 };
 
 /**
  * Adjust time for multiple students
  * @param {string} pollId - Poll ID
- * @param {Array} adjustments - Array of {studentEmail, adjustmentMinutes}
+ * @param {string} sessionId - Session ID
+ * @param {Array} studentEmails - Array of student emails
+ * @param {number} adjustmentMinutes - Minutes to add
  * @returns {Object} Result with counts
  */
-Veritas.TeacherApi.adjustSecureAssessmentTimeBulk = function(pollId, adjustments) {
+Veritas.TeacherApi.adjustSecureAssessmentTimeBulk = function(pollId, sessionId, studentEmails, adjustmentMinutes) {
   return withErrorHandling(function() {
     Veritas.TeacherApi.assertTeacher();
 
     // Delegate to Models layer
-    return Veritas.Models.Session.adjustSecureAssessmentTimeBulk(pollId, adjustments);
+    return Veritas.Models.Session.adjustSecureAssessmentTimeBulk(pollId, sessionId, studentEmails, adjustmentMinutes);
   })();
 };
 
 /**
  * Adjust time for all students
  * @param {string} pollId - Poll ID
+ * @param {string} sessionId - Session ID
  * @param {number} adjustmentMinutes - Time adjustment in minutes
  * @returns {Object} Result with count
  */
-Veritas.TeacherApi.adjustSecureAssessmentTimeForAll = function(pollId, adjustmentMinutes) {
+Veritas.TeacherApi.adjustSecureAssessmentTimeForAll = function(pollId, sessionId, adjustmentMinutes) {
   return withErrorHandling(function() {
     Veritas.TeacherApi.assertTeacher();
 
     // Delegate to Models layer
-    return Veritas.Models.Session.adjustSecureAssessmentTimeForAll(pollId, adjustmentMinutes);
+    return Veritas.Models.Session.adjustSecureAssessmentTimeForAll(pollId, sessionId, adjustmentMinutes);
   })();
 };
 
 /**
  * Pause student's secure assessment
  * @param {string} pollId - Poll ID
+ * @param {string} sessionId - Session ID
  * @param {string} studentEmail - Student email
  * @returns {Object} Result
  */
-Veritas.TeacherApi.pauseSecureAssessmentStudent = function(pollId, studentEmail) {
+Veritas.TeacherApi.pauseSecureAssessmentStudent = function(pollId, sessionId, studentEmail) {
   return withErrorHandling(function() {
     Veritas.TeacherApi.assertTeacher();
 
     // Delegate to Models layer
-    return Veritas.Models.Session.pauseSecureAssessmentStudent(pollId, studentEmail);
+    return Veritas.Models.Session.pauseSecureAssessmentStudent(pollId, sessionId, studentEmail);
   })();
 };
 
 /**
  * Resume student's secure assessment
  * @param {string} pollId - Poll ID
+ * @param {string} sessionId - Session ID
  * @param {string} studentEmail - Student email
  * @returns {Object} Result
  */
-Veritas.TeacherApi.resumeSecureAssessmentStudent = function(pollId, studentEmail) {
+Veritas.TeacherApi.resumeSecureAssessmentStudent = function(pollId, sessionId, studentEmail) {
   return withErrorHandling(function() {
     Veritas.TeacherApi.assertTeacher();
 
     // Delegate to Models layer
-    return Veritas.Models.Session.resumeSecureAssessmentStudent(pollId, studentEmail);
+    return Veritas.Models.Session.resumeSecureAssessmentStudent(pollId, sessionId, studentEmail);
   })();
 };
 
 /**
  * Force submit student's secure assessment
  * @param {string} pollId - Poll ID
+ * @param {string} sessionId - Session ID
  * @param {string} studentEmail - Student email
  * @returns {Object} Result
  */
-Veritas.TeacherApi.forceSubmitSecureAssessmentStudent = function(pollId, studentEmail) {
+Veritas.TeacherApi.forceSubmitSecureAssessmentStudent = function(pollId, sessionId, studentEmail) {
   return withErrorHandling(function() {
     Veritas.TeacherApi.assertTeacher();
 
     // Delegate to Models layer
-    return Veritas.Models.Session.forceSubmitSecureAssessmentStudent(pollId, studentEmail);
+    return Veritas.Models.Session.forceSubmitSecureAssessmentStudent(pollId, sessionId, studentEmail);
   })();
 };
 

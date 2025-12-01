@@ -11,6 +11,18 @@ var Veritas = Veritas || {};
 Veritas.Models = Veritas.Models || {};
 Veritas.Models.Session = Veritas.Models.Session || {};
 
+// Defensive DataAccess binding to avoid load-order issues in Apps Script
+// Falls back to Veritas.Data if the legacy DataAccess global is not yet defined.
+if (typeof DataAccess === 'undefined') {
+  var DataAccess = Veritas.Data;
+}
+if (!DataAccess.individualSessionState && Veritas.Data && Veritas.Data.individualSessionState) {
+  DataAccess.individualSessionState = Veritas.Data.individualSessionState;
+}
+var IndividualSessionState = (DataAccess && DataAccess.individualSessionState)
+  ? DataAccess.individualSessionState
+  : (Veritas.Data && Veritas.Data.individualSessionState ? Veritas.Data.individualSessionState : null);
+
 // =============================================================================
 // LIVE POLL SESSION CONTROL
 // =============================================================================
@@ -526,7 +538,7 @@ Veritas.Models.Session.startIndividualTimedSession = function(pollId) {
  */
 Veritas.Models.Session.endIndividualTimedSession = function(pollId) {
   return withErrorHandling(function() {
-    if (Session.getActiveUser().getEmail() !== Veritas.Config.TEACHER_EMAIL) {
+    if (Veritas.Dev.getCurrentUser() !== Veritas.Config.TEACHER_EMAIL) {
       throw new Error('Unauthorized');
     }
 
@@ -542,10 +554,10 @@ Veritas.Models.Session.endIndividualTimedSession = function(pollId) {
 
     // Lock all unlocked students
     if (sessionId) {
-      const allStudents = DataAccess.individualSessionState.getAllForSession(pollId, sessionId);
+      const allStudents = IndividualSessionState ? IndividualSessionState.getAllForSession(pollId, sessionId) : [];
       allStudents.forEach(function(student) {
         if (!student.isLocked) {
-          DataAccess.individualSessionState.lockStudent(pollId, sessionId, student.studentEmail);
+          IndividualSessionState.lockStudent(pollId, sessionId, student.studentEmail);
         }
       });
     }
@@ -611,7 +623,7 @@ Veritas.Models.Session.beginIndividualTimedAttempt = function(pollId, sessionId,
       }
     }
 
-    const existingState = DataAccess.individualSessionState.getByStudent(pollId, sessionId, studentEmail);
+    const existingState = IndividualSessionState ? IndividualSessionState.getByStudent(pollId, sessionId, studentEmail) : null;
     if (existingState) {
       return { success: true, alreadyStarted: true };
     }
@@ -622,7 +634,10 @@ Veritas.Models.Session.beginIndividualTimedAttempt = function(pollId, sessionId,
 
     const defaultAdjustmentMinutes = Math.max(0, Number(metadata.secureDefaultTimeAdjustmentMinutes || 0));
 
-    DataAccess.individualSessionState.initStudent(
+    if (!IndividualSessionState) {
+      throw new Error('Secure session storage unavailable');
+    }
+    IndividualSessionState.initStudent(
       pollId,
       sessionId,
       studentEmail,
@@ -669,7 +684,22 @@ Veritas.Models.Session.getIndividualTimedSessionState = function(token) {
 
     const heartbeatInfo = StateVersionManager.noteHeartbeat(studentEmail);
     const connectionMeta = Veritas.Models.Session.deriveSecureConnectionMeta(heartbeatInfo);
-    const studentState = DataAccess.individualSessionState.getByStudent(pollId, sessionId, studentEmail);
+    const studentState = IndividualSessionState ? IndividualSessionState.getByStudent(pollId, sessionId, studentEmail) : null;
+
+    // Enforce proctor lock state for secure assessments before proceeding
+    var proctorState = Veritas.Models.Session.ProctorAccess.getState(pollId, studentEmail, sessionId);
+    if (proctorState.status && proctorState.status !== 'OK') {
+      return Veritas.Models.Session.applyConnectionMetaToPayload({
+        status: proctorState.status,
+        sessionType: Veritas.Config.SESSION_TYPES.SECURE,
+        message: proctorState.status === 'BLOCKED'
+          ? 'Your teacher has paused your session.'
+          : 'Fullscreen required. Wait for your teacher to unlock and return to fullscreen.',
+        pollId: pollId,
+        sessionId: sessionId,
+        lockVersion: proctorState.lockVersion || 0
+      }, connectionMeta);
+    }
 
     if (!studentState) {
       return Veritas.Models.Session.applyConnectionMetaToPayload(
@@ -872,13 +902,23 @@ Veritas.Models.Session.submitIndividualTimedAnswer = function(pollId, sessionId,
   const poll = DataAccess.polls.getById(pollId);
   if (!poll) throw new Error('Poll not found');
 
-  const studentState = DataAccess.individualSessionState.getByStudent(pollId, sessionId, studentEmail);
+  // Auto-heal if the student row is missing (e.g., sheet latency) by re-initializing
+  let studentState = DataAccess.individualSessionState.getByStudent(pollId, sessionId, studentEmail);
+  if (!studentState) {
+    studentState = Veritas.Models.Session.initializeIndividualTimedStudent(pollId, sessionId, studentEmail);
+  }
   if (!studentState) {
     throw new Error('Student not initialized for this session');
   }
 
   if (studentState.isLocked) {
     throw new Error('Session is locked - time expired or already completed');
+  }
+
+  // Enforce proctoring lock/block for secure assessments
+  var proctorState = Veritas.Models.Session.ProctorAccess.getState(pollId, studentEmail, sessionId);
+  if (proctorState.status && proctorState.status !== 'OK') {
+    throw new Error('Session is locked. Wait for your teacher to unlock you.');
   }
 
   // Check elapsed time to prevent submissions after time limit
@@ -972,7 +1012,7 @@ Veritas.Models.Session.submitIndividualTimedAnswer = function(pollId, sessionId,
 Veritas.Models.Session.getIndividualTimedSessionTeacherView = function(pollId, sessionId) {
   return withErrorHandling(function() {
     // Verify teacher authorization
-    const currentUser = Session.getActiveUser().getEmail();
+    const currentUser = Veritas.Dev.getCurrentUser();
     if (currentUser !== Veritas.Config.TEACHER_EMAIL && !isAdditionalTeacher_(currentUser)) {
       throw new Error('Unauthorized');
     }
@@ -1202,7 +1242,7 @@ Veritas.Models.Session.adjustSecureAssessmentTime = function(pollId, sessionId, 
       throw new Error('Poll, session, and student are required');
     }
 
-    const teacherEmail = Session.getActiveUser().getEmail();
+    const teacherEmail = Veritas.Dev.getCurrentUser();
     if (teacherEmail !== Veritas.Config.TEACHER_EMAIL && !isAdditionalTeacher_(teacherEmail)) {
       throw new Error('Unauthorized');
     }
@@ -1233,7 +1273,7 @@ Veritas.Models.Session.adjustSecureAssessmentTimeBulk = function(pollId, session
     if (!pollId || !sessionId) {
       throw new Error('Poll and session are required');
     }
-    const teacherEmail = Session.getActiveUser().getEmail();
+    const teacherEmail = Veritas.Dev.getCurrentUser();
     if (teacherEmail !== Veritas.Config.TEACHER_EMAIL && !isAdditionalTeacher_(teacherEmail)) {
       throw new Error('Unauthorized');
     }
@@ -1262,7 +1302,7 @@ Veritas.Models.Session.adjustSecureAssessmentTimeForAll = function(pollId, sessi
     if (!pollId || !sessionId) {
       throw new Error('Poll and session are required');
     }
-    const teacherEmail = Session.getActiveUser().getEmail();
+    const teacherEmail = Veritas.Dev.getCurrentUser();
     if (teacherEmail !== Veritas.Config.TEACHER_EMAIL && !isAdditionalTeacher_(teacherEmail)) {
       throw new Error('Unauthorized');
     }
@@ -1331,7 +1371,7 @@ Veritas.Models.Session.pauseSecureAssessmentStudent = function(pollId, sessionId
       throw new Error('Poll, session, and student are required');
     }
 
-    const teacherEmail = Session.getActiveUser().getEmail();
+    const teacherEmail = Veritas.Dev.getCurrentUser();
     if (teacherEmail !== Veritas.Config.TEACHER_EMAIL && !isAdditionalTeacher_(teacherEmail)) {
       throw new Error('Unauthorized');
     }
@@ -1370,7 +1410,7 @@ Veritas.Models.Session.resumeSecureAssessmentStudent = function(pollId, sessionI
       throw new Error('Poll, session, and student are required');
     }
 
-    const teacherEmail = Session.getActiveUser().getEmail();
+    const teacherEmail = Veritas.Dev.getCurrentUser();
     if (teacherEmail !== Veritas.Config.TEACHER_EMAIL && !isAdditionalTeacher_(teacherEmail)) {
       throw new Error('Unauthorized');
     }
@@ -1420,7 +1460,7 @@ Veritas.Models.Session.forceSubmitSecureAssessmentStudent = function(pollId, ses
       throw new Error('Poll, session, and student are required');
     }
 
-    const teacherEmail = Session.getActiveUser().getEmail();
+    const teacherEmail = Veritas.Dev.getCurrentUser();
     if (teacherEmail !== Veritas.Config.TEACHER_EMAIL && !isAdditionalTeacher_(teacherEmail)) {
       throw new Error('Unauthorized');
     }
@@ -2074,7 +2114,7 @@ Veritas.Models.Session.getStudentProctorState = function(token) {
  */
 Veritas.Models.Session.teacherApproveUnlock = function(studentEmail, pollId, expectedLockVersion) {
   return withErrorHandling(function() {
-    var teacherEmail = Session.getActiveUser().getEmail();
+    var teacherEmail = Veritas.Dev.getCurrentUser();
 
     if (teacherEmail !== Veritas.Config.TEACHER_EMAIL) {
       throw new Error('Unauthorized');
@@ -2127,7 +2167,7 @@ Veritas.Models.Session.teacherApproveUnlock = function(studentEmail, pollId, exp
  */
 Veritas.Models.Session.teacherBlockStudent = function(studentEmail, pollId, reason) {
   return withErrorHandling(function() {
-    var teacherEmail = Session.getActiveUser().getEmail();
+    var teacherEmail = Veritas.Dev.getCurrentUser();
 
     if (teacherEmail !== Veritas.Config.TEACHER_EMAIL) {
       throw new Error('Unauthorized');
@@ -2196,7 +2236,7 @@ Veritas.Models.Session.teacherBlockStudent = function(studentEmail, pollId, reas
  */
 Veritas.Models.Session.teacherUnblockStudent = function(studentEmail, pollId) {
   return withErrorHandling(function() {
-    var teacherEmail = Session.getActiveUser().getEmail();
+    var teacherEmail = Veritas.Dev.getCurrentUser();
 
     if (teacherEmail !== Veritas.Config.TEACHER_EMAIL) {
       throw new Error('Unauthorized');
@@ -2408,10 +2448,14 @@ Veritas.Models.Session.lookupStudentDisplayName = function(className, studentEma
     return '';
   }
   var roster = DataAccess.roster.getByClass(className) || [];
-  var normalizedEmail = studentEmail.toString().trim().toLowerCase();
+  var normalizedEmail = (studentEmail && studentEmail.toString ? studentEmail.toString() : String(studentEmail)).trim().toLowerCase();
   var match = roster.find(function(entry) { return (entry.email || '').toLowerCase() === normalizedEmail; });
   if (!match) {
-    return (studentEmail.split('@')[0] || '').trim();
+    var localPart = '';
+    if (typeof normalizedEmail === 'string' && normalizedEmail.indexOf('@') >= 0) {
+      localPart = normalizedEmail.split('@')[0];
+    }
+    return (localPart || normalizedEmail || '').trim();
   }
   var parts = Veritas.Utils.extractStudentNameParts(match.name || '');
   return parts.displayName || parts.trimmed || match.name || '';

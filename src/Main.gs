@@ -124,3 +124,13 @@ Veritas.Env = {
 // Phase: 2D Complete - Full Modular Architecture
 // Reduction: From 7,972 lines to ~105 lines (98.7% reduction)
 // =============================================================================
+
+/**
+ * Creates a custom menu in the spreadsheet UI.
+ */
+function onOpen() {
+  SpreadsheetApp.getUi()
+      .createMenu('Veritas Tools')
+      .addItem('Run Student Simulation', 'runSmokeTest')
+      .addToUi();
+}

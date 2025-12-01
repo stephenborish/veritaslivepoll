@@ -235,7 +235,15 @@ Veritas.StudentApi.getStudentPollStatus = function(token, context) {
       });
     }
 
-    if (!DataAccess.roster.isEnrolled(poll.className, studentEmail)) {
+    var isDevStudent = false;
+    try {
+      var devRole = (PropertiesService.getUserProperties().getProperty('DEV_ROLE') || '').toUpperCase();
+      isDevStudent = (devRole === 'STUDENT');
+    } catch (e) {
+      // If properties are unavailable, fall back to normal checks
+    }
+
+    if (!isDevStudent && !DataAccess.roster.isEnrolled(poll.className, studentEmail)) {
       return envelope({
         status: "NOT_ENROLLED",
         message: "You are not enrolled in this class.",
@@ -386,6 +394,17 @@ Veritas.StudentApi.submitLivePollAnswer = function(pollId, questionIndex, answer
       return { success: false, error: 'Invalid answer format' };
     }
 
+    // Enforce proctor lock before accepting submission
+    var liveStatus = DataAccess.liveStatus.get();
+    var metadata = (liveStatus && liveStatus.metadata) ? liveStatus.metadata : {};
+    var proctorState = ProctorAccess.getState(pollId, studentEmail, metadata && metadata.sessionId ? metadata.sessionId : null);
+    if (proctorState.status && proctorState.status !== 'OK') {
+      return {
+        success: false,
+        error: 'Your session is locked. Please return to fullscreen and wait for your teacher.'
+      };
+    }
+
     var statusValues = DataAccess.liveStatus.get();
     var activePollId = statusValues[0];
     var activeQIndex = statusValues[1];
@@ -468,11 +487,10 @@ Veritas.StudentApi.getStudentProctorState = function(token) {
  */
 Veritas.StudentApi.getIndividualTimedSessionState = function(token) {
   return withErrorHandling(function() {
-    var tokenData = Veritas.StudentApi.validateToken(token);
-    var studentEmail = tokenData.email;
+    Veritas.StudentApi.validateToken(token);
 
-    // Delegate to Models layer
-    return Veritas.Models.Session.getIndividualTimedSessionState(null, studentEmail);
+    // Delegate to Models layer (token contains student identity)
+    return Veritas.Models.Session.getIndividualTimedSessionState(token);
   })();
 };
 
@@ -480,31 +498,33 @@ Veritas.StudentApi.getIndividualTimedSessionState = function(token) {
  * Begin individual timed attempt (student first access)
  * @param {string} pollId - Poll ID
  * @param {string} token - Session token
+ * @param {string} sessionId - Secure session ID
+ * @param {Object} options - Additional options (e.g., access code)
  * @returns {Object} Initial state
  */
-Veritas.StudentApi.beginIndividualTimedAttempt = function(pollId, token) {
+Veritas.StudentApi.beginIndividualTimedAttempt = function(pollId, sessionId, token, options) {
   return withErrorHandling(function() {
-    var tokenData = Veritas.StudentApi.validateToken(token);
-    var studentEmail = tokenData.email;
+    Veritas.StudentApi.validateToken(token);
 
     // Delegate to Models layer
-    return Veritas.Models.Session.beginIndividualTimedAttempt(pollId, studentEmail);
+    return Veritas.Models.Session.beginIndividualTimedAttempt(pollId, sessionId, token, options);
   })();
 };
 
 /**
  * Get current question for student in individual timed session
  * @param {string} pollId - Poll ID
+ * @param {string} sessionId - Session ID
  * @param {string} token - Session token
  * @returns {Object} Question data
  */
-Veritas.StudentApi.getIndividualTimedQuestion = function(pollId, token) {
+Veritas.StudentApi.getIndividualTimedQuestion = function(pollId, sessionId, token) {
   return withErrorHandling(function() {
     var tokenData = Veritas.StudentApi.validateToken(token);
     var studentEmail = tokenData.email;
 
     // Delegate to Models layer
-    return Veritas.Models.Session.getIndividualTimedQuestion(pollId, studentEmail);
+    return Veritas.Models.Session.getIndividualTimedQuestion(pollId, sessionId, studentEmail);
   })();
 };
 
@@ -517,19 +537,18 @@ Veritas.StudentApi.getIndividualTimedQuestion = function(pollId, token) {
  * @param {string} confidenceLevel - Confidence level (optional)
  * @returns {Object} Result
  */
-Veritas.StudentApi.submitIndividualTimedAnswer = function(pollId, questionIndex, answerText, token, confidenceLevel) {
+Veritas.StudentApi.submitIndividualTimedAnswer = function(pollId, sessionId, questionIndex, answerText, token, confidenceLevel) {
   return withErrorHandling(function() {
-    var tokenData = Veritas.StudentApi.validateToken(token);
-    var studentEmail = tokenData.email;
+    Veritas.StudentApi.validateToken(token);
 
-    // Delegate to Models layer
-    return Veritas.Models.Session.submitIndividualTimedAnswer(
-      pollId,
-      studentEmail,
-      questionIndex,
-      answerText,
-      confidenceLevel
-    );
+    // Delegate to Models layer with token to resolve student identity
+    return Veritas.Models.Session.submitAnswerIndividualTimed(token, {
+      pollId: pollId,
+      sessionId: sessionId,
+      actualQuestionIndex: questionIndex,
+      answer: answerText,
+      confidenceLevel: confidenceLevel
+    });
   })();
 };
 

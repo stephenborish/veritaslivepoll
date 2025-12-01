@@ -29,6 +29,8 @@
  * @returns {HtmlOutput} Rendered HTML page
  */
 function doGet(e) {
+  // Handle dev role switching via URL parameters for local testing
+  Veritas.Dev.handleRouteSwitch(e);
   return Veritas.Routing.doGet(e);
 }
 
@@ -371,81 +373,89 @@ function endIndividualTimedSession(pollId) {
 
 /**
  * Get individual timed session state
- * @param {string} pollId - Poll ID
+ * @param {string} token - Session token
  * @returns {Object} Session state
  */
-function getIndividualTimedSessionState(pollId) {
-  return Veritas.TeacherApi.getIndividualTimedSessionState(pollId);
+function getIndividualTimedSessionState(token) {
+  return Veritas.StudentApi.getIndividualTimedSessionState(token);
 }
 
 /**
  * Get individual timed session teacher view
  * @param {string} pollId - Poll ID
+ * @param {string} sessionId - Session ID
  * @returns {Object} Teacher view data
  */
-function getIndividualTimedSessionTeacherView(pollId) {
-  return Veritas.TeacherApi.getIndividualTimedSessionTeacherView(pollId);
+function getIndividualTimedSessionTeacherView(pollId, sessionId) {
+  return Veritas.TeacherApi.getIndividualTimedSessionTeacherView(pollId, sessionId);
 }
 
 /**
  * Adjust time for student
  * @param {string} pollId - Poll ID
+ * @param {string} sessionId - Session ID
  * @param {string} studentEmail - Student email
  * @param {number} adjustmentMinutes - Time adjustment
  * @returns {Object} Result
  */
-function adjustSecureAssessmentTime(pollId, studentEmail, adjustmentMinutes) {
-  return Veritas.TeacherApi.adjustSecureAssessmentTime(pollId, studentEmail, adjustmentMinutes);
+function adjustSecureAssessmentTime(pollId, sessionId, studentEmail, adjustmentMinutes) {
+  return Veritas.TeacherApi.adjustSecureAssessmentTime(pollId, sessionId, studentEmail, adjustmentMinutes);
 }
 
 /**
  * Adjust time for multiple students
  * @param {string} pollId - Poll ID
- * @param {Array} adjustments - Adjustments array
+ * @param {string} sessionId - Session ID
+ * @param {Array} studentEmails - Student emails
+ * @param {number} adjustmentMinutes - Minutes to add
  * @returns {Object} Result
  */
-function adjustSecureAssessmentTimeBulk(pollId, adjustments) {
-  return Veritas.TeacherApi.adjustSecureAssessmentTimeBulk(pollId, adjustments);
+function adjustSecureAssessmentTimeBulk(pollId, sessionId, studentEmails, adjustmentMinutes) {
+  return Veritas.TeacherApi.adjustSecureAssessmentTimeBulk(pollId, sessionId, studentEmails, adjustmentMinutes);
 }
 
 /**
  * Adjust time for all students
  * @param {string} pollId - Poll ID
+ * @param {string} sessionId - Session ID
  * @param {number} adjustmentMinutes - Time adjustment
  * @returns {Object} Result
  */
-function adjustSecureAssessmentTimeForAll(pollId, adjustmentMinutes) {
-  return Veritas.TeacherApi.adjustSecureAssessmentTimeForAll(pollId, adjustmentMinutes);
+function adjustSecureAssessmentTimeForAll(pollId, sessionId, adjustmentMinutes) {
+  return Veritas.TeacherApi.adjustSecureAssessmentTimeForAll(pollId, sessionId, adjustmentMinutes);
 }
 
 /**
  * Pause student assessment
  * @param {string} pollId - Poll ID
+ * @param {string} sessionId - Session ID
  * @param {string} studentEmail - Student email
  * @returns {Object} Result
  */
-function pauseSecureAssessmentStudent(pollId, studentEmail) {
-  return Veritas.TeacherApi.pauseSecureAssessmentStudent(pollId, studentEmail);
+function pauseSecureAssessmentStudent(pollId, sessionId, studentEmail) {
+  return Veritas.TeacherApi.pauseSecureAssessmentStudent(pollId, sessionId, studentEmail);
 }
 
 /**
  * Resume student assessment
  * @param {string} pollId - Poll ID
+ * @param {string} sessionId - Session ID
  * @param {string} studentEmail - Student email
  * @returns {Object} Result
  */
-function resumeSecureAssessmentStudent(pollId, studentEmail) {
-  return Veritas.TeacherApi.resumeSecureAssessmentStudent(pollId, studentEmail);
+function resumeSecureAssessmentStudent(pollId, sessionId, studentEmail) {
+  return Veritas.TeacherApi.resumeSecureAssessmentStudent(pollId, sessionId, studentEmail);
 }
 
 /**
  * Force submit student assessment
  * @param {string} pollId - Poll ID
+ * @param {string} sessionId - Session ID
  * @param {string} studentEmail - Student email
  * @returns {Object} Result
  */
-function forceSubmitSecureAssessmentStudent(pollId, studentEmail) {
-  return Veritas.TeacherApi.forceSubmitSecureAssessmentStudent(pollId, studentEmail);
+function forceSubmitSecureAssessmentStudent(pollId, sessionId, studentEmail) {
+  return Veritas.TeacherApi.forceSubmitSecureAssessmentStudent(pollId, sessionId, studentEmail);
 }
 
 /**
@@ -536,34 +546,38 @@ function submitLivePollAnswer(pollId, questionIndex, answerText, token, confiden
 /**
  * Begin individual timed attempt
  * @param {string} pollId - Poll ID
+ * @param {string} sessionId - Session ID
  * @param {string} token - Session token
+ * @param {Object} options - Options (e.g., access code)
  * @returns {Object} Initial state
  */
-function beginIndividualTimedAttempt(pollId, token) {
-  return Veritas.StudentApi.beginIndividualTimedAttempt(pollId, token);
+function beginIndividualTimedAttempt(pollId, sessionId, token, options) {
+  return Veritas.StudentApi.beginIndividualTimedAttempt(pollId, sessionId, token, options);
 }
 
 /**
  * Get individual timed question
  * @param {string} pollId - Poll ID
+ * @param {string} sessionId - Session ID
  * @param {string} token - Session token
  * @returns {Object} Question data
  */
-function getIndividualTimedQuestion(pollId, token) {
-  return Veritas.StudentApi.getIndividualTimedQuestion(pollId, token);
+function getIndividualTimedQuestion(pollId, sessionId, token) {
+  return Veritas.StudentApi.getIndividualTimedQuestion(pollId, sessionId, token);
 }
 
 /**
  * Submit individual timed answer
  * @param {string} pollId - Poll ID
+ * @param {string} sessionId - Session ID
  * @param {number} questionIndex - Question index
  * @param {string} answerText - Answer
  * @param {string} token - Session token
  * @param {string} confidenceLevel - Confidence level
  * @returns {Object} Result
  */
-function submitIndividualTimedAnswer(pollId, questionIndex, answerText, token, confidenceLevel) {
-  return Veritas.StudentApi.submitIndividualTimedAnswer(pollId, questionIndex, answerText, token, confidenceLevel);
+function submitIndividualTimedAnswer(pollId, sessionId, questionIndex, answerText, token, confidenceLevel) {
+  return Veritas.StudentApi.submitIndividualTimedAnswer(pollId, sessionId, questionIndex, answerText, token, confidenceLevel);
 }
 
 /**

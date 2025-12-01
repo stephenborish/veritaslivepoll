@@ -63,7 +63,7 @@ Veritas.Security.isTeacher = function(email) {
  */
 Veritas.Security.getCurrentUserEmail = function() {
   try {
-    return Session.getActiveUser().getEmail() || '';
+    return Veritas.Dev.getCurrentUser() || '';
   } catch (err) {
     Veritas.Logging.error('Failed to get current user email', err);
     return '';

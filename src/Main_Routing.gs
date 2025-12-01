@@ -89,7 +89,22 @@ Veritas.Routing.resolveIdentity = function(e) {
 
   // Try Google authentication (teacher or fallback)
   try {
-    var userEmail = (Session.getActiveUser().getEmail() || '').trim();
+    var userEmail = (Veritas.Dev.getCurrentUser() || '').trim();
+    var devRole = '';
+    try {
+      devRole = (PropertiesService.getUserProperties().getProperty('DEV_ROLE') || '').toUpperCase();
+    } catch (e) {
+      // If properties are inaccessible, continue with default flow
+    }
+
+    // Allow dev student mode to bypass token requirement while testing
+    if (devRole === 'STUDENT') {
+      return {
+        isTeacher: false,
+        studentEmail: userEmail || Veritas.Dev.MOCK_STUDENT,
+        token: null
+      };
+    }
     var isTeacher = Veritas.Routing.isTeacherEmail(userEmail);
 
     Logger.log('Resolved active user identity', {

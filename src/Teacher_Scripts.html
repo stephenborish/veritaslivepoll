@@ -1987,7 +1987,7 @@
   }
 
   // --- Event Listeners ---
-  bindClick('nav-create-poll',function(){openPollCreator();});
+  bindClick('nav-create-poll',function(){Wizard.init();});
   bindClick('nav-polls-list',showDashboard);
   bindClick('nav-rosters',showRosterManager);
   bindClick('nav-archived',showArchivedView);
@@ -10625,6 +10625,12 @@
     // Return to dashboard
     setMainSection('dashboard');
   }
+
+  // Global Wizard API
+  window.Wizard = {
+    init: openPollWizard,
+    close: closePollWizard
+  };
 
   // ===========================
   // STEP NAVIGATION

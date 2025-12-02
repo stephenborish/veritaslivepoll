@@ -1524,7 +1524,7 @@
     <div class="max-w-5xl mx-auto w-full flex-1 flex flex-col">
       <div class="wizard-header">
         <h2 id="wizard-title" class="wizard-main-title">Create New Poll</h2>
-        <button type="button" class="modal-close-btn" onclick="closePollWizard()" aria-label="Close wizard">
+        <button type="button" class="modal-close-btn" onclick="Wizard.close()" aria-label="Close wizard">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
@@ -1622,7 +1622,7 @@
       <div class="wizard-footer">
         <button type="button" class="btn-secondary" id="wizard-back-btn" onclick="wizardGoBack()" disabled>Back</button>
         <div class="footer-spacer"></div>
-        <button type="button" class="btn-secondary" onclick="closePollWizard()">Cancel</button>
+        <button type="button" class="btn-secondary" onclick="Wizard.close()">Cancel</button>
         <button type="button" class="btn-primary" id="wizard-next-btn" onclick="wizardGoNext()">Next</button>
         <button type="button" class="btn-primary hidden" id="wizard-publish-btn" onclick="publishWizardPoll()">Publish</button>
       </div>

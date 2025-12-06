@@ -10606,8 +10606,8 @@
 
         window.ALL_CLASSES.forEach(function (cls) {
           var option = document.createElement('option');
-          option.value = cls.className;
-          option.textContent = cls.className;
+          option.value = cls;
+          option.textContent = cls;
           classSelect.appendChild(option);
         });
       }

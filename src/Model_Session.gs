@@ -23,6 +23,19 @@ var IndividualSessionState = (DataAccess && DataAccess.individualSessionState)
   ? DataAccess.individualSessionState
   : (Veritas.Data && Veritas.Data.individualSessionState ? Veritas.Data.individualSessionState : null);
 
+/**
+ * Helper: Get individualSessionState with lazy evaluation to avoid load-order issues
+ */
+function getIndividualSessionState_() {
+  if (DataAccess && DataAccess.individualSessionState) {
+    return DataAccess.individualSessionState;
+  }
+  if (Veritas.Data && Veritas.Data.individualSessionState) {
+    return Veritas.Data.individualSessionState;
+  }
+  return null;
+}
+
 // =============================================================================
 // LIVE POLL SESSION CONTROL
 // =============================================================================
@@ -1351,7 +1364,16 @@ Veritas.Models.Session.adjustSecureAssessmentTimeForAll = function(pollId, sessi
  * Internal helper: Apply time adjustment to student
  */
 Veritas.Models.Session.applySecureAssessmentTimeAdjustment = function(pollId, sessionId, studentEmail, numericDelta, actorEmail, throwIfMissing) {
-  const studentState = DataAccess.individualSessionState.getByStudent(pollId, sessionId, studentEmail);
+  // Use lazy evaluation to get individualSessionState at runtime
+  var sessionState = getIndividualSessionState_();
+  if (!sessionState) {
+    if (throwIfMissing) {
+      throw new Error('Secure session storage unavailable. Please refresh and try again.');
+    }
+    return { email: studentEmail, skipped: true, error: 'storage_unavailable' };
+  }
+  
+  const studentState = sessionState.getByStudent(pollId, sessionId, studentEmail);
   if (!studentState) {
     if (throwIfMissing) {
       throw new Error('Student session not initialized');

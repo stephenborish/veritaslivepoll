@@ -10468,6 +10468,35 @@
     // Bind book view events
     bindClick('view-book-report-btn', openBookView);
 
+    // FIX Bug #6: Add secure view links button handler
+    bindClick('secure-view-links-btn', function () {
+      // Use the current poll data's className if available
+      var className = CURRENT_POLL_DATA && CURRENT_POLL_DATA.className;
+      if (!className) {
+        veritasAlert('No class assigned to this assessment.', { title: 'View Links', destructive: true });
+        return;
+      }
+      // Set viewLinksBtn dataset so onViewLinks can use it
+      if (viewLinksBtn) {
+        viewLinksBtn.dataset.className = className;
+        onViewLinks();
+      } else {
+        // Fallback: manually trigger the links modal
+        google.script.run
+          .withSuccessHandler(function (response) {
+            if (response.success && response.links) {
+              openLinksModalWithData(className, response.links);
+            } else {
+              veritasAlert('Could not load student links.', { title: 'View Links', destructive: true });
+            }
+          })
+          .withFailureHandler(function (error) {
+            handleError(error);
+          })
+          .getStudentLinksForClass(className);
+      }
+    });
+
     var bookTabStudents = document.getElementById('book-tab-students');
     var bookTabQuestions = document.getElementById('book-tab-questions');
     var bookTabMatrix = document.getElementById('book-tab-matrix');

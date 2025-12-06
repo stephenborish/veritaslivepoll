@@ -1,5 +1,5 @@
-  <script>
-    (function() {
+<script>
+    (function () {
         var secureFocusContainer = document.getElementById('individual-timed-session');
         var secureProgressLabel = document.getElementById('secure-progress-label');
         var secureCountdownEl = document.getElementById('secure-countdown');
@@ -30,16 +30,16 @@
         var secureCloseTimer = null;
 
         var secureCountdownController = window.SecureAssessmentShared.createCountdown({
-            onTick: function(seconds) {
+            onTick: function (seconds) {
                 updateSecureTimerDisplay(seconds);
             },
-            onExpire: function() {
+            onExpire: function () {
                 handleSecureTimeExpiry();
             }
         });
         var secureSessionHeartbeat = window.SecureAssessmentShared.createHeartbeat({
             intervalMs: 3500,
-            onBeat: function() {
+            onBeat: function () {
                 pollForIndividualSessionState();
             }
         });
@@ -48,7 +48,7 @@
         });
 
         if (timerVisibilityToggle) {
-            timerVisibilityToggle.addEventListener('click', function() {
+            timerVisibilityToggle.addEventListener('click', function () {
                 timerHidden = !timerHidden;
                 applyTimerVisibility();
             });
@@ -157,7 +157,7 @@
         function syncSecureOptionSelection() {
             if (!secureOptionsList) return;
             var buttons = secureOptionsList.querySelectorAll('button.secure-answer-option');
-            buttons.forEach(function(btn) {
+            buttons.forEach(function (btn) {
                 var btnIndex = parseInt(btn.dataset.optionIndex, 10);
                 var selected = btnIndex === secureSelectedOptionIndex;
                 btn.classList.toggle('answer-option-selected', selected);
@@ -180,6 +180,12 @@
                 secureSessionHeartbeat.start(true);
             }
             setSecureChromeState(true);
+
+            // FIX: Explicitly show timer container - defensive check
+            if (secureTopbarTimer) {
+                secureTopbarTimer.classList.remove('hidden');
+            }
+
             hideSecureOverlay();
             setSecureConnectionIndicatorVisible(true);
             attachProctorVisibilityListeners();
@@ -198,15 +204,21 @@
             secureSubmitting = false;
             secureTimeExpired = false;
             disableSecureOptions(false);
+
+            // FIX: More robust question progress with debug logging
             if (questionProgressEl) {
                 var progressIdx = typeof state.progressIndex === 'number'
                     ? state.progressIndex
                     : (typeof state.currentQuestionIndex === 'number' ? state.currentQuestionIndex : 0);
                 var totalCount = typeof state.totalQuestions === 'number'
                     ? state.totalQuestions
-                    : (state.question && state.question.options ? state.question.options.length : '?');
+                    : (state.question && state.question.options ? state.question.options.length : 1);
+                console.log('[Secure] Question progress:', { progressIdx: progressIdx, totalCount: totalCount, state: state });
                 questionProgressEl.textContent = 'QUESTION ' + (progressIdx + 1) + ' OF ' + totalCount;
+            } else {
+                console.warn('[Secure] questionProgressEl not found');
             }
+
             renderSecureQuestion(state);
             startSecureCountdown(state.timeRemainingSeconds || 0);
             updateSecureConnectionIndicators(state);
@@ -250,7 +262,7 @@
                 secureOptionsList.innerHTML = '';
                 var letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
                 var options = Array.isArray(state.question.options) ? state.question.options : [];
-                options.forEach(function(option, index) {
+                options.forEach(function (option, index) {
                     secureOptionsList.appendChild(buildSecureOption(option, index, letters.charAt(index) || '#'));
                 });
                 syncSecureOptionSelection();
@@ -286,7 +298,7 @@
             content += '</div>';
             content += '<span class="result-indicator" aria-hidden="true"></span>';
             button.innerHTML = content;
-            button.addEventListener('click', function(event) {
+            button.addEventListener('click', function (event) {
                 if (event && event.target && event.target.closest('.option-image')) {
                     return;
                 }
@@ -341,7 +353,7 @@
 
         function disableSecureOptions(disabled) {
             if (!secureOptionsList) return;
-            secureOptionsList.querySelectorAll('button.secure-answer-option').forEach(function(btn) {
+            secureOptionsList.querySelectorAll('button.secure-answer-option').forEach(function (btn) {
                 btn.disabled = disabled;
                 btn.classList.toggle('answer-option-disabled', disabled);
             });
@@ -378,7 +390,7 @@
             };
 
             google.script.run
-                .withSuccessHandler(function(response) {
+                .withSuccessHandler(function (response) {
                     setSecureSubmitLoading(false);
                     disableSecureOptions(false);
                     hideSecureConfidencePrompt(); // Ensure hidden on success
@@ -404,7 +416,7 @@
                         if (secureOptionsList) secureOptionsList.innerHTML = '';
 
                         // Immediate polling to load next question faster
-                        setTimeout(function() {
+                        setTimeout(function () {
                             pollForIndividualSessionState();
                         }, 100);
                     } else {
@@ -418,22 +430,22 @@
                         handleError(errorMessage);
                     }
                 })
-                .withFailureHandler(function(error) {
+                .withFailureHandler(function (error) {
                     // Check if network error and retries available
                     var isNetworkError = /network|timeout|unavailable|DNS|failed to fetch/i.test(error.toString());
 
                     if (isNetworkError && retryCount < maxRetries) {
                         console.warn('Submission failed, retrying... (' + (retryCount + 1) + '/' + maxRetries + ')');
-                        
+
                         // Exponential backoff: 1s, 2s, 4s
                         var delay = Math.pow(2, retryCount) * 1000;
-                        
-                        setTimeout(function() {
+
+                        setTimeout(function () {
                             setSecureSubmitLoading(false); // Reset to allow retry
                             secureSubmitting = false; // Important: reset locking flag
                             submitIndividualAnswerWithConfidence(state, answerText, confidenceLevel, retryCount + 1);
                         }, delay);
-                        
+
                         return; // Don't show error yet
                     }
 
@@ -524,8 +536,8 @@
 
             // Attach confidence button handlers
             var confidenceBtns = secureConfidencePrompt.querySelectorAll('.confidence-btn');
-            confidenceBtns.forEach(function(btn) {
-                btn.onclick = function() {
+            confidenceBtns.forEach(function (btn) {
+                btn.onclick = function () {
                     var confidenceLevel = btn.getAttribute('data-confidence');
                     handleSecureConfidenceSelection(confidenceLevel);
                 };
@@ -576,7 +588,7 @@
         function attemptSecureWindowClose() {
             try {
                 if (document && document.fullscreenElement && document.exitFullscreen) {
-                    document.exitFullscreen().catch(function(err) {
+                    document.exitFullscreen().catch(function (err) {
                         console.warn('Error exiting fullscreen:', err);
                     });
                 }
@@ -606,7 +618,7 @@
         function scheduleSecureWindowClose(delayMs) {
             if (secureCloseTimer) return;
             var timeout = Math.max(500, Number(delayMs) || 2500);
-            secureCloseTimer = setTimeout(function() {
+            secureCloseTimer = setTimeout(function () {
                 secureCloseTimer = null;
                 attemptSecureWindowClose();
             }, timeout);
@@ -698,7 +710,7 @@
             if (!state || !secureConnectionDot) return;
             var health = (state.connectionHealth || '').toUpperCase();
             var dotClasses = ['bg-emerald-400', 'bg-amber-400', 'bg-red-500'];
-            dotClasses.forEach(function(cls) { secureConnectionDot.classList.remove(cls); });
+            dotClasses.forEach(function (cls) { secureConnectionDot.classList.remove(cls); });
             var label = 'Synced';
             var warningText = '';
             if (health === 'RED') {
@@ -736,7 +748,7 @@
             if (securePollInFlight) return;
             securePollInFlight = true;
             google.script.run
-                .withSuccessHandler(function(state) {
+                .withSuccessHandler(function (state) {
                     securePollInFlight = false;
                     if (studentLoader) {
                         studentLoader.style.display = 'none';
@@ -782,7 +794,7 @@
                         updateStudentView(state);
                     }
                 })
-                .withFailureHandler(function(error) {
+                .withFailureHandler(function (error) {
                     securePollInFlight = false;
                     handleError(error);
                 })
@@ -790,7 +802,7 @@
         }
 
         if (secureSubmitBtn) {
-            secureSubmitBtn.addEventListener('click', function() {
+            secureSubmitBtn.addEventListener('click', function () {
                 if (!secureQuestionState || secureSubmitting) return;
                 var answerText = '';
                 if (typeof secureSelectedOptionIndex === 'number') {
@@ -805,7 +817,7 @@
 
         // Add click handler to secure assessment question image for zoom
         if (secureQuestionImage) {
-            secureQuestionImage.addEventListener('click', function(e) {
+            secureQuestionImage.addEventListener('click', function (e) {
                 e.stopPropagation();
                 e.preventDefault();
                 if (window.expandImage) {
@@ -822,7 +834,7 @@
             if (backup) {
                 var answerDetails = JSON.parse(backup);
                 // Use a slight delay to ensure UI is ready
-                setTimeout(function() {
+                setTimeout(function () {
                     if (confirm('Veritas found an unsaved answer from a previous session. Would you like to retry submitting it?')) {
                         // Create a dummy state to pass to submit
                         var dummyState = {
@@ -831,11 +843,11 @@
                             actualQuestionIndex: answerDetails.actualQuestionIndex,
                             question: {} // Dummy question object
                         };
-                        
+
                         // Manually trigger submission with recovered data
                         submitIndividualAnswerWithConfidence(
-                            dummyState, 
-                            answerDetails.answer, 
+                            dummyState,
+                            answerDetails.answer,
                             answerDetails.confidenceLevel
                         );
                     } else {
@@ -861,7 +873,7 @@
         var startSessionBtn = document.getElementById('start-session-btn');
         var studentContainer = document.getElementById('student-container');
         // Simple image zoom function (same approach as teacher panel)
-        window.expandImage = function(imgElement) {
+        window.expandImage = function (imgElement) {
             var imgSrc = imgElement.src;
             var modalHtml = '<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="this.remove()">';
             modalHtml += '<img src="' + imgSrc + '" style="max-width:90%;max-height:90%;"/>';
@@ -871,7 +883,7 @@
 
         // Add click handler to question image
         if (questionImageEl) {
-            questionImageEl.addEventListener('click', function(e) {
+            questionImageEl.addEventListener('click', function (e) {
                 e.stopPropagation();
                 e.preventDefault();
                 window.expandImage(this);
@@ -879,7 +891,7 @@
         }
 
         // Event delegation for dynamically created option images
-        document.addEventListener('click', function(e) {
+        document.addEventListener('click', function (e) {
             if (e.target.classList.contains('option-image')) {
                 e.stopPropagation();
                 e.preventDefault();
@@ -954,50 +966,60 @@
         var liveSessionActive = false;
 
         function reportViolationDebounced(reason) {
+            // FIX: Immediately block interaction to prevent submissions during debounce
+            if (!isInteractionBlocked && !violationLogged && secureSessionActive) {
+                console.log('[Proctor] Violation detected:', reason, '- blocking interaction immediately');
+                isInteractionBlocked = true;
+                showLockEnforcementUI('Fullscreen required', 'Reporting violation to teacher...');
+            }
+
             if (violationDebounceTimer) {
                 clearTimeout(violationDebounceTimer);
             }
-            violationDebounceTimer = setTimeout(function() {
-                if (violationLogged || (isInteractionBlocked && !isTeacherBlocked)) {
+            // FIX: Reduce debounce from 300ms to 100ms for faster blocking
+            violationDebounceTimer = setTimeout(function () {
+                if (violationLogged) {
                     return;
                 }
 
                 var activePollId = (currentPollState && currentPollState.pollId) ||
-                                   (secureLobbyContext && secureLobbyContext.pollId);
+                    (secureLobbyContext && secureLobbyContext.pollId);
 
                 if (!activePollId) {
-                    console.warn('Cannot report violation: no active poll ID');
+                    console.warn('[Proctor] Cannot report violation: no active poll ID');
                     return;
                 }
 
                 violationLogged = true;
                 isInteractionBlocked = true;
+                console.log('[Proctor] Reporting violation to server:', reason, 'pollId:', activePollId);
                 showLockEnforcementUI('Fullscreen required', 'Return to fullscreen and wait for your teacher to resume the assessment.');
                 google.script.run
-                    .withSuccessHandler(function(response) {
+                    .withSuccessHandler(function (response) {
+                        console.log('[Proctor] Violation reported, server response:', response);
                         if (response.success) {
                             currentLockVersion = response.lockVersion;
                             showLockEnforcementUI('Fullscreen required', 'Your teacher will let you back in once they confirm fullscreen.');
                             startProctorPolling();
                         }
                     })
-                    .withFailureHandler(function(error) {
-                        console.error('Violation report failed:', error);
+                    .withFailureHandler(function (error) {
+                        console.error('[Proctor] Violation report failed:', error);
                         showLockEnforcementUI('Fullscreen required', 'Please contact your teacher to resume.');
                     })
                     .reportStudentViolation(activePollId, SESSION_TOKEN, reason);
-            }, 300);
+            }, 100);
         }
 
         function attachProctorVisibilityListeners() {
             if (blurListenerAttached) { return; }
             blurListenerAttached = true;
-            window.addEventListener('blur', function() {
+            window.addEventListener('blur', function () {
                 if ((secureSessionActive || liveSessionActive) && !isInteractionBlocked && !violationLogged) {
                     reportViolationDebounced('window-blur');
                 }
             });
-            document.addEventListener('visibilitychange', function() {
+            document.addEventListener('visibilitychange', function () {
                 if (document.hidden && (secureSessionActive || liveSessionActive) && !isInteractionBlocked && !violationLogged) {
                     reportViolationDebounced('tab-hidden');
                 }
@@ -1005,7 +1027,7 @@
         }
 
         var VeritasModal = null;
-        var veritasModalReady = new Promise(function(resolve) {
+        var veritasModalReady = new Promise(function (resolve) {
             function initializeModal() {
                 VeritasModal = window.VeritasModal || createVeritasModal();
                 window.VeritasModal = VeritasModal;
@@ -1020,25 +1042,25 @@
         });
 
         function withVeritasModal(callback) {
-            return veritasModalReady.then(function(controller) {
+            return veritasModalReady.then(function (controller) {
                 return callback(controller);
             });
         }
 
         function veritasAlert(message, options) {
-            return withVeritasModal(function(modal) {
+            return withVeritasModal(function (modal) {
                 return modal.alert(Object.assign({ message: message }, options || {}));
             });
         }
 
         function veritasConfirm(message, options) {
-            return withVeritasModal(function(modal) {
+            return withVeritasModal(function (modal) {
                 return modal.confirm(Object.assign({ message: message }, options || {}));
             });
         }
 
         function veritasPrompt(message, options) {
-            return withVeritasModal(function(modal) {
+            return withVeritasModal(function (modal) {
                 return modal.prompt(Object.assign({ message: message }, options || {}));
             });
         }
@@ -1069,7 +1091,7 @@
             if (!secureRulesList) return;
             secureRulesList.innerHTML = '';
             var appliedRules = Array.isArray(rules) && rules.length ? rules : SECURE_RULES_FALLBACK;
-            appliedRules.forEach(function(rule) {
+            appliedRules.forEach(function (rule) {
                 var li = document.createElement('li');
                 var icon = document.createElement('span');
                 icon.className = 'material-symbols-outlined text-base text-veritas-navy mt-0.5';
@@ -1167,7 +1189,7 @@
             if (secureBeginLabel) {
                 secureBeginLabel.textContent = 'Refreshing...';
             }
-            setTimeout(function() {
+            setTimeout(function () {
                 window.location.reload();
             }, 750);
         }
@@ -1258,22 +1280,41 @@
             if (secureFullscreenManager.isFullscreen()) {
                 return Promise.resolve();
             }
-            return secureFullscreenManager.request().catch(function() {
+            return secureFullscreenManager.request().catch(function () {
                 return Promise.resolve();
             });
         }
 
         function handleSecureFullscreenChange(event) {
             // Proctoring is now active for ALL sessions (live polls and secure assessments)
+            console.log('[Proctor] Fullscreen change event:', {
+                isFullscreen: event.isFullscreen,
+                hidden: event.hidden,
+                secureSessionActive: secureSessionActive,
+                liveSessionActive: liveSessionActive,
+                fullscreenEnteredOnce: fullscreenEnteredOnce,
+                isInteractionBlocked: isInteractionBlocked,
+                violationLogged: violationLogged
+            });
+
+            // Check for tab blur/switch (visibility hidden)
             if (event.hidden && !isInteractionBlocked && !violationLogged) {
+                console.log('[Proctor] Tab blur detected - triggering violation');
                 reportViolationDebounced('tab-blur');
                 return;
             }
+
+            // Check for entering fullscreen
             if (event.isFullscreen) {
+                console.log('[Proctor] Fullscreen entered');
                 fullscreenEnteredOnce = true;
                 return;
             }
-            if (fullscreenEnteredOnce && !isInteractionBlocked && !violationLogged) {
+
+            // Check for exiting fullscreen after having entered
+            // FIX: Also check if session is active, not just fullscreenEnteredOnce
+            if ((fullscreenEnteredOnce || secureSessionActive) && !isInteractionBlocked && !violationLogged) {
+                console.log('[Proctor] Fullscreen exit detected - triggering violation');
                 reportViolationDebounced('exit-fullscreen');
             }
         }
@@ -1293,10 +1334,10 @@
             }
 
             requestFullscreenForSecureAssessment()
-                .then(function() {
+                .then(function () {
                     setSecureBeginLoading(true);
                     google.script.run
-                        .withSuccessHandler(function(response) {
+                        .withSuccessHandler(function (response) {
                             setSecureBeginLoading(false);
                             if (response && response.success) {
                                 pollForIndividualSessionState();
@@ -1304,7 +1345,7 @@
                                 veritasAlert('Unable to begin the assessment right now.', { title: 'Secure Assessment' });
                             }
                         })
-                        .withFailureHandler(function(error) {
+                        .withFailureHandler(function (error) {
                             setSecureBeginLoading(false);
                             var message = (error && error.message) ? error.message : 'Unable to begin assessment.';
                             if (/access code/i.test(message)) {
@@ -1323,7 +1364,7 @@
                             { accessCode: providedCode }
                         );
                 })
-                .catch(function(err) {
+                .catch(function (err) {
                     console.warn('Fullscreen request was rejected', err);
                     veritasAlert('Fullscreen permission is required to begin the assessment.', { title: 'Secure Assessment' });
                 });
@@ -1342,24 +1383,24 @@
             root.innerHTML = '' +
                 '<div class="veritas-modal-backdrop"></div>' +
                 '<div class="veritas-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="veritas-modal-title" aria-describedby="veritas-modal-message">' +
-                    '<div class="veritas-modal-header">' +
-                        '<h2 id="veritas-modal-title">Notice</h2>' +
-                    '</div>' +
-                    '<div class="veritas-modal-body">' +
-                        '<p id="veritas-modal-message"></p>' +
-                        '<div id="veritas-modal-subtext" class="veritas-modal-subtext"></div>' +
-                        '<div id="veritas-modal-input" class="veritas-modal-input" style="display: none;">' +
-                            '<label for="veritas-modal-input-field" class="sr-only">Input</label>' +
-                            '<input id="veritas-modal-input-field" type="text" autocomplete="off" />' +
-                        '</div>' +
-                    '</div>' +
-                    '<div class="veritas-modal-actions">' +
-                        '<button type="button" class="veritas-modal-button secondary" data-action="cancel">Cancel</button>' +
-                        '<button type="button" class="veritas-modal-button primary" data-action="confirm">' +
-                            '<span class="veritas-modal-spinner" aria-hidden="true"></span>' +
-                            '<span>Confirm</span>' +
-                        '</button>' +
-                    '</div>' +
+                '<div class="veritas-modal-header">' +
+                '<h2 id="veritas-modal-title">Notice</h2>' +
+                '</div>' +
+                '<div class="veritas-modal-body">' +
+                '<p id="veritas-modal-message"></p>' +
+                '<div id="veritas-modal-subtext" class="veritas-modal-subtext"></div>' +
+                '<div id="veritas-modal-input" class="veritas-modal-input" style="display: none;">' +
+                '<label for="veritas-modal-input-field" class="sr-only">Input</label>' +
+                '<input id="veritas-modal-input-field" type="text" autocomplete="off" />' +
+                '</div>' +
+                '</div>' +
+                '<div class="veritas-modal-actions">' +
+                '<button type="button" class="veritas-modal-button secondary" data-action="cancel">Cancel</button>' +
+                '<button type="button" class="veritas-modal-button primary" data-action="confirm">' +
+                '<span class="veritas-modal-spinner" aria-hidden="true"></span>' +
+                '<span>Confirm</span>' +
+                '</button>' +
+                '</div>' +
                 '</div>';
 
             (document.body || document.documentElement).appendChild(root);
@@ -1389,7 +1430,7 @@
                 var siblings = [].slice.call(document.body.children);
                 if (state) {
                     hiddenNodes = [];
-                    siblings.forEach(function(node) {
+                    siblings.forEach(function (node) {
                         if (node === root) return;
                         hiddenNodes.push({
                             node: node,
@@ -1402,7 +1443,7 @@
                         }
                     });
                 } else {
-                    hiddenNodes.forEach(function(record) {
+                    hiddenNodes.forEach(function (record) {
                         if (record.ariaHidden === null) {
                             record.node.removeAttribute('aria-hidden');
                         } else {
@@ -1437,7 +1478,7 @@
             function getFocusable() {
                 var selectors = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
                 var nodes = [].slice.call(dialog.querySelectorAll(selectors));
-                return nodes.filter(function(node) {
+                return nodes.filter(function (node) {
                     return !node.hasAttribute('disabled') && node.offsetParent !== null;
                 });
             }
@@ -1501,7 +1542,7 @@
                 toggleBackground(false);
                 setPending(false);
                 if (previousFocus && typeof previousFocus.focus === 'function') {
-                    setTimeout(function() { previousFocus.focus(); }, 0);
+                    setTimeout(function () { previousFocus.focus(); }, 0);
                 }
                 if (resolveFn) {
                     resolveFn(result);
@@ -1585,9 +1626,9 @@
                 root.addEventListener('keydown', trapKey, true);
                 document.addEventListener('focus', enforceFocus, true);
 
-                return new Promise(function(resolve) {
+                return new Promise(function (resolve) {
                     resolveFn = resolve;
-                    setTimeout(function() {
+                    setTimeout(function () {
                         if (mode === 'prompt') {
                             inputField.focus();
                             inputField.select();
@@ -1602,7 +1643,7 @@
 
             confirmBtn.addEventListener('click', handleConfirm);
             cancelBtn.addEventListener('click', handleCancel);
-            root.addEventListener('click', function(event) {
+            root.addEventListener('click', function (event) {
                 if (event.target === root || event.target.classList.contains('veritas-modal-backdrop')) {
                     if (!currentConfig || currentConfig.allowBackdropClose === false) {
                         return;
@@ -1612,14 +1653,14 @@
             });
 
             return {
-                alert: function(options) {
-                    return openModal('alert', options).then(function() { return; });
+                alert: function (options) {
+                    return openModal('alert', options).then(function () { return; });
                 },
-                confirm: function(options) {
-                    return openModal('confirm', options).then(function(result) { return result !== false; });
+                confirm: function (options) {
+                    return openModal('confirm', options).then(function (result) { return result !== false; });
                 },
-                prompt: function(options) {
-                    return openModal('prompt', options).then(function(result) { return result; });
+                prompt: function (options) {
+                    return openModal('prompt', options).then(function (result) { return result; });
                 }
             };
         }
@@ -1682,7 +1723,7 @@
             stopPolling();
             var boundedDelay = Math.min(maxPollInterval, Math.max(1000, delay));
             var jitter = Math.random() * 0.15 * boundedDelay;
-            pollTimerId = setTimeout(function() {
+            pollTimerId = setTimeout(function () {
                 pollTimerId = null;
                 pollForStatus();
             }, boundedDelay + jitter);
@@ -1764,7 +1805,7 @@
             };
 
             google.script.run
-                .withSuccessHandler(function(data) {
+                .withSuccessHandler(function (data) {
                     pollInFlight = false;
                     var hadFailures = pollFailureCount > 0 || recoveringFromOutage;
                     pollFailureCount = 0;
@@ -1772,7 +1813,7 @@
                     lastSuccessfulPollAt = Date.now();
                     handlePostPollSuccess(data || {}, hadFailures);
                 })
-                .withFailureHandler(function(error) {
+                .withFailureHandler(function (error) {
                     pollInFlight = false;
                     pollFailureCount += 1;
                     console.error('Polling error', error);
@@ -1785,7 +1826,7 @@
             return studentContainer && studentContainer.style.display !== 'none' && entryScreen && entryScreen.style.display === 'none';
         }
 
-        window.addEventListener('offline', function() {
+        window.addEventListener('offline', function () {
             if (!isSessionActive()) return;
             recoveringFromOutage = true;
             showConnectivityState('offline', {
@@ -1794,7 +1835,7 @@
             });
         });
 
-        window.addEventListener('online', function() {
+        window.addEventListener('online', function () {
             if (!isSessionActive()) return;
             showConnectivityState('connecting', {
                 message: 'Reconnecting... your poll data is catching up.',
@@ -1805,15 +1846,15 @@
         });
 
         if (resumeSessionBtn) {
-            resumeSessionBtn.onclick = function() {
+            resumeSessionBtn.onclick = function () {
                 console.log('Resume button clicked - attempting fullscreen');
                 if (document.documentElement.requestFullscreen) {
                     document.documentElement.requestFullscreen()
-                        .then(function() {
+                        .then(function () {
                             console.log('Fullscreen entered - confirming with server');
                             // Call studentConfirmFullscreen with the current lockVersion
                             google.script.run
-                                .withSuccessHandler(function(response) {
+                                .withSuccessHandler(function (response) {
                                     if (response.success && response.status === 'OK') {
                                         console.log('Server confirmed unlock - resuming poll');
                                         isInteractionBlocked = false;
@@ -1836,13 +1877,13 @@
                                         statusMessage.textContent = 'Failed to resume. Please try again.';
                                     }
                                 })
-                                .withFailureHandler(function(error) {
+                                .withFailureHandler(function (error) {
                                     console.error('Error confirming fullscreen:', error);
                                     statusMessage.textContent = 'Error resuming session.';
                                 })
                                 .studentConfirmFullscreen(currentLockVersion, SESSION_TOKEN);
                         })
-                        .catch(function(e) {
+                        .catch(function (e) {
                             console.warn('Fullscreen denied on resume:', e);
                             statusMessage.textContent = 'Fullscreen is required. Please allow fullscreen and try again.';
                         });
@@ -1851,14 +1892,14 @@
         }
 
         if (secureExitButton) {
-            secureExitButton.addEventListener('click', function() {
+            secureExitButton.addEventListener('click', function () {
                 exitSecureSessionNow();
             });
         }
 
         if (startSessionBtn) {
             console.log('Attaching onclick handler to start session button');
-            startSessionBtn.onclick = function() {
+            startSessionBtn.onclick = function () {
                 console.log('!!! BEGIN SESSION BUTTON CLICKED !!!');
                 console.log('Hiding entry screen, showing student container');
                 entryScreen.style.display = 'none';
@@ -1873,7 +1914,7 @@
 
                 try {
                     if (document.documentElement.requestFullscreen) {
-                        document.documentElement.requestFullscreen().catch(function(e) {
+                        document.documentElement.requestFullscreen().catch(function (e) {
                             console.warn('Fullscreen denied:', e);
                         });
                     }
@@ -1899,7 +1940,7 @@
 
         function checkProctorState() {
             google.script.run
-                .withSuccessHandler(function(response) {
+                .withSuccessHandler(function (response) {
                     if (!response.success) {
                         console.error('Proctor state check failed:', response.error);
                         return;
@@ -1938,7 +1979,7 @@
                         }
                     }
                 })
-                .withFailureHandler(function(error) {
+                .withFailureHandler(function (error) {
                     console.error('Proctor state check error:', error);
                 })
                 .getStudentProctorState(SESSION_TOKEN);
@@ -2001,7 +2042,7 @@
                     showTeacherBlockedMessage();
                 }
                 google.script.run
-                    .withSuccessHandler(function(proctorResponse) {
+                    .withSuccessHandler(function (proctorResponse) {
                         if (proctorResponse.success) {
                             currentLockVersion = proctorResponse.lockVersion;
                             if (proctorResponse.status === 'AWAITING_FULLSCREEN') {
@@ -2093,7 +2134,7 @@
 
                     // Request fullscreen for live polls to enable proctoring
                     if (secureFullscreenManager && !secureFullscreenManager.isFullscreen()) {
-                        secureFullscreenManager.request().catch(function(err) {
+                        secureFullscreenManager.request().catch(function (err) {
                             console.log('Fullscreen request declined or not supported:', err);
                         });
                     }
@@ -2143,13 +2184,13 @@
                     console.log('currentMetacognitionEnabled will be set to:', !!data.metacognitionEnabled);
                     console.log('options:', data.options);
                     if (data.options && data.options.length > 0) {
-                        data.options.forEach(function(opt, idx) {
+                        data.options.forEach(function (opt, idx) {
                             console.log('  Option ' + idx + ':', 'text="' + opt.text + '", imageURL=' + opt.imageURL);
                         });
                     }
 
                     currentOptionLayout = [];
-                    shuffled.forEach(function(option, index) {
+                    shuffled.forEach(function (option, index) {
                         var letter = letters[index] || (index + 1).toString();
                         var btn = createOptionButton(option, letter, data.pollId, data.questionIndex);
                         var listItem = document.createElement('li');
@@ -2251,7 +2292,7 @@
                     }
                     // Exit fullscreen when poll ends
                     if (document.fullscreenElement) {
-                        document.exitFullscreen().catch(function(err) {
+                        document.exitFullscreen().catch(function (err) {
                             console.log('Error exiting fullscreen:', err);
                         });
                     }
@@ -2411,7 +2452,7 @@
 
                 var confidenceBtns = statusSubMessage.querySelectorAll('.confidence-btn');
                 for (var i = 0; i < confidenceBtns.length; i++) {
-                    confidenceBtns[i].addEventListener('click', function(event) {
+                    confidenceBtns[i].addEventListener('click', function (event) {
                         event.preventDefault();
                         var confidence = this.dataset.confidence;
                         submitAnswerWithConfidence(pollId, questionIndex, pendingAnswerText, confidence);
@@ -2425,7 +2466,7 @@
         }
 
         if (secureAccessCodeInput) {
-            secureAccessCodeInput.addEventListener('input', function() {
+            secureAccessCodeInput.addEventListener('input', function () {
                 setSecureAccessError('');
             });
         }
@@ -2443,9 +2484,9 @@
         }
 
         function submitAnswerToServer(pollId, questionIndex, answerText, confidence) {
-             // Live Poll
+            // Live Poll
             google.script.run
-                .withSuccessHandler(function(response) {
+                .withSuccessHandler(function (response) {
                     if (!response.success) {
                         hasAnsweredCurrent = false;
                         pendingSubmission = false;
@@ -2456,7 +2497,7 @@
                             statusSubMessage.style.display = 'none';
                             statusSubMessage.textContent = '';
                         }
-                        setTimeout(function() {
+                        setTimeout(function () {
                             if (!isInteractionBlocked) {
                                 questionContainer.style.display = 'block';
                                 statusContainer.style.display = 'none';
@@ -2478,7 +2519,7 @@
                         }
                     }
                 })
-                .withFailureHandler(function(error) {
+                .withFailureHandler(function (error) {
                     hasAnsweredCurrent = false;
                     pendingSubmission = false;
                     pendingAnswerText = null;
@@ -2527,7 +2568,7 @@
             content += '</div>';
             content += '<span class="result-indicator" aria-hidden="true"></span>';
             btn.innerHTML = content;
-            btn.addEventListener('click', function(event) {
+            btn.addEventListener('click', function (event) {
                 if (event && event.target && event.target.closest('.option-image')) {
                     return;
                 }
@@ -2552,7 +2593,7 @@
             }
             if (!optionsList) return;
             var buttons = optionsList.querySelectorAll('button');
-            buttons.forEach(function(btn) {
+            buttons.forEach(function (btn) {
                 btn.disabled = false;
                 btn.className = optionBaseClass;
                 btn.classList.remove('result-readonly', 'result-correct', 'result-incorrect', 'result-your-choice');
@@ -2583,7 +2624,7 @@
             optionsList.innerHTML = '';
             currentOptionLayout = [];
 
-            baseOptions.forEach(function(option, index) {
+            baseOptions.forEach(function (option, index) {
                 var normalized = {
                     text: option.text || option,
                     imageURL: option.imageURL || option.imageUrl || ''
@@ -2608,7 +2649,7 @@
             var percentages = data.resultPercentages || {};
             var buttons = optionsList.querySelectorAll('button');
 
-            buttons.forEach(function(btn) {
+            buttons.forEach(function (btn) {
                 var answerText = btn.dataset.answerText || '';
                 btn.disabled = true;
                 btn.className = optionBaseClass + ' result-readonly';
@@ -2744,7 +2785,7 @@
             questionContainer.classList.add('results-stage');
             questionContainer.classList.remove('showing-results');
             if (data.status === 'RESULTS_REVEALED') {
-                requestAnimationFrame(function() {
+                requestAnimationFrame(function () {
                     questionContainer.classList.add('showing-results');
                 });
             }
@@ -2902,4 +2943,4 @@
             if (resumeControls) resumeControls.style.display = 'none';
         }
     })();
-    </script>
+</script>

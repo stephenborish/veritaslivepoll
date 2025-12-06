@@ -2732,6 +2732,7 @@
         }
       });
       ALL_CLASSES = Array.from(classSet).sort();
+      window.ALL_CLASSES = ALL_CLASSES; // Expose for Poll Wizard
 
       var previousSelection = classSelect.value;
       classSelect.innerHTML = '<option value="">-- Select Class --</option>';

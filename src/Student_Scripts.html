@@ -362,7 +362,10 @@
             submitIndividualAnswerWithConfidence(state, answerText, null);
         }
 
-        function submitIndividualAnswerWithConfidence(state, answerText, confidenceLevel) {
+        function submitIndividualAnswerWithConfidence(state, answerText, confidenceLevel, retryCount) {
+            retryCount = retryCount || 0;
+            var maxRetries = 3;
+
             if (!state || secureSubmitting) return;
             setSecureSubmitLoading(true);
             disableSecureOptions(true);
@@ -373,12 +376,20 @@
                 answer: answerText || '',
                 confidenceLevel: confidenceLevel
             };
+
             google.script.run
                 .withSuccessHandler(function(response) {
                     setSecureSubmitLoading(false);
                     disableSecureOptions(false);
                     hideSecureConfidencePrompt(); // Ensure hidden on success
                     if (response && response.success) {
+                        // Success - clear local backup
+                        try {
+                            localStorage.removeItem('secure_pending_answer');
+                        } catch (e) {
+                            console.warn('Could not clear local backup', e);
+                        }
+
                         // Clear current question state immediately to prevent re-display
                         var previousQuestionKey = secureCurrentQuestionKey;
                         secureSelectedOptionIndex = null;
@@ -408,10 +419,36 @@
                     }
                 })
                 .withFailureHandler(function(error) {
+                    // Check if network error and retries available
+                    var isNetworkError = /network|timeout|unavailable|DNS|failed to fetch/i.test(error.toString());
+
+                    if (isNetworkError && retryCount < maxRetries) {
+                        console.warn('Submission failed, retrying... (' + (retryCount + 1) + '/' + maxRetries + ')');
+                        
+                        // Exponential backoff: 1s, 2s, 4s
+                        var delay = Math.pow(2, retryCount) * 1000;
+                        
+                        setTimeout(function() {
+                            setSecureSubmitLoading(false); // Reset to allow retry
+                            secureSubmitting = false; // Important: reset locking flag
+                            submitIndividualAnswerWithConfidence(state, answerText, confidenceLevel, retryCount + 1);
+                        }, delay);
+                        
+                        return; // Don't show error yet
+                    }
+
                     setSecureSubmitLoading(false);
                     disableSecureOptions(false);
                     hideSecureConfidencePrompt(); // Ensure hidden on error
-                    handleError(error);
+
+                    // Save to local storage for manual recovery
+                    try {
+                        localStorage.setItem('secure_pending_answer', JSON.stringify(answerDetails));
+                    } catch (e) {
+                        console.error('Failed to backup answer', e);
+                    }
+
+                    handleError('Submission failed after ' + (retryCount + 1) + ' attempts. Your answer is backed up. Please check your connection and try again.');
                 })
                 .submitIndividualTimedAnswer(
                     answerDetails.pollId,
@@ -778,6 +815,38 @@
         }
 
         console.log('Student poll script initializing...');
+
+        // Check for pending answer backup on initialization
+        try {
+            var backup = localStorage.getItem('secure_pending_answer');
+            if (backup) {
+                var answerDetails = JSON.parse(backup);
+                // Use a slight delay to ensure UI is ready
+                setTimeout(function() {
+                    if (confirm('Veritas found an unsaved answer from a previous session. Would you like to retry submitting it?')) {
+                        // Create a dummy state to pass to submit
+                        var dummyState = {
+                            pollId: answerDetails.pollId,
+                            sessionId: answerDetails.sessionId,
+                            actualQuestionIndex: answerDetails.actualQuestionIndex,
+                            question: {} // Dummy question object
+                        };
+                        
+                        // Manually trigger submission with recovered data
+                        submitIndividualAnswerWithConfidence(
+                            dummyState, 
+                            answerDetails.answer, 
+                            answerDetails.confidenceLevel
+                        );
+                    } else {
+                        localStorage.removeItem('secure_pending_answer');
+                    }
+                }, 1000);
+            }
+        } catch (e) {
+            console.error('Failed to check backup', e);
+        }
+
         var studentLoader = document.getElementById('student-loader');
         var preLiveCard = document.getElementById('pre-live-card');
         var statusContainer = document.getElementById('status-container');

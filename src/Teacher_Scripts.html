@@ -11299,6 +11299,18 @@
 
       // Switch to create-poll-view (hide other views)
       setMainSection('create-poll');
+
+      // Show wizard progress in main header and hide session controls
+      var headerWizardProgress = document.getElementById('header-wizard-progress');
+      var headerSessionControls = document.getElementById('header-session-controls');
+      if (headerWizardProgress) {
+        headerWizardProgress.classList.remove('hidden');
+        headerWizardProgress.classList.add('flex');
+      }
+      if (headerSessionControls) {
+        headerSessionControls.classList.add('hidden');
+      }
+
       goToWizardStep(1);
     }
 
@@ -11308,6 +11320,18 @@
           return;
         }
       }
+
+      // Hide wizard progress in main header and restore session controls
+      var headerWizardProgress = document.getElementById('header-wizard-progress');
+      var headerSessionControls = document.getElementById('header-session-controls');
+      if (headerWizardProgress) {
+        headerWizardProgress.classList.add('hidden');
+        headerWizardProgress.classList.remove('flex');
+      }
+      if (headerSessionControls) {
+        headerSessionControls.classList.remove('hidden');
+      }
+
       // Return to dashboard
       setMainSection('dashboard');
     }
@@ -11325,24 +11349,50 @@
     function goToWizardStep(stepNumber) {
       if (stepNumber < 1 || stepNumber > 4) return;
 
-      for (var i = 1; i <= 4; i++) {
-        var step = document.getElementById('wizard-step-' + i);
-        var progressStep = document.querySelector('.progress-step[data-step="' + i + '"]');
-        if (step) step.classList.remove('active');
-        if (progressStep) {
-          progressStep.classList.remove('active');
-          if (i < stepNumber) {
-            progressStep.classList.add('completed');
-          } else {
-            progressStep.classList.remove('completed');
+      // Update progress steps in BOTH the wizard header and the main header
+      var progressContainers = ['#header-wizard-progress', '.wizard-progress'];
+      progressContainers.forEach(function (containerSelector) {
+        var container = document.querySelector(containerSelector);
+        if (!container) return;
+
+        for (var i = 1; i <= 4; i++) {
+          var progressStep = container.querySelector('.progress-step[data-step="' + i + '"]');
+          if (progressStep) {
+            progressStep.classList.remove('active', 'completed');
+            if (i < stepNumber) {
+              progressStep.classList.add('completed');
+              // Visual feedback for completed steps
+              var circle = progressStep.querySelector('.progress-circle');
+              if (circle) {
+                circle.classList.add('bg-green-500');
+                circle.classList.remove('bg-white/20');
+              }
+            } else if (i === stepNumber) {
+              progressStep.classList.add('active');
+              var circle = progressStep.querySelector('.progress-circle');
+              if (circle) {
+                circle.classList.remove('bg-green-500', 'bg-white/20');
+                circle.classList.add('bg-veritas-gold');
+              }
+            } else {
+              var circle = progressStep.querySelector('.progress-circle');
+              if (circle) {
+                circle.classList.remove('bg-green-500', 'bg-veritas-gold');
+                circle.classList.add('bg-white/20');
+              }
+            }
           }
         }
+      });
+
+      // Update wizard content steps
+      for (var i = 1; i <= 4; i++) {
+        var step = document.getElementById('wizard-step-' + i);
+        if (step) step.classList.remove('active');
       }
 
       var targetStep = document.getElementById('wizard-step-' + stepNumber);
-      var targetProgressStep = document.querySelector('.progress-step[data-step="' + stepNumber + '"]');
       if (targetStep) targetStep.classList.add('active');
-      if (targetProgressStep) targetProgressStep.classList.add('active');
 
       wizardState.currentStep = stepNumber;
       updateWizardFooter();
@@ -12025,7 +12075,23 @@
           console.log('Publish response:', response);
           if (response && !response.error) {
             alert('Poll published successfully!');
-            closePollWizard();
+            // Reset wizard state BEFORE closing to avoid "unsaved changes" prompt
+            wizardState.pollName = '';
+            wizardState.className = '';
+            wizardState.questions = [];
+
+            // Hide wizard progress in main header and restore session controls
+            var headerWizardProgress = document.getElementById('header-wizard-progress');
+            var headerSessionControls = document.getElementById('header-session-controls');
+            if (headerWizardProgress) {
+              headerWizardProgress.classList.add('hidden');
+              headerWizardProgress.classList.remove('flex');
+            }
+            if (headerSessionControls) {
+              headerSessionControls.classList.remove('hidden');
+            }
+
+            setMainSection('dashboard');
             location.reload();
           } else {
             alert('Failed to publish: ' + (response.error || response.message || 'Unknown error'));

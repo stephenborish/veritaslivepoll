@@ -27,6 +27,41 @@
       </div>
     </div>
 
+    <!-- Wizard Progress Steps in Header (shown only during wizard) -->
+    <div id="header-wizard-progress" class="hidden items-center gap-1 ml-4">
+      <div class="progress-step active flex items-center gap-1" data-step="1">
+        <div
+          class="progress-circle h-6 w-6 rounded-full bg-white/20 text-white text-xs font-bold flex items-center justify-center">
+          1</div>
+        <span class="progress-label text-white/80 text-xs font-medium hidden md:inline">Mode</span>
+      </div>
+      <div class="progress-connector w-4 h-0.5 bg-white/30"></div>
+
+      <div class="progress-step flex items-center gap-1" data-step="2">
+        <div
+          class="progress-circle h-6 w-6 rounded-full bg-white/20 text-white/70 text-xs font-bold flex items-center justify-center">
+          2</div>
+        <span class="progress-label text-white/60 text-xs font-medium hidden md:inline">Configure</span>
+      </div>
+      <div class="progress-connector w-4 h-0.5 bg-white/30"></div>
+
+      <div class="progress-step flex items-center gap-1" data-step="3">
+        <div
+          class="progress-circle h-6 w-6 rounded-full bg-white/20 text-white/70 text-xs font-bold flex items-center justify-center">
+          3</div>
+        <span class="progress-label text-white/60 text-xs font-medium hidden md:inline">Questions</span>
+      </div>
+      <div class="progress-connector w-4 h-0.5 bg-white/30"></div>
+
+      <div class="progress-step flex items-center gap-1" data-step="4">
+        <div
+          class="progress-circle h-6 w-6 rounded-full bg-white/20 text-white/70 text-xs font-bold flex items-center justify-center">
+          4</div>
+        <span class="progress-label text-white/60 text-xs font-medium hidden md:inline">Review</span>
+      </div>
+    </div>
+
+
     <div id="header-session-controls" class="flex flex-1 flex-wrap items-center justify-center gap-3 text-sm">
       <div class="min-w-[220px]">
         <label for="poll-select" class="sr-only">Select Poll to Start Session</label>
@@ -1235,8 +1270,8 @@
             <h2 id="wizard-title" class="text-lg font-bold text-white">Create Poll</h2>
           </div>
 
-          <!-- Inline Progress Steps -->
-          <div class="wizard-progress flex items-center gap-1 flex-1 justify-center max-w-xl">
+          <!-- Inline Progress Steps (hidden - now in main header) -->
+          <div class="wizard-progress hidden items-center gap-1 flex-1 justify-center max-w-xl">
             <div class="progress-step active flex items-center gap-1.5" data-step="1">
               <div
                 class="progress-circle h-7 w-7 rounded-full bg-white/20 text-white text-xs font-bold flex items-center justify-center">

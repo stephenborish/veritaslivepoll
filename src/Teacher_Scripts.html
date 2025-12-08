@@ -11198,22 +11198,45 @@
     };
     wizardQuestionIdCounter = 0;
 
-    // Populate class dropdown from ALL_CLASSES
+    // Populate class dropdown from ALL_CLASSES or BASE_CLASSES
     var classSelect = document.getElementById('wizard-class-select');
     if (classSelect) {
       classSelect.innerHTML = '<option value="">-- Select a class --</option>';
 
-      if (!window.ALL_CLASSES || window.ALL_CLASSES.length === 0) {
-        alert('Please wait for the dashboard to finish loading before creating a poll.');
-        return;
-      }
+      var classesList = (window.ALL_CLASSES && window.ALL_CLASSES.length > 0)
+        ? window.ALL_CLASSES
+        : (typeof BASE_CLASSES !== 'undefined' ? BASE_CLASSES : []);
 
-      window.ALL_CLASSES.forEach(function (cls) {
-        var option = document.createElement('option');
-        option.value = cls;
-        option.textContent = cls;
-        classSelect.appendChild(option);
-      });
+      if (classesList.length === 0) {
+        // Attempt one-time retry in case of timing issue, or show placeholder
+        var loadingOpt = document.createElement('option');
+        loadingOpt.textContent = "Loading classes...";
+        loadingOpt.disabled = true;
+        classSelect.appendChild(loadingOpt);
+
+        // Async check
+        setTimeout(function () {
+          var retryList = (window.ALL_CLASSES && window.ALL_CLASSES.length > 0) ? window.ALL_CLASSES : [];
+          if (retryList.length > 0) {
+            classSelect.innerHTML = '<option value="">-- Select a class --</option>';
+            retryList.forEach(function (cls) {
+              var option = document.createElement('option');
+              option.value = cls;
+              option.textContent = cls;
+              classSelect.appendChild(option);
+            });
+          } else {
+            loadingOpt.textContent = "No classes found (Create one in Dashboard)";
+          }
+        }, 1500);
+      } else {
+        classesList.forEach(function (cls) {
+          var option = document.createElement('option');
+          option.value = cls;
+          option.textContent = cls;
+          classSelect.appendChild(option);
+        });
+      }
     }
 
     // Switch to create-poll-view (hide other views)
@@ -11436,15 +11459,15 @@
 
     wizardState.questions.forEach(function (q, index) {
       var questionDiv = document.createElement('div');
-      questionDiv.className = 'question-card';
-      questionDiv.innerHTML = '<div class="question-card-header">' +
-        '<span class="question-number">Question ' + (index + 1) + '</span>' +
-        '<button type="button" class="btn-icon-danger" onclick="removeWizardQuestion(' + index + ')">' +
+      questionDiv.className = 'question-card bg-white dark:bg-brand-dark-gray border border-brand-light-gray rounded-lg overflow-hidden shadow-sm';
+      questionDiv.innerHTML = '<div class="question-card-header flex justify-between items-center p-4 bg-slate-50 dark:bg-black/10 border-b border-brand-light-gray dark:border-brand-dark-gray/40">' +
+        '<span class="question-number font-bold text-brand-dark-gray dark:text-white">Question ' + (index + 1) + '</span>' +
+        '<button type="button" class="btn-icon-danger p-2 rounded text-red-500 hover:bg-red-50" onclick="removeWizardQuestion(' + index + ')" title="Remove">' +
         '<span class="material-symbols-outlined">delete</span></button></div>' +
-        '<div class="question-card-body">' +
+        '<div class="question-card-body p-4">' +
         '<div class="form-group">' +
-        '<label class="form-label required">Question Text</label>' +
-        '<textarea class="form-textarea" rows="3" placeholder="Enter your question" data-q-index="' + index + '"></textarea>' +
+        '<label class="form-label block text-sm font-bold text-brand-dark-gray dark:text-white mb-2">Question Text <span class="text-red-500">*</span></label>' +
+        '<textarea class="form-textarea w-full rounded-lg border border-brand-light-gray px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50" rows="3" placeholder="Enter your question text here..." data-q-index="' + index + '"></textarea>' +
         '</div></div>';
 
       container.appendChild(questionDiv);
@@ -11465,7 +11488,25 @@
 
   function renderReviewSummary() {
     document.getElementById('review-mode').textContent = wizardState.mode === 'live' ? 'Live Poll' : 'Secure Assessment';
-    document.getElementById('review-name').textContent = wizardState.pollName || '(Not set)';
+    document.getElementById('review-name').textContent = wizardState.pollName || '(Untitled)';
+
+    // New fields
+    document.getElementById('review-class').textContent = wizardState.className || '(No class selected)';
+
+    var qSummary = document.getElementById('review-questions-summary');
+    if (qSummary) {
+      if (wizardState.questions.length === 0) {
+        qSummary.textContent = "No questions added.";
+      } else {
+        qSummary.innerHTML = '<ul class="list-disc pl-5 space-y-1">' +
+          wizardState.questions.map(function (q, i) {
+            var text = q.questionText || '(Empty question)';
+            if (text.length > 60) text = text.substring(0, 60) + '...';
+            return '<li>Question ' + (i + 1) + ': ' + escapeHtml(text) + '</li>';
+          }).join('') +
+          '</ul>';
+      }
+    }
   }
 
   function publishWizardPoll() {

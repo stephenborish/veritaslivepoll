@@ -12075,24 +12075,8 @@
           console.log('Publish response:', response);
           if (response && !response.error) {
             alert('Poll published successfully!');
-            // Reset wizard state BEFORE closing to avoid "unsaved changes" prompt
-            wizardState.pollName = '';
-            wizardState.className = '';
-            wizardState.questions = [];
-
-            // Hide wizard progress in main header and restore session controls
-            var headerWizardProgress = document.getElementById('header-wizard-progress');
-            var headerSessionControls = document.getElementById('header-session-controls');
-            if (headerWizardProgress) {
-              headerWizardProgress.classList.add('hidden');
-              headerWizardProgress.classList.remove('flex');
-            }
-            if (headerSessionControls) {
-              headerSessionControls.classList.remove('hidden');
-            }
-
-            setMainSection('dashboard');
-            location.reload();
+            // Just reload - no need to manipulate state, reload resets everything
+            window.location.reload();
           } else {
             alert('Failed to publish: ' + (response.error || response.message || 'Unknown error'));
             if (publishBtn) {

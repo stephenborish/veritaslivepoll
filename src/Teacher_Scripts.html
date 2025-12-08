@@ -11483,7 +11483,7 @@
     }
 
     // ===========================
-    // STEP 3: QUESTIONS
+    // STEP 3: QUESTIONS - Full Editor
     // ===========================
 
     function addWizardQuestion() {
@@ -11492,19 +11492,67 @@
 
       wizardState.questions.push({
         questionText: '',
-        options: ['', ''],
-        correctAnswer: null,
-        metacognitionEnabled: false
+        questionImageURL: '',
+        options: [
+          { text: '', imageURL: '' },
+          { text: '', imageURL: '' },
+          { text: '', imageURL: '' },
+          { text: '', imageURL: '' }
+        ],
+        correctAnswerIndex: 0,
+        metacognitionEnabled: false,
+        timerSeconds: null
       });
 
       renderWizardQuestions();
+
+      // Scroll to the new question
+      setTimeout(function () {
+        var newQuestion = container.lastElementChild;
+        if (newQuestion) {
+          newQuestion.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
     }
 
     function removeWizardQuestion(index) {
+      if (wizardState.questions.length <= 1) {
+        alert('You must have at least one question.');
+        return;
+      }
       if (confirm('Are you sure you want to remove this question?')) {
         wizardState.questions.splice(index, 1);
         renderWizardQuestions();
       }
+    }
+
+    function addWizardOption(qIndex) {
+      var q = wizardState.questions[qIndex];
+      if (q.options.length >= 6) {
+        alert('Maximum 6 answer choices allowed.');
+        return;
+      }
+      q.options.push({ text: '', imageURL: '' });
+      renderWizardQuestions();
+    }
+
+    function removeWizardOption(qIndex, optIndex) {
+      var q = wizardState.questions[qIndex];
+      if (q.options.length <= 2) {
+        alert('Minimum 2 answer choices required.');
+        return;
+      }
+      q.options.splice(optIndex, 1);
+      // Adjust correct answer index if needed
+      if (q.correctAnswerIndex >= q.options.length) {
+        q.correctAnswerIndex = 0;
+      }
+      renderWizardQuestions();
+    }
+
+    function setCorrectAnswer(qIndex, optIndex) {
+      wizardState.questions[qIndex].correctAnswerIndex = optIndex;
+      renderWizardQuestions();
     }
 
     function renderWizardQuestions() {
@@ -11513,100 +11561,367 @@
 
       container.innerHTML = '';
 
-      wizardState.questions.forEach(function (q, index) {
-        var questionDiv = document.createElement('div');
-        questionDiv.className = 'question-card bg-white dark:bg-brand-dark-gray border border-brand-light-gray rounded-lg overflow-hidden shadow-sm';
-        questionDiv.innerHTML = '<div class="question-card-header flex justify-between items-center p-4 bg-slate-50 dark:bg-black/10 border-b border-brand-light-gray dark:border-brand-dark-gray/40">' +
-          '<span class="question-number font-bold text-brand-dark-gray dark:text-white">Question ' + (index + 1) + '</span>' +
-          '<button type="button" class="btn-icon-danger p-2 rounded text-red-500 hover:bg-red-50" onclick="removeWizardQuestion(' + index + ')" title="Remove">' +
-          '<span class="material-symbols-outlined">delete</span></button></div>' +
-          '<div class="question-card-body p-4">' +
-          '<div class="form-group">' +
-          '<label class="form-label block text-sm font-bold text-brand-dark-gray dark:text-white mb-2">Question Text <span class="text-red-500">*</span></label>' +
-          '<textarea class="form-textarea w-full rounded-lg border border-brand-light-gray px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50" rows="3" placeholder="Enter your question text here..." data-q-index="' + index + '"></textarea>' +
-          '</div></div>';
+      wizardState.questions.forEach(function (q, qIndex) {
+        var optionLabels = ['A', 'B', 'C', 'D', 'E', 'F'];
 
+        var questionDiv = document.createElement('div');
+        questionDiv.className = 'question-card bg-white border border-brand-light-gray rounded-xl overflow-hidden shadow-sm';
+
+        // Question Header
+        var headerHtml = '<div class="question-card-header flex justify-between items-center px-5 py-4 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-brand-light-gray">' +
+          '<div class="flex items-center gap-3">' +
+          '<div class="h-9 w-9 rounded-lg bg-primary text-white flex items-center justify-center font-bold text-sm">' + (qIndex + 1) + '</div>' +
+          '<span class="font-bold text-brand-dark-gray text-lg">Question ' + (qIndex + 1) + '</span>' +
+          '</div>' +
+          '<button type="button" class="p-2 rounded-lg text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors" onclick="removeWizardQuestion(' + qIndex + ')" title="Remove Question">' +
+          '<span class="material-symbols-outlined">delete</span></button></div>';
+
+        // Question Body
+        var bodyHtml = '<div class="question-card-body p-5 space-y-5">' +
+          // Question Text
+          '<div class="form-group">' +
+          '<label class="block text-sm font-bold text-brand-dark-gray mb-2">Question Text <span class="text-red-500">*</span></label>' +
+          '<textarea class="wizard-q-text w-full rounded-lg border border-brand-light-gray px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all resize-none" rows="2" placeholder="Enter your question..." data-q-index="' + qIndex + '">' + escapeHtml(q.questionText || '') + '</textarea>' +
+          '</div>' +
+
+          // Question Image URL (optional)
+          '<div class="form-group">' +
+          '<label class="block text-xs font-semibold text-brand-dark-gray/60 mb-1.5 uppercase tracking-wider">Question Image URL (optional)</label>' +
+          '<input type="url" class="wizard-q-img w-full rounded-lg border border-brand-light-gray px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all" placeholder="https://..." data-q-index="' + qIndex + '" value="' + escapeHtml(q.questionImageURL || '') + '">' +
+          '</div>' +
+
+          // Answer Choices Header
+          '<div class="pt-2">' +
+          '<div class="flex items-center justify-between mb-3">' +
+          '<label class="text-sm font-bold text-brand-dark-gray">Answer Choices <span class="text-red-500">*</span></label>' +
+          '<span class="text-xs text-brand-dark-gray/50">Select the correct answer</span>' +
+          '</div>';
+
+        // Answer Options
+        bodyHtml += '<div class="space-y-3">';
+        q.options.forEach(function (opt, optIndex) {
+          var isCorrect = q.correctAnswerIndex === optIndex;
+          var correctClass = isCorrect ? 'border-green-400 bg-green-50/50 ring-2 ring-green-200' : 'border-brand-light-gray hover:border-primary/40';
+
+          bodyHtml += '<div class="answer-option flex items-start gap-3 p-3 rounded-lg border-2 ' + correctClass + ' transition-all">' +
+            // Correct answer radio
+            '<label class="flex items-center cursor-pointer mt-1">' +
+            '<input type="radio" name="correct-' + qIndex + '" class="hidden wizard-correct-radio" data-q-index="' + qIndex + '" data-opt-index="' + optIndex + '" ' + (isCorrect ? 'checked' : '') + '>' +
+            '<div class="h-8 w-8 rounded-lg flex items-center justify-center font-bold text-sm transition-all ' +
+            (isCorrect ? 'bg-green-500 text-white shadow-sm' : 'bg-slate-100 text-slate-500 hover:bg-primary/10 hover:text-primary') + '">' + optionLabels[optIndex] + '</div>' +
+            '</label>' +
+
+            // Option text and image inputs
+            '<div class="flex-1 space-y-2">' +
+            '<input type="text" class="wizard-opt-text w-full rounded-lg border border-brand-light-gray px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all" placeholder="Answer ' + optionLabels[optIndex] + '..." data-q-index="' + qIndex + '" data-opt-index="' + optIndex + '" value="' + escapeHtml(opt.text || '') + '">' +
+            '<input type="url" class="wizard-opt-img w-full rounded border border-brand-light-gray/70 px-2.5 py-1.5 text-xs text-brand-dark-gray/70 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all" placeholder="Image URL (optional)" data-q-index="' + qIndex + '" data-opt-index="' + optIndex + '" value="' + escapeHtml(opt.imageURL || '') + '">' +
+            '</div>' +
+
+            // Remove option button
+            '<button type="button" class="p-1.5 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors mt-1" onclick="removeWizardOption(' + qIndex + ',' + optIndex + ')" title="Remove option">' +
+            '<span class="material-symbols-outlined text-lg">close</span></button>' +
+            '</div>';
+        });
+        bodyHtml += '</div>';
+
+        // Add option button
+        if (q.options.length < 6) {
+          bodyHtml += '<button type="button" class="w-full mt-2 py-2 flex items-center justify-center gap-2 text-sm font-medium text-primary border border-dashed border-primary/40 rounded-lg hover:bg-primary/5 hover:border-primary transition-all" onclick="addWizardOption(' + qIndex + ')">' +
+            '<span class="material-symbols-outlined text-lg">add</span>Add Answer Choice</button>';
+        }
+        bodyHtml += '</div>';
+
+        // Additional Options (metacognition, timer)
+        bodyHtml += '<div class="pt-4 border-t border-brand-light-gray/60 flex flex-wrap gap-6">' +
+          '<label class="flex items-center gap-2 cursor-pointer">' +
+          '<input type="checkbox" class="wizard-meta-cb h-4 w-4 rounded border-brand-light-gray text-primary focus:ring-primary/30" data-q-index="' + qIndex + '" ' + (q.metacognitionEnabled ? 'checked' : '') + '>' +
+          '<span class="text-sm text-brand-dark-gray font-medium">Enable Confidence Tracking</span>' +
+          '</label>' +
+          '<div class="flex items-center gap-2">' +
+          '<label class="text-sm text-brand-dark-gray/70">Timer (seconds):</label>' +
+          '<input type="number" class="wizard-timer w-20 rounded border border-brand-light-gray px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30" placeholder="Optional" min="5" max="600" data-q-index="' + qIndex + '" value="' + (q.timerSeconds || '') + '">' +
+          '</div>' +
+          '</div>';
+
+        bodyHtml += '</div>'; // Close question-card-body
+
+        questionDiv.innerHTML = headerHtml + bodyHtml;
         container.appendChild(questionDiv);
 
-        var textarea = questionDiv.querySelector('textarea');
-        if (textarea) {
-          textarea.value = q.questionText || '';
-          textarea.addEventListener('input', function () {
-            wizardState.questions[index].questionText = this.value;
+        // Bind event listeners
+        var qTextarea = questionDiv.querySelector('.wizard-q-text');
+        if (qTextarea) {
+          qTextarea.addEventListener('input', function () {
+            wizardState.questions[qIndex].questionText = this.value;
+          });
+        }
+
+        var qImgInput = questionDiv.querySelector('.wizard-q-img');
+        if (qImgInput) {
+          qImgInput.addEventListener('input', function () {
+            wizardState.questions[qIndex].questionImageURL = this.value;
+          });
+        }
+
+        // Option text inputs
+        questionDiv.querySelectorAll('.wizard-opt-text').forEach(function (input) {
+          input.addEventListener('input', function () {
+            var qi = parseInt(this.getAttribute('data-q-index'));
+            var oi = parseInt(this.getAttribute('data-opt-index'));
+            wizardState.questions[qi].options[oi].text = this.value;
+          });
+        });
+
+        // Option image inputs
+        questionDiv.querySelectorAll('.wizard-opt-img').forEach(function (input) {
+          input.addEventListener('input', function () {
+            var qi = parseInt(this.getAttribute('data-q-index'));
+            var oi = parseInt(this.getAttribute('data-opt-index'));
+            wizardState.questions[qi].options[oi].imageURL = this.value;
+          });
+        });
+
+        // Correct answer radios - handle clicks on the parent label
+        questionDiv.querySelectorAll('.wizard-correct-radio').forEach(function (radio) {
+          radio.parentElement.addEventListener('click', function (e) {
+            e.preventDefault();
+            var qi = parseInt(radio.getAttribute('data-q-index'));
+            var oi = parseInt(radio.getAttribute('data-opt-index'));
+            setCorrectAnswer(qi, oi);
+          });
+        });
+
+        // Metacognition checkbox
+        var metaCb = questionDiv.querySelector('.wizard-meta-cb');
+        if (metaCb) {
+          metaCb.addEventListener('change', function () {
+            wizardState.questions[qIndex].metacognitionEnabled = this.checked;
+          });
+        }
+
+        // Timer input
+        var timerInput = questionDiv.querySelector('.wizard-timer');
+        if (timerInput) {
+          timerInput.addEventListener('input', function () {
+            var val = parseInt(this.value);
+            wizardState.questions[qIndex].timerSeconds = isNaN(val) ? null : val;
           });
         }
       });
     }
+
+    // Expose new functions globally
+    window.addWizardOption = addWizardOption;
+    window.removeWizardOption = removeWizardOption;
+    window.setCorrectAnswer = setCorrectAnswer;
 
     // ===========================
     // STEP 4: REVIEW
     // ===========================
 
     function renderReviewSummary() {
-      document.getElementById('review-mode').textContent = wizardState.mode === 'live' ? 'Live Poll' : 'Secure Assessment';
+      var modeText = wizardState.mode === 'live' ? 'Live Poll' : 'Secure Assessment';
+      document.getElementById('review-mode').textContent = modeText;
       document.getElementById('review-name').textContent = wizardState.pollName || '(Untitled)';
-
-      // New fields
       document.getElementById('review-class').textContent = wizardState.className || '(No class selected)';
 
       var qSummary = document.getElementById('review-questions-summary');
       if (qSummary) {
         if (wizardState.questions.length === 0) {
-          qSummary.textContent = "No questions added.";
+          qSummary.innerHTML = '<p class="text-red-500 font-medium">No questions added. Please go back and add at least one question.</p>';
         } else {
-          qSummary.innerHTML = '<ul class="list-disc pl-5 space-y-1">' +
-            wizardState.questions.map(function (q, i) {
-              var text = q.questionText || '(Empty question)';
-              if (text.length > 60) text = text.substring(0, 60) + '...';
-              return '<li>Question ' + (i + 1) + ': ' + escapeHtml(text) + '</li>';
-            }).join('') +
-            '</ul>';
+          var optionLabels = ['A', 'B', 'C', 'D', 'E', 'F'];
+          var html = '<div class="space-y-4">';
+          html += '<p class="text-sm text-brand-dark-gray/60 mb-3">' + wizardState.questions.length + ' question(s) ready to publish</p>';
+
+          wizardState.questions.forEach(function (q, i) {
+            var text = q.questionText || '(Empty question)';
+            if (text.length > 80) text = text.substring(0, 80) + '...';
+
+            html += '<div class="bg-slate-50 rounded-lg p-3 border border-brand-light-gray">';
+            html += '<div class="flex items-start gap-2 mb-2">';
+            html += '<span class="h-6 w-6 rounded bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">' + (i + 1) + '</span>';
+            html += '<span class="font-medium text-brand-dark-gray text-sm">' + escapeHtml(text) + '</span>';
+            html += '</div>';
+
+            // Show answer choices
+            if (q.options && q.options.length > 0) {
+              html += '<div class="ml-8 flex flex-wrap gap-2">';
+              q.options.forEach(function (opt, j) {
+                if (opt.text && opt.text.trim() !== '') {
+                  var isCorrect = q.correctAnswerIndex === j;
+                  var optClass = isCorrect ? 'bg-green-100 text-green-700 border-green-300' : 'bg-white text-brand-dark-gray/70 border-brand-light-gray';
+                  var optText = opt.text.length > 20 ? opt.text.substring(0, 20) + '...' : opt.text;
+                  html += '<span class="inline-flex items-center gap-1 px-2 py-1 text-xs rounded border ' + optClass + '">';
+                  html += '<strong>' + optionLabels[j] + '</strong> ' + escapeHtml(optText);
+                  if (isCorrect) html += ' <span class="material-symbols-outlined text-xs">check</span>';
+                  html += '</span>';
+                }
+              });
+              html += '</div>';
+            }
+            html += '</div>';
+          });
+
+          html += '</div>';
+
+          // Show secure settings if applicable
+          if (wizardState.mode === 'secure') {
+            html += '<div class="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200">';
+            html += '<h5 class="text-sm font-bold text-amber-800 mb-2 flex items-center gap-2"><span class="material-symbols-outlined text-base">lock</span>Secure Assessment Settings</h5>';
+            html += '<div class="text-sm text-amber-700 space-y-1">';
+            html += '<p><strong>Time Limit:</strong> ' + (wizardState.timeLimitMinutes || 'Not set') + ' minutes</p>';
+            if (wizardState.accessCode) {
+              html += '<p><strong>Access Code:</strong> ' + escapeHtml(wizardState.accessCode) + '</p>';
+            }
+            html += '</div></div>';
+          }
+
+          qSummary.innerHTML = html;
         }
       }
     }
 
     function publishWizardPoll() {
-      var payload = {
-        pollName: wizardState.pollName,
-        className: wizardState.className,
-        sessionType: wizardState.mode === 'secure' ? 'individual-timed' : 'live',
-        questions: wizardState.questions,
-        showResultsImmediately: wizardState.showResultsImmediately
+      // Client-side validation
+      if (!wizardState.pollName || wizardState.pollName.trim() === '') {
+        alert('Please enter a poll name.');
+        goToWizardStep(2);
+        return;
+      }
+
+      if (!wizardState.className || wizardState.className.trim() === '') {
+        alert('Please select a class.');
+        goToWizardStep(2);
+        return;
+      }
+
+      if (wizardState.questions.length === 0) {
+        alert('Please add at least one question.');
+        goToWizardStep(3);
+        return;
+      }
+
+      // Validate each question has text and at least one non-empty answer
+      for (var i = 0; i < wizardState.questions.length; i++) {
+        var q = wizardState.questions[i];
+        if (!q.questionText || q.questionText.trim() === '') {
+          alert('Question ' + (i + 1) + ' is missing the question text.');
+          goToWizardStep(3);
+          return;
+        }
+
+        var hasValidOption = false;
+        for (var j = 0; j < q.options.length; j++) {
+          if (q.options[j].text && q.options[j].text.trim() !== '') {
+            hasValidOption = true;
+            break;
+          }
+        }
+
+        if (!hasValidOption) {
+          alert('Question ' + (i + 1) + ' needs at least one answer choice.');
+          goToWizardStep(3);
+          return;
+        }
+      }
+
+      // Validate secure assessment settings
+      if (wizardState.mode === 'secure') {
+        if (!wizardState.timeLimitMinutes || wizardState.timeLimitMinutes <= 0) {
+          alert('Please set a time limit for secure assessments.');
+          goToWizardStep(2);
+          return;
+        }
+      }
+
+      // Transform questions to match API format
+      // API expects: { questionText, options: [{text, imageURL}], correctAnswer, timerSeconds, metacognitionEnabled }
+      var apiQuestions = wizardState.questions.map(function (q) {
+        // Filter out empty options
+        var validOptions = q.options.filter(function (opt) {
+          return opt.text && opt.text.trim() !== '';
+        });
+
+        // If no valid options, use at least 2 placeholder options
+        if (validOptions.length < 2) {
+          validOptions = [
+            { text: 'Option A', imageURL: null },
+            { text: 'Option B', imageURL: null }
+          ];
+        }
+
+        // Get the correct answer text
+        var correctAnswerText = null;
+        if (q.correctAnswerIndex !== undefined && q.correctAnswerIndex !== null) {
+          var correctOpt = q.options[q.correctAnswerIndex];
+          if (correctOpt && correctOpt.text && correctOpt.text.trim() !== '') {
+            correctAnswerText = correctOpt.text.trim();
+          }
+        }
+
+        // If correct answer wasn't set or was invalid, default to first option
+        if (!correctAnswerText && validOptions.length > 0) {
+          correctAnswerText = validOptions[0].text;
+        }
+
+        return {
+          questionText: q.questionText.trim(),
+          questionImageURL: q.questionImageURL && q.questionImageURL.trim() !== '' ? q.questionImageURL.trim() : null,
+          options: validOptions.map(function (opt) {
+            return {
+              text: opt.text.trim(),
+              imageURL: opt.imageURL && opt.imageURL.trim() !== '' ? opt.imageURL.trim() : null
+            };
+          }),
+          correctAnswer: correctAnswerText,
+          timerSeconds: q.timerSeconds || null,
+          metacognitionEnabled: !!q.metacognitionEnabled
+        };
+      });
+
+      // Build metadata object
+      var metadata = {
+        sessionType: wizardState.mode === 'secure' ? 'SECURE_ASSESSMENT' : 'LIVE_POLL'
       };
 
       if (wizardState.mode === 'secure') {
-        payload.timeLimitMinutes = wizardState.timeLimitMinutes;
-        payload.accessCode = wizardState.accessCode;
+        metadata.timeLimitMinutes = parseInt(wizardState.timeLimitMinutes) || 60;
+        metadata.accessCode = wizardState.accessCode || '';
       }
 
       var publishBtn = document.getElementById('wizard-publish-btn');
       if (publishBtn) {
         publishBtn.disabled = true;
-        publishBtn.innerHTML = '<span class="material-symbols-outlined">hourglass_empty</span> Publishing...';
+        publishBtn.innerHTML = '<span class="material-symbols-outlined animate-spin">hourglass_empty</span> Publishing...';
       }
+
+      console.log('Publishing poll:', wizardState.pollName, wizardState.className, apiQuestions, metadata);
 
       google.script.run
         .withSuccessHandler(function (response) {
-          if (response && response.success) {
+          console.log('Publish response:', response);
+          if (response && !response.error) {
             alert('Poll published successfully!');
             closePollWizard();
             location.reload();
           } else {
-            alert('Failed to publish: ' + (response.error || 'Unknown error'));
+            alert('Failed to publish: ' + (response.error || response.message || 'Unknown error'));
             if (publishBtn) {
               publishBtn.disabled = false;
-              publishBtn.innerHTML = '<span class="material-symbols-outlined">publish</span> Publish';
+              publishBtn.innerHTML = '<span class="material-symbols-outlined">rocket_launch</span> Publish Poll';
             }
           }
         })
         .withFailureHandler(function (error) {
-          alert('Error: ' + error);
+          console.error('Publish error:', error);
+          alert('Error: ' + (error.message || error));
           if (publishBtn) {
             publishBtn.disabled = false;
-            publishBtn.innerHTML = '<span class="material-symbols-outlined">publish</span> Publish';
+            publishBtn.innerHTML = '<span class="material-symbols-outlined">rocket_launch</span> Publish Poll';
           }
         })
-        .createNewPoll(payload);
+        .createNewPoll(wizardState.pollName.trim(), wizardState.className.trim(), apiQuestions, metadata);
     }
 
     // Expose functions used by inline HTML handlers

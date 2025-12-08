@@ -1986,7 +1986,10 @@
       }, 8000);
     }
 
-    bindClick('nav-create-poll', function () { openPollCreator(); });
+    bindClick('nav-create-poll', function () {
+      console.log('Create New Poll button clicked');
+      openPollCreator();
+    });
     bindClick('nav-polls-list', showDashboard);
     bindClick('nav-rosters', showRosterManager);
     bindClick('nav-archived', showArchivedView);
@@ -8356,9 +8359,11 @@
 
     // --- Poll Creator Modal ---
     function openPollCreator(existingPoll) {
+      console.log('openPollCreator called', existingPoll ? 'with existing poll' : 'for new poll');
       try {
         // Defensive check: ensure modal exists
         if (!modal) {
+          console.log('Modal variable is null, fetching from DOM...');
           modal = document.getElementById('poll-creator-modal');
           if (!modal) {
             console.error('Poll creator modal not found in DOM');

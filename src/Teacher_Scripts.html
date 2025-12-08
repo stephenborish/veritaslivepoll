@@ -11567,81 +11567,104 @@
         var questionDiv = document.createElement('div');
         questionDiv.className = 'question-card bg-white border border-brand-light-gray rounded-xl overflow-hidden shadow-sm';
 
-        // Question Header
-        var headerHtml = '<div class="question-card-header flex justify-between items-center px-5 py-4 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-brand-light-gray">' +
-          '<div class="flex items-center gap-3">' +
-          '<div class="h-9 w-9 rounded-lg bg-primary text-white flex items-center justify-center font-bold text-sm">' + (qIndex + 1) + '</div>' +
-          '<span class="font-bold text-brand-dark-gray text-lg">Question ' + (qIndex + 1) + '</span>' +
+        // Compact Question Header
+        var headerHtml = '<div class="question-card-header flex justify-between items-center px-4 py-2.5 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-brand-light-gray">' +
+          '<div class="flex items-center gap-2">' +
+          '<div class="h-7 w-7 rounded-lg bg-primary text-white flex items-center justify-center font-bold text-xs">' + (qIndex + 1) + '</div>' +
+          '<span class="font-bold text-brand-dark-gray">Q' + (qIndex + 1) + '</span>' +
           '</div>' +
-          '<button type="button" class="p-2 rounded-lg text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors" onclick="removeWizardQuestion(' + qIndex + ')" title="Remove Question">' +
-          '<span class="material-symbols-outlined">delete</span></button></div>';
+          '<div class="flex items-center gap-1">' +
+          '<label class="flex items-center gap-1 px-2 py-1 rounded hover:bg-slate-200 cursor-pointer text-xs text-slate-500" title="Enable confidence tracking">' +
+          '<input type="checkbox" class="wizard-meta-cb h-3.5 w-3.5 rounded" data-q-index="' + qIndex + '" ' + (q.metacognitionEnabled ? 'checked' : '') + '>' +
+          '<span>Confidence</span></label>' +
+          '<button type="button" class="p-1.5 rounded text-red-500 hover:bg-red-50 transition-colors" onclick="removeWizardQuestion(' + qIndex + ')" title="Remove">' +
+          '<span class="material-symbols-outlined text-lg">delete</span></button>' +
+          '</div></div>';
 
-        // Question Body
-        var bodyHtml = '<div class="question-card-body p-5 space-y-5">' +
-          // Question Text
-          '<div class="form-group">' +
-          '<label class="block text-sm font-bold text-brand-dark-gray mb-2">Question Text <span class="text-red-500">*</span></label>' +
-          '<textarea class="wizard-q-text w-full rounded-lg border border-brand-light-gray px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all resize-none" rows="2" placeholder="Enter your question..." data-q-index="' + qIndex + '">' + escapeHtml(q.questionText || '') + '</textarea>' +
+        // Compact Question Body
+        var bodyHtml = '<div class="question-card-body p-4 space-y-3">' +
+          // Question Row: Text + Image Upload
+          '<div class="flex gap-3">' +
+          '<div class="flex-1">' +
+          '<textarea class="wizard-q-text w-full rounded-lg border border-brand-light-gray px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none" rows="2" placeholder="Enter question text..." data-q-index="' + qIndex + '">' + escapeHtml(q.questionText || '') + '</textarea>' +
           '</div>' +
+          '<div class="shrink-0 flex flex-col items-center gap-1">';
 
-          // Question Image URL (optional)
-          '<div class="form-group">' +
-          '<label class="block text-xs font-semibold text-brand-dark-gray/60 mb-1.5 uppercase tracking-wider">Question Image URL (optional)</label>' +
-          '<input type="url" class="wizard-q-img w-full rounded-lg border border-brand-light-gray px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all" placeholder="https://..." data-q-index="' + qIndex + '" value="' + escapeHtml(q.questionImageURL || '') + '">' +
-          '</div>' +
+        // Question Image Upload/Preview
+        var qImagePreview = getImagePreviewUrl(q.questionImageURL, q.questionImageFileId);
+        var qIsUploading = q.questionImageURL === 'UPLOADING';
 
-          // Answer Choices Header
-          '<div class="pt-2">' +
-          '<div class="flex items-center justify-between mb-3">' +
-          '<label class="text-sm font-bold text-brand-dark-gray">Answer Choices <span class="text-red-500">*</span></label>' +
-          '<span class="text-xs text-brand-dark-gray/50">Select the correct answer</span>' +
-          '</div>';
+        if (qIsUploading) {
+          bodyHtml += '<div class="h-16 w-20 rounded-lg bg-primary/10 flex items-center justify-center">' +
+            '<div class="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div></div>';
+        } else if (qImagePreview) {
+          bodyHtml += '<div class="relative">' +
+            '<img src="' + qImagePreview + '" class="h-16 w-20 object-cover rounded-lg border border-brand-light-gray" referrerpolicy="no-referrer">' +
+            '<button type="button" class="wizard-remove-q-img absolute -top-1.5 -right-1.5 h-5 w-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs" data-q-index="' + qIndex + '" title="Remove">&times;</button>' +
+            '</div>';
+        } else {
+          bodyHtml += '<label class="h-16 w-20 rounded-lg border-2 border-dashed border-brand-light-gray flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all">' +
+            '<span class="material-symbols-outlined text-brand-dark-gray/40 text-lg">image</span>' +
+            '<span class="text-[10px] text-brand-dark-gray/40">Upload</span>' +
+            '<input type="file" class="wizard-q-img-input hidden" accept="image/*" data-q-index="' + qIndex + '">' +
+            '</label>';
+        }
 
-        // Answer Options
-        bodyHtml += '<div class="space-y-3">';
+        bodyHtml += '</div></div>';
+
+        // Answer Choices - Compact
+        bodyHtml += '<div class="space-y-2">';
         q.options.forEach(function (opt, optIndex) {
           var isCorrect = q.correctAnswerIndex === optIndex;
-          var correctClass = isCorrect ? 'border-green-400 bg-green-50/50 ring-2 ring-green-200' : 'border-brand-light-gray hover:border-primary/40';
+          var correctBorder = isCorrect ? 'border-green-400 bg-green-50/30' : 'border-brand-light-gray/80';
+          var optImagePreview = getImagePreviewUrl(opt.imageURL, opt.imageFileId);
+          var optIsUploading = opt.imageURL === 'UPLOADING';
 
-          bodyHtml += '<div class="answer-option flex items-start gap-3 p-3 rounded-lg border-2 ' + correctClass + ' transition-all">' +
+          bodyHtml += '<div class="answer-option flex items-center gap-2 p-2 rounded-lg border ' + correctBorder + ' transition-all">' +
             // Correct answer radio
-            '<label class="flex items-center cursor-pointer mt-1">' +
+            '<label class="cursor-pointer">' +
             '<input type="radio" name="correct-' + qIndex + '" class="hidden wizard-correct-radio" data-q-index="' + qIndex + '" data-opt-index="' + optIndex + '" ' + (isCorrect ? 'checked' : '') + '>' +
-            '<div class="h-8 w-8 rounded-lg flex items-center justify-center font-bold text-sm transition-all ' +
-            (isCorrect ? 'bg-green-500 text-white shadow-sm' : 'bg-slate-100 text-slate-500 hover:bg-primary/10 hover:text-primary') + '">' + optionLabels[optIndex] + '</div>' +
+            '<div class="h-7 w-7 rounded flex items-center justify-center font-bold text-xs transition-all ' +
+            (isCorrect ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-primary/10') + '">' + optionLabels[optIndex] + '</div>' +
             '</label>' +
+            // Option text
+            '<input type="text" class="wizard-opt-text flex-1 rounded border border-brand-light-gray/70 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30" placeholder="Answer ' + optionLabels[optIndex] + '..." data-q-index="' + qIndex + '" data-opt-index="' + optIndex + '" value="' + escapeHtml(opt.text || '') + '">';
 
-            // Option text and image inputs
-            '<div class="flex-1 space-y-2">' +
-            '<input type="text" class="wizard-opt-text w-full rounded-lg border border-brand-light-gray px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all" placeholder="Answer ' + optionLabels[optIndex] + '..." data-q-index="' + qIndex + '" data-opt-index="' + optIndex + '" value="' + escapeHtml(opt.text || '') + '">' +
-            '<input type="url" class="wizard-opt-img w-full rounded border border-brand-light-gray/70 px-2.5 py-1.5 text-xs text-brand-dark-gray/70 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all" placeholder="Image URL (optional)" data-q-index="' + qIndex + '" data-opt-index="' + optIndex + '" value="' + escapeHtml(opt.imageURL || '') + '">' +
-            '</div>' +
+          // Option image upload/preview
+          if (optIsUploading) {
+            bodyHtml += '<div class="h-8 w-10 rounded bg-primary/10 flex items-center justify-center shrink-0">' +
+              '<div class="h-3 w-3 animate-spin rounded-full border border-primary border-t-transparent"></div></div>';
+          } else if (optImagePreview) {
+            bodyHtml += '<div class="relative shrink-0">' +
+              '<img src="' + optImagePreview + '" class="h-8 w-10 object-cover rounded border" referrerpolicy="no-referrer">' +
+              '<button type="button" class="wizard-remove-opt-img absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px]" data-q-index="' + qIndex + '" data-opt-index="' + optIndex + '">&times;</button>' +
+              '</div>';
+          } else {
+            bodyHtml += '<label class="h-8 w-10 rounded border border-dashed border-brand-light-gray/70 flex items-center justify-center cursor-pointer hover:border-primary shrink-0">' +
+              '<span class="material-symbols-outlined text-sm text-slate-400">add_photo_alternate</span>' +
+              '<input type="file" class="wizard-opt-img-input hidden" accept="image/*" data-q-index="' + qIndex + '" data-opt-index="' + optIndex + '">' +
+              '</label>';
+          }
 
-            // Remove option button
-            '<button type="button" class="p-1.5 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors mt-1" onclick="removeWizardOption(' + qIndex + ',' + optIndex + ')" title="Remove option">' +
-            '<span class="material-symbols-outlined text-lg">close</span></button>' +
+          // Remove option
+          bodyHtml += '<button type="button" class="p-1 rounded text-slate-300 hover:text-red-500 transition-colors" onclick="removeWizardOption(' + qIndex + ',' + optIndex + ')">' +
+            '<span class="material-symbols-outlined text-base">close</span></button>' +
             '</div>';
         });
         bodyHtml += '</div>';
 
-        // Add option button
+        // Add option + timer row
+        bodyHtml += '<div class="flex items-center justify-between pt-1">';
         if (q.options.length < 6) {
-          bodyHtml += '<button type="button" class="w-full mt-2 py-2 flex items-center justify-center gap-2 text-sm font-medium text-primary border border-dashed border-primary/40 rounded-lg hover:bg-primary/5 hover:border-primary transition-all" onclick="addWizardOption(' + qIndex + ')">' +
-            '<span class="material-symbols-outlined text-lg">add</span>Add Answer Choice</button>';
+          bodyHtml += '<button type="button" class="flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80" onclick="addWizardOption(' + qIndex + ')">' +
+            '<span class="material-symbols-outlined text-sm">add</span>Add choice</button>';
+        } else {
+          bodyHtml += '<span></span>';
         }
-        bodyHtml += '</div>';
-
-        // Additional Options (metacognition, timer)
-        bodyHtml += '<div class="pt-4 border-t border-brand-light-gray/60 flex flex-wrap gap-6">' +
-          '<label class="flex items-center gap-2 cursor-pointer">' +
-          '<input type="checkbox" class="wizard-meta-cb h-4 w-4 rounded border-brand-light-gray text-primary focus:ring-primary/30" data-q-index="' + qIndex + '" ' + (q.metacognitionEnabled ? 'checked' : '') + '>' +
-          '<span class="text-sm text-brand-dark-gray font-medium">Enable Confidence Tracking</span>' +
-          '</label>' +
-          '<div class="flex items-center gap-2">' +
-          '<label class="text-sm text-brand-dark-gray/70">Timer (seconds):</label>' +
-          '<input type="number" class="wizard-timer w-20 rounded border border-brand-light-gray px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30" placeholder="Optional" min="5" max="600" data-q-index="' + qIndex + '" value="' + (q.timerSeconds || '') + '">' +
-          '</div>' +
-          '</div>';
+        bodyHtml += '<div class="flex items-center gap-1.5">' +
+          '<span class="text-xs text-slate-400">Timer:</span>' +
+          '<input type="number" class="wizard-timer w-14 rounded border border-brand-light-gray/70 px-1.5 py-0.5 text-xs text-center" placeholder="sec" min="5" max="600" data-q-index="' + qIndex + '" value="' + (q.timerSeconds || '') + '">' +
+          '</div></div>';
 
         bodyHtml += '</div>'; // Close question-card-body
 
@@ -11656,10 +11679,21 @@
           });
         }
 
-        var qImgInput = questionDiv.querySelector('.wizard-q-img');
+        // Question image file input
+        var qImgInput = questionDiv.querySelector('.wizard-q-img-input');
         if (qImgInput) {
-          qImgInput.addEventListener('input', function () {
-            wizardState.questions[qIndex].questionImageURL = this.value;
+          qImgInput.addEventListener('change', function (e) {
+            handleWizardImageUpload(e.target.files[0], qIndex, null);
+          });
+        }
+
+        // Question image remove button
+        var qImgRemoveBtn = questionDiv.querySelector('.wizard-remove-q-img');
+        if (qImgRemoveBtn) {
+          qImgRemoveBtn.addEventListener('click', function () {
+            wizardState.questions[qIndex].questionImageURL = null;
+            wizardState.questions[qIndex].questionImageFileId = null;
+            renderWizardQuestions();
           });
         }
 
@@ -11672,16 +11706,27 @@
           });
         });
 
-        // Option image inputs
-        questionDiv.querySelectorAll('.wizard-opt-img').forEach(function (input) {
-          input.addEventListener('input', function () {
+        // Option image file inputs
+        questionDiv.querySelectorAll('.wizard-opt-img-input').forEach(function (input) {
+          input.addEventListener('change', function (e) {
             var qi = parseInt(this.getAttribute('data-q-index'));
             var oi = parseInt(this.getAttribute('data-opt-index'));
-            wizardState.questions[qi].options[oi].imageURL = this.value;
+            handleWizardImageUpload(e.target.files[0], qi, oi);
           });
         });
 
-        // Correct answer radios - handle clicks on the parent label
+        // Option image remove buttons
+        questionDiv.querySelectorAll('.wizard-remove-opt-img').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var qi = parseInt(this.getAttribute('data-q-index'));
+            var oi = parseInt(this.getAttribute('data-opt-index'));
+            wizardState.questions[qi].options[oi].imageURL = null;
+            wizardState.questions[qi].options[oi].imageFileId = null;
+            renderWizardQuestions();
+          });
+        });
+
+        // Correct answer radios
         questionDiv.querySelectorAll('.wizard-correct-radio').forEach(function (radio) {
           radio.parentElement.addEventListener('click', function (e) {
             e.preventDefault();
@@ -11710,10 +11755,76 @@
       });
     }
 
+    // Image upload handler for wizard
+    function handleWizardImageUpload(file, qIndex, optIndex) {
+      if (!file) return;
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file.');
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image must be less than 5MB.');
+        return;
+      }
+
+      // Set uploading state
+      if (optIndex === null) {
+        wizardState.questions[qIndex].questionImageURL = 'UPLOADING';
+      } else {
+        wizardState.questions[qIndex].options[optIndex].imageURL = 'UPLOADING';
+      }
+      renderWizardQuestions();
+
+      // Convert to data URL and upload
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        var dataUrl = e.target.result;
+
+        google.script.run
+          .withSuccessHandler(function (response) {
+            if (response && response.fileId) {
+              if (optIndex === null) {
+                wizardState.questions[qIndex].questionImageURL = response.url || null;
+                wizardState.questions[qIndex].questionImageFileId = response.fileId;
+              } else {
+                wizardState.questions[qIndex].options[optIndex].imageURL = response.url || null;
+                wizardState.questions[qIndex].options[optIndex].imageFileId = response.fileId;
+              }
+            } else {
+              // Upload failed, reset state
+              if (optIndex === null) {
+                wizardState.questions[qIndex].questionImageURL = null;
+              } else {
+                wizardState.questions[qIndex].options[optIndex].imageURL = null;
+              }
+              alert('Image upload failed: ' + (response.error || 'Unknown error'));
+            }
+            renderWizardQuestions();
+          })
+          .withFailureHandler(function (error) {
+            // Reset state on error
+            if (optIndex === null) {
+              wizardState.questions[qIndex].questionImageURL = null;
+            } else {
+              wizardState.questions[qIndex].options[optIndex].imageURL = null;
+            }
+            alert('Image upload failed: ' + error);
+            renderWizardQuestions();
+          })
+          .uploadImageToDrive(dataUrl, file.name);
+      };
+      reader.readAsDataURL(file);
+    }
+
     // Expose new functions globally
     window.addWizardOption = addWizardOption;
     window.removeWizardOption = removeWizardOption;
     window.setCorrectAnswer = setCorrectAnswer;
+    window.handleWizardImageUpload = handleWizardImageUpload;
 
     // ===========================
     // STEP 4: REVIEW
@@ -11836,7 +11947,7 @@
       }
 
       // Transform questions to match API format
-      // API expects: { questionText, options: [{text, imageURL}], correctAnswer, timerSeconds, metacognitionEnabled }
+      // API expects: { questionText, questionImageURL, questionImageFileId, options: [{text, imageURL, imageFileId}], correctAnswer, timerSeconds, metacognitionEnabled }
       var apiQuestions = wizardState.questions.map(function (q) {
         // Filter out empty options
         var validOptions = q.options.filter(function (opt) {
@@ -11846,8 +11957,8 @@
         // If no valid options, use at least 2 placeholder options
         if (validOptions.length < 2) {
           validOptions = [
-            { text: 'Option A', imageURL: null },
-            { text: 'Option B', imageURL: null }
+            { text: 'Option A', imageURL: null, imageFileId: null },
+            { text: 'Option B', imageURL: null, imageFileId: null }
           ];
         }
 
@@ -11867,11 +11978,13 @@
 
         return {
           questionText: q.questionText.trim(),
-          questionImageURL: q.questionImageURL && q.questionImageURL.trim() !== '' ? q.questionImageURL.trim() : null,
+          questionImageURL: q.questionImageURL && q.questionImageURL !== 'UPLOADING' ? q.questionImageURL : null,
+          questionImageFileId: q.questionImageFileId || null,
           options: validOptions.map(function (opt) {
             return {
               text: opt.text.trim(),
-              imageURL: opt.imageURL && opt.imageURL.trim() !== '' ? opt.imageURL.trim() : null
+              imageURL: opt.imageURL && opt.imageURL !== 'UPLOADING' ? opt.imageURL : null,
+              imageFileId: opt.imageFileId || null
             };
           }),
           correctAnswer: correctAnswerText,

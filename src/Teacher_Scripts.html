@@ -2920,8 +2920,16 @@
         pollCombobox.updateData(comboData);
       }
 
-      renderPollCards(polls);
-      renderPollTable(polls);
+      try {
+        renderPollCards(polls);
+      } catch (e) {
+        console.error("Error rendering poll cards:", e);
+      }
+      try {
+        renderPollTable(polls);
+      } catch (e) {
+        console.error("Error rendering poll table:", e);
+      }
       updatePollDropdown(polls);
       if (pollsEmptyState) {
         if (polls.length === 0) {
@@ -3000,6 +3008,7 @@
       }
 
       polls.forEach(function (poll) {
+        if (!poll) return;
         var card = document.createElement('article');
         card.className = 'poll-card';
         if (poll && poll.pollId) {
@@ -3332,6 +3341,7 @@
       }
 
       polls.forEach(function (poll) {
+        if (!poll) return;
         var row = document.createElement('tr');
         row.className = 'hover:bg-brand-light-gray/40 dark:hover:bg-brand-dark-gray/40 transition-colors';
         var lastEdited = formatDateTime(poll.updatedAt || poll.lastRunAt || poll.createdAt);

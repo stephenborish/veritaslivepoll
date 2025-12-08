@@ -7595,7 +7595,15 @@
         }
         html += '</tbody></table></div>';
         container.innerHTML = html;
-        linksModal.style.display = 'flex';
+
+        // Apply comprehensive modal visibility fix
+        if (linksModal.parentElement !== document.body) {
+          document.body.appendChild(linksModal);
+        }
+        linksModal.classList.remove('hidden');
+        linksModal.style.cssText = 'display: flex !important; visibility: visible !important; position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; z-index: 99999 !important; background-color: rgba(0,0,0,0.6) !important;';
+        linksModal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
         setButtonLoading(btn, false);
         return;
       }
@@ -7653,7 +7661,15 @@
             };
           });
 
-          linksModal.style.display = 'flex';
+          // Apply comprehensive modal visibility fix
+          if (linksModal.parentElement !== document.body) {
+            document.body.appendChild(linksModal);
+          }
+          linksModal.classList.remove('hidden');
+          linksModal.style.cssText = 'display: flex !important; visibility: visible !important; position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; z-index: 99999 !important; background-color: rgba(0,0,0,0.6) !important;';
+          linksModal.setAttribute('aria-hidden', 'false');
+          document.body.style.overflow = 'hidden';
+
           setButtonLoading(btn, false);
         })
         .withFailureHandler(function (err) {
@@ -7664,7 +7680,11 @@
     }
 
     function closeLinksModal() {
+      linksModal.classList.add('hidden');
       linksModal.style.display = 'none';
+      linksModal.style.cssText = ''; // Reset inline styles
+      // Restore body scroll
+      document.body.style.overflow = '';
     }
 
     // --- Poll Preview Modal Functions ---

@@ -2924,6 +2924,9 @@
         renderPollCards(polls);
       } catch (e) {
         console.error("Error rendering poll cards:", e);
+        if (pollsCardView) {
+          pollsCardView.innerHTML = '<div class="col-span-full text-center p-8 text-red-500 bg-red-50 rounded-lg border border-red-200">System Error: Unable to render polls. Please refresh or contact support.</div>';
+        }
       }
       try {
         renderPollTable(polls);
@@ -3007,109 +3010,121 @@
         return;
       }
 
+      var renderErrors = 0;
+
       polls.forEach(function (poll) {
-        if (!poll) return;
-        var card = document.createElement('article');
-        card.className = 'poll-card';
-        if (poll && poll.pollId) {
-          card.dataset.pollId = poll.pollId;
-        }
-        card.setAttribute('tabindex', '0');
-        card.setAttribute('role', 'group');
-        var safeName = escapeHtml(poll && poll.pollName ? poll.pollName : 'Untitled Poll');
-        card.setAttribute('aria-label', 'Poll: ' + safeName);
-
-        var className = escapeHtml(poll && poll.className ? poll.className : 'Unassigned');
-        var questionCount = Array.isArray(poll && poll.questions) ? poll.questions.length : 0;
-        var lastEdited = formatDateTime(poll.updatedAt || poll.lastRunAt || poll.createdAt);
-        var sessionType = normalizeSessionTypeClient(poll.sessionType);
-
-        var htmlParts = [];
-
-        // Header with Title
-        htmlParts.push('<div class="mb-4">');
-        htmlParts.push('<h3 class="text-lg font-bold text-veritas-navy dark:text-white">' + safeName + '</h3>');
-        htmlParts.push('</div>');
-
-        // Meta Badges
-        htmlParts.push('<div class="flex flex-wrap gap-2 mb-4">');
-        // Session Type Badge
-        var sessionTypeInfo = getSessionTypeInfo(sessionType);
-        htmlParts.push('<span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ' + sessionTypeInfo.badgeClass + '">');
-        htmlParts.push('<span class="material-symbols-outlined text-sm">' + sessionTypeInfo.icon + '</span>');
-        htmlParts.push(sessionTypeInfo.label);
-        htmlParts.push('</span>');
-
-        // Question Count Badge
-        htmlParts.push('<span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">');
-        htmlParts.push('<span class="material-symbols-outlined text-sm">quiz</span>');
-        htmlParts.push(questionCount + ' Questions');
-        htmlParts.push('</span>');
-
-        htmlParts.push('</div>');
-
-        if (sessionType === 'SECURE_ASSESSMENT') {
-          var secureTimeLabel = describeSecureTimeLimit(poll);
-          var secureAccessCode = getSecureAccessCode(poll);
-          var secureWindowLabel = describeSecureAvailability(poll);
-          htmlParts.push('<div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-100 mb-4">');
-          if (secureTimeLabel) {
-            htmlParts.push('<div class="flex items-center gap-2 mb-2"><span class="material-symbols-outlined text-base">timer</span><span>' + escapeHtml(secureTimeLabel) + '</span></div>');
+        try {
+          if (!poll) return;
+          var card = document.createElement('article');
+          card.className = 'poll-card';
+          if (poll && poll.pollId) {
+            card.dataset.pollId = poll.pollId;
           }
-          htmlParts.push('<div class="flex items-center gap-2 mb-2"><span class="material-symbols-outlined text-base">key</span><span>Access Code: ');
-          if (secureAccessCode) {
-            htmlParts.push('<span class="font-semibold tracking-widest">' + escapeHtml(secureAccessCode) + '</span>');
-          } else {
-            htmlParts.push('<span class="opacity-80">Not required</span>');
-          }
-          htmlParts.push('</span></div>');
-          if (secureWindowLabel) {
-            htmlParts.push('<div class="flex items-center gap-2"><span class="material-symbols-outlined text-base">calendar_month</span><span>' + escapeHtml(secureWindowLabel) + '</span></div>');
-          }
+          card.setAttribute('tabindex', '0');
+          card.setAttribute('role', 'group');
+          var safeName = escapeHtml(poll && poll.pollName ? poll.pollName : 'Untitled Poll');
+          card.setAttribute('aria-label', 'Poll: ' + safeName);
+
+          var className = escapeHtml(poll && poll.className ? poll.className : 'Unassigned');
+          var questionCount = Array.isArray(poll && poll.questions) ? poll.questions.length : 0;
+          var lastEdited = formatDateTime(poll.updatedAt || poll.lastRunAt || poll.createdAt);
+          var sessionType = normalizeSessionTypeClient(poll.sessionType);
+
+          var htmlParts = [];
+
+          // Header with Title
+          htmlParts.push('<div class="mb-4">');
+          htmlParts.push('<h3 class="text-lg font-bold text-veritas-navy dark:text-white">' + safeName + '</h3>');
           htmlParts.push('</div>');
-        }
 
+          // Meta Badges
+          htmlParts.push('<div class="flex flex-wrap gap-2 mb-4">');
+          // Session Type Badge
+          var sessionTypeInfo = getSessionTypeInfo(sessionType);
+          htmlParts.push('<span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ' + sessionTypeInfo.badgeClass + '">');
+          htmlParts.push('<span class="material-symbols-outlined text-sm">' + sessionTypeInfo.icon + '</span>');
+          htmlParts.push(sessionTypeInfo.label);
+          htmlParts.push('</span>');
 
-        // Stats
-        htmlParts.push('<div class="text-xs text-gray-500 dark:text-gray-400 mb-4">Last updated: ' + lastEdited + '</div>');
+          // Question Count Badge
+          htmlParts.push('<span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">');
+          htmlParts.push('<span class="material-symbols-outlined text-sm">quiz</span>');
+          htmlParts.push(questionCount + ' Questions');
+          htmlParts.push('</span>');
 
-        // Actions
-        htmlParts.push('<div class="flex gap-2 mt-auto">');
-        htmlParts.push('<button type="button" class="flex-1 poll-card-btn primary poll-preview-btn" data-poll-id="' + (poll && poll.pollId ? poll.pollId : '') + '" aria-label="Preview ' + safeName + '"><span class="material-symbols-outlined text-base">visibility</span>Preview</button>');
-        htmlParts.push('<button type="button" class="poll-card-btn secondary poll-edit-btn" data-poll-id="' + (poll && poll.pollId ? poll.pollId : '') + '" aria-label="Edit ' + safeName + '"><span class="material-symbols-outlined text-base">edit</span></button>');
-        htmlParts.push('<button type="button" class="poll-card-btn info poll-copy-btn" data-poll-id="' + (poll && poll.pollId ? poll.pollId : '') + '" aria-label="Duplicate ' + safeName + '"><span class="material-symbols-outlined text-base">content_copy</span></button>');
-        htmlParts.push('<button type="button" class="poll-card-btn danger poll-delete-btn" data-poll-id="' + (poll && poll.pollId ? poll.pollId : '') + '" aria-label="Delete ' + safeName + '"><span class="material-symbols-outlined text-base">delete</span></button>');
-        htmlParts.push('</div>');
+          htmlParts.push('</div>');
 
-        card.innerHTML = htmlParts.join('');
-
-        card.addEventListener('click', function (event) {
-          if (event.target.closest('.poll-card-btn')) {
-            return;
+          if (sessionType === 'SECURE_ASSESSMENT') {
+            var secureTimeLabel = describeSecureTimeLimit(poll);
+            var secureAccessCode = getSecureAccessCode(poll);
+            var secureWindowLabel = describeSecureAvailability(poll);
+            htmlParts.push('<div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-100 mb-4">');
+            if (secureTimeLabel) {
+              htmlParts.push('<div class="flex items-center gap-2 mb-2"><span class="material-symbols-outlined text-base">timer</span><span>' + escapeHtml(secureTimeLabel) + '</span></div>');
+            }
+            htmlParts.push('<div class="flex items-center gap-2 mb-2"><span class="material-symbols-outlined text-base">key</span><span>Access Code: ');
+            if (secureAccessCode) {
+              htmlParts.push('<span class="font-semibold tracking-widest">' + escapeHtml(secureAccessCode) + '</span>');
+            } else {
+              htmlParts.push('<span class="opacity-80">Not required</span>');
+            }
+            htmlParts.push('</span></div>');
+            if (secureWindowLabel) {
+              htmlParts.push('<div class="flex items-center gap-2"><span class="material-symbols-outlined text-base">calendar_month</span><span>' + escapeHtml(secureWindowLabel) + '</span></div>');
+            }
+            htmlParts.push('</div>');
           }
-          var pollId = this.dataset.pollId;
-          if (!pollId) return;
-          pollSelect.value = pollId;
-          onPollSelectChange();
-          showDashboard();
-        });
 
-        card.addEventListener('keydown', function (event) {
-          if (event.target.closest('.poll-card-btn')) {
-            return;
-          }
-          if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
-            event.preventDefault();
+
+          // Stats
+          htmlParts.push('<div class="text-xs text-gray-500 dark:text-gray-400 mb-4">Last updated: ' + lastEdited + '</div>');
+
+          // Actions
+          htmlParts.push('<div class="flex gap-2 mt-auto">');
+          htmlParts.push('<button type="button" class="flex-1 poll-card-btn primary poll-preview-btn" data-poll-id="' + (poll && poll.pollId ? poll.pollId : '') + '" aria-label="Preview ' + safeName + '"><span class="material-symbols-outlined text-base">visibility</span>Preview</button>');
+          htmlParts.push('<button type="button" class="poll-card-btn secondary poll-edit-btn" data-poll-id="' + (poll && poll.pollId ? poll.pollId : '') + '" aria-label="Edit ' + safeName + '"><span class="material-symbols-outlined text-base">edit</span></button>');
+          htmlParts.push('<button type="button" class="poll-card-btn info poll-copy-btn" data-poll-id="' + (poll && poll.pollId ? poll.pollId : '') + '" aria-label="Duplicate ' + safeName + '"><span class="material-symbols-outlined text-base">content_copy</span></button>');
+          htmlParts.push('<button type="button" class="poll-card-btn danger poll-delete-btn" data-poll-id="' + (poll && poll.pollId ? poll.pollId : '') + '" aria-label="Delete ' + safeName + '"><span class="material-symbols-outlined text-base">delete</span></button>');
+          htmlParts.push('</div>');
+
+          card.innerHTML = htmlParts.join('');
+
+          card.addEventListener('click', function (event) {
+            if (event.target.closest('.poll-card-btn')) {
+              return;
+            }
             var pollId = this.dataset.pollId;
             if (!pollId) return;
             pollSelect.value = pollId;
             onPollSelectChange();
             showDashboard();
-          }
-        });
+          });
 
-        pollsCardView.appendChild(card);
+          card.addEventListener('keydown', function (event) {
+            if (event.target.closest('.poll-card-btn')) {
+              return;
+            }
+            if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+              event.preventDefault();
+              var pollId = this.dataset.pollId;
+              if (!pollId) return;
+              pollSelect.value = pollId;
+              onPollSelectChange();
+              showDashboard();
+            }
+          });
+
+          pollsCardView.appendChild(card);
+        } catch (cardError) {
+          console.error("Error rendering individual poll card:", cardError, poll);
+          renderErrors++;
+        }
       });
+
+      if (renderErrors > 0 && pollsCardView.children.length === 0) {
+        // If all failed, show a friendly error
+        pollsCardView.innerHTML = '<div class="col-span-full text-center p-8 text-red-500 bg-red-50 rounded-lg border border-red-200">Unable to load polls due to a data error. Please contact support.</div>';
+      }
 
       attachPollActionHandlers(pollsCardView);
     }
@@ -3341,40 +3356,44 @@
       }
 
       polls.forEach(function (poll) {
-        if (!poll) return;
-        var row = document.createElement('tr');
-        row.className = 'hover:bg-brand-light-gray/40 dark:hover:bg-brand-dark-gray/40 transition-colors';
-        var lastEdited = formatDateTime(poll.updatedAt || poll.lastRunAt || poll.createdAt);
-        var createdLabel = poll.createdAt ? formatDateTime(poll.createdAt) : '—';
-        var htmlParts = [];
-        htmlParts.push('<td class="px-4 py-3 align-top">');
-        htmlParts.push('<div class="font-semibold text-brand-dark-gray dark:text-brand-white"><span class="poll-name-link cursor-pointer hover:text-primary dark:hover:text-primary transition-colors" data-poll-id="' + poll.pollId + '">' + escapeHtml(poll.pollName || 'Untitled Poll') + '</span></div>');
-        htmlParts.push('<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/50">Created ' + createdLabel + '</div>');
-        htmlParts.push('</td>');
-        htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">' + escapeHtml(poll.className || '—') + '</td>');
-        htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">' + (poll.questions ? poll.questions.length : 0) + '</td>');
-        htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">' + buildSessionModeCellHtml(poll) + '</td>');
-        htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">' + lastEdited + '</td>');
+        try {
+          if (!poll) return;
+          var row = document.createElement('tr');
+          row.className = 'hover:bg-brand-light-gray/40 dark:hover:bg-brand-dark-gray/40 transition-colors';
+          var lastEdited = formatDateTime(poll.updatedAt || poll.lastRunAt || poll.createdAt);
+          var createdLabel = poll.createdAt ? formatDateTime(poll.createdAt) : '—';
+          var htmlParts = [];
+          htmlParts.push('<td class="px-4 py-3 align-top">');
+          htmlParts.push('<div class="font-semibold text-brand-dark-gray dark:text-brand-white"><span class="poll-name-link cursor-pointer hover:text-primary dark:hover:text-primary transition-colors" data-poll-id="' + poll.pollId + '">' + escapeHtml(poll.pollName || 'Untitled Poll') + '</span></div>');
+          htmlParts.push('<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/50">Created ' + createdLabel + '</div>');
+          htmlParts.push('</td>');
+          htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">' + escapeHtml(poll.className || '—') + '</td>');
+          htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">' + (poll.questions ? poll.questions.length : 0) + '</td>');
+          htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">' + buildSessionModeCellHtml(poll) + '</td>');
+          htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">' + lastEdited + '</td>');
 
-        // Actions Column
-        htmlParts.push('<td class="px-4 py-3 align-top text-right">');
-        htmlParts.push('<div class="flex justify-end items-center gap-2">');
+          // Actions Column
+          htmlParts.push('<td class="px-4 py-3 align-top text-right">');
+          htmlParts.push('<div class="flex justify-end items-center gap-2">');
 
-        // Primary Action: Select
-        htmlParts.push('<button class="poll-select-btn h-8 px-3 rounded-md bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-xs font-semibold hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors" data-poll-id="' + poll.pollId + '">Select</button>');
+          // Primary Action: Select
+          htmlParts.push('<button class="poll-select-btn h-8 px-3 rounded-md bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-xs font-semibold hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors" data-poll-id="' + poll.pollId + '">Select</button>');
 
-        // Options Dropdown Trigger
-        htmlParts.push('<div class="relative inline-block text-left">');
-        htmlParts.push('<button type="button" class="poll-options-btn inline-flex items-center gap-2 rounded-md bg-gray-800 px-3 py-1.5 text-xs font-semibold text-white shadow-inner shadow-white/10 hover:bg-gray-700 focus:outline-none transition-colors" data-poll-id="' + poll.pollId + '" aria-expanded="false" aria-haspopup="true">');
-        htmlParts.push('Options');
-        htmlParts.push('<span class="material-symbols-outlined text-base text-white/60">keyboard_arrow_down</span>');
-        htmlParts.push('</button>');
-        htmlParts.push('</div>');
+          // Options Dropdown Trigger
+          htmlParts.push('<div class="relative inline-block text-left">');
+          htmlParts.push('<button type="button" class="poll-options-btn inline-flex items-center gap-2 rounded-md bg-gray-800 px-3 py-1.5 text-xs font-semibold text-white shadow-inner shadow-white/10 hover:bg-gray-700 focus:outline-none transition-colors" data-poll-id="' + poll.pollId + '" aria-expanded="false" aria-haspopup="true">');
+          htmlParts.push('Options');
+          htmlParts.push('<span class="material-symbols-outlined text-base text-white/60">keyboard_arrow_down</span>');
+          htmlParts.push('</button>');
+          htmlParts.push('</div>');
 
-        htmlParts.push('</div>');
-        htmlParts.push('</td>');
-        row.innerHTML = htmlParts.join('');
-        pollsTableBody.appendChild(row);
+          htmlParts.push('</div>');
+          htmlParts.push('</td>');
+          row.innerHTML = htmlParts.join('');
+          pollsTableBody.appendChild(row);
+        } catch (rowError) {
+          console.error("Error rendering poll table row:", rowError, poll);
+        }
       });
 
       attachPollActionHandlers(pollsTableBody);

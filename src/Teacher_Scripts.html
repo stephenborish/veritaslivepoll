@@ -1986,17 +1986,7 @@
       }, 8000);
     }
 
-    // --- Event Listeners ---
-    var createPollBtn = bindClick('nav-create-poll', function () {
-      console.log('Nav Create Poll Clicked');
-      try {
-        openPollCreator();
-      } catch (e) {
-        console.error('Click handler failed:', e);
-        alert('Click handler failed: ' + e);
-      }
-    });
-    if (!createPollBtn) console.error('CRITICAL: Create Poll Button Not Found during binding');
+    bindClick('nav-create-poll', function () { openPollCreator(); });
     bindClick('nav-polls-list', showDashboard);
     bindClick('nav-rosters', showRosterManager);
     bindClick('nav-archived', showArchivedView);
@@ -8367,16 +8357,6 @@
     // --- Poll Creator Modal ---
     function openPollCreator(existingPoll) {
       try {
-        console.log('openPollCreator: Function started');
-        console.log('openPollCreator: Modal object:', modal);
-        if (modal) {
-          console.log('openPollCreator: Modal ID:', modal.id);
-          console.log('openPollCreator: Modal Classes:', modal.className);
-          console.log('openPollCreator: Modal Display (Before):', modal.style.display);
-        } else {
-          console.error('openPollCreator: CRITICAL - Modal variable is null/undefined!');
-        }
-
         var saveButton = document.getElementById('save-poll-btn');
 
         questionCounter = 0;
@@ -8466,10 +8446,8 @@
         enforceQuestionOrder();
         renderQuestionNavigator();
         renderQuestionWorkspace();
-        console.log('openPollCreator: About to set display to flex');
+        modal.classList.remove('hidden');
         modal.style.display = 'flex';
-        console.log('openPollCreator: Display set to:', modal.style.display);
-        console.log('openPollCreator: Modal classes:', modal.className);
       } catch (e) {
         console.error("Error opening poll creator:", e);
         veritasAlert("Error opening poll creator: " + e.message, { title: "Error" });
@@ -8478,6 +8456,7 @@
 
     function closePollCreator() {
       modal.style.display = 'none';
+      modal.classList.add('hidden');
       questions = [];
       questionCounter = 0;
       selectedQuestionIndex = 0;

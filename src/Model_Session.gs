@@ -1997,41 +1997,85 @@ Veritas.Models.Session.reportStudentViolation = function(pollId, studentEmail, r
       return { success: false, error: 'Poll ID required' };
     }
 
-    var statusValues = DataAccess.liveStatus.get();
-    var activePollId = statusValues[0];
-    var metadata = (statusValues && statusValues.metadata) ? statusValues.metadata : {};
+    // RACE CONDITION FIX: Wrap entire read-check-write in a single lock to prevent TOCTOU
+    return Veritas.Utils.withLock(function() {
+      var statusValues = DataAccess.liveStatus.get();
+      var activePollId = statusValues[0];
+      var metadata = (statusValues && statusValues.metadata) ? statusValues.metadata : {};
 
-    // Only use session ID if the violation is for the currently active poll
-    var currentSessionId = (activePollId === pollId && metadata && metadata.sessionId) ? metadata.sessionId : null;
+      // Only use session ID if the violation is for the currently active poll
+      var currentSessionId = (activePollId === pollId && metadata && metadata.sessionId) ? metadata.sessionId : null;
 
-    var currentState = Veritas.Models.Session.ProctorAccess.getState(pollId, studentEmail, currentSessionId);
+      var currentState = Veritas.Models.Session.ProctorAccess.getState(pollId, studentEmail, currentSessionId);
 
-    if (currentState.status === 'LOCKED') {
-      Logger.log('Student already locked, not incrementing version', {
-        studentEmail: studentEmail,
-        pollId: pollId,
-        currentLockVersion: currentState.lockVersion,
-        newReason: reason
-      });
+      if (currentState.status === 'LOCKED') {
+        Logger.log('Student already locked, not incrementing version', {
+          studentEmail: studentEmail,
+          pollId: pollId,
+          currentLockVersion: currentState.lockVersion,
+          newReason: reason
+        });
 
-      currentState.lockReason = reason || currentState.lockReason;
-      currentState.sessionId = currentSessionId || currentState.sessionId;
-      Veritas.Models.Session.ProctorAccess.setState(currentState);
+        currentState.lockReason = reason || currentState.lockReason;
+        currentState.sessionId = currentSessionId || currentState.sessionId;
+        Veritas.Models.Session.ProctorAccess.setState(currentState);
 
-      return {
-        success: true,
-        status: 'LOCKED',
-        lockVersion: currentState.lockVersion
-      };
-    }
+        return {
+          success: true,
+          status: 'LOCKED',
+          lockVersion: currentState.lockVersion
+        };
+      }
 
-    if (currentState.status === 'AWAITING_FULLSCREEN') {
+      if (currentState.status === 'AWAITING_FULLSCREEN') {
+        var newState = {
+          pollId: pollId,
+          studentEmail: studentEmail,
+          status: 'LOCKED',
+          lockVersion: currentState.lockVersion + 1,
+          lockReason: reason || 'exit-fullscreen-while-awaiting',
+          lockedAt: new Date().toISOString(),
+          unlockApproved: false,
+          unlockApprovedBy: null,
+          unlockApprovedAt: null,
+          sessionId: currentSessionId,
+          rowIndex: currentState.rowIndex
+        };
+
+        Veritas.Models.Session.ProctorAccess.setState(newState);
+
+        var responseId = 'V-' + Utilities.getUuid();
+        DataAccess.responses.add([
+          responseId,
+          new Date().getTime(),
+          pollId,
+          -1,
+          studentEmail,
+          Veritas.Config.PROCTOR_VIOLATION_CODES.LOCKED,
+          false
+        ]);
+
+        Logger.log('Student violated while awaiting fullscreen - version bumped', {
+          studentEmail: studentEmail,
+          pollId: pollId,
+          oldVersion: currentState.lockVersion,
+          newVersion: newState.lockVersion,
+          reason: newState.lockReason
+        });
+
+        return {
+          success: true,
+          status: 'LOCKED',
+          lockVersion: newState.lockVersion
+        };
+      }
+
       var newState = {
         pollId: pollId,
         studentEmail: studentEmail,
         status: 'LOCKED',
         lockVersion: currentState.lockVersion + 1,
-        lockReason: reason || 'exit-fullscreen-while-awaiting',
+        lockReason: reason || 'exit-fullscreen',
         lockedAt: new Date().toISOString(),
         unlockApproved: false,
         unlockApprovedBy: null,
@@ -2053,12 +2097,10 @@ Veritas.Models.Session.reportStudentViolation = function(pollId, studentEmail, r
         false
       ]);
 
-      Logger.log('Student violated while awaiting fullscreen - version bumped', {
-        studentEmail: studentEmail,
-        pollId: pollId,
-        oldVersion: currentState.lockVersion,
-        newVersion: newState.lockVersion,
-        reason: newState.lockReason
+      Veritas.Models.Session.ProctorTelemetry.log('violation', studentEmail, pollId, {
+        lockVersion: newState.lockVersion,
+        reason: newState.lockReason,
+        status: 'LOCKED'
       });
 
       return {
@@ -2066,46 +2108,7 @@ Veritas.Models.Session.reportStudentViolation = function(pollId, studentEmail, r
         status: 'LOCKED',
         lockVersion: newState.lockVersion
       };
-    }
-
-    var newState = {
-      pollId: pollId,
-      studentEmail: studentEmail,
-      status: 'LOCKED',
-      lockVersion: currentState.lockVersion + 1,
-      lockReason: reason || 'exit-fullscreen',
-      lockedAt: new Date().toISOString(),
-      unlockApproved: false,
-      unlockApprovedBy: null,
-      unlockApprovedAt: null,
-      sessionId: currentSessionId,
-      rowIndex: currentState.rowIndex
-    };
-
-    Veritas.Models.Session.ProctorAccess.setState(newState);
-
-    var responseId = 'V-' + Utilities.getUuid();
-    DataAccess.responses.add([
-      responseId,
-      new Date().getTime(),
-      pollId,
-      -1,
-      studentEmail,
-      Veritas.Config.PROCTOR_VIOLATION_CODES.LOCKED,
-      false
-    ]);
-
-    Veritas.Models.Session.ProctorTelemetry.log('violation', studentEmail, pollId, {
-      lockVersion: newState.lockVersion,
-      reason: newState.lockReason,
-      status: 'LOCKED'
     });
-
-    return {
-      success: true,
-      status: 'LOCKED',
-      lockVersion: newState.lockVersion
-    };
   })();
 };
 
@@ -2159,41 +2162,46 @@ Veritas.Models.Session.teacherApproveUnlock = function(studentEmail, pollId, exp
       throw new Error('Invalid parameters');
     }
 
-    var statusValues = DataAccess.liveStatus.get();
-    var metadata = (statusValues && statusValues.metadata) ? statusValues.metadata : {};
-    var currentSessionId = metadata && metadata.sessionId ? metadata.sessionId : null;
+    // RACE CONDITION FIX: Wrap entire read-check-write in a single lock to prevent TOCTOU
+    // This prevents the "infinite loop unlock" bug where a student violates again between
+    // the version check and the setState, causing the teacher to approve a stale lockVersion.
+    return Veritas.Utils.withLock(function() {
+      var statusValues = DataAccess.liveStatus.get();
+      var metadata = (statusValues && statusValues.metadata) ? statusValues.metadata : {};
+      var currentSessionId = metadata && metadata.sessionId ? metadata.sessionId : null;
 
-    var currentState = Veritas.Models.Session.ProctorAccess.getState(pollId, studentEmail, currentSessionId);
+      var currentState = Veritas.Models.Session.ProctorAccess.getState(pollId, studentEmail, currentSessionId);
 
-    if (currentState.status !== 'LOCKED') {
-      Logger.log('Unlock failed: student not locked', { studentEmail: studentEmail, pollId: pollId, status: currentState.status });
-      return { ok: false, reason: 'not_locked', status: currentState.status };
-    }
+      if (currentState.status !== 'LOCKED') {
+        Logger.log('Unlock failed: student not locked', { studentEmail: studentEmail, pollId: pollId, status: currentState.status });
+        return { ok: false, reason: 'not_locked', status: currentState.status };
+      }
 
-    if (currentState.lockVersion !== expectedLockVersion) {
-      Logger.log('Unlock failed: version mismatch', {
-        studentEmail: studentEmail,
-        pollId: pollId,
-        expected: expectedLockVersion,
-        current: currentState.lockVersion
+      if (currentState.lockVersion !== expectedLockVersion) {
+        Logger.log('Unlock failed: version mismatch', {
+          studentEmail: studentEmail,
+          pollId: pollId,
+          expected: expectedLockVersion,
+          current: currentState.lockVersion
+        });
+        return { ok: false, reason: 'version_mismatch', lockVersion: currentState.lockVersion };
+      }
+
+      currentState.status = 'AWAITING_FULLSCREEN';
+      currentState.unlockApproved = true;
+      currentState.unlockApprovedBy = teacherEmail;
+      currentState.unlockApprovedAt = new Date().toISOString();
+      currentState.sessionId = currentSessionId || currentState.sessionId;
+      Veritas.Models.Session.ProctorAccess.setState(currentState);
+
+      Veritas.Models.Session.ProctorTelemetry.log('approve_unlock', studentEmail, pollId, {
+        lockVersion: expectedLockVersion,
+        approvedBy: teacherEmail,
+        status: 'AWAITING_FULLSCREEN'
       });
-      return { ok: false, reason: 'version_mismatch', lockVersion: currentState.lockVersion };
-    }
 
-    currentState.status = 'AWAITING_FULLSCREEN';
-    currentState.unlockApproved = true;
-    currentState.unlockApprovedBy = teacherEmail;
-    currentState.unlockApprovedAt = new Date().toISOString();
-    currentState.sessionId = currentSessionId || currentState.sessionId;
-    Veritas.Models.Session.ProctorAccess.setState(currentState);
-
-    Veritas.Models.Session.ProctorTelemetry.log('approve_unlock', studentEmail, pollId, {
-      lockVersion: expectedLockVersion,
-      approvedBy: teacherEmail,
-      status: 'AWAITING_FULLSCREEN'
+      return { ok: true, status: 'AWAITING_FULLSCREEN', lockVersion: expectedLockVersion };
     });
-
-    return { ok: true, status: 'AWAITING_FULLSCREEN', lockVersion: expectedLockVersion };
   })();
 };
 
@@ -2212,57 +2220,60 @@ Veritas.Models.Session.teacherBlockStudent = function(studentEmail, pollId, reas
       throw new Error('Invalid parameters');
     }
 
-    var statusValues = DataAccess.liveStatus.get();
-    var activePollId = statusValues[0];
-    var metadata = (statusValues && statusValues.metadata) ? statusValues.metadata : {};
-    var currentSessionId = metadata && metadata.sessionId ? metadata.sessionId : null;
+    // RACE CONDITION FIX: Wrap entire read-check-write in a single lock to prevent TOCTOU
+    return Veritas.Utils.withLock(function() {
+      var statusValues = DataAccess.liveStatus.get();
+      var activePollId = statusValues[0];
+      var metadata = (statusValues && statusValues.metadata) ? statusValues.metadata : {};
+      var currentSessionId = metadata && metadata.sessionId ? metadata.sessionId : null;
 
-    if (!activePollId || activePollId !== pollId) {
-      throw new Error('Poll is not currently live');
-    }
+      if (!activePollId || activePollId !== pollId) {
+        throw new Error('Poll is not currently live');
+      }
 
-    var currentState = Veritas.Models.Session.ProctorAccess.getState(pollId, studentEmail, currentSessionId);
+      var currentState = Veritas.Models.Session.ProctorAccess.getState(pollId, studentEmail, currentSessionId);
 
-    var newState = {
-      pollId: pollId,
-      studentEmail: studentEmail,
-      status: 'BLOCKED',
-      lockVersion: (currentState.lockVersion || 0) + 1,
-      lockReason: 'teacher-block::' + teacherEmail + (reason ? '::' + reason : ''),
-      lockedAt: new Date().toISOString(),
-      unlockApproved: false,
-      unlockApprovedBy: null,
-      unlockApprovedAt: null,
-      sessionId: currentSessionId,
-      rowIndex: currentState.rowIndex
-    };
+      var newState = {
+        pollId: pollId,
+        studentEmail: studentEmail,
+        status: 'BLOCKED',
+        lockVersion: (currentState.lockVersion || 0) + 1,
+        lockReason: 'teacher-block::' + teacherEmail + (reason ? '::' + reason : ''),
+        lockedAt: new Date().toISOString(),
+        unlockApproved: false,
+        unlockApprovedBy: null,
+        unlockApprovedAt: null,
+        sessionId: currentSessionId,
+        rowIndex: currentState.rowIndex
+      };
 
-    Veritas.Models.Session.ProctorAccess.setState(newState);
+      Veritas.Models.Session.ProctorAccess.setState(newState);
 
-    var responseId = 'TB-' + Utilities.getUuid();
-    DataAccess.responses.add([
-      responseId,
-      new Date().getTime(),
-      pollId,
-      -1,
-      studentEmail,
-      Veritas.Config.PROCTOR_VIOLATION_CODES.TEACHER_BLOCK,
-      false
-    ]);
+      var responseId = 'TB-' + Utilities.getUuid();
+      DataAccess.responses.add([
+        responseId,
+        new Date().getTime(),
+        pollId,
+        -1,
+        studentEmail,
+        Veritas.Config.PROCTOR_VIOLATION_CODES.TEACHER_BLOCK,
+        false
+      ]);
 
-    Veritas.Models.Session.ProctorTelemetry.log('teacher_block', studentEmail, pollId, {
-      lockVersion: newState.lockVersion,
-      status: 'BLOCKED',
-      blockedBy: teacherEmail
+      Veritas.Models.Session.ProctorTelemetry.log('teacher_block', studentEmail, pollId, {
+        lockVersion: newState.lockVersion,
+        status: 'BLOCKED',
+        blockedBy: teacherEmail
+      });
+
+      return {
+        ok: true,
+        status: 'BLOCKED',
+        lockVersion: newState.lockVersion,
+        blockedAt: newState.lockedAt,
+        blockedBy: teacherEmail
+      };
     });
-
-    return {
-      ok: true,
-      status: 'BLOCKED',
-      lockVersion: newState.lockVersion,
-      blockedAt: newState.lockedAt,
-      blockedBy: teacherEmail
-    };
   })();
 };
 
@@ -2281,44 +2292,47 @@ Veritas.Models.Session.teacherUnblockStudent = function(studentEmail, pollId) {
       throw new Error('Invalid parameters');
     }
 
-    var statusValues = DataAccess.liveStatus.get();
-    var activePollId = statusValues[0];
-    var metadata = (statusValues && statusValues.metadata) ? statusValues.metadata : {};
-    var currentSessionId = metadata && metadata.sessionId ? metadata.sessionId : null;
+    // RACE CONDITION FIX: Wrap entire read-check-write in a single lock to prevent TOCTOU
+    return Veritas.Utils.withLock(function() {
+      var statusValues = DataAccess.liveStatus.get();
+      var activePollId = statusValues[0];
+      var metadata = (statusValues && statusValues.metadata) ? statusValues.metadata : {};
+      var currentSessionId = metadata && metadata.sessionId ? metadata.sessionId : null;
 
-    if (!activePollId || activePollId !== pollId) {
-      throw new Error('Poll is not currently live');
-    }
+      if (!activePollId || activePollId !== pollId) {
+        throw new Error('Poll is not currently live');
+      }
 
-    var currentState = Veritas.Models.Session.ProctorAccess.getState(pollId, studentEmail, currentSessionId);
+      var currentState = Veritas.Models.Session.ProctorAccess.getState(pollId, studentEmail, currentSessionId);
 
-    if (currentState.status !== 'BLOCKED') {
-      return { ok: false, reason: 'not_blocked', status: currentState.status };
-    }
+      if (currentState.status !== 'BLOCKED') {
+        return { ok: false, reason: 'not_blocked', status: currentState.status };
+      }
 
-    var newState = {
-      pollId: pollId,
-      studentEmail: studentEmail,
-      status: 'OK',
-      lockVersion: (currentState.lockVersion || 0) + 1,
-      lockReason: '',
-      lockedAt: '',
-      unlockApproved: false,
-      unlockApprovedBy: null,
-      unlockApprovedAt: null,
-      sessionId: currentSessionId,
-      rowIndex: currentState.rowIndex
-    };
+      var newState = {
+        pollId: pollId,
+        studentEmail: studentEmail,
+        status: 'OK',
+        lockVersion: (currentState.lockVersion || 0) + 1,
+        lockReason: '',
+        lockedAt: '',
+        unlockApproved: false,
+        unlockApprovedBy: null,
+        unlockApprovedAt: null,
+        sessionId: currentSessionId,
+        rowIndex: currentState.rowIndex
+      };
 
-    Veritas.Models.Session.ProctorAccess.setState(newState);
+      Veritas.Models.Session.ProctorAccess.setState(newState);
 
-    Veritas.Models.Session.ProctorTelemetry.log('teacher_unblock', studentEmail, pollId, {
-      lockVersion: newState.lockVersion,
-      status: 'OK',
-      unblockedBy: teacherEmail
+      Veritas.Models.Session.ProctorTelemetry.log('teacher_unblock', studentEmail, pollId, {
+        lockVersion: newState.lockVersion,
+        status: 'OK',
+        unblockedBy: teacherEmail
+      });
+
+      return { ok: true, status: 'OK', lockVersion: newState.lockVersion };
     });
-
-    return { ok: true, status: 'OK', lockVersion: newState.lockVersion };
   })();
 };
 
@@ -2333,46 +2347,49 @@ Veritas.Models.Session.studentConfirmFullscreen = function(expectedLockVersion, 
       return { success: false, error: 'Authentication error' };
     }
 
-    var statusValues = DataAccess.liveStatus.get();
-    var pollId = statusValues[0];
-    var metadata = (statusValues && statusValues.metadata) ? statusValues.metadata : {};
-    var currentSessionId = metadata && metadata.sessionId ? metadata.sessionId : null;
+    // RACE CONDITION FIX: Wrap entire read-check-write in a single lock to prevent TOCTOU
+    return Veritas.Utils.withLock(function() {
+      var statusValues = DataAccess.liveStatus.get();
+      var pollId = statusValues[0];
+      var metadata = (statusValues && statusValues.metadata) ? statusValues.metadata : {};
+      var currentSessionId = metadata && metadata.sessionId ? metadata.sessionId : null;
 
-    if (!pollId) {
-      return { success: false, error: 'No active poll' };
-    }
+      if (!pollId) {
+        return { success: false, error: 'No active poll' };
+      }
 
-    var currentState = Veritas.Models.Session.ProctorAccess.getState(pollId, studentEmail, currentSessionId);
+      var currentState = Veritas.Models.Session.ProctorAccess.getState(pollId, studentEmail, currentSessionId);
 
-    if (currentState.status !== 'AWAITING_FULLSCREEN') {
-      Logger.log('Confirm fullscreen failed: wrong status', {
-        studentEmail: studentEmail,
-        pollId: pollId,
-        status: currentState.status
+      if (currentState.status !== 'AWAITING_FULLSCREEN') {
+        Logger.log('Confirm fullscreen failed: wrong status', {
+          studentEmail: studentEmail,
+          pollId: pollId,
+          status: currentState.status
+        });
+        return { success: false, error: 'not_awaiting_fullscreen', status: currentState.status };
+      }
+
+      if (currentState.lockVersion !== expectedLockVersion) {
+        Logger.log('Confirm fullscreen failed: version mismatch', {
+          studentEmail: studentEmail,
+          pollId: pollId,
+          expected: expectedLockVersion,
+          current: currentState.lockVersion
+        });
+        return { success: false, error: 'version_mismatch', lockVersion: currentState.lockVersion };
+      }
+
+      currentState.status = 'OK';
+      currentState.sessionId = currentSessionId || currentState.sessionId;
+      Veritas.Models.Session.ProctorAccess.setState(currentState);
+
+      Veritas.Models.Session.ProctorTelemetry.log('confirm_fullscreen', studentEmail, pollId, {
+        lockVersion: expectedLockVersion,
+        status: 'OK'
       });
-      return { success: false, error: 'not_awaiting_fullscreen', status: currentState.status };
-    }
 
-    if (currentState.lockVersion !== expectedLockVersion) {
-      Logger.log('Confirm fullscreen failed: version mismatch', {
-        studentEmail: studentEmail,
-        pollId: pollId,
-        expected: expectedLockVersion,
-        current: currentState.lockVersion
-      });
-      return { success: false, error: 'version_mismatch', lockVersion: currentState.lockVersion };
-    }
-
-    currentState.status = 'OK';
-    currentState.sessionId = currentSessionId || currentState.sessionId;
-    Veritas.Models.Session.ProctorAccess.setState(currentState);
-
-    Veritas.Models.Session.ProctorTelemetry.log('confirm_fullscreen', studentEmail, pollId, {
-      lockVersion: expectedLockVersion,
-      status: 'OK'
+      return { success: true, status: 'OK' };
     });
-
-    return { success: true, status: 'OK' };
   })();
 };
 

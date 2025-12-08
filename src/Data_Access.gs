@@ -922,13 +922,25 @@ var DataAccess = {
         .some(function(r) { return r[4] === studentEmail; });
     },
 
-    add: function(responseData) {
-      return Veritas.Utils.withLock(function() {
-        var ss = Veritas.Data.getSpreadsheet();
-        var sheet = Veritas.Data.ensureSheet(ss, Veritas.Config.SHEET_NAMES.RESPONSES);
-        Veritas.Data.ensureHeaders(sheet, Veritas.Config.SHEET_HEADERS.RESPONSES);
+    /**
+     * Internal unlocked version for use within withLock callbacks
+     * @private
+     */
+    _addNoLock: function(responseData) {
+      var ss = Veritas.Data.getSpreadsheet();
+      var sheet = Veritas.Data.ensureSheet(ss, Veritas.Config.SHEET_NAMES.RESPONSES);
+      Veritas.Data.ensureHeaders(sheet, Veritas.Config.SHEET_HEADERS.RESPONSES);
 
-        sheet.appendRow(responseData);
+      sheet.appendRow(responseData);
+    },
+
+    /**
+     * Add response with locking (public API)
+     */
+    add: function(responseData) {
+      var self = this;
+      return Veritas.Utils.withLock(function() {
+        self._addNoLock(responseData);
       });
     }
   },

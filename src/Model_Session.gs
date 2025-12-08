@@ -1882,58 +1882,67 @@ Veritas.Models.Session.ProctorAccess = {
   /**
    * Set proctoring state with validation
    */
+  /**
+   * Internal unlocked version of setState for use within withLock callbacks
+   * @private
+   */
+  _setStateNoLock: function(state) {
+    var validStatuses = Veritas.Config.PROCTOR_STATUS_VALUES;
+    if (!validStatuses.includes(state.status)) {
+      throw new Error('Invalid proctor status: ' + state.status + '. Must be one of: ' + validStatuses.join(', '));
+    }
+
+    if (typeof state.lockVersion !== 'number' || state.lockVersion < 0) {
+      throw new Error('Invalid lockVersion: ' + state.lockVersion + '. Must be non-negative number.');
+    }
+
+    if (state.status === 'AWAITING_FULLSCREEN' && !state.unlockApproved) {
+      throw new Error('State AWAITING_FULLSCREEN requires unlockApproved=true (teacher must approve first)');
+    }
+
+    if (state.status === 'LOCKED' && state.unlockApproved) {
+      throw new Error('State LOCKED requires unlockApproved=false (approval must be cleared on new violation)');
+    }
+
+    if (state.status === 'BLOCKED') {
+      state.unlockApproved = false;
+    }
+
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('ProctorState');
+
+    if (!sheet) {
+      Veritas.Models.Session.ProctorAccess.getState(state.pollId, state.studentEmail);
+      sheet = ss.getSheetByName('ProctorState');
+    }
+
+    var rowData = [
+      state.pollId,
+      state.studentEmail,
+      state.status || 'OK',
+      state.lockVersion,
+      state.lockReason || '',
+      state.lockedAt || '',
+      state.unlockApproved || false,
+      state.unlockApprovedBy || '',
+      state.unlockApprovedAt || '',
+      state.sessionId || ''
+    ];
+
+    if (state.rowIndex) {
+      sheet.getRange(state.rowIndex, 1, 1, 10).setValues([rowData]);
+    } else {
+      sheet.appendRow(rowData);
+    }
+  },
+
+  /**
+   * Set proctoring state with validation (public API with locking)
+   */
   setState: function(state) {
+    var self = this;
     return Veritas.Utils.withLock(function() {
-      var validStatuses = Veritas.Config.PROCTOR_STATUS_VALUES;
-      if (!validStatuses.includes(state.status)) {
-        throw new Error('Invalid proctor status: ' + state.status + '. Must be one of: ' + validStatuses.join(', '));
-      }
-
-      if (typeof state.lockVersion !== 'number' || state.lockVersion < 0) {
-        throw new Error('Invalid lockVersion: ' + state.lockVersion + '. Must be non-negative number.');
-      }
-
-      if (state.status === 'AWAITING_FULLSCREEN' && !state.unlockApproved) {
-        throw new Error('State AWAITING_FULLSCREEN requires unlockApproved=true (teacher must approve first)');
-      }
-
-      if (state.status === 'LOCKED' && state.unlockApproved) {
-        throw new Error('State LOCKED requires unlockApproved=false (approval must be cleared on new violation)');
-      }
-
-      if (state.status === 'BLOCKED') {
-        state.unlockApproved = false;
-      }
-
-      var ss = SpreadsheetApp.getActiveSpreadsheet();
-      var sheet = ss.getSheetByName('ProctorState');
-
-      if (!sheet) {
-        // This call might be redundant if called within a lock, but ensures sheet exists
-        // Note: this.getState is not locked, but ensures sheet creation
-        // Since we are inside a lock, concurrent creation is prevented if they use withLock
-        Veritas.Models.Session.ProctorAccess.getState(state.pollId, state.studentEmail);
-        sheet = ss.getSheetByName('ProctorState');
-      }
-
-      var rowData = [
-        state.pollId,
-        state.studentEmail,
-        state.status || 'OK',
-        state.lockVersion,
-        state.lockReason || '',
-        state.lockedAt || '',
-        state.unlockApproved || false,
-        state.unlockApprovedBy || '',
-        state.unlockApprovedAt || '',
-        state.sessionId || ''
-      ];
-
-      if (state.rowIndex) {
-        sheet.getRange(state.rowIndex, 1, 1, 10).setValues([rowData]);
-      } else {
-        sheet.appendRow(rowData);
-      }
+      self._setStateNoLock(state);
     });
   },
 
@@ -1998,6 +2007,7 @@ Veritas.Models.Session.reportStudentViolation = function(pollId, studentEmail, r
     }
 
     // RACE CONDITION FIX: Wrap entire read-check-write in a single lock to prevent TOCTOU
+    // Use unlocked versions (_setStateNoLock, _addNoLock) to avoid nested locking deadlock
     return Veritas.Utils.withLock(function() {
       var statusValues = DataAccess.liveStatus.get();
       var activePollId = statusValues[0];
@@ -2018,7 +2028,7 @@ Veritas.Models.Session.reportStudentViolation = function(pollId, studentEmail, r
 
         currentState.lockReason = reason || currentState.lockReason;
         currentState.sessionId = currentSessionId || currentState.sessionId;
-        Veritas.Models.Session.ProctorAccess.setState(currentState);
+        Veritas.Models.Session.ProctorAccess._setStateNoLock(currentState);
 
         return {
           success: true,
@@ -2042,10 +2052,10 @@ Veritas.Models.Session.reportStudentViolation = function(pollId, studentEmail, r
           rowIndex: currentState.rowIndex
         };
 
-        Veritas.Models.Session.ProctorAccess.setState(newState);
+        Veritas.Models.Session.ProctorAccess._setStateNoLock(newState);
 
         var responseId = 'V-' + Utilities.getUuid();
-        DataAccess.responses.add([
+        DataAccess.responses._addNoLock([
           responseId,
           new Date().getTime(),
           pollId,
@@ -2084,10 +2094,10 @@ Veritas.Models.Session.reportStudentViolation = function(pollId, studentEmail, r
         rowIndex: currentState.rowIndex
       };
 
-      Veritas.Models.Session.ProctorAccess.setState(newState);
+      Veritas.Models.Session.ProctorAccess._setStateNoLock(newState);
 
       var responseId = 'V-' + Utilities.getUuid();
-      DataAccess.responses.add([
+      DataAccess.responses._addNoLock([
         responseId,
         new Date().getTime(),
         pollId,
@@ -2165,6 +2175,7 @@ Veritas.Models.Session.teacherApproveUnlock = function(studentEmail, pollId, exp
     // RACE CONDITION FIX: Wrap entire read-check-write in a single lock to prevent TOCTOU
     // This prevents the "infinite loop unlock" bug where a student violates again between
     // the version check and the setState, causing the teacher to approve a stale lockVersion.
+    // Use _setStateNoLock to avoid nested locking deadlock.
     return Veritas.Utils.withLock(function() {
       var statusValues = DataAccess.liveStatus.get();
       var metadata = (statusValues && statusValues.metadata) ? statusValues.metadata : {};
@@ -2192,7 +2203,7 @@ Veritas.Models.Session.teacherApproveUnlock = function(studentEmail, pollId, exp
       currentState.unlockApprovedBy = teacherEmail;
       currentState.unlockApprovedAt = new Date().toISOString();
       currentState.sessionId = currentSessionId || currentState.sessionId;
-      Veritas.Models.Session.ProctorAccess.setState(currentState);
+      Veritas.Models.Session.ProctorAccess._setStateNoLock(currentState);
 
       Veritas.Models.Session.ProctorTelemetry.log('approve_unlock', studentEmail, pollId, {
         lockVersion: expectedLockVersion,
@@ -2221,6 +2232,7 @@ Veritas.Models.Session.teacherBlockStudent = function(studentEmail, pollId, reas
     }
 
     // RACE CONDITION FIX: Wrap entire read-check-write in a single lock to prevent TOCTOU
+    // Use unlocked versions to avoid nested locking deadlock
     return Veritas.Utils.withLock(function() {
       var statusValues = DataAccess.liveStatus.get();
       var activePollId = statusValues[0];
@@ -2247,10 +2259,10 @@ Veritas.Models.Session.teacherBlockStudent = function(studentEmail, pollId, reas
         rowIndex: currentState.rowIndex
       };
 
-      Veritas.Models.Session.ProctorAccess.setState(newState);
+      Veritas.Models.Session.ProctorAccess._setStateNoLock(newState);
 
       var responseId = 'TB-' + Utilities.getUuid();
-      DataAccess.responses.add([
+      DataAccess.responses._addNoLock([
         responseId,
         new Date().getTime(),
         pollId,
@@ -2293,6 +2305,7 @@ Veritas.Models.Session.teacherUnblockStudent = function(studentEmail, pollId) {
     }
 
     // RACE CONDITION FIX: Wrap entire read-check-write in a single lock to prevent TOCTOU
+    // Use _setStateNoLock to avoid nested locking deadlock
     return Veritas.Utils.withLock(function() {
       var statusValues = DataAccess.liveStatus.get();
       var activePollId = statusValues[0];
@@ -2323,7 +2336,7 @@ Veritas.Models.Session.teacherUnblockStudent = function(studentEmail, pollId) {
         rowIndex: currentState.rowIndex
       };
 
-      Veritas.Models.Session.ProctorAccess.setState(newState);
+      Veritas.Models.Session.ProctorAccess._setStateNoLock(newState);
 
       Veritas.Models.Session.ProctorTelemetry.log('teacher_unblock', studentEmail, pollId, {
         lockVersion: newState.lockVersion,
@@ -2348,6 +2361,7 @@ Veritas.Models.Session.studentConfirmFullscreen = function(expectedLockVersion, 
     }
 
     // RACE CONDITION FIX: Wrap entire read-check-write in a single lock to prevent TOCTOU
+    // Use _setStateNoLock to avoid nested locking deadlock
     return Veritas.Utils.withLock(function() {
       var statusValues = DataAccess.liveStatus.get();
       var pollId = statusValues[0];
@@ -2381,7 +2395,7 @@ Veritas.Models.Session.studentConfirmFullscreen = function(expectedLockVersion, 
 
       currentState.status = 'OK';
       currentState.sessionId = currentSessionId || currentState.sessionId;
-      Veritas.Models.Session.ProctorAccess.setState(currentState);
+      Veritas.Models.Session.ProctorAccess._setStateNoLock(currentState);
 
       Veritas.Models.Session.ProctorTelemetry.log('confirm_fullscreen', studentEmail, pollId, {
         lockVersion: expectedLockVersion,

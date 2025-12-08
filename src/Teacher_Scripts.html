@@ -7698,13 +7698,26 @@
 
       renderPreviewNav();
       renderPreviewQuestion();
+
+      // Ensure modal is appended to document.body to escape any container clipping
+      if (previewModal.parentElement !== document.body) {
+        document.body.appendChild(previewModal);
+      }
+
       previewModal.classList.remove('hidden');
-      previewModal.style.display = 'flex';
+      previewModal.style.cssText = 'display: flex !important; visibility: visible !important; position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; z-index: 99999 !important; background-color: rgba(0,0,0,0.6) !important;';
+      previewModal.setAttribute('aria-hidden', 'false');
+
+      // Prevent background scrolling
+      document.body.style.overflow = 'hidden';
     }
 
     function closePollPreview() {
       previewModal.classList.add('hidden');
       previewModal.style.display = 'none';
+      previewModal.style.cssText = ''; // Reset inline styles
+      // Restore body scroll
+      document.body.style.overflow = '';
       currentPreviewPoll = null;
       currentPreviewQuestionIndex = 0;
       isPreviewReorderMode = false;
@@ -8465,9 +8478,23 @@
         console.log('About to show modal. Modal element:', modal);
         console.log('Modal current classes:', modal ? modal.className : 'N/A');
         console.log('Modal current display style:', modal ? modal.style.display : 'N/A');
+
+        // Ensure modal is appended to document.body to escape any container clipping
+        if (modal.parentElement !== document.body) {
+          document.body.appendChild(modal);
+        }
+
+        // Remove hidden class first
         modal.classList.remove('hidden');
-        modal.style.display = 'flex';
-        console.log('Modal should now be visible. Display:', modal.style.display, 'Classes:', modal.className);
+
+        // Force visibility with maximum z-index and all required properties
+        modal.style.cssText = 'display: flex !important; visibility: visible !important; position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; z-index: 99999 !important; background-color: rgba(0,0,0,0.6) !important;';
+        modal.setAttribute('aria-hidden', 'false');
+
+        // Prevent background scrolling
+        document.body.style.overflow = 'hidden';
+
+        console.log('Modal should now be visible. Display:', modal.style.display, 'Classes:', modal.className, 'Parent:', modal.parentElement.tagName);
       } catch (e) {
         console.error("Error opening poll creator:", e);
         console.error("Error stack:", e.stack);
@@ -8479,7 +8506,10 @@
       if (modal) {
         modal.style.display = 'none';
         modal.classList.add('hidden');
+        modal.style.cssText = ''; // Reset inline styles
       }
+      // Restore body scroll
+      document.body.style.overflow = '';
       questions = [];
       questionCounter = 0;
       selectedQuestionIndex = 0;

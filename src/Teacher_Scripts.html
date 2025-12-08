@@ -8357,96 +8357,101 @@
 
     // --- Poll Creator Modal ---
     function openPollCreator(existingPoll) {
-      var saveButton = document.getElementById('save-poll-btn');
+      try {
+        var saveButton = document.getElementById('save-poll-btn');
 
-      questionCounter = 0;
-      questions = [];
-      selectedQuestionIndex = 0;
-      questionIdCounter = 0;
-      customQuestionOrder = [];
-      initialQuestionOrder = [];
-      draggedQuestionId = null;
-      setQuestionReorderHelp();
-
-      if (existingPoll) {
-        editingPollId = existingPoll.pollId;
-        document.getElementById('new-poll-name').value = existingPoll.pollName || '';
-        if (existingPoll.className) {
-          refreshClassOptions(BASE_CLASSES.concat([existingPoll.className]));
-        }
-        classSelect.value = existingPoll.className || '';
-
-        var existingSessionType = normalizeSessionTypeClient(existingPoll.sessionType);
-        secureAssessmentConfig = {
-          timeLimitMinutes: typeof existingPoll.timeLimitMinutes === 'number' ? existingPoll.timeLimitMinutes :
-            (existingPoll.secureSettings && typeof existingPoll.secureSettings.timeLimitMinutes === 'number'
-              ? existingPoll.secureSettings.timeLimitMinutes : ''),
-          accessCode: (existingPoll.accessCode || (existingPoll.secureSettings && existingPoll.secureSettings.accessCode) || '').toString().toUpperCase(),
-          availableFrom: existingPoll.availableFrom || (existingPoll.secureSettings && existingPoll.secureSettings.availableFrom) || '',
-          dueBy: existingPoll.dueBy || (existingPoll.secureSettings && existingPoll.secureSettings.dueBy) || ''
-        };
-        if (secureAssessmentConfig.timeLimitMinutes === '') {
-          secureAssessmentConfig.timeLimitMinutes = 60;
-        }
-        populateSecureSettingsInputs();
-        setPollSessionType(existingSessionType, true);
-        updateSecureSettingsVisibility();
-
-        questions = existingPoll.questions.map(function (question) {
-          var answers = (question.options || []).map(function (opt) {
-            return {
-              text: opt.text || '',
-              image: opt.imageURL || null,
-              imageURL: opt.imageURL || null,
-              imageFileId: opt.imageFileId || null
-            };
-          });
-          while (answers.length < 2) {
-            answers.push({ text: '', image: null, imageURL: null, imageFileId: null });
-          }
-          var correctIndex = 0;
-          answers.forEach(function (answer, idx) {
-            if (answer.text === question.correctAnswer) {
-              correctIndex = idx;
-            }
-          });
-          return assignQuestionId({
-            questionText: question.questionText || '',
-            questionImage: null,
-            questionImageURL: question.questionImageURL || null,
-            questionImageFileId: question.questionImageFileId || null,
-            answers: answers,
-            correctAnswerIndex: correctIndex,
-            timerSeconds: question.timerSeconds || null,
-            metacognitionEnabled: !!question.metacognitionEnabled
-          });
-        });
-        if (questions.length === 0) {
-          addQuestion(true);
-        }
-        questionCounter = questions.length;
+        questionCounter = 0;
+        questions = [];
         selectedQuestionIndex = 0;
-        saveButton.innerHTML = '<span class="truncate">Save Changes</span>';
-        resetPollDirty('Editing existing poll');
-      } else {
-        editingPollId = null;
-        document.getElementById('new-poll-name').value = '';
-        classSelect.value = '';
-        resetSecureAssessmentState();
-        setPollSessionType('LIVE_POLL', true);
-        updateSecureSettingsVisibility();
+        questionIdCounter = 0;
+        customQuestionOrder = [];
+        initialQuestionOrder = [];
+        draggedQuestionId = null;
+        setQuestionReorderHelp();
 
-        addQuestion(true);
-        saveButton.innerHTML = '<span class="truncate">Publish Poll</span>';
-        resetPollDirty('All changes saved');
+        if (existingPoll) {
+          editingPollId = existingPoll.pollId;
+          document.getElementById('new-poll-name').value = existingPoll.pollName || '';
+          if (existingPoll.className) {
+            refreshClassOptions(BASE_CLASSES.concat([existingPoll.className]));
+          }
+          classSelect.value = existingPoll.className || '';
+
+          var existingSessionType = normalizeSessionTypeClient(existingPoll.sessionType);
+          secureAssessmentConfig = {
+            timeLimitMinutes: typeof existingPoll.timeLimitMinutes === 'number' ? existingPoll.timeLimitMinutes :
+              (existingPoll.secureSettings && typeof existingPoll.secureSettings.timeLimitMinutes === 'number'
+                ? existingPoll.secureSettings.timeLimitMinutes : ''),
+            accessCode: (existingPoll.accessCode || (existingPoll.secureSettings && existingPoll.secureSettings.accessCode) || '').toString().toUpperCase(),
+            availableFrom: existingPoll.availableFrom || (existingPoll.secureSettings && existingPoll.secureSettings.availableFrom) || '',
+            dueBy: existingPoll.dueBy || (existingPoll.secureSettings && existingPoll.secureSettings.dueBy) || ''
+          };
+          if (secureAssessmentConfig.timeLimitMinutes === '') {
+            secureAssessmentConfig.timeLimitMinutes = 60;
+          }
+          populateSecureSettingsInputs();
+          setPollSessionType(existingSessionType, true);
+          updateSecureSettingsVisibility();
+
+          questions = existingPoll.questions.map(function (question) {
+            var answers = (question.options || []).map(function (opt) {
+              return {
+                text: opt.text || '',
+                image: opt.imageURL || null,
+                imageURL: opt.imageURL || null,
+                imageFileId: opt.imageFileId || null
+              };
+            });
+            while (answers.length < 2) {
+              answers.push({ text: '', image: null, imageURL: null, imageFileId: null });
+            }
+            var correctIndex = 0;
+            answers.forEach(function (answer, idx) {
+              if (answer.text === question.correctAnswer) {
+                correctIndex = idx;
+              }
+            });
+            return assignQuestionId({
+              questionText: question.questionText || '',
+              questionImage: null,
+              questionImageURL: question.questionImageURL || null,
+              questionImageFileId: question.questionImageFileId || null,
+              answers: answers,
+              correctAnswerIndex: correctIndex,
+              timerSeconds: question.timerSeconds || null,
+              metacognitionEnabled: !!question.metacognitionEnabled
+            });
+          });
+          if (questions.length === 0) {
+            addQuestion(true);
+          }
+          questionCounter = questions.length;
+          selectedQuestionIndex = 0;
+          saveButton.innerHTML = '<span class="truncate">Save Changes</span>';
+          resetPollDirty('Editing existing poll');
+        } else {
+          editingPollId = null;
+          document.getElementById('new-poll-name').value = '';
+          classSelect.value = '';
+          resetSecureAssessmentState();
+          setPollSessionType('LIVE_POLL', true);
+          updateSecureSettingsVisibility();
+
+          addQuestion(true);
+          saveButton.innerHTML = '<span class="truncate">Publish Poll</span>';
+          resetPollDirty('All changes saved');
+        }
+
+        customQuestionOrder = questions.map(function (question) { return question._id; });
+        initialQuestionOrder = customQuestionOrder.slice();
+        enforceQuestionOrder();
+        renderQuestionNavigator();
+        renderQuestionWorkspace();
+        modal.style.display = 'flex';
+      } catch (e) {
+        console.error("Error opening poll creator:", e);
+        veritasAlert("Error opening poll creator: " + e.message, { title: "Error" });
       }
-
-      customQuestionOrder = questions.map(function (question) { return question._id; });
-      initialQuestionOrder = customQuestionOrder.slice();
-      enforceQuestionOrder();
-      renderQuestionNavigator();
-      renderQuestionWorkspace();
-      modal.style.display = 'flex';
     }
 
     function closePollCreator() {

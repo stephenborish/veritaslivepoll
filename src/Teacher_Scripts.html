@@ -1987,7 +1987,16 @@
     }
 
     // --- Event Listeners ---
-    bindClick('nav-create-poll', function () { openPollCreator(); });
+    var createPollBtn = bindClick('nav-create-poll', function () {
+      console.log('Nav Create Poll Clicked');
+      try {
+        openPollCreator();
+      } catch (e) {
+        console.error('Click handler failed:', e);
+        alert('Click handler failed: ' + e);
+      }
+    });
+    if (!createPollBtn) console.error('CRITICAL: Create Poll Button Not Found during binding');
     bindClick('nav-polls-list', showDashboard);
     bindClick('nav-rosters', showRosterManager);
     bindClick('nav-archived', showArchivedView);

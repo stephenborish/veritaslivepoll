@@ -422,7 +422,21 @@ Veritas.Data.Polls = {
           }
         }
 
-        var questionData = normalizeQuestionObject_(JSON.parse(row[4] || "{}"), updatedAt);
+        // CRITICAL BUG FIX: Add try-catch for question JSON parsing to prevent crash on corrupted data
+        var questionData = {};
+        try {
+          questionData = normalizeQuestionObject_(JSON.parse(row[4] || "{}"), updatedAt);
+        } catch (err) {
+          Veritas.Logging.error('Failed to parse QuestionJSON for poll ' + pollId + ' question ' + questionIndex, err);
+          // Create a fallback question object to allow graceful recovery
+          questionData = normalizeQuestionObject_({
+            questionText: '[Error loading question - corrupted data]',
+            questionType: 'multiple-choice',
+            options: [],
+            correctAnswer: '',
+            points: 0
+          }, updatedAt);
+        }
         questionData.index = questionIndex;
 
         if (!pollsMap[pollId]) {
@@ -908,13 +922,25 @@ var DataAccess = {
         .some(function(r) { return r[4] === studentEmail; });
     },
 
-    add: function(responseData) {
-      return Veritas.Utils.withLock(function() {
-        var ss = Veritas.Data.getSpreadsheet();
-        var sheet = Veritas.Data.ensureSheet(ss, Veritas.Config.SHEET_NAMES.RESPONSES);
-        Veritas.Data.ensureHeaders(sheet, Veritas.Config.SHEET_HEADERS.RESPONSES);
+    /**
+     * Internal unlocked version for use within withLock callbacks
+     * @private
+     */
+    _addNoLock: function(responseData) {
+      var ss = Veritas.Data.getSpreadsheet();
+      var sheet = Veritas.Data.ensureSheet(ss, Veritas.Config.SHEET_NAMES.RESPONSES);
+      Veritas.Data.ensureHeaders(sheet, Veritas.Config.SHEET_HEADERS.RESPONSES);
 
-        sheet.appendRow(responseData);
+      sheet.appendRow(responseData);
+    },
+
+    /**
+     * Add response with locking (public API)
+     */
+    add: function(responseData) {
+      var self = this;
+      return Veritas.Utils.withLock(function() {
+        self._addNoLock(responseData);
       });
     }
   },
@@ -1112,6 +1138,7 @@ var DataAccess = {
     },
 
     updateProgress: function(pollId, sessionId, studentEmail, newIndex) {
+      // RACE CONDITION FIX: Move getByStudent call INSIDE the lock to prevent TOCTOU
       return Veritas.Utils.withLock(function() {
         var studentState = Veritas.Data.individualSessionState.getByStudent(pollId, sessionId, studentEmail);
         if (studentState) {

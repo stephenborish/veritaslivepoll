@@ -634,6 +634,14 @@ function getSecureAssessmentBookView(pollId) {
 }
 
 /**
+ * Get all questions from all polls for Question Bank import
+ * @returns {Object} {questions: Array} All questions with poll metadata
+ */
+function getAllQuestionsForBank() {
+  return Veritas.TeacherApi.getAllQuestionsForBank();
+}
+
+/**
  * Pause poll when timer expires (automatic)
  * @returns {Object} Result
  */

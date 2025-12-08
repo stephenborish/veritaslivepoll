@@ -1126,3 +1126,36 @@ function safeUiAlert(message, title) {
 function setupSheet() {
   return Veritas.TeacherApi.setupSheet();
 }
+
+/**
+ * Get all questions from all polls for Question Bank import
+ * @returns {Object} {questions: Array} All questions with poll metadata
+ */
+Veritas.TeacherApi.getAllQuestionsForBank = function() {
+  return withErrorHandling(function() {
+    Veritas.TeacherApi.assertTeacher();
+    
+    var polls = DataAccess.polls.getAll();
+    var questions = [];
+    
+    polls.forEach(function(poll) {
+      if (!poll.questions || !Array.isArray(poll.questions)) return;
+      
+      poll.questions.forEach(function(q, idx) {
+        questions.push({
+          pollId: poll.pollId,
+          pollName: poll.pollName,
+          questionIndex: idx,
+          questionText: q.questionText || '',
+          answers: q.answers || q.options || [],
+          topicTag: q.topicTag || q.topic || '',
+          difficultyLevel: q.difficultyLevel || ''
+        });
+      });
+    });
+    
+    Logger.log('Question bank loaded', { questionCount: questions.length });
+    
+    return { questions: questions };
+  })();
+};

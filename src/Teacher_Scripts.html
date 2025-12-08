@@ -7698,10 +7698,12 @@
 
       renderPreviewNav();
       renderPreviewQuestion();
+      previewModal.classList.remove('hidden');
       previewModal.style.display = 'flex';
     }
 
     function closePollPreview() {
+      previewModal.classList.add('hidden');
       previewModal.style.display = 'none';
       currentPreviewPoll = null;
       currentPreviewQuestionIndex = 0;
@@ -11586,7 +11588,7 @@
           // Question Row: Text + Image Upload
           '<div class="flex gap-3">' +
           '<div class="flex-1">' +
-          '<textarea class="wizard-q-text w-full rounded-lg border border-brand-light-gray px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none" rows="2" placeholder="Enter question text..." data-q-index="' + qIndex + '">' + escapeHtml(q.questionText || '') + '</textarea>' +
+          '<textarea class="wizard-q-text w-full rounded-lg border border-brand-light-gray px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary overflow-hidden min-h-[60px]" style="resize:none;height:auto;" placeholder="Enter question text..." data-q-index="' + qIndex + '">' + escapeHtml(q.questionText || '') + '</textarea>' +
           '</div>' +
           '<div class="shrink-0 flex flex-col items-center gap-1">';
 
@@ -11674,8 +11676,15 @@
         // Bind event listeners
         var qTextarea = questionDiv.querySelector('.wizard-q-text');
         if (qTextarea) {
+          // Auto-resize textarea on load
+          qTextarea.style.height = 'auto';
+          qTextarea.style.height = qTextarea.scrollHeight + 'px';
+
           qTextarea.addEventListener('input', function () {
             wizardState.questions[qIndex].questionText = this.value;
+            // Auto-resize as user types
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
           });
         }
 

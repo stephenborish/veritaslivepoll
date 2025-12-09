@@ -565,8 +565,8 @@
         <div class="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-800 px-4 pt-2 pb-4 live-view-shell">
 
           <div class="flex flex-col lg:flex-row gap-4 h-full live-view-grid">
-            <!-- LEFT COLUMN: Question + Answer Choices (60%) -->
-            <div class="w-full lg:w-[60%] flex flex-col gap-4">
+            <!-- LEFT COLUMN: Question + Answer Choices (Adaptive Width) -->
+            <div class="flex-1 min-w-0 flex flex-col gap-4">
 
               <!-- Question Display Area -->
               <div
@@ -624,8 +624,8 @@
               </div>
             </div>
 
-            <!-- RIGHT COLUMN: STUDENTS + CONFIDENCE PULSE (40%) -->
-            <div class="w-full lg:w-[40%] flex flex-col gap-4 h-full overflow-hidden">
+            <!-- RIGHT COLUMN: STUDENTS + CONFIDENCE PULSE (Fixed Width) -->
+            <div class="w-full lg:w-96 flex-none flex flex-col gap-4 h-full overflow-hidden">
 
               <!-- STUDENTS PANEL -->
               <div
@@ -1442,20 +1442,25 @@
                       placeholder="e.g. EXAM2025">
                   </div>
                   <div class="form-group md:col-span-2">
-                    <div class="flex items-start justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm">
+                    <div
+                      class="flex items-start justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm">
                       <div>
                         <div class="flex items-center gap-2 font-semibold">
                           <span class="material-symbols-outlined text-base">calculate</span>
                           TI-84 Calculator
                         </div>
-                        <p class="mt-1 text-amber-800/80">Allow students to use a secure, embedded calculator during this assessment.</p>
+                        <p class="mt-1 text-amber-800/80">Allow students to use a secure, embedded calculator during
+                          this assessment.</p>
                       </div>
                       <label class="inline-flex items-center cursor-pointer select-none">
                         <input id="wizard-calculator-toggle" type="checkbox" class="peer sr-only">
-                        <span class="h-6 w-11 rounded-full bg-amber-200 peer-checked:bg-amber-500 transition-colors relative">
-                          <span class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-all peer-checked:translate-x-5"></span>
+                        <span
+                          class="h-6 w-11 rounded-full bg-amber-200 peer-checked:bg-amber-500 transition-colors relative">
+                          <span
+                            class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-all peer-checked:translate-x-5"></span>
                         </span>
-                        <span class="ml-3 text-sm font-semibold text-amber-900 peer-checked:text-amber-800">Enable</span>
+                        <span
+                          class="ml-3 text-sm font-semibold text-amber-900 peer-checked:text-amber-800">Enable</span>
                       </label>
                     </div>
                   </div>

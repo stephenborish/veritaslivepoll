@@ -1393,6 +1393,12 @@
         var recoveringFromOutage = false;
         var connectivityHideTimer = null;
         var lastAdvisedInterval = defaultPollInterval;
+
+        // --- PROCTORING SAFEGUARDS ---
+        var secureSessionActive = false; // Must be TRUE for lock logic to engage
+        var isEnteringFullscreen = false; // Grace period flag
+        // -----------------------------
+
         var optionBaseClass = 'answer-option relative w-full text-left';
         var optionSelectedClass = optionBaseClass + ' answer-option-selected';
         var optionDisabledClass = optionBaseClass + ' answer-option-disabled';
@@ -1467,29 +1473,31 @@
         function attachProctorVisibilityListeners() {
             if (blurListenerAttached) { return; }
             blurListenerAttached = true;
+
             // ZERO TOLERANCE: Immediate lock on window blur
             window.addEventListener('blur', function () {
-                // SAFE HARBOR: If focus moved to the calculator iframe, ignore violation
-                var calcIframe = document.getElementById('calc-iframe');
-                var focusIsCalculator = calcIframe && document.activeElement === calcIframe;
-                var pageIsVisible = document.visibilityState === 'visible';
+                // 1. GLOBAL SAFEGUARDS
+                if (!secureSessionActive || isEnteringFullscreen || isInteractionBlocked || isTeacherBlocked) return;
 
-                if (focusIsCalculator && pageIsVisible) {
-                    console.log('[Proctor] Focus moved to Calculator - Allowed (Safe Harbor)');
+                // 2. IFRAME SAFE HARBOR (Calculator / Tools)
+                if (document.activeElement && document.activeElement.tagName === 'IFRAME') {
+                    console.log('[Proctor] Ignored blur - interaction with iframe');
                     return;
                 }
 
-                // If we are active and interaction isn't blocked...
-                if ((secureSessionActive || liveSessionActive) && !isInteractionBlocked && !violationLogged) {
-                    console.log('[Proctor] ZERO TOLERANCE: Window blur detected - IMMEDIATE LOCK');
-                    lockSession('window-blur');
-                }
+                // 3. LOCK IF VIOLATION CONFIRMED
+                console.warn('[Proctor] Blur detected - LOCKING');
+                violationLogged = true;
+                LockManager.lock('tab_switch');
             });
+
             // ZERO TOLERANCE: Immediate lock on tab visibility change
             document.addEventListener('visibilitychange', function () {
-                if (document.hidden && (secureSessionActive || liveSessionActive) && !isInteractionBlocked && !violationLogged) {
-                    console.log('[Proctor] ZERO TOLERANCE: Tab hidden detected - IMMEDIATE LOCK');
-                    lockSession('tab-hidden');
+                if (document.hidden) {
+                    if (!secureSessionActive || isEnteringFullscreen || isInteractionBlocked || isTeacherBlocked) return;
+                    console.warn('[Proctor] Visibility hidden - LOCKING');
+                    violationLogged = true;
+                    LockManager.lock('tab_hidden');
                 }
             });
         }
@@ -1807,17 +1815,41 @@
             requestFullscreenForSecureAssessment()
                 .then(function () {
                     setSecureBeginLoading(true);
+                    isEnteringFullscreen = true; // START GRACE PERIOD
+
+                    // Allow 3 seconds for browser transition chaos to settle
+                    setTimeout(function () { isEnteringFullscreen = false; }, 3000);
+
+                    // Double check fullscreen state
+                    if (!secureFullscreenManager.isFullscreen()) {
+                        throw new Error('Fullscreen failed');
+                    }
+
+                    // Immediately mark as active to allow polling, but grace period protects against blur
+                    secureSessionActive = true;
+
                     google.script.run
                         .withSuccessHandler(function (response) {
                             setSecureBeginLoading(false);
-                            if (response && response.success) {
-                                pollForIndividualSessionState();
+                            if (response.success) {
+                                // Success!
+                                hideAllViews();
+                                entryScreen.style.display = 'none';
+                                secureLobbyContext = null;
+                                veritasToast('Secure Session Started', 'good');
+
+                                // Start polling with active session flag
+                                startPolling(true);
                             } else {
-                                veritasAlert('Unable to begin the assessment right now.', { title: 'Secure Assessment' });
+                                isEnteringFullscreen = false;
+                                secureSessionActive = false;
+                                veritasAlert(response.error || 'Failed to start session.', { title: 'Error' });
                             }
                         })
                         .withFailureHandler(function (error) {
                             setSecureBeginLoading(false);
+                            isEnteringFullscreen = false;
+                            secureSessionActive = false;
                             var message = (error && error.message) ? error.message : 'Unable to begin assessment.';
                             if (/access code/i.test(message)) {
                                 setSecureAccessError(message);
@@ -2322,6 +2354,10 @@
                 submessage: 'Syncing now...'
             });
             startPolling(true);
+            // Re-assert session active state if recovering
+            if (isSessionActive() && !isInteractionBlocked) {
+                secureSessionActive = true;
+            }
         });
 
         if (resumeSessionBtn) {
@@ -2462,6 +2498,12 @@
                         violationLogged = false;
                         fullscreenEnteredOnce = false; // Reset for new fullscreen session
                         hideConnectivityBanner();
+                        isInteractionBlocked = false;
+                        isTeacherBlocked = false;
+                        violationLogged = false;
+                        fullscreenEnteredOnce = false; // Reset for new fullscreen session
+                        hideConnectivityBanner();
+                        secureSessionActive = true; // RESUME SESSIONS MUST BE ACTIVE
                         startPolling(true);
                         if (lastUnlockedState && lastUnlockedState.status && lastUnlockedState.status !== 'LOCKED' && lastUnlockedState.status !== 'AWAITING_FULLSCREEN') {
                             updateStudentView(lastUnlockedState);

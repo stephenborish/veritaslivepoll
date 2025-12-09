@@ -121,7 +121,8 @@
        ======================================== */
 
     // === Toast Notification System ===
-    function showToast(type, title, message, duration = 5000, action = null) {
+    // FIX: Hardcoded duration to 6000ms for "All students complete" and similar banners
+    function showToast(type, title, message, duration = 6000, action = null) {
       const container = document.getElementById('toast-container');
       if (!container) return;
 

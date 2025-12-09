@@ -94,7 +94,7 @@
          * Immediately locks the session with no grace period, no warnings.
          * - Hides question UI
          * - Shows red "LOCKED" overlay
-         * - Persists lock to sessionStorage to prevent refresh bypass
+         * - Persists lock to sessionStorage to prevent refresh bypass ("Poison Pill")
          * - Sends priority violation report to server
          * @param {string} reason - The violation reason (e.g., 'exit-fullscreen', 'tab-blur')
          */
@@ -105,8 +105,11 @@
             isInteractionBlocked = true;
             violationLogged = true;
 
-            // Persist lock state to sessionStorage to prevent refresh bypass
+            // POISON PILL: Persist lock state to sessionStorage to prevent refresh bypass
+            // This key MUST be checked at the top of startPolling() and updateStudentView()
+            // The ONLY way to clear this is when server sends unlock_granted: true
             try {
+                sessionStorage.setItem('veritas_lock_active', 'true');
                 sessionStorage.setItem('is_locally_locked', 'true');
                 sessionStorage.setItem('lock_reason', reason || 'violation');
                 sessionStorage.setItem('lock_timestamp', Date.now().toString());
@@ -153,16 +156,22 @@
         /**
          * Check if session was locked before (e.g., page refresh bypass attempt)
          * Called on page load to restore lock state
+         * POISON PILL: Uses veritas_lock_active which can ONLY be cleared by server unlock_granted
          */
         function checkForPersistedLock() {
             try {
+                // PRIMARY CHECK: veritas_lock_active is the "Poison Pill" key
+                var poisonPillActive = sessionStorage.getItem('veritas_lock_active');
                 var isLocked = sessionStorage.getItem('is_locally_locked');
-                if (isLocked === 'true') {
+
+                if (poisonPillActive === 'true' || isLocked === 'true') {
                     var lockReason = sessionStorage.getItem('lock_reason') || 'previous-violation';
-                    console.log('[Proctor] Restoring lock state from sessionStorage:', lockReason);
+                    console.log('[Proctor] POISON PILL ACTIVE - Restoring lock state from sessionStorage:', lockReason);
                     isInteractionBlocked = true;
                     violationLogged = true;
                     showLockEnforcementUI('SESSION LOCKED', 'Your session was locked. Wait for teacher approval.');
+                    // Start proctor polling to wait for server unlock
+                    startProctorPolling();
                     return true;
                 }
             } catch (e) {
@@ -172,15 +181,30 @@
         }
 
         /**
-         * Clear the persisted lock state (called when teacher approves unlock)
+         * Clear the persisted lock state (called ONLY when server sends unlock_granted: true)
+         * This is the ONLY "antidote" to the Poison Pill
          */
         function clearPersistedLock() {
             try {
+                console.log('[Proctor] ANTIDOTE - Clearing Poison Pill lock state');
+                sessionStorage.removeItem('veritas_lock_active');
                 sessionStorage.removeItem('is_locally_locked');
                 sessionStorage.removeItem('lock_reason');
                 sessionStorage.removeItem('lock_timestamp');
             } catch (e) {
                 console.warn('[Proctor] Could not clear lock from sessionStorage:', e);
+            }
+        }
+
+        /**
+         * POISON PILL CHECK - Must be called at the start of any function that resumes the session
+         * Returns true if the Poison Pill is active (student should see lock screen)
+         */
+        function isPoisonPillActive() {
+            try {
+                return sessionStorage.getItem('veritas_lock_active') === 'true';
+            } catch (e) {
+                return false;
             }
         }
 
@@ -475,14 +499,20 @@
         }
 
         function showIndividualTimedView(state) {
+            // FIX: Force hide ALL other screens to prevent "Start Screen Leak" cheating risk
             hideSecureLobby();
             if (studentLoader) studentLoader.style.display = 'none';
             if (entryScreen) entryScreen.style.display = 'none';
+            if (secureLobbyCard) secureLobbyCard.style.display = 'none';
             studentContainer.style.display = 'block';
             questionContainer.style.display = 'none';
             statusContainer.style.display = 'none';
             if (preLiveCard) preLiveCard.style.display = 'none';
             if (secureFocusContainer) secureFocusContainer.style.display = 'block';
+
+            // FIX: SCROLL LOCK - Prevent scrolling to any leaked content
+            document.body.style.overflow = 'hidden';
+
             toggleSecureLayout(true);
             if (!secureSessionActive) {
                 secureSessionActive = true;
@@ -1065,6 +1095,14 @@
         }
 
         function pollForIndividualSessionState() {
+            // POISON PILL CHECK: If lock is active, immediately show lock UI and return
+            if (isPoisonPillActive()) {
+                console.log('[Proctor] POISON PILL ACTIVE in pollForIndividualSessionState - blocking');
+                isInteractionBlocked = true;
+                showLockEnforcementUI('SESSION LOCKED', 'Your session was locked. Wait for teacher approval.');
+                return;
+            }
+
             if (securePollInFlight) return;
             securePollInFlight = true;
             google.script.run
@@ -2060,6 +2098,15 @@
         }
 
         function startPolling(immediate) {
+            // POISON PILL CHECK: If lock is active, immediately show lock UI and return
+            if (isPoisonPillActive()) {
+                console.log('[Proctor] POISON PILL ACTIVE in startPolling - blocking resume');
+                isInteractionBlocked = true;
+                showLockEnforcementUI('SESSION LOCKED', 'Your session was locked. Wait for teacher approval.');
+                startProctorPolling();
+                return;
+            }
+
             pollFailureCount = 0;
             recoveringFromOutage = false;
             if (immediate) {
@@ -2186,7 +2233,10 @@
                             google.script.run
                                 .withSuccessHandler(function (response) {
                                     if (response.success && response.status === 'OK') {
-                                        console.log('Server confirmed unlock - resuming poll');
+                                        console.log('[Proctor] Server confirmed unlock via fullscreen confirmation - clearing Poison Pill');
+                                        // ANTIDOTE: Clear the Poison Pill upon successful server confirmation
+                                        clearPersistedLock();
+
                                         isInteractionBlocked = false;
                                         violationLogged = false;
                                         fullscreenEnteredOnce = false; // Reset for new fullscreen session
@@ -2277,6 +2327,8 @@
                     }
 
                     // Check if status is AWAITING_FULLSCREEN and lockVersion matches
+                    // NOTE: We do NOT clear the Poison Pill here - only show resume prompt
+                    // The Poison Pill will be cleared ONLY after successful fullscreen confirmation
                     if (response.status === 'AWAITING_FULLSCREEN' && response.lockVersion === currentLockVersion) {
                         if (proctorPollInterval) {
                             clearInterval(proctorPollInterval);
@@ -2293,8 +2345,12 @@
                             currentLockVersion = response.lockVersion;
                         }
                         showTeacherBlockedMessage();
-                    } else if (response.status === 'OK') {
-                        // Unlocked - resume normal polling
+                    } else if (response.status === 'OK' || response.unlock_granted === true) {
+                        // ANTIDOTE: Server has explicitly granted unlock
+                        // This is the ONLY place where the Poison Pill can be cleared
+                        console.log('[Proctor] Server granted unlock - clearing Poison Pill');
+                        clearPersistedLock();
+
                         if (proctorPollInterval) {
                             clearInterval(proctorPollInterval);
                             proctorPollInterval = null;
@@ -2302,6 +2358,7 @@
                         isInteractionBlocked = false;
                         isTeacherBlocked = false;
                         violationLogged = false;
+                        fullscreenEnteredOnce = false; // Reset for new fullscreen session
                         hideConnectivityBanner();
                         startPolling(true);
                         if (lastUnlockedState && lastUnlockedState.status && lastUnlockedState.status !== 'LOCKED' && lastUnlockedState.status !== 'AWAITING_FULLSCREEN') {
@@ -2317,6 +2374,15 @@
 
         function updateStudentView(data) {
             data = data || {};
+
+            // POISON PILL CHECK: If lock is active, immediately show lock UI and return
+            // This prevents ANY data from being displayed to a locked student
+            if (isPoisonPillActive()) {
+                console.log('[Proctor] POISON PILL ACTIVE in updateStudentView - blocking display');
+                isInteractionBlocked = true;
+                showLockEnforcementUI('SESSION LOCKED', 'Your session was locked. Wait for teacher approval.');
+                return;
+            }
 
             // Fix: UI Overlap - Ensure proper container visibility
             if (studentLoader) studentLoader.style.display = 'none';
@@ -2451,6 +2517,12 @@
                 var questionKey = data.pollId + ':' + data.questionIndex + ':' + resetTimestamp;
                 var isNewQuestion = questionKey !== currentQuestionKey;
                 toggleSecureLayout(false);
+
+                // FIX: Force hide entry/lobby screens to prevent "Start Screen Leak"
+                if (entryScreen) entryScreen.style.display = 'none';
+                if (secureLobbyCard) secureLobbyCard.style.display = 'none';
+                // FIX: SCROLL LOCK - Prevent scrolling to any leaked content during live poll
+                document.body.style.overflow = 'hidden';
 
                 if (isNewQuestion) {
                     currentQuestionKey = questionKey;

@@ -1900,7 +1900,7 @@
     var analyticsView = document.getElementById('analytics-view');
     var headerDefault = document.getElementById('header-default');
     var headerLive = document.getElementById('header-live');
-    var liveCalculatorToggle = document.getElementById('live-calculator-toggle');
+    var liveCalculatorToggle = document.getElementById('header-calc-toggle');
     var modal = document.getElementById('poll-creator-modal');
     var linksModal = document.getElementById('student-links-modal');
     var pollSortSelect = document.getElementById('poll-sort-select');
@@ -2124,7 +2124,21 @@
     bindClick('header-start-btn', onResumePoll);
     bindClick('header-end-show-btn', onEndQuestionAndShowAnswer);
     bindClick('header-stop-btn', onEndPoll);
-    bindClick('live-calculator-toggle', onToggleLiveCalculator);
+
+    document.getElementById('header-calc-toggle')?.addEventListener('click', () => {
+      google.script.run
+        .withSuccessHandler(enabled => {
+          const btn = document.getElementById('header-calc-toggle');
+          if (!btn) return;
+          // Visual feedback for enabled state:
+          if (enabled) {
+            btn.classList.add('text-green-500');
+          } else {
+            btn.classList.remove('text-green-500');
+          }
+        })
+        .toggleSessionCalculator(CURRENT_POLL_DATA.pollId); // must match backend function name
+    });
 
     // Live View More Actions Menu
     bindClick('live-more-actions-btn', function (e) {

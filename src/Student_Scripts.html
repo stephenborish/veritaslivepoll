@@ -1376,7 +1376,9 @@
             window.addEventListener('blur', function () {
                 // SAFE HARBOR: If focus moved to the calculator iframe, ignore violation
                 var calcIframe = document.getElementById('calc-iframe');
-                if (calcIframe && document.activeElement === calcIframe) {
+                var focusIsCalculator = calcIframe && document.activeElement === calcIframe;
+                var pageIsVisible = document.visibilityState === 'visible';
+                if (focusIsCalculator && pageIsVisible) {
                     console.log('[Proctor] Focus moved to Calculator - Allowed (Safe Harbor)');
                     return;
                 }

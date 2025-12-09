@@ -884,6 +884,12 @@ Veritas.Models.Poll.normalizeSecureMetadata = function(metadata) {
     secureSettings.calculatorEnabled = true;
   }
 
+  // Persist explicit calculator flag at the top-level metadata for quicker reads
+  // while keeping secureSettings synchronized for backward compatibility.
+  if (!calculatorEnabled && secureSettings.calculatorEnabled === true) {
+    calculatorEnabled = true;
+  }
+
   return {
     sessionType: sessionType,
     timeLimitMinutes: validTimeLimit,

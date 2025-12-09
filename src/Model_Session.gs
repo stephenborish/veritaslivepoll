@@ -513,6 +513,8 @@ Veritas.Models.Session.startIndividualTimedSession = function(pollId) {
 
     const nowIso = new Date().toISOString();
     const sessionId = pollId + '::' + Utilities.getUuid();
+    var calculatorEnabled = poll.calculatorEnabled === true ||
+      (poll.secureSettings && poll.secureSettings.calculatorEnabled === true);
 
     DataAccess.liveStatus.set(pollId, -1, "OPEN", {
       reason: 'SECURE_ASSESSMENT_RUNNING',
@@ -523,7 +525,8 @@ Veritas.Models.Session.startIndividualTimedSession = function(pollId) {
       secureDefaultTimeAdjustmentMinutes: 0,
       isCollecting: true,
       resultsVisibility: 'HIDDEN',
-      sessionId: sessionId
+      sessionId: sessionId,
+      calculatorEnabled: calculatorEnabled === true
     });
 
     Veritas.Models.Session.ProctorAccess.resetForNewSession(pollId, sessionId);

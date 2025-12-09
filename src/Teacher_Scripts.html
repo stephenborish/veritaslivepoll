@@ -4747,6 +4747,23 @@
     var studentInsightsSortBy = 'name';
     var studentInsightsSortAsc = true;
 
+    function showStudentInsightsError(message) {
+      // Display error message in the student insights container
+      var container = document.getElementById('student-insights-content');
+      if (container) {
+        container.innerHTML = '<div class="flex items-center justify-center p-12 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/30 rounded-lg">' +
+          '<div class="text-center">' +
+          '<span class="material-symbols-outlined text-5xl text-red-600 dark:text-red-400 mb-4">error</span>' +
+          '<p class="text-red-800 dark:text-red-200 text-lg font-semibold mb-2">Failed to Load Student Insights</p>' +
+          '<p class="text-red-600 dark:text-red-300 text-sm">' + escapeHtml(message) + '</p>' +
+          '<button onclick="loadStudentInsights()" class="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">Retry</button>' +
+          '</div>' +
+          '</div>';
+      }
+      // Also show a toast notification
+      showToast('error', 'Error', message, 5000);
+    }
+
     function loadStudentInsights() {
       // Get current class filter
       var className = analyticsFilters && analyticsFilters.className ? analyticsFilters.className : 'all';
@@ -4759,10 +4776,17 @@
             currentStudentInsights = data;
             filteredStudentInsights = data.students || [];
             renderStudentInsights();
+          } else {
+            // Handle backend-level failures with user feedback
+            var errorMsg = data && data.error ? data.error : 'Failed to load insights';
+            showStudentInsightsError(errorMsg);
           }
         })
         .withFailureHandler(function (error) {
           console.error('Failed to load student insights:', error);
+          // FIX: Show user-visible error message instead of silent console log
+          var errorMsg = error && error.message ? error.message : 'Network error loading insights';
+          showStudentInsightsError(errorMsg);
         })
         .getStudentInsights(className, { dateFrom: dateFrom, dateTo: dateTo });
     }

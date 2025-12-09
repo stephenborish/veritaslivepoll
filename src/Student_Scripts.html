@@ -1424,6 +1424,18 @@
         var blurListenerAttached = false;
         var liveSessionActive = false;
 
+        function triggerSecurityViolation(reason) {
+            sessionStorage.setItem('veritas_lock_active', 'true');
+
+            if (typeof showLockEnforcementUI === 'function') {
+                showLockEnforcementUI("LOCKED", "Security violation detected. Wait for teacher approval.");
+            }
+
+            if (typeof reportViolationDebounced === 'function') {
+                reportViolationDebounced(reason);
+            }
+        }
+
         function reportViolationDebounced(reason) {
             // FIX: Immediately block interaction to prevent submissions during debounce
             if (!isInteractionBlocked && !violationLogged && secureSessionActive) {
@@ -1488,7 +1500,7 @@
                 // 3. LOCK IF VIOLATION CONFIRMED
                 console.warn('[Proctor] Blur detected - LOCKING');
                 violationLogged = true;
-                LockManager.lock('tab_switch');
+                triggerSecurityViolation('tab_switch');
             });
 
             // ZERO TOLERANCE: Immediate lock on tab visibility change
@@ -1497,7 +1509,8 @@
                     if (!secureSessionActive || isEnteringFullscreen || isInteractionBlocked || isTeacherBlocked) return;
                     console.warn('[Proctor] Visibility hidden - LOCKING');
                     violationLogged = true;
-                    LockManager.lock('tab_hidden');
+                    // Safe harbor check not needed for visibility hidden (user definitely left)
+                    triggerSecurityViolation('tab_hidden');
                 }
             });
         }
@@ -1779,7 +1792,7 @@
             // Check for tab blur/switch (visibility hidden) - IMMEDIATE LOCK
             if (event.hidden && !isInteractionBlocked && !violationLogged) {
                 console.log('[Proctor] ZERO TOLERANCE: Tab blur detected - IMMEDIATE LOCK');
-                lockSession('tab-blur');
+                triggerSecurityViolation('tab-blur');
                 return;
             }
 
@@ -1794,7 +1807,7 @@
             // No grace periods. No warnings. Zero tolerance.
             if ((fullscreenEnteredOnce || secureSessionActive || liveSessionActive) && !isInteractionBlocked && !violationLogged) {
                 console.log('[Proctor] ZERO TOLERANCE: Fullscreen exit detected - IMMEDIATE LOCK');
-                lockSession('exit-fullscreen');
+                triggerSecurityViolation('exit-fullscreen');
             }
         }
 
@@ -2564,6 +2577,13 @@
         // =============================================================================
 
         function updateStudentView(data) {
+            if (sessionStorage.getItem('veritas_lock_active') === 'true') {
+                if (typeof showLockEnforcementUI === 'function') {
+                    showLockEnforcementUI("LOCKED", "Security violation detected. Wait for teacher approval.");
+                }
+                return;
+            }
+
             data = data || {};
             console.log('[ViewManager] Update View State:', data);
 

@@ -622,10 +622,13 @@ Veritas.Models.Session.toggleSessionCalculator = function(pollId, isEnabled) {
     const sessionId = previousMetadata.sessionId || '';
     const nowIso = new Date().toISOString();
 
+    // Determine new state: toggle if isEnabled is undefined, otherwise set to isEnabled
+    var newState = (typeof isEnabled === 'undefined') ? !previousMetadata.calculatorEnabled : !!isEnabled;
+
     // Update metadata with calculator state
     DataAccess.liveStatus.set(activePollId, questionIndex, status, {
       ...previousMetadata,
-      calculatorEnabled: !!isEnabled,
+      calculatorEnabled: newState,
       calculatorToggledAt: nowIso
     });
 
@@ -634,21 +637,18 @@ Veritas.Models.Session.toggleSessionCalculator = function(pollId, isEnabled) {
       pollId,
       sessionId,
       Veritas.Config.TEACHER_EMAIL,
-      isEnabled ? 'CALCULATOR_ENABLED' : 'CALCULATOR_DISABLED',
+      newState ? 'CALCULATOR_ENABLED' : 'CALCULATOR_DISABLED',
       { toggledAt: nowIso }
     );
 
     Logger.log('Session calculator toggled', {
       pollId: pollId,
       sessionId: sessionId,
-      calculatorEnabled: !!isEnabled
+      calculatorEnabled: newState
     });
 
-    return {
-      success: true,
-      pollId: pollId,
-      calculatorEnabled: !!isEnabled
-    };
+    // Return just the boolean as expected by the frontend handler
+    return newState;
   })();
 };
 

@@ -2109,6 +2109,18 @@
     } else {
       console.warn('Missing click target: start-poll-btn');
     }
+
+    // --- Calculator Toggles ---
+    // (Live Calculator is already bound via bindClick below)
+
+    var wizardCalcToggle = document.getElementById('wizard-calculator-toggle');
+    if (wizardCalcToggle) {
+      wizardCalcToggle.addEventListener('change', function () {
+        if (typeof wizardState !== 'undefined') {
+          wizardState.calculatorEnabled = this.checked;
+        }
+      });
+    }
     bindClick('header-start-btn', onResumePoll);
     bindClick('header-end-show-btn', onEndQuestionAndShowAnswer);
     bindClick('header-stop-btn', onEndPoll);
@@ -11431,7 +11443,7 @@
           wizardState.timeLimitMinutes = typeof pollData.timeLimitMinutes === 'number'
             ? pollData.timeLimitMinutes
             : (pollData.secureSettings && typeof pollData.secureSettings.timeLimitMinutes === 'number'
-                ? pollData.secureSettings.timeLimitMinutes : 60);
+              ? pollData.secureSettings.timeLimitMinutes : 60);
           wizardState.accessCode = (pollData.accessCode ||
             (pollData.secureSettings && pollData.secureSettings.accessCode) || '').toString().toUpperCase();
           wizardState.availabilityStart = pollData.availableFrom ||
@@ -11444,8 +11456,8 @@
 
         // Load questions
         if (pollData.questions && pollData.questions.length > 0) {
-          wizardState.questions = pollData.questions.map(function(q) {
-            var options = (q.options || []).map(function(opt) {
+          wizardState.questions = pollData.questions.map(function (q) {
+            var options = (q.options || []).map(function (opt) {
               return {
                 text: opt.text || '',
                 imageURL: opt.imageURL || '',
@@ -11460,7 +11472,7 @@
 
             // Find correct answer index
             var correctIndex = 0;
-            options.forEach(function(opt, idx) {
+            options.forEach(function (opt, idx) {
               if (opt.text === q.correctAnswer) {
                 correctIndex = idx;
               }

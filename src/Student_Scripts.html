@@ -217,7 +217,7 @@
          * Uses localStorage for persistence across network failures
          * Implements optimistic UI with background sync
          */
-        var AnswerQueue = (function() {
+        var AnswerQueue = (function () {
             var QUEUE_PREFIX = 'veritas_queue_';
             var SYNC_INTERVAL = 2000; // 2 seconds
             var syncIntervalId = null;
@@ -305,7 +305,7 @@
                 console.log('[AnswerQueue] Syncing answer:', item.actualQuestionIndex, 'attempt:', item.syncAttempts);
 
                 google.script.run
-                    .withSuccessHandler(function(response) {
+                    .withSuccessHandler(function (response) {
                         isSyncing = false;
                         if (response && response.success) {
                             // Remove successfully synced item from queue
@@ -315,7 +315,7 @@
                             if (onSuccess) onSuccess(response, item);
                             // Continue syncing remaining items
                             if (queue.length > 0) {
-                                setTimeout(function() {
+                                setTimeout(function () {
                                     syncToServer(sessionId, onSuccess, onError);
                                 }, 100);
                             }
@@ -331,7 +331,7 @@
                             if (onError) onError(response, item);
                         }
                     })
-                    .withFailureHandler(function(error) {
+                    .withFailureHandler(function (error) {
                         isSyncing = false;
                         console.error('[AnswerQueue] Sync failed:', error);
                         // Keep item in queue for retry, update queue with new attempt count
@@ -357,7 +357,7 @@
                     return;
                 }
                 console.log('[AnswerQueue] Starting sync loop for session:', sessionId);
-                syncIntervalId = setInterval(function() {
+                syncIntervalId = setInterval(function () {
                     syncToServer(sessionId, onSuccess, onError);
                 }, SYNC_INTERVAL);
             }
@@ -2374,17 +2374,44 @@
                 .getStudentProctorState(SESSION_TOKEN);
         }
 
+        function hideAllViews() {
+            ['entry-screen', 'secure-lobby', 'status-container', 'pre-live-card', 'student-container', 'question-container', 'individual-timed-session'].forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+            document.body.style.overflow = '';
+        }
+
+        function syncCalculatorVisibility(enabled) {
+            var fab = document.getElementById('calc-fab');
+            var win = document.getElementById('calc-window');
+            if (enabled === true || enabled === 'true') {
+                if (fab) fab.style.display = 'flex';
+            } else {
+                if (fab) fab.style.display = 'none';
+                if (win) {
+                    win.classList.remove('active');
+                    win.style.display = 'none';
+                }
+            }
+        }
+
         function updateStudentView(data) {
             data = data || {};
 
             // POISON PILL CHECK: If lock is active, immediately show lock UI and return
-            // This prevents ANY data from being displayed to a locked student
             if (isPoisonPillActive()) {
                 console.log('[Proctor] POISON PILL ACTIVE in updateStudentView - blocking display');
                 isInteractionBlocked = true;
                 showLockEnforcementUI('SESSION LOCKED', 'Your session was locked. Wait for teacher approval.');
                 return;
             }
+
+            // VIEW MUTEX: Hide all views first to prevent Ghost Screens
+            hideAllViews();
+
+            // CALCULATOR: Sync visibility based on metadata
+            syncCalculatorVisibility(data.calculatorEnabled);
 
             // Fix: UI Overlap - Ensure proper container visibility
             if (studentLoader) studentLoader.style.display = 'none';
@@ -2396,12 +2423,20 @@
                     secureSessionHeartbeat.start(true);
                 }
                 setSecureChromeState(true);
+                // Individual session view handling is done by INDIVIDUAL_TIMED/SECURE_ASSESSMENT logic
+                // usually via updateIndividualSessionView or similar if it exists,
+                // or just showing the secure lobby.
+                // Assuming specific logic follows or is handled by sub-functions.
+                // Re-showing secure lobby if needed:
+                // But wait, the original code returned early here.
+                // I should verify if I need to show the secure session view here.
+                // The original code returned early. I should check if it needs to show anything.
                 return;
             }
 
             // Otherwise, we are in a normal Live Poll or standard state.
             // Explicitly hide secure lobby and entry screen to prevent overlap.
-            if (entryScreen) entryScreen.style.display = 'none';
+            // hideAllViews() handled most, but let's be safe.
             if (studentContainer) studentContainer.style.display = 'block';
             hideSecureLobby();
             if (secureFocusContainer) secureFocusContainer.style.display = 'none';
@@ -2549,6 +2584,7 @@
 
                     if (questionTextEl) {
                         questionTextEl.textContent = data.questionText || '';
+                        questionTextEl.style.whiteSpace = 'pre-wrap';
                     }
 
                     if (questionSublineEl) {

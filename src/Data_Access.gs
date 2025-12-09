@@ -1298,6 +1298,120 @@ var DataAccess = {
 
         return state;
       });
+    },
+
+    /**
+     * Internal unlocked version of updateProgress for use within withLock callbacks
+     * @private
+     */
+    _updateProgressNoLock: function(studentState, newIndex) {
+      if (!studentState || !studentState.rowIndex) return;
+      var ss = Veritas.Data.getSpreadsheet();
+      var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
+      if (!sheet) {
+        throw new Error('IndividualTimedSessions sheet not found');
+      }
+      sheet.getRange(studentState.rowIndex, Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.CURRENT_QUESTION_INDEX).setValue(newIndex);
+    },
+
+    /**
+     * Internal unlocked version of updateFields for use within withLock callbacks
+     * @private
+     */
+    _updateFieldsNoLock: function(studentState, updates) {
+      if (!updates || typeof updates !== 'object') {
+        throw new Error('Updates object required');
+      }
+      if (!studentState || !studentState.rowIndex) {
+        throw new Error('Student state with rowIndex required');
+      }
+
+      var ss = Veritas.Data.getSpreadsheet();
+      var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
+      if (!sheet) {
+        throw new Error('IndividualTimedSessions sheet not found');
+      }
+
+      var rowIndex = studentState.rowIndex;
+      var columns = Veritas.Config.INDIVIDUAL_SESSION_COLUMNS;
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'timeAdjustmentMinutes')) {
+        sheet.getRange(rowIndex, columns.TIME_ADJUSTMENT_MINUTES).setValue(updates.timeAdjustmentMinutes);
+        studentState.timeAdjustmentMinutes = updates.timeAdjustmentMinutes;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'pauseDurationMs')) {
+        sheet.getRange(rowIndex, columns.PAUSE_DURATION_MS).setValue(updates.pauseDurationMs);
+        studentState.pauseDurationMs = updates.pauseDurationMs;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'currentQuestionIndex')) {
+        sheet.getRange(rowIndex, columns.CURRENT_QUESTION_INDEX).setValue(updates.currentQuestionIndex);
+        studentState.currentQuestionIndex = updates.currentQuestionIndex;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'endTime')) {
+        sheet.getRange(rowIndex, columns.END_TIME).setValue(updates.endTime);
+        studentState.endTime = updates.endTime;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'isLocked')) {
+        sheet.getRange(rowIndex, columns.IS_LOCKED).setValue(updates.isLocked);
+        studentState.isLocked = updates.isLocked;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'violationCode')) {
+        sheet.getRange(rowIndex, columns.VIOLATION_CODE).setValue(updates.violationCode);
+        studentState.violationCode = updates.violationCode;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'proctorStatus')) {
+        sheet.getRange(rowIndex, columns.PROCTOR_STATUS).setValue(updates.proctorStatus);
+        studentState.proctorStatus = updates.proctorStatus;
+      }
+
+      var metadataUpdated = false;
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'additionalMetadata')) {
+        studentState.additionalMetadata = updates.additionalMetadata;
+        metadataUpdated = true;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'mergeAdditionalMetadata')) {
+        var currentMetadata = studentState.additionalMetadata || {};
+        var newMetadata = updates.mergeAdditionalMetadata;
+        if (newMetadata && typeof newMetadata === 'object') {
+          for (var key in newMetadata) {
+            if (Object.prototype.hasOwnProperty.call(newMetadata, key)) {
+              currentMetadata[key] = newMetadata[key];
+            }
+          }
+          studentState.additionalMetadata = currentMetadata;
+          metadataUpdated = true;
+        }
+      }
+
+      if (metadataUpdated) {
+        var metadataJson = JSON.stringify(studentState.additionalMetadata);
+        sheet.getRange(rowIndex, columns.ADDITIONAL_METADATA_JSON).setValue(metadataJson);
+      }
+
+      return studentState;
+    },
+
+    /**
+     * Internal unlocked version of lockStudent for use within withLock callbacks
+     * @private
+     */
+    _lockStudentNoLock: function(studentState) {
+      if (!studentState || !studentState.rowIndex) return;
+      var ss = Veritas.Data.getSpreadsheet();
+      var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS);
+      if (!sheet) {
+        throw new Error('IndividualTimedSessions sheet not found');
+      }
+      sheet.getRange(studentState.rowIndex, Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.IS_LOCKED).setValue(true);
+      sheet.getRange(studentState.rowIndex, Veritas.Config.INDIVIDUAL_SESSION_COLUMNS.END_TIME).setValue(new Date().toISOString());
     }
   }
 };

@@ -910,126 +910,137 @@ Veritas.Models.Session.submitAnswerIndividualTimed = function(token, answerDetai
 
 /**
  * Submit answer for secure assessment (core logic)
+ * CRITICAL CONCURRENCY FIX: Wrap entire operation in single lock to prevent race conditions
+ * when 20+ students submit simultaneously (the "Submission Spike" scenario)
  */
 Veritas.Models.Session.submitIndividualTimedAnswer = function(pollId, sessionId, studentEmail, actualQuestionIndex, answer, confidenceLevel) {
   const poll = DataAccess.polls.getById(pollId);
   if (!poll) throw new Error('Poll not found');
 
-  // Auto-heal if the student row is missing (e.g., sheet latency) by re-initializing
-  let studentState = DataAccess.individualSessionState.getByStudent(pollId, sessionId, studentEmail);
-  if (!studentState) {
-    studentState = Veritas.Models.Session.initializeIndividualTimedStudent(pollId, sessionId, studentEmail);
-  }
-  if (!studentState) {
-    throw new Error('Student not initialized for this session');
-  }
+  // CONCURRENCY FIX: Wrap entire read-check-write sequence in a SINGLE lock
+  // This prevents TOCTOU (Time-of-Check-Time-of-Use) race conditions
+  return Veritas.Utils.withLock(function() {
+    // Re-fetch student state INSIDE the lock to ensure fresh data
+    let studentState = DataAccess.individualSessionState.getByStudent(pollId, sessionId, studentEmail);
 
-  if (studentState.isLocked) {
-    throw new Error('Session is locked - time expired or already completed');
-  }
+    // Auto-heal if the student row is missing (e.g., sheet latency) by re-initializing
+    if (!studentState) {
+      studentState = Veritas.Models.Session.initializeIndividualTimedStudent(pollId, sessionId, studentEmail);
+    }
+    if (!studentState) {
+      throw new Error('Student not initialized for this session');
+    }
 
-  // Enforce proctoring lock/block for secure assessments
-  var proctorState = Veritas.Models.Session.ProctorAccess.getState(pollId, studentEmail, sessionId);
-  if (proctorState.status && proctorState.status !== 'OK') {
-    throw new Error('Session is locked. Wait for your teacher to unlock you.');
-  }
+    if (studentState.isLocked) {
+      throw new Error('Session is locked - time expired or already completed');
+    }
 
-  // Check elapsed time to prevent submissions after time limit
-  const metadata = DataAccess.liveStatus.getMetadata();
-  const timingState = Veritas.Models.Session.computeSecureTimingState(studentState, poll, metadata);
+    // Enforce proctoring lock/block for secure assessments
+    var proctorState = Veritas.Models.Session.ProctorAccess.getState(pollId, studentEmail, sessionId);
+    if (proctorState.status && proctorState.status !== 'OK') {
+      throw new Error('Session is locked. Wait for your teacher to unlock you.');
+    }
 
-  if (timingState.allowedMs > 0 && timingState.remainingMs <= 0) {
-    DataAccess.individualSessionState.lockStudent(pollId, sessionId, studentEmail);
-    Logger.log('Submission rejected: time limit exceeded', {
+    // Check elapsed time to prevent submissions after time limit
+    const metadata = DataAccess.liveStatus.getMetadata();
+    const timingState = Veritas.Models.Session.computeSecureTimingState(studentState, poll, metadata);
+
+    if (timingState.allowedMs > 0 && timingState.remainingMs <= 0) {
+      // Use unlocked version since we're already in a lock
+      DataAccess.individualSessionState._lockStudentNoLock(studentState);
+      Logger.log('Submission rejected: time limit exceeded', {
+        pollId: pollId,
+        studentEmail: studentEmail,
+        elapsedMs: timingState.elapsedMs,
+        allowedMs: timingState.allowedMs
+      });
+      throw new Error('Time limit exceeded. Your session has been locked and this response cannot be recorded.');
+    }
+
+    // Verify this is the current question
+    const expectedQuestionIndex = studentState.questionOrder[studentState.currentQuestionIndex];
+
+    // FIX: Resync if client state is out of sync but valid
+    // If the client submits an answer for a question we *think* they've already passed (or haven't reached),
+    // but it matches their actualQuestionIndex, it might be a race condition or retry.
+    if (actualQuestionIndex !== expectedQuestionIndex) {
+      Logger.log('Question index mismatch', {
+          expected: expectedQuestionIndex,
+          received: actualQuestionIndex,
+          progress: studentState.currentQuestionIndex
+      });
+
+      // If they are submitting for the *previous* question (maybe network lag), reject gracefully
+      // If they are submitting for a future question, that's impossible.
+      // We strictly enforce current question index from server state.
+      throw new Error('Cannot submit answer for non-current question (Expected: ' + expectedQuestionIndex + ', Received: ' + actualQuestionIndex + ')');
+    }
+
+    // Check if already answered (check INSIDE lock with fresh data)
+    const alreadyAnswered = DataAccess.responses.hasAnswered(pollId, actualQuestionIndex, studentEmail);
+    if (alreadyAnswered) {
+      throw new Error('Question already answered');
+    }
+
+    const question = poll.questions[actualQuestionIndex];
+    if (!question) throw new Error('Question not found');
+
+    const isCorrect = (answer === question.correctAnswer);
+
+    // Record response using unlocked version (we're already in a lock)
+    const responseId = Utilities.getUuid();
+    const timestamp = new Date().toISOString();
+    DataAccess.responses._addNoLock([
+      responseId,
+      timestamp,
+      pollId,
+      actualQuestionIndex,
+      studentEmail,
+      answer,
+      isCorrect,
+      confidenceLevel || null
+    ]);
+
+    // Advance to next question using unlocked version
+    const nextProgressIndex = studentState.currentQuestionIndex + 1;
+    DataAccess.individualSessionState._updateProgressNoLock(studentState, nextProgressIndex);
+
+    // Update metadata using unlocked version
+    const existingCorrect = (studentState.additionalMetadata && typeof studentState.additionalMetadata.correctCount === 'number')
+      ? studentState.additionalMetadata.correctCount
+      : 0;
+    const updatedMetadata = {
+      mergeAdditionalMetadata: {
+        correctCount: existingCorrect + (isCorrect ? 1 : 0),
+        answeredCount: nextProgressIndex
+      }
+    };
+    DataAccess.individualSessionState._updateFieldsNoLock(studentState, updatedMetadata);
+
+    // Check if completed all questions
+    const isComplete = nextProgressIndex >= poll.questions.length;
+    if (isComplete) {
+      // Use unlocked version since we're already in a lock
+      DataAccess.individualSessionState._lockStudentNoLock(studentState);
+    }
+
+    Logger.log('Individual timed answer submitted', {
       pollId: pollId,
       studentEmail: studentEmail,
-      elapsedMs: timingState.elapsedMs,
-      allowedMs: timingState.allowedMs
-    });
-    throw new Error('Time limit exceeded. Your session has been locked and this response cannot be recorded.');
-  }
-
-  // Verify this is the current question
-  const expectedQuestionIndex = studentState.questionOrder[studentState.currentQuestionIndex];
-
-  // FIX: Resync if client state is out of sync but valid
-  // If the client submits an answer for a question we *think* they've already passed (or haven't reached),
-  // but it matches their actualQuestionIndex, it might be a race condition or retry.
-  if (actualQuestionIndex !== expectedQuestionIndex) {
-    Logger.log('Question index mismatch', {
-        expected: expectedQuestionIndex,
-        received: actualQuestionIndex,
-        progress: studentState.currentQuestionIndex
+      actualQuestionIndex: actualQuestionIndex,
+      isCorrect: isCorrect,
+      nextProgressIndex: nextProgressIndex,
+      isComplete: isComplete
     });
 
-    // If they are submitting for the *previous* question (maybe network lag), reject gracefully
-    // If they are submitting for a future question, that's impossible.
-    // We strictly enforce current question index from server state.
-    throw new Error('Cannot submit answer for non-current question (Expected: ' + expectedQuestionIndex + ', Received: ' + actualQuestionIndex + ')');
-  }
-
-  // Check if already answered
-  const alreadyAnswered = DataAccess.responses.hasAnswered(pollId, actualQuestionIndex, studentEmail);
-  if (alreadyAnswered) {
-    throw new Error('Question already answered');
-  }
-
-  const question = poll.questions[actualQuestionIndex];
-  if (!question) throw new Error('Question not found');
-
-  const isCorrect = (answer === question.correctAnswer);
-
-  // Record response
-  const responseId = Utilities.getUuid();
-  const timestamp = new Date().toISOString();
-  DataAccess.responses.add([
-    responseId,
-    timestamp,
-    pollId,
-    actualQuestionIndex,
-    studentEmail,
-    answer,
-    isCorrect,
-    confidenceLevel || null
-  ]);
-
-  // Advance to next question
-  const nextProgressIndex = studentState.currentQuestionIndex + 1;
-  DataAccess.individualSessionState.updateProgress(pollId, sessionId, studentEmail, nextProgressIndex);
-
-  const existingCorrect = (studentState.additionalMetadata && typeof studentState.additionalMetadata.correctCount === 'number')
-    ? studentState.additionalMetadata.correctCount
-    : 0;
-  const updatedMetadata = {
-    mergeAdditionalMetadata: {
-      correctCount: existingCorrect + (isCorrect ? 1 : 0),
-      answeredCount: nextProgressIndex
-    }
-  };
-  DataAccess.individualSessionState.updateFields(pollId, sessionId, studentEmail, updatedMetadata);
-
-  // Check if completed all questions
-  const isComplete = nextProgressIndex >= poll.questions.length;
-  if (isComplete) {
-    DataAccess.individualSessionState.lockStudent(pollId, sessionId, studentEmail);
-  }
-
-  Logger.log('Individual timed answer submitted', {
-    pollId: pollId,
-    studentEmail: studentEmail,
-    actualQuestionIndex: actualQuestionIndex,
-    isCorrect: isCorrect,
-    nextProgressIndex: nextProgressIndex,
-    isComplete: isComplete
+    return {
+      success: true,
+      isCorrect: isCorrect,
+      isComplete: isComplete,
+      nextProgressIndex: nextProgressIndex,
+      totalQuestions: poll.questions.length
+    };
   });
-
-  return {
-    success: true,
-    isCorrect: isCorrect,
-    isComplete: isComplete,
-    nextProgressIndex: nextProgressIndex,
-    totalQuestions: poll.questions.length
-  };
 };
 
 /**

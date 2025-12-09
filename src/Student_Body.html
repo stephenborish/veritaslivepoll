@@ -245,5 +245,25 @@
       </div>
 
     </div>
+
+    <!-- TI-84 Calculator FAB and Draggable Window -->
+    <button id="calc-fab" class="hidden fixed bottom-6 right-6 z-40 h-14 w-14 rounded-full bg-veritas-navy text-white shadow-xl hover:bg-veritas-navy/90 transition-transform active:scale-95 flex items-center justify-center" aria-label="Open Calculator">
+      <span class="material-symbols-outlined text-2xl">calculate</span>
+    </button>
+
+    <div id="calc-window" class="hidden fixed top-20 left-1/2 -translate-x-1/2 z-50 w-[360px] h-[640px] bg-brand-dark-gray rounded-xl shadow-2xl overflow-hidden border border-white/20 flex flex-col resize-y min-h-[400px] max-h-[90vh]">
+      <div id="calc-header" class="h-10 bg-veritas-navy/90 backdrop-blur cursor-move flex items-center justify-between px-4 select-none flex-shrink-0">
+        <span class="text-white font-bold text-xs tracking-wider uppercase flex items-center gap-2">
+          <span class="material-symbols-outlined text-sm">function</span> TI-84 Plus
+        </span>
+        <button id="calc-close" type="button" class="text-white/60 hover:text-white transition-colors">
+          <span class="material-symbols-outlined text-lg">close</span>
+        </button>
+      </div>
+      <div class="flex-1 bg-black relative overflow-hidden">
+        <div id="calc-loader" class="absolute inset-0 flex items-center justify-center text-white/50 text-sm">Loading...</div>
+        <iframe id="calc-iframe" src="about:blank" data-src="https://mpcalc-aaa91.web.app/" class="w-full h-full border-0" allow="fullscreen" title="TI-84 Calculator"></iframe>
+      </div>
+    </div>
   </main>
 

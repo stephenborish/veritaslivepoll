@@ -864,6 +864,16 @@ Veritas.Models.Poll.normalizeSecureMetadata = function(metadata) {
     ];
   }
 
+  // Calculator enabled flag (default false for backward compatibility)
+  var calculatorEnabled = incoming.calculatorEnabled === true ||
+    incoming.calculatorEnabled === 'true' ||
+    incoming.calculatorEnabled === 1 ||
+    (incoming.secureSettings && incoming.secureSettings.calculatorEnabled === true);
+
+  if (calculatorEnabled && !secureSettings.calculatorEnabled) {
+    secureSettings.calculatorEnabled = true;
+  }
+
   return {
     sessionType: sessionType,
     timeLimitMinutes: validTimeLimit,
@@ -871,7 +881,8 @@ Veritas.Models.Poll.normalizeSecureMetadata = function(metadata) {
     availableFrom: availableFrom,
     dueBy: dueBy,
     missionControlState: missionControlState,
-    secureSettings: secureSettings
+    secureSettings: secureSettings,
+    calculatorEnabled: calculatorEnabled
   };
 };
 

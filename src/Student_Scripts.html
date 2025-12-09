@@ -3360,10 +3360,47 @@
         }
 
         // Initialize Drag
+        function initVisuals() {
+            // 1. Fix Question Header Initialization
+            var qProgress = document.getElementById('question-progress');
+            if (qProgress) {
+                // Hide initially until a real question index is received
+                qProgress.classList.add('hidden');
+                qProgress.textContent = 'WAITING TO START';
+            }
+
+            // 2. Ghost Screen / Duplicate Logo Killer
+            // The screenshot shows a duplicate "Veritas Live Polls" logo at the bottom.
+            // This detects and removes duplicate entry screens or rogue H1s.
+            var entryScreens = document.querySelectorAll('#entry-screen');
+            if (entryScreens.length > 1) {
+                console.warn('[VisualFix] Found ' + entryScreens.length + ' entry-screens. Removing duplicates.');
+                for (var i = 1; i < entryScreens.length; i++) {
+                    entryScreens[i].remove();
+                }
+            } else {
+                // Fallback: If ID is missing on duplicates, check H1s
+                var brands = document.querySelectorAll('h1');
+                if (brands.length > 1) {
+                    console.warn('[VisualFix] Found duplicate H1 elements. Cleaning up.');
+                    for (var j = 1; j < brands.length; j++) {
+                        // Traverse up to find the container to remove
+                        var wrapper = brands[j].closest('.flex.items-center.gap-4'); // The logo container class
+                        if (wrapper) wrapper.remove();
+                        else brands[j].remove();
+                    }
+                }
+            }
+        }
+
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initCalculatorDrag);
+            document.addEventListener('DOMContentLoaded', function () {
+                initCalculatorDrag();
+                initVisuals();
+            });
         } else {
             initCalculatorDrag();
+            initVisuals();
         }
 
         // Handle calculator visibility when session ends or locks

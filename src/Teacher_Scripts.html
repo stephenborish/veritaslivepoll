@@ -2976,7 +2976,8 @@
           button.innerHTML = originalLabel;
         }
         if (previewPoll) {
-          openPollCreator(deepClone(previewPoll));
+          // Use unified wizard for editing
+          openPollWizard(deepClone(previewPoll));
         } else {
           veritasAlert('Unable to locate this poll in preview mode.', { title: 'Edit poll' });
         }
@@ -2989,7 +2990,8 @@
             button.disabled = false;
             button.innerHTML = originalLabel;
           }
-          openPollCreator(poll);
+          // Use unified wizard for editing
+          openPollWizard(poll);
         })
         .withFailureHandler(function (error) {
           if (button) {
@@ -11281,16 +11283,22 @@
       availabilityEnd: null,
       proctoringRules: [],
       questions: [],
-      showResultsImmediately: false
+      showResultsImmediately: false,
+      pollId: null, // For edit mode
+      isEditMode: false // Track if we're editing
     };
 
     var wizardQuestionIdCounter = 0;
+    var wizardDraggedIndex = null; // For drag-and-drop
+    var wizardEditingQuestionIndex = null; // Track which question is being edited
 
     // ===========================
     // WIZARD LIFECYCLE
     // ===========================
 
-    function openPollWizard() {
+    function openPollWizard(pollData) {
+      var isEdit = !!pollData;
+
       wizardState = {
         currentStep: 1,
         mode: null,
@@ -11302,9 +11310,85 @@
         availabilityEnd: null,
         proctoringRules: ['FULLSCREEN_REQUIRED', 'DETECT_TAB_SWITCH'],
         questions: [],
-        showResultsImmediately: false
+        showResultsImmediately: false,
+        pollId: isEdit ? pollData.pollId : null,
+        isEditMode: isEdit
       };
       wizardQuestionIdCounter = 0;
+      wizardEditingQuestionIndex = null;
+
+      // If editing, populate wizard with existing poll data
+      if (isEdit && pollData) {
+        wizardState.pollName = pollData.pollName || '';
+        wizardState.className = pollData.className || '';
+
+        // Determine mode from session type
+        var sessionType = normalizeSessionTypeClient(pollData.sessionType);
+        wizardState.mode = (sessionType === 'SECURE_ASSESSMENT') ? 'secure' : 'live';
+
+        // Load secure settings if applicable
+        if (wizardState.mode === 'secure') {
+          wizardState.timeLimitMinutes = typeof pollData.timeLimitMinutes === 'number'
+            ? pollData.timeLimitMinutes
+            : (pollData.secureSettings && typeof pollData.secureSettings.timeLimitMinutes === 'number'
+                ? pollData.secureSettings.timeLimitMinutes : 60);
+          wizardState.accessCode = (pollData.accessCode ||
+            (pollData.secureSettings && pollData.secureSettings.accessCode) || '').toString().toUpperCase();
+          wizardState.availabilityStart = pollData.availableFrom ||
+            (pollData.secureSettings && pollData.secureSettings.availableFrom) || null;
+          wizardState.availabilityEnd = pollData.dueBy ||
+            (pollData.secureSettings && pollData.secureSettings.dueBy) || null;
+        }
+
+        // Load questions
+        if (pollData.questions && pollData.questions.length > 0) {
+          wizardState.questions = pollData.questions.map(function(q) {
+            var options = (q.options || []).map(function(opt) {
+              return {
+                text: opt.text || '',
+                imageURL: opt.imageURL || '',
+                imageFileId: opt.imageFileId || null
+              };
+            });
+
+            // Ensure at least 4 options
+            while (options.length < 4) {
+              options.push({ text: '', imageURL: '', imageFileId: null });
+            }
+
+            // Find correct answer index
+            var correctIndex = 0;
+            options.forEach(function(opt, idx) {
+              if (opt.text === q.correctAnswer) {
+                correctIndex = idx;
+              }
+            });
+
+            return {
+              questionText: q.questionText || '',
+              questionImageURL: q.questionImageURL || '',
+              questionImageFileId: q.questionImageFileId || null,
+              options: options,
+              correctAnswerIndex: correctIndex,
+              metacognitionEnabled: !!q.metacognitionEnabled,
+              timerSeconds: q.timerSeconds || null
+            };
+          });
+        }
+
+        // Update wizard title
+        var wizardTitle = document.getElementById('wizard-title');
+        if (wizardTitle) {
+          wizardTitle.textContent = 'Edit Poll';
+        }
+      } else {
+        // New poll - update title
+        var wizardTitle = document.getElementById('wizard-title');
+        if (wizardTitle) {
+          wizardTitle.textContent = 'Create Poll';
+        }
+      }
+      wizardQuestionIdCounter = wizardState.questions.length;
 
       // Populate class dropdown from ALL_CLASSES or BASE_CLASSES
       var classSelect = document.getElementById('wizard-class-select');
@@ -11345,6 +11429,18 @@
             classSelect.appendChild(option);
           });
         }
+
+        // Set selected value in edit mode
+        if (isEdit && wizardState.className) {
+          // If the class isn't in the list, add it
+          if (classesList.indexOf(wizardState.className) === -1) {
+            var opt = document.createElement('option');
+            opt.value = wizardState.className;
+            opt.textContent = wizardState.className;
+            classSelect.appendChild(opt);
+          }
+          classSelect.value = wizardState.className;
+        }
       }
 
       // Switch to create-poll-view (hide other views)
@@ -11361,7 +11457,29 @@
         headerSessionControls.classList.add('hidden');
       }
 
-      goToWizardStep(1);
+      // In edit mode, skip step 1 (mode selection) and go directly to step 2
+      if (isEdit) {
+        goToWizardStep(2);
+
+        // CRITICAL: Reveal secure config section if editing a secure assessment
+        // Step 1 validation normally handles this toggle, but we skip step 1 in edit mode
+        // Replicate the validateWizardStep(1) logic for mode-specific sections
+        var liveSection = document.getElementById('live-config-section');
+        var secureSection = document.getElementById('secure-config-section');
+        var modeLabel = document.getElementById('config-mode-label');
+
+        if (wizardState.mode === 'secure') {
+          if (liveSection) liveSection.classList.add('hidden');
+          if (secureSection) secureSection.classList.remove('hidden');
+          if (modeLabel) modeLabel.textContent = 'Secure Assessment';
+        } else if (wizardState.mode === 'live') {
+          if (liveSection) liveSection.classList.remove('hidden');
+          if (secureSection) secureSection.classList.add('hidden');
+          if (modeLabel) modeLabel.textContent = 'Live Poll';
+        }
+      } else {
+        goToWizardStep(1);
+      }
     }
 
     function closePollWizard() {
@@ -11386,10 +11504,39 @@
       setMainSection('dashboard');
     }
 
+    // Load wizard with existing poll data for editing
+    function loadWizardWithData(pollId) {
+      if (!pollId) return;
+
+      if (PREVIEW_MODE) {
+        var previewPoll = ALL_POLLS.find(function (p) { return p.pollId === pollId; });
+        if (previewPoll) {
+          openPollWizard(deepClone(previewPoll));
+        } else {
+          veritasAlert('Unable to locate this poll in preview mode.', { title: 'Edit poll' });
+        }
+        return;
+      }
+
+      google.script.run
+        .withSuccessHandler(function (poll) {
+          if (poll) {
+            openPollWizard(poll);
+          } else {
+            veritasAlert('Failed to load poll data.', { title: 'Error' });
+          }
+        })
+        .withFailureHandler(function (error) {
+          handleError(error);
+        })
+        .getPollForEditing(pollId);
+    }
+
     // Global Wizard API
     window.Wizard = {
       init: openPollWizard,
-      close: closePollWizard
+      close: closePollWizard,
+      loadWithData: loadWizardWithData
     };
 
     // ===========================
@@ -11447,6 +11594,40 @@
       wizardState.currentStep = stepNumber;
       updateWizardFooter();
 
+      // Pre-fill configuration fields when navigating to step 2
+      if (stepNumber === 2) {
+        var pollNameInput = document.getElementById('wizard-poll-name');
+        var classSelect = document.getElementById('wizard-class-select');
+        var timeLimitInput = document.getElementById('wizard-time-limit');
+        var accessCodeInput = document.getElementById('wizard-access-code');
+
+        if (pollNameInput && wizardState.pollName) {
+          pollNameInput.value = wizardState.pollName;
+        }
+        if (classSelect && wizardState.className) {
+          classSelect.value = wizardState.className;
+        }
+        if (timeLimitInput && wizardState.timeLimitMinutes) {
+          timeLimitInput.value = wizardState.timeLimitMinutes;
+        }
+        if (accessCodeInput && wizardState.accessCode) {
+          accessCodeInput.value = wizardState.accessCode;
+        }
+
+        // Update mode-specific content if in edit mode
+        if (wizardState.isEditMode && wizardState.mode) {
+          var modeLabel = document.getElementById('wizard-step-2')?.querySelector('span.mode-label');
+          if (modeLabel) {
+            modeLabel.textContent = wizardState.mode === 'secure' ? 'Secure Assessment' : 'Live Poll';
+          }
+        }
+      }
+
+      // Render questions when navigating to step 3
+      if (stepNumber === 3) {
+        renderWizardQuestions();
+      }
+
       if (stepNumber === 4) {
         renderReviewSummary();
       }
@@ -11477,11 +11658,28 @@
 
       if (!backBtn || !nextBtn || !publishBtn) return;
 
-      backBtn.disabled = wizardState.currentStep === 1;
+      // In edit mode, allow going back to step 2 (but not step 1)
+      if (wizardState.isEditMode) {
+        backBtn.disabled = wizardState.currentStep <= 2;
+      } else {
+        backBtn.disabled = wizardState.currentStep === 1;
+      }
 
       if (wizardState.currentStep === 4) {
         nextBtn.classList.add('hidden');
         publishBtn.classList.remove('hidden');
+
+        // Update publish button text based on mode
+        var publishBtnIcon = publishBtn.querySelector('.material-symbols-outlined');
+        var publishBtnText = publishBtn.querySelector('.publish-btn-text') || publishBtn;
+
+        if (wizardState.isEditMode) {
+          if (publishBtnIcon) publishBtnIcon.textContent = 'save';
+          publishBtnText.innerHTML = '<span class="material-symbols-outlined">save</span>Update Poll';
+        } else {
+          if (publishBtnIcon) publishBtnIcon.textContent = 'rocket_launch';
+          publishBtnText.innerHTML = '<span class="material-symbols-outlined">rocket_launch</span>Publish Poll';
+        }
       } else {
         nextBtn.classList.remove('hidden');
         publishBtn.classList.add('hidden');
@@ -11667,11 +11865,14 @@
         var optionLabels = ['A', 'B', 'C', 'D', 'E', 'F'];
 
         var questionDiv = document.createElement('div');
-        questionDiv.className = 'question-card bg-white border border-brand-light-gray rounded-xl overflow-hidden shadow-sm';
+        questionDiv.className = 'question-card bg-white border border-brand-light-gray rounded-xl overflow-hidden shadow-sm transition-all duration-200';
+        questionDiv.draggable = true;
+        questionDiv.dataset.qIndex = qIndex;
 
-        // Compact Question Header
-        var headerHtml = '<div class="question-card-header flex justify-between items-center px-4 py-2.5 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-brand-light-gray">' +
+        // Compact Question Header with drag handle
+        var headerHtml = '<div class="question-card-header flex justify-between items-center px-4 py-2.5 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-brand-light-gray cursor-move" data-drag-handle>' +
           '<div class="flex items-center gap-2">' +
+          '<span class="material-symbols-outlined text-slate-400 text-lg" title="Drag to reorder">drag_indicator</span>' +
           '<div class="h-7 w-7 rounded-lg bg-primary text-white flex items-center justify-center font-bold text-xs">' + (qIndex + 1) + '</div>' +
           '<span class="font-bold text-brand-dark-gray">Q' + (qIndex + 1) + '</span>' +
           '</div>' +
@@ -11861,6 +12062,58 @@
             wizardState.questions[qIndex].timerSeconds = isNaN(val) ? null : val;
           });
         }
+
+        // Drag and Drop Event Listeners
+        questionDiv.addEventListener('dragstart', function (e) {
+          wizardDraggedIndex = qIndex;
+          this.classList.add('opacity-50');
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/html', this.innerHTML);
+        });
+
+        questionDiv.addEventListener('dragend', function (e) {
+          this.classList.remove('opacity-50');
+          // Remove all drag-over indicators
+          container.querySelectorAll('.question-card').forEach(function (card) {
+            card.classList.remove('border-blue-500', 'border-dashed', 'border-2');
+          });
+        });
+
+        questionDiv.addEventListener('dragover', function (e) {
+          if (e.preventDefault) {
+            e.preventDefault();
+          }
+          e.dataTransfer.dropEffect = 'move';
+
+          // Add visual feedback
+          this.classList.add('border-blue-500', 'border-dashed', 'border-2');
+
+          return false;
+        });
+
+        questionDiv.addEventListener('dragleave', function (e) {
+          this.classList.remove('border-blue-500', 'border-dashed', 'border-2');
+        });
+
+        questionDiv.addEventListener('drop', function (e) {
+          if (e.stopPropagation) {
+            e.stopPropagation();
+          }
+
+          var dropIndex = parseInt(this.dataset.qIndex);
+
+          if (wizardDraggedIndex !== null && wizardDraggedIndex !== dropIndex) {
+            // Reorder questions in the array
+            var draggedQuestion = wizardState.questions[wizardDraggedIndex];
+            wizardState.questions.splice(wizardDraggedIndex, 1);
+            wizardState.questions.splice(dropIndex, 0, draggedQuestion);
+
+            // Re-render questions to show new order
+            renderWizardQuestions();
+          }
+
+          return false;
+        });
       });
     }
 
@@ -11958,10 +12211,11 @@
             var text = q.questionText || '(Empty question)';
             if (text.length > 80) text = text.substring(0, 80) + '...';
 
-            html += '<div class="bg-slate-50 rounded-lg p-3 border border-brand-light-gray">';
+            html += '<div class="bg-slate-50 rounded-lg p-3 border border-brand-light-gray hover:border-primary hover:bg-primary/5 cursor-pointer transition-all group" data-edit-question="' + i + '" title="Click to edit this question">';
             html += '<div class="flex items-start gap-2 mb-2">';
             html += '<span class="h-6 w-6 rounded bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">' + (i + 1) + '</span>';
-            html += '<span class="font-medium text-brand-dark-gray text-sm">' + escapeHtml(text) + '</span>';
+            html += '<span class="font-medium text-brand-dark-gray text-sm group-hover:text-primary">' + escapeHtml(text) + '</span>';
+            html += '<span class="material-symbols-outlined text-xs text-slate-400 ml-auto opacity-0 group-hover:opacity-100 transition-opacity">edit</span>';
             html += '</div>';
 
             // Show answer choices
@@ -11998,6 +12252,27 @@
           }
 
           qSummary.innerHTML = html;
+
+          // Add click handlers for editing questions from review
+          qSummary.querySelectorAll('[data-edit-question]').forEach(function (card) {
+            card.addEventListener('click', function () {
+              var questionIndex = parseInt(this.getAttribute('data-edit-question'));
+              // Navigate back to step 3 (questions editor)
+              goToWizardStep(3);
+              // Scroll to the question after a brief delay to allow rendering
+              setTimeout(function () {
+                var questionCards = document.querySelectorAll('.question-card');
+                if (questionCards[questionIndex]) {
+                  questionCards[questionIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  // Briefly highlight the card
+                  questionCards[questionIndex].classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+                  setTimeout(function () {
+                    questionCards[questionIndex].classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
+                  }, 2000);
+                }
+              }, 100);
+            });
+          });
         }
       }
     }
@@ -12113,37 +12388,67 @@
       }
 
       var publishBtn = document.getElementById('wizard-publish-btn');
+      var actionText = wizardState.isEditMode ? 'Updating' : 'Publishing';
+      var actionIcon = wizardState.isEditMode ? 'save' : 'rocket_launch';
+
       if (publishBtn) {
         publishBtn.disabled = true;
-        publishBtn.innerHTML = '<span class="material-symbols-outlined animate-spin">hourglass_empty</span> Publishing...';
+        publishBtn.innerHTML = '<span class="material-symbols-outlined animate-spin">hourglass_empty</span> ' + actionText + '...';
       }
 
-      console.log('Publishing poll:', wizardState.pollName, wizardState.className, apiQuestions, metadata);
+      console.log(actionText + ' poll:', wizardState.pollName, wizardState.className, apiQuestions, metadata);
 
-      google.script.run
-        .withSuccessHandler(function (response) {
-          console.log('Publish response:', response);
-          if (response && !response.error) {
-            alert('Poll published successfully!');
-            // Just reload - no need to manipulate state, reload resets everything
-            window.location.reload();
-          } else {
-            alert('Failed to publish: ' + (response.error || response.message || 'Unknown error'));
+      if (wizardState.isEditMode && wizardState.pollId) {
+        // Update existing poll
+        google.script.run
+          .withSuccessHandler(function (response) {
+            console.log('Update response:', response);
+            if (response && !response.error) {
+              alert('Poll updated successfully!');
+              window.location.reload();
+            } else {
+              alert('Failed to update: ' + (response.error || response.message || 'Unknown error'));
+              if (publishBtn) {
+                publishBtn.disabled = false;
+                publishBtn.innerHTML = '<span class="material-symbols-outlined">' + actionIcon + '</span> Update Poll';
+              }
+            }
+          })
+          .withFailureHandler(function (error) {
+            console.error('Update error:', error);
+            alert('Error: ' + (error.message || error));
             if (publishBtn) {
               publishBtn.disabled = false;
-              publishBtn.innerHTML = '<span class="material-symbols-outlined">rocket_launch</span> Publish Poll';
+              publishBtn.innerHTML = '<span class="material-symbols-outlined">' + actionIcon + '</span> Update Poll';
             }
-          }
-        })
-        .withFailureHandler(function (error) {
-          console.error('Publish error:', error);
-          alert('Error: ' + (error.message || error));
-          if (publishBtn) {
-            publishBtn.disabled = false;
-            publishBtn.innerHTML = '<span class="material-symbols-outlined">rocket_launch</span> Publish Poll';
-          }
-        })
-        .createNewPoll(wizardState.pollName.trim(), wizardState.className.trim(), apiQuestions, metadata);
+          })
+          .updatePoll(wizardState.pollId, wizardState.pollName.trim(), wizardState.className.trim(), apiQuestions, metadata);
+      } else {
+        // Create new poll
+        google.script.run
+          .withSuccessHandler(function (response) {
+            console.log('Publish response:', response);
+            if (response && !response.error) {
+              alert('Poll published successfully!');
+              window.location.reload();
+            } else {
+              alert('Failed to publish: ' + (response.error || response.message || 'Unknown error'));
+              if (publishBtn) {
+                publishBtn.disabled = false;
+                publishBtn.innerHTML = '<span class="material-symbols-outlined">' + actionIcon + '</span> Publish Poll';
+              }
+            }
+          })
+          .withFailureHandler(function (error) {
+            console.error('Publish error:', error);
+            alert('Error: ' + (error.message || error));
+            if (publishBtn) {
+              publishBtn.disabled = false;
+              publishBtn.innerHTML = '<span class="material-symbols-outlined">' + actionIcon + '</span> Publish Poll';
+            }
+          })
+          .createNewPoll(wizardState.pollName.trim(), wizardState.className.trim(), apiQuestions, metadata);
+      }
     }
 
     // Expose functions used by inline HTML handlers

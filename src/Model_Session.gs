@@ -2219,7 +2219,8 @@ Veritas.Models.Session.getStudentProctorState = function(token) {
 
     var state = Veritas.Models.Session.ProctorAccess.getState(pollId, studentEmail, currentSessionId);
 
-    return {
+    // ANTIDOTE: When status is 'OK', include unlock_granted: true to clear the client "Poison Pill"
+    var response = {
       success: true,
       status: state.status,
       lockVersion: state.lockVersion,
@@ -2229,6 +2230,13 @@ Veritas.Models.Session.getStudentProctorState = function(token) {
       unlockApprovedBy: state.unlockApprovedBy,
       unlockApprovedAt: state.unlockApprovedAt
     };
+
+    // Only set unlock_granted when the student is truly unlocked
+    if (state.status === 'OK') {
+      response.unlock_granted = true;
+    }
+
+    return response;
   })();
 };
 
@@ -2477,7 +2485,9 @@ Veritas.Models.Session.studentConfirmFullscreen = function(expectedLockVersion, 
         status: 'OK'
       });
 
-      return { success: true, status: 'OK' };
+      // ANTIDOTE: Return unlock_granted: true to clear the client-side "Poison Pill"
+      // This is the ONLY way for the client to clear the veritas_lock_active sessionStorage key
+      return { success: true, status: 'OK', unlock_granted: true };
     });
   })();
 };

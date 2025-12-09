@@ -1987,8 +1987,8 @@
     }
 
     bindClick('nav-create-poll', function () {
-      console.log('Create New Poll button clicked - opening wizard');
-      openPollWizard();
+      console.log('Create New Poll button clicked - opening wizard via Wizard.init()');
+      Wizard.init();
     });
     bindClick('nav-polls-list', showDashboard);
     bindClick('nav-rosters', showRosterManager);
@@ -6333,7 +6333,7 @@
           ? 'needs to re-confirm fullscreen before continuing.'
           : 'exited fullscreen or switched tabs.';
 
-        showToast('warning', 'Approve re-entry', studentName + ' ' + context, 12000, {
+        showToast('warning', 'Approve re-entry', studentName + ' ' + context, 6000, {
           label: 'Approve',
           onClick: function () {
             if (!CURRENT_POLL_DATA || !CURRENT_POLL_DATA.pollId) return;
@@ -6801,6 +6801,16 @@
             approveStudentUnlock(email, CURRENT_POLL_DATA.pollId, lockVersion, this, { skipConfirm: true });
           });
         }
+        // GRID INTERACTION: Clicking the entire LOCKED tile triggers unlock approval flow
+        tile.style.cursor = 'pointer';
+        tile.addEventListener('click', function (e) {
+          // Don't trigger if clicking a button (button handler will handle it)
+          if (e.target.closest('button')) return;
+          var email = student.email;
+          var lockVersion = student.lockVersion || 0;
+          if (!CURRENT_POLL_DATA || !CURRENT_POLL_DATA.pollId) return;
+          approveStudentUnlock(email, CURRENT_POLL_DATA.pollId, lockVersion, null, { skipConfirm: true });
+        });
       }
 
       var resumeBtn = tile.querySelector('.resume-access-btn');

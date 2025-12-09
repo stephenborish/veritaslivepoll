@@ -987,19 +987,22 @@ Veritas.Models.Session.submitIndividualTimedAnswer = function(pollId, sessionId,
 
     const isCorrect = (answer === question.correctAnswer);
 
-    // Record response using unlocked version (we're already in a lock)
+    // WRITE-BEHIND PATTERN: Cache response instead of direct spreadsheet write
+    // This decouples validation from I/O for better performance under load
     const responseId = Utilities.getUuid();
     const timestamp = new Date().toISOString();
-    DataAccess.responses._addNoLock([
-      responseId,
-      timestamp,
-      pollId,
-      actualQuestionIndex,
-      studentEmail,
-      answer,
-      isCorrect,
-      confidenceLevel || null
-    ]);
+
+    // Cache the answer for async flush to spreadsheet
+    Veritas.Models.Session.cacheAnswerForWriteBehind({
+      responseId: responseId,
+      timestamp: timestamp,
+      pollId: pollId,
+      actualQuestionIndex: actualQuestionIndex,
+      studentEmail: studentEmail,
+      answer: answer,
+      isCorrect: isCorrect,
+      confidenceLevel: confidenceLevel || null
+    });
 
     // Advance to next question using unlocked version
     const nextProgressIndex = studentState.currentQuestionIndex + 1;
@@ -2775,6 +2778,188 @@ function lookupStudentDisplayName_(className, studentEmail) {
 
 function buildInitialAnswerOrderMap_(poll) {
   return Veritas.Models.Session.buildInitialAnswerOrderMap(poll);
+}
+
+// =============================================================================
+// WRITE-BEHIND PATTERN - Data Layer for Answer Submission
+// =============================================================================
+// Purpose: Decouple answer validation from spreadsheet writes for performance
+// Pattern: Validate -> Cache -> Return success immediately -> Flush to sheet later
+// =============================================================================
+
+/**
+ * Write-Behind Cache Key Generator
+ * @param {string} pollId - Poll ID
+ * @param {string} email - Student email
+ * @returns {string} Cache key
+ */
+Veritas.Models.Session.getWriteBehindKey = function(pollId, email) {
+  return 'pending_ans_' + pollId + '_' + email.replace(/[^a-zA-Z0-9]/g, '_');
+};
+
+/**
+ * Write answer to cache instead of spreadsheet (Write-Behind pattern)
+ * @param {Object} answerData - Answer data to cache
+ */
+Veritas.Models.Session.cacheAnswerForWriteBehind = function(answerData) {
+  var cache = CacheService.getScriptCache();
+  var key = Veritas.Models.Session.getWriteBehindKey(answerData.pollId, answerData.studentEmail);
+
+  // Store with 10 minute TTL (plenty of time for flush worker)
+  var payload = JSON.stringify({
+    responseId: answerData.responseId,
+    timestamp: answerData.timestamp,
+    pollId: answerData.pollId,
+    actualQuestionIndex: answerData.actualQuestionIndex,
+    studentEmail: answerData.studentEmail,
+    answer: answerData.answer,
+    isCorrect: answerData.isCorrect,
+    confidenceLevel: answerData.confidenceLevel,
+    cachedAt: new Date().toISOString()
+  });
+
+  cache.put(key, payload, 600); // 10 minute TTL
+
+  // Also track all pending keys for flush worker
+  var pendingKeysKey = 'pending_keys_' + answerData.pollId;
+  var existingKeys = cache.get(pendingKeysKey);
+  var keysList = existingKeys ? JSON.parse(existingKeys) : [];
+  if (keysList.indexOf(key) === -1) {
+    keysList.push(key);
+  }
+  cache.put(pendingKeysKey, JSON.stringify(keysList), 600);
+
+  Logger.log('Write-Behind: Answer cached', {
+    key: key,
+    pollId: answerData.pollId,
+    studentEmail: answerData.studentEmail,
+    questionIndex: answerData.actualQuestionIndex
+  });
+};
+
+/**
+ * Flush Worker - Reads all pending cache keys and batch writes to Responses sheet
+ * Should be triggered every minute by time-based trigger
+ * @param {string} pollId - Optional: flush for specific poll. If omitted, flushes all.
+ * @returns {Object} Flush result summary
+ */
+Veritas.Models.Session.flushAnswersWorker = function(pollId) {
+  return withErrorHandling(function() {
+    return Veritas.Utils.withLock(function() {
+      var cache = CacheService.getScriptCache();
+      var flushed = 0;
+      var errors = 0;
+      var processedKeys = [];
+
+      // Get list of all pending keys for this poll (or all polls)
+      var keysToProcess = [];
+
+      if (pollId) {
+        // Flush specific poll
+        var pendingKeysKey = 'pending_keys_' + pollId;
+        var existingKeys = cache.get(pendingKeysKey);
+        if (existingKeys) {
+          keysToProcess = JSON.parse(existingKeys);
+        }
+      } else {
+        // Flush all polls - scan for pending_keys_* (limited approach)
+        // In production, you'd want to maintain a master list
+        var allPolls = DataAccess.polls.getAll();
+        allPolls.forEach(function(poll) {
+          var pendingKeysKey = 'pending_keys_' + poll.pollId;
+          var existingKeys = cache.get(pendingKeysKey);
+          if (existingKeys) {
+            var keys = JSON.parse(existingKeys);
+            keysToProcess = keysToProcess.concat(keys);
+          }
+        });
+      }
+
+      if (keysToProcess.length === 0) {
+        return { success: true, flushed: 0, errors: 0, message: 'No pending answers to flush' };
+      }
+
+      // Batch read all cached answers
+      var cachedValues = cache.getAll(keysToProcess);
+      var answersToWrite = [];
+
+      Object.keys(cachedValues).forEach(function(key) {
+        try {
+          var answerData = JSON.parse(cachedValues[key]);
+          if (answerData && answerData.responseId) {
+            answersToWrite.push(answerData);
+            processedKeys.push(key);
+          }
+        } catch (e) {
+          Logger.log('Write-Behind: Failed to parse cached answer', { key: key, error: e.message });
+          errors++;
+        }
+      });
+
+      // Batch write to Responses sheet
+      if (answersToWrite.length > 0) {
+        var responsesSheet = DataAccess.responses.getSheet_();
+        var rowsToAppend = answersToWrite.map(function(ans) {
+          return [
+            ans.responseId,
+            ans.timestamp,
+            ans.pollId,
+            ans.actualQuestionIndex,
+            ans.studentEmail,
+            ans.answer,
+            ans.isCorrect,
+            ans.confidenceLevel || null
+          ];
+        });
+
+        // Batch append all rows at once (much faster than individual writes)
+        if (rowsToAppend.length > 0) {
+          var lastRow = responsesSheet.getLastRow();
+          responsesSheet.getRange(lastRow + 1, 1, rowsToAppend.length, 8).setValues(rowsToAppend);
+          flushed = rowsToAppend.length;
+        }
+      }
+
+      // Remove flushed keys from cache
+      if (processedKeys.length > 0) {
+        cache.removeAll(processedKeys);
+
+        // Update pending keys list
+        if (pollId) {
+          var pendingKeysKey = 'pending_keys_' + pollId;
+          var remainingKeys = keysToProcess.filter(function(k) {
+            return processedKeys.indexOf(k) === -1;
+          });
+          if (remainingKeys.length > 0) {
+            cache.put(pendingKeysKey, JSON.stringify(remainingKeys), 600);
+          } else {
+            cache.remove(pendingKeysKey);
+          }
+        }
+      }
+
+      Logger.log('Write-Behind: Flush completed', {
+        pollId: pollId || 'all',
+        flushed: flushed,
+        errors: errors
+      });
+
+      return {
+        success: true,
+        flushed: flushed,
+        errors: errors,
+        message: 'Flushed ' + flushed + ' answers to spreadsheet'
+      };
+    });
+  })();
+};
+
+/**
+ * Global function for time-based trigger to call flush worker
+ * Set up a time-based trigger to call this every 1 minute
+ */
+function flushAnswersWorker() {
+  return Veritas.Models.Session.flushAnswersWorker();
 }
 
 function shuffleArray_(array) {

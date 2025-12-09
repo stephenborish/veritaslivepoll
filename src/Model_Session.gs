@@ -595,6 +595,61 @@ Veritas.Models.Session.endIndividualTimedSession = function(pollId) {
 };
 
 /**
+ * Toggle calculator availability for an active session
+ * @param {string} pollId - The poll ID
+ * @param {boolean} isEnabled - Whether calculator should be enabled
+ * @returns {Object} Success result with new calculator state
+ */
+Veritas.Models.Session.toggleSessionCalculator = function(pollId, isEnabled) {
+  return withErrorHandling(function() {
+    if (Veritas.Dev.getCurrentUser() !== Veritas.Config.TEACHER_EMAIL) {
+      throw new Error('Unauthorized');
+    }
+
+    const liveStatus = DataAccess.liveStatus.get();
+    const activePollId = liveStatus[0];
+    const questionIndex = liveStatus[1];
+    const status = liveStatus[2];
+
+    if (activePollId !== pollId) {
+      throw new Error('This poll is not the active session.');
+    }
+
+    const previousMetadata = (liveStatus && liveStatus.metadata) ? liveStatus.metadata : {};
+    const sessionId = previousMetadata.sessionId || '';
+    const nowIso = new Date().toISOString();
+
+    // Update metadata with calculator state
+    DataAccess.liveStatus.set(activePollId, questionIndex, status, {
+      ...previousMetadata,
+      calculatorEnabled: !!isEnabled,
+      calculatorToggledAt: nowIso
+    });
+
+    // Log the event for audit trail
+    Veritas.Models.Session.logAssessmentEvent(
+      pollId,
+      sessionId,
+      Veritas.Config.TEACHER_EMAIL,
+      isEnabled ? 'CALCULATOR_ENABLED' : 'CALCULATOR_DISABLED',
+      { toggledAt: nowIso }
+    );
+
+    Logger.log('Session calculator toggled', {
+      pollId: pollId,
+      sessionId: sessionId,
+      calculatorEnabled: !!isEnabled
+    });
+
+    return {
+      success: true,
+      pollId: pollId,
+      calculatorEnabled: !!isEnabled
+    };
+  })();
+};
+
+/**
  * Begin individual timed attempt (student starts assessment)
  */
 Veritas.Models.Session.beginIndividualTimedAttempt = function(pollId, sessionId, token, options) {
@@ -814,6 +869,11 @@ Veritas.Models.Session.getIndividualTimedQuestion = function(pollId, sessionId, 
       };
     }
 
+    // Get calculator enabled state from session metadata (runtime) or poll config (default)
+    var calculatorEnabled = metadata.calculatorEnabled === true ||
+      poll.calculatorEnabled === true ||
+      (poll.secureSettings && poll.secureSettings.calculatorEnabled === true);
+
     return {
       status: 'ACTIVE',
       sessionType: Veritas.Models.Poll.normalizeSessionTypeValue(poll.sessionType),
@@ -827,7 +887,8 @@ Veritas.Models.Session.getIndividualTimedQuestion = function(pollId, sessionId, 
       startTime: studentState.startTime,
       timeLimitMinutes: timeLimitMinutes,
       answerOrder: answerOrder,
-      timeAdjustmentMinutes: studentState.timeAdjustmentMinutes || 0
+      timeAdjustmentMinutes: studentState.timeAdjustmentMinutes || 0,
+      calculatorEnabled: calculatorEnabled
     };
   })();
 };
@@ -2978,4 +3039,14 @@ function logStudentViolation() {
 function unlockStudent(studentEmail, pollId) {
   Logger.log('Deprecated unlockStudent called', { studentEmail: studentEmail, pollId: pollId });
   return { success: true, message: 'This function is deprecated.' };
+}
+
+/**
+ * Toggle session calculator availability (Teacher API)
+ * @param {string} pollId - Poll ID
+ * @param {boolean} isEnabled - Whether to enable calculator
+ * @returns {Object} Result with calculator state
+ */
+function toggleSessionCalculator(pollId, isEnabled) {
+  return Veritas.Models.Session.toggleSessionCalculator(pollId, isEnabled);
 }

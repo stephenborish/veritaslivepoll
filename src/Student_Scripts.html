@@ -490,6 +490,9 @@
             }
             setSecureChromeState(true);
 
+            // Sync calculator visibility based on server state
+            syncCalculatorVisibility(state.calculatorEnabled);
+
             // FIX: Explicitly show timer container - defensive check
             if (secureTopbarTimer) {
                 secureTopbarTimer.classList.remove('hidden');
@@ -950,6 +953,10 @@
             secureCurrentQuestionKey = null;
             secureSelectedOptionIndex = null;
             secureSubmitting = false;
+            // Hide calculator when session ends
+            if (typeof hideCalculatorOnSessionEnd === 'function') {
+                hideCalculatorOnSessionEnd();
+            }
             showSecureOverlay(statusType, message, subtext);
             scheduleSecureWindowClose(2500);
         }
@@ -1013,6 +1020,10 @@
             }
             disableSecureOptions(true);
             showSecureOverlay('LOCKED', message || 'Your session has been paused.', subtext || 'Wait for your teacher to unlock you.');
+            // Hide calculator when locked
+            if (typeof hideCalculatorOnSessionEnd === 'function') {
+                hideCalculatorOnSessionEnd();
+            }
         }
 
         function updateSecureConnectionIndicators(state) {
@@ -1325,6 +1336,12 @@
             blurListenerAttached = true;
             // ZERO TOLERANCE: Immediate lock on window blur
             window.addEventListener('blur', function () {
+                // SAFE HARBOR: If focus moved to the calculator iframe, ignore violation
+                var calcIframe = document.getElementById('calc-iframe');
+                if (calcIframe && document.activeElement === calcIframe) {
+                    console.log('[Proctor] Focus moved to Calculator - Allowed (Safe Harbor)');
+                    return;
+                }
                 if ((secureSessionActive || liveSessionActive) && !isInteractionBlocked && !violationLogged) {
                     console.log('[Proctor] ZERO TOLERANCE: Window blur detected - IMMEDIATE LOCK');
                     lockSession('window-blur');
@@ -3255,5 +3272,201 @@
             });
             if (resumeControls) resumeControls.style.display = 'none';
         }
+
+        // =========================================================================
+        // TI-84 CALCULATOR WIDGET MODULE
+        // =========================================================================
+
+        var calcFab = document.getElementById('calc-fab');
+        var calcWindow = document.getElementById('calc-window');
+        var calcHeader = document.getElementById('calc-header');
+        var calcClose = document.getElementById('calc-close');
+        var calcIframe = document.getElementById('calc-iframe');
+        var calcLoader = document.getElementById('calc-loader');
+        var calcIframeLoaded = false;
+        var calcWindowOpen = false;
+
+        /**
+         * Sync calculator FAB visibility based on server state
+         * @param {boolean} isEnabled - Whether calculator is enabled for this session
+         */
+        function syncCalculatorVisibility(isEnabled) {
+            if (!calcFab) return;
+
+            if (isEnabled) {
+                calcFab.classList.remove('hidden');
+            } else {
+                calcFab.classList.add('hidden');
+                // Force close calculator window if disabled mid-exam
+                if (calcWindow) {
+                    calcWindow.classList.add('hidden');
+                    calcWindowOpen = false;
+                }
+            }
+        }
+
+        /**
+         * Open calculator window and lazy-load iframe
+         */
+        function openCalculator() {
+            if (!calcWindow || !calcIframe) return;
+
+            calcWindow.classList.remove('hidden');
+            calcWindowOpen = true;
+
+            // Lazy load iframe on first open
+            if (!calcIframeLoaded && calcIframe.dataset.src) {
+                calcIframe.src = calcIframe.dataset.src;
+                calcIframeLoaded = true;
+
+                calcIframe.addEventListener('load', function () {
+                    if (calcLoader) {
+                        calcLoader.style.display = 'none';
+                    }
+                    console.log('[Calculator] TI-84 iframe loaded');
+                }, { once: true });
+            }
+        }
+
+        /**
+         * Close calculator window
+         */
+        function closeCalculator() {
+            if (!calcWindow) return;
+            calcWindow.classList.add('hidden');
+            calcWindowOpen = false;
+        }
+
+        // FAB click handler
+        if (calcFab) {
+            calcFab.addEventListener('click', function () {
+                if (calcWindowOpen) {
+                    closeCalculator();
+                } else {
+                    openCalculator();
+                }
+            });
+        }
+
+        // Close button handler
+        if (calcClose) {
+            calcClose.addEventListener('click', function (e) {
+                e.stopPropagation();
+                closeCalculator();
+            });
+        }
+
+        // =========================================================================
+        // DRAGGABLE WINDOW LOGIC (Performant transform3d approach)
+        // =========================================================================
+
+        if (calcHeader && calcWindow) {
+            var isDragging = false;
+            var dragStartX = 0;
+            var dragStartY = 0;
+            var windowOffsetX = 0;
+            var windowOffsetY = 0;
+
+            // Get initial transform offset
+            function getTransformOffset() {
+                var style = window.getComputedStyle(calcWindow);
+                var matrix = style.transform;
+                if (matrix === 'none' || !matrix) {
+                    return { x: 0, y: 0 };
+                }
+                var values = matrix.match(/matrix.*\((.+)\)/);
+                if (values && values[1]) {
+                    var parts = values[1].split(', ');
+                    return {
+                        x: parseFloat(parts[4]) || 0,
+                        y: parseFloat(parts[5]) || 0
+                    };
+                }
+                return { x: 0, y: 0 };
+            }
+
+            function startDrag(e) {
+                if (e.target.closest('#calc-close')) return;
+
+                isDragging = true;
+                var offset = getTransformOffset();
+                windowOffsetX = offset.x;
+                windowOffsetY = offset.y;
+
+                var clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+                var clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+
+                dragStartX = clientX - windowOffsetX;
+                dragStartY = clientY - windowOffsetY;
+
+                // Disable pointer events on iframe during drag for better UX
+                if (calcIframe) {
+                    calcIframe.style.pointerEvents = 'none';
+                }
+
+                document.addEventListener('mousemove', onDrag);
+                document.addEventListener('mouseup', stopDrag);
+                document.addEventListener('touchmove', onDrag, { passive: false });
+                document.addEventListener('touchend', stopDrag);
+
+                e.preventDefault();
+            }
+
+            function onDrag(e) {
+                if (!isDragging) return;
+
+                var clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+                var clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+
+                var newX = clientX - dragStartX;
+                var newY = clientY - dragStartY;
+
+                // Bound to viewport
+                var rect = calcWindow.getBoundingClientRect();
+                var maxX = window.innerWidth - rect.width;
+                var maxY = window.innerHeight - rect.height;
+
+                // Account for initial centering offset (left: 50%, translate: -50%)
+                var initialCenterOffset = rect.width / 2;
+
+                // Clamp to viewport bounds
+                var clampedX = Math.max(-initialCenterOffset, Math.min(maxX - initialCenterOffset, newX));
+                var clampedY = Math.max(0, Math.min(maxY, newY));
+
+                calcWindow.style.transform = 'translate3d(' + clampedX + 'px, ' + clampedY + 'px, 0)';
+
+                e.preventDefault();
+            }
+
+            function stopDrag() {
+                isDragging = false;
+
+                // Re-enable pointer events on iframe
+                if (calcIframe) {
+                    calcIframe.style.pointerEvents = '';
+                }
+
+                document.removeEventListener('mousemove', onDrag);
+                document.removeEventListener('mouseup', stopDrag);
+                document.removeEventListener('touchmove', onDrag);
+                document.removeEventListener('touchend', stopDrag);
+            }
+
+            calcHeader.addEventListener('mousedown', startDrag);
+            calcHeader.addEventListener('touchstart', startDrag, { passive: false });
+        }
+
+        // Handle calculator visibility when session ends or locks
+        function hideCalculatorOnSessionEnd() {
+            if (calcFab) calcFab.classList.add('hidden');
+            if (calcWindow) {
+                calcWindow.classList.add('hidden');
+                calcWindowOpen = false;
+            }
+        }
+
+        // Expose function for session state changes
+        window.syncCalculatorVisibility = syncCalculatorVisibility;
+        window.hideCalculatorOnSessionEnd = hideCalculatorOnSessionEnd;
     })();
 </script>

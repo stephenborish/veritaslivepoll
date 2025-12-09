@@ -1415,3 +1415,13 @@ var DataAccess = {
     }
   }
 };
+
+// =============================================================================
+// NAMESPACE EXPORTS & ALIASES
+// =============================================================================
+
+// Explicitly assign internal objects to namespace to prevent 'undefined' errors
+Veritas.Data.individualSessionState = DataAccess.individualSessionState;
+Veritas.Data.liveStatus = DataAccess.liveStatus;
+Veritas.Data.responses = DataAccess.responses;
+Veritas.Data.roster = DataAccess.roster;

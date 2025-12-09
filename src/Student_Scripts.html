@@ -66,6 +66,80 @@
         var securePendingAnswerText = null;
 
         // =============================================================================
+        // SOVEREIGN STATE MANAGEMENT (Novel Approach)
+        // =============================================================================
+
+        var ViewManager = {
+            views: [
+                'entry-screen',
+                'secure-lobby',
+                'status-container',
+                'pre-live-card',
+                'student-container',
+                'question-container',
+                'individual-timed-session',
+                'student-loader'
+            ],
+            show: function (viewId) {
+                var self = this;
+                this.views.forEach(function (id) {
+                    var el = document.getElementById(id);
+                    if (!el) return;
+
+                    if (id === viewId) {
+                        el.style.display = 'block';
+                        el.classList.remove('hidden');
+                        void el.offsetWidth; // Force reflow
+                    } else {
+                        el.style.display = 'none';
+                        el.classList.add('hidden');
+                    }
+                });
+                console.log('[ViewManager] Active View:', viewId);
+            }
+        };
+
+        var LockManager = {
+            isLocked: function () {
+                try {
+                    return sessionStorage.getItem('veritas_lock_active') === 'true' ||
+                        localStorage.getItem('veritas_lock_active') === 'true';
+                } catch (e) { return false; }
+            },
+            lock: function (reason) {
+                console.warn('[LockManager] LOCKING:', reason);
+                try {
+                    sessionStorage.setItem('veritas_lock_active', 'true');
+                    localStorage.setItem('veritas_lock_active', 'true');
+                    sessionStorage.setItem('lock_reason', reason || 'unknown');
+                } catch (e) { }
+
+                this.renderLockScreen(reason);
+
+                // Report violation
+                var activePollId = (typeof currentPollState !== 'undefined' && currentPollState && currentPollState.pollId) ||
+                    (typeof secureLobbyContext !== 'undefined' && secureLobbyContext && secureLobbyContext.pollId) ||
+                    (typeof secureQuestionState !== 'undefined' && secureQuestionState && secureQuestionState.pollId);
+
+                if (activePollId && window.google && google.script) {
+                    google.script.run.reportStudentViolation(activePollId, SESSION_TOKEN || '', reason || 'lock');
+                }
+            },
+            unlock: function () {
+                console.log('[LockManager] UNLOCKING');
+                try {
+                    sessionStorage.removeItem('veritas_lock_active');
+                    localStorage.removeItem('veritas_lock_active');
+                    sessionStorage.removeItem('lock_reason');
+                } catch (e) { }
+                hideLockEnforcementUI();
+            },
+            renderLockScreen: function (reason) {
+                showLockEnforcementUI('SESSION LOCKED', 'Violation: ' + (reason || 'Security Policy') + '. Wait for teacher approval.');
+            }
+        };
+
+        // =============================================================================
         // ZERO TOLERANCE PROCTORING - Helper Functions
         // =============================================================================
 
@@ -197,14 +271,32 @@
         }
 
         /**
-         * POISON PILL CHECK - Must be called at the start of any function that resumes the session
-         * Returns true if the Poison Pill is active (student should see lock screen)
-         */
+ * POISON PILL CHECK - Uses both sessionStorage and localStorage for maximum persistence
+ */
         function isPoisonPillActive() {
             try {
-                return sessionStorage.getItem('veritas_lock_active') === 'true';
+                var sessionLock = sessionStorage.getItem('veritas_lock_active') === 'true';
+                var localLock = localStorage.getItem('veritas_lock_active') === 'true';
+                return sessionLock || localLock;
             } catch (e) {
                 return false;
+            }
+        }
+
+        /**
+         * Set the persistent lock state
+         */
+        function setPoisonPill(active) {
+            try {
+                if (active) {
+                    sessionStorage.setItem('veritas_lock_active', 'true');
+                    localStorage.setItem('veritas_lock_active', 'true');
+                } else {
+                    sessionStorage.removeItem('veritas_lock_active');
+                    localStorage.removeItem('veritas_lock_active');
+                }
+            } catch (e) {
+                console.error('Failed to set poison pill', e);
             }
         }
 
@@ -439,6 +531,9 @@
             var safeTotal = isNaN(parsedTotal) || parsedTotal <= 0 ? '?' : Math.max(1, parsedTotal);
 
             questionProgressEl.textContent = 'QUESTION ' + (safeIndex + 1) + ' OF ' + safeTotal;
+
+            // Ensure visibility
+            questionProgressEl.classList.remove('hidden');
         }
 
         function deriveSecureQuestionKey(state) {
@@ -1378,10 +1473,13 @@
                 var calcIframe = document.getElementById('calc-iframe');
                 var focusIsCalculator = calcIframe && document.activeElement === calcIframe;
                 var pageIsVisible = document.visibilityState === 'visible';
+
                 if (focusIsCalculator && pageIsVisible) {
                     console.log('[Proctor] Focus moved to Calculator - Allowed (Safe Harbor)');
                     return;
                 }
+
+                // If we are active and interaction isn't blocked...
                 if ((secureSessionActive || liveSessionActive) && !isInteractionBlocked && !violationLogged) {
                     console.log('[Proctor] ZERO TOLERANCE: Window blur detected - IMMEDIATE LOCK');
                     lockSession('window-blur');
@@ -1609,9 +1707,11 @@
                 if (state.className) {
                     secureLobbySummary.textContent = 'Class: ' + state.className;
                     secureLobbySummary.style.display = 'block';
+                    secureLobbySummary.classList.remove('hidden');
                 } else {
                     secureLobbySummary.textContent = '';
                     secureLobbySummary.style.display = 'none';
+                    secureLobbySummary.classList.add('hidden');
                 }
             }
             if (secureLobbyTime) {
@@ -1632,6 +1732,7 @@
 
             if (secureAccessCodeGroup) {
                 secureAccessCodeGroup.style.display = secureLobbyContext.requiresAccessCode ? 'block' : 'none';
+                secureAccessCodeGroup.classList.toggle('hidden', !secureLobbyContext.requiresAccessCode);
             }
             if (secureAccessCodeInput && isNewLobbyContext) {
                 secureAccessCodeInput.value = '';
@@ -1762,7 +1863,6 @@
                 '<div id="veritas-modal-input" class="veritas-modal-input" style="display: none;">' +
                 '<label for="veritas-modal-input-field" class="sr-only">Input</label>' +
                 '<input id="veritas-modal-input-field" type="text" autocomplete="off" />' +
-                '</div>' +
                 '</div>' +
                 '<div class="veritas-modal-actions">' +
                 '<button type="button" class="veritas-modal-button secondary" data-action="cancel">Cancel</button>' +
@@ -2375,11 +2475,32 @@
         }
 
         function hideAllViews() {
+            // ENHANCED VIEW MUTEX: Use both display property and hidden class for robustness
             ['entry-screen', 'secure-lobby', 'status-container', 'pre-live-card', 'student-container', 'question-container', 'individual-timed-session'].forEach(function (id) {
                 var el = document.getElementById(id);
-                if (el) el.style.display = 'none';
+                if (el) {
+                    el.style.display = 'none';
+                    el.classList.add('hidden'); // Tailwind hidden utility
+                }
             });
-            document.body.style.overflow = '';
+            // Ensure body overflow logic is reset unless locked
+            if (!isInteractionBlocked) {
+                document.body.style.overflow = '';
+            }
+        }
+
+        function showView(elementId) {
+            hideAllViews();
+            var el = document.getElementById(elementId);
+            if (el) {
+                el.style.display = 'block';
+                el.classList.remove('hidden');
+            }
+            // Also ensure parent container is visible if needed
+            if (elementId !== 'entry-screen' && studentContainer) {
+                studentContainer.style.display = 'block';
+                studentContainer.classList.remove('hidden');
+            }
         }
 
         function syncCalculatorVisibility(enabled) {
@@ -2396,435 +2517,93 @@
             }
         }
 
+        // =============================================================================
+        // MAIN VIEW CONTROLLER (Sovereign Implementation)
+        // =============================================================================
+
         function updateStudentView(data) {
             data = data || {};
+            console.log('[ViewManager] Update View State:', data);
 
-            // POISON PILL CHECK: If lock is active, immediately show lock UI and return
-            if (isPoisonPillActive()) {
-                console.log('[Proctor] POISON PILL ACTIVE in updateStudentView - blocking display');
-                isInteractionBlocked = true;
-                showLockEnforcementUI('SESSION LOCKED', 'Your session was locked. Wait for teacher approval.');
-                return;
-            }
-
-            // VIEW MUTEX: Hide all views first to prevent Ghost Screens
-            hideAllViews();
-
-            // CALCULATOR: Sync visibility based on metadata
-            syncCalculatorVisibility(data.calculatorEnabled);
-
-            // Fix: UI Overlap - Ensure proper container visibility
-            if (studentLoader) studentLoader.style.display = 'none';
-
-            // If data indicates a secure session, delegate and return early
-            if (data.sessionType === 'INDIVIDUAL_TIMED' || data.sessionType === 'SECURE_ASSESSMENT') {
-                if (!secureSessionActive) {
-                    secureSessionActive = true;
-                    secureSessionHeartbeat.start(true);
-                }
-                setSecureChromeState(true);
-                // Individual session view handling is done by INDIVIDUAL_TIMED/SECURE_ASSESSMENT logic
-                // usually via updateIndividualSessionView or similar if it exists,
-                // or just showing the secure lobby.
-                // Assuming specific logic follows or is handled by sub-functions.
-                // Re-showing secure lobby if needed:
-                // But wait, the original code returned early here.
-                // I should verify if I need to show the secure session view here.
-                // The original code returned early. I should check if it needs to show anything.
-                return;
-            }
-
-            // Otherwise, we are in a normal Live Poll or standard state.
-            // Explicitly hide secure lobby and entry screen to prevent overlap.
-            // hideAllViews() handled most, but let's be safe.
-            if (studentContainer) studentContainer.style.display = 'block';
-            hideSecureLobby();
-            if (secureFocusContainer) secureFocusContainer.style.display = 'none';
-
-            if (secureSessionActive) {
-                secureSessionActive = false;
-                secureSessionHeartbeat.stop();
-                setSecureConnectionIndicatorVisible(false);
-                setSecureChromeState(false);
-            }
-
-            // Ensure proctoring listeners are attached for live polls too
-            if (data.status === 'LIVE' || data.status === 'OPEN') {
-                attachProctorVisibilityListeners();
-            }
-
-            console.log('Status update:', data.status);
-
-            // Only clear any existing status submessage content when
-            // we're not showing the metacognition confidence prompt.
-            if (statusSubMessage && pendingAnswerText === null) {
-                statusSubMessage.style.display = 'none';
-                statusSubMessage.textContent = '';
-                statusSubMessage.innerHTML = '';
-            }
-            setPreLiveReconnectMessage('');
-
-            currentPollState = data || {};
-            hideExitControls();
-
-            if (data.status === 'LOCKED' || data.status === 'AWAITING_FULLSCREEN' || data.status === 'BLOCKED') {
-                console.log('Server confirmed lock status on page load:', data.status);
-                isInteractionBlocked = true;
-                if (data.status === 'BLOCKED') {
-                    isTeacherBlocked = true;
-                    showTeacherBlockedMessage();
-                }
-                google.script.run
-                    .withSuccessHandler(function (proctorResponse) {
-                        if (proctorResponse.success) {
-                            currentLockVersion = proctorResponse.lockVersion;
-                            if (proctorResponse.status === 'AWAITING_FULLSCREEN') {
-                                showResumePrompt();
-                            } else if (proctorResponse.status === 'LOCKED') {
-                                isTeacherBlocked = false;
-                                showLockEnforcementUI();
-                                startProctorPolling();
-                            } else if (proctorResponse.status === 'BLOCKED') {
-                                isTeacherBlocked = true;
-                                showTeacherBlockedMessage();
-                                startProctorPolling();
-                            }
-                        }
-                    })
-                    .withFailureHandler(handleError)
-                    .getStudentProctorState(SESSION_TOKEN);
-                return;
-            }
-
-            isTeacherBlocked = false;
-
-            if (preLiveCard) {
-                preLiveCard.style.display = 'none';
-            }
-
-            if (data.status !== 'LOCKED' && data.status !== 'AWAITING_FULLSCREEN' && data.status !== 'BLOCKED') {
-                lastUnlockedState = data;
-            }
-
-            if (resumeControls) {
-                resumeControls.style.display = 'none';
-            }
-
-            if (data.status === 'PRE_LIVE') {
-                liveSessionActive = false;
-                hasAnsweredCurrent = false;
-                pendingSubmission = false;
-                currentQuestionKey = null;
-                toggleSecureLayout(false);
-                if (questionProgressEl) {
-                    questionProgressEl.textContent = 'QUESTION --';
-                }
-                questionContainer.style.display = 'none';
-                if (statusContainer) {
-                    statusContainer.style.display = 'none';
-                }
-                if (preLiveCard) {
-                    preLiveCard.style.display = 'block';
-                    if (preLivePrimary) {
-                        preLivePrimary.textContent = data.message || 'Waiting for your teacher to begin the poll...';
-                    }
-                    if (preLiveSubline) {
-                        preLiveSubline.textContent = 'This page will update automatically.';
-                        preLiveSubline.style.display = 'block';
-                        preLiveSubline.classList.remove('hidden');
-                    }
+            // 1. SOVEREIGN LOCK CHECK
+            // If local machine is locked, it STAYS locked unless Server Explicitly Approves Unlock
+            if (LockManager.isLocked()) {
+                if (data.unlockApproved === true) {
+                    console.log('[LockManager] Server approved unlock - Clearing Poison Pill');
+                    LockManager.unlock();
                 } else {
-                    statusContainer.style.display = 'block';
-                    statusMessage.textContent = data.message || 'Waiting for your teacher to begin the poll...';
-                    statusMessage.className = 'text-gray-900 text-2xl font-semibold';
-                    if (statusSubMessage) {
-                        statusSubMessage.textContent = 'This page will update automatically.';
-                        statusSubMessage.style.display = 'block';
-                        statusSubMessage.className = 'text-gray-700 text-base mt-4';
-                    }
+                    console.warn('[LockManager] Local Lock Active - Blocking View Update');
+                    var reason = sessionStorage.getItem('lock_reason');
+                    LockManager.renderLockScreen(reason);
+                    return; // HALT RENDER - SECURITY BLOCK
                 }
+            } else if (data.isLocked || data.status === 'LOCKED') {
+                // Server commanded lock
+                LockManager.lock(data.lockReason || 'Server Command');
                 return;
             }
 
-            if (data.status === 'LIVE' && typeof data.questionIndex === 'number' && data.questionIndex >= 0) {
-                liveSessionActive = true;
-                resetResultDecorations();
-                lastUnlockedState = data;
-                var resetTimestamp = (data.metadata && data.metadata.resetAt) ? data.metadata.resetAt : '';
-                var questionKey = data.pollId + ':' + data.questionIndex + ':' + resetTimestamp;
-                var isNewQuestion = questionKey !== currentQuestionKey;
-                toggleSecureLayout(false);
+            // 2. View Mutex - Hide all views first
+            // Note: ViewManager.show() handles hiding others, but calling this explicitly ensures clean slate
+            // if we have logic branching below.
 
-                // FIX: Force hide entry/lobby screens to prevent "Start Screen Leak"
-                if (entryScreen) entryScreen.style.display = 'none';
-                if (secureLobbyCard) secureLobbyCard.style.display = 'none';
-                // FIX: SCROLL LOCK - Prevent scrolling to any leaked content during live poll
-                document.body.style.overflow = 'hidden';
+            // 3. Calculator Sync
+            var calcEnabled = data.calculatorEnabled === true;
+            if (window.syncCalculatorVisibility) {
+                window.syncCalculatorVisibility(calcEnabled);
+            }
 
-                if (isNewQuestion) {
-                    currentQuestionKey = questionKey;
-                    hasAnsweredCurrent = !!data.hasSubmitted;
-                    pendingSubmission = false;
-                    pendingAnswerText = null;
-                    currentMetacognitionEnabled = !!data.metacognitionEnabled;
-                    currentPollState = data;
-                    statusContainer.style.display = hasAnsweredCurrent ? 'block' : 'none';
-                    questionContainer.style.display = hasAnsweredCurrent ? 'none' : 'block';
-
-                    // Request fullscreen for live polls to enable proctoring
-                    if (secureFullscreenManager && !secureFullscreenManager.isFullscreen()) {
-                        secureFullscreenManager.request().catch(function (err) {
-                            console.log('Fullscreen request declined or not supported:', err);
-                        });
-                    }
-
-                    var qNum = (data.questionIndex || 0) + 1;
-                    var qTotal = data.totalQuestions || '?';
-                    updateQuestionProgress(data.questionIndex, data.totalQuestions);
-
-                    if (questionTextEl) {
-                        questionTextEl.textContent = data.questionText || '';
-                        questionTextEl.style.whiteSpace = 'pre-wrap';
-                    }
-
-                    if (questionSublineEl) {
-                        questionSublineEl.classList.add('hidden');
-                        questionSublineEl.textContent = '';
-                    }
-
-                    var hasQuestionImage = !!data.questionImageURL;
-                    if (questionImageEl) {
-                        if (hasQuestionImage) {
-                            questionImageEl.src = data.questionImageURL;
-                            questionImageEl.style.display = 'block';
-                        } else {
-                            questionImageEl.style.display = 'none';
-                        }
-                    }
-                    if (questionLayout) {
-                        questionLayout.classList.toggle('no-image', !hasQuestionImage);
-                    }
-                    if (questionVisual) {
-                        questionVisual.style.display = hasQuestionImage ? 'flex' : 'none';
-                    }
-
-                    if (noResponsesMessageEl) {
-                        noResponsesMessageEl.classList.add('hidden');
-                        noResponsesMessageEl.textContent = '';
-                    }
-
-                    optionsList.innerHTML = "";
-                    var shuffled = shuffle(data.options || []);
-                    var letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-
-                    // DEBUG: Log what we received
-                    console.log('=== STUDENT RECEIVED DATA ===');
-                    console.log('questionImageURL:', data.questionImageURL);
-                    console.log('metacognitionEnabled:', data.metacognitionEnabled);
-                    console.log('currentMetacognitionEnabled will be set to:', !!data.metacognitionEnabled);
-                    console.log('options:', data.options);
-                    if (data.options && data.options.length > 0) {
-                        data.options.forEach(function (opt, idx) {
-                            console.log('  Option ' + idx + ':', 'text="' + opt.text + '", imageURL=' + opt.imageURL);
-                        });
-                    }
-
-                    currentOptionLayout = [];
-                    shuffled.forEach(function (option, index) {
-                        var letter = letters[index] || (index + 1).toString();
-                        var btn = createOptionButton(option, letter, data.pollId, data.questionIndex);
-                        var listItem = document.createElement('li');
-                        listItem.appendChild(btn);
-                        optionsList.appendChild(listItem);
-                        currentOptionLayout.push({
-                            text: option.text || '',
-                            imageURL: option.imageURL || ''
-                        });
-                    });
-                }
-
-                if (pendingSubmission && !data.hasSubmitted) {
-                    return;
-                }
-
-                // Only update hasAnsweredCurrent if we've actually attempted to submit
-                // This prevents premature hiding of options due to stale server data
-                if (data.hasSubmitted && (pendingSubmission || hasAnsweredCurrent)) {
-                    hasAnsweredCurrent = true;
-                    pendingSubmission = false;
-                }
-
-                if (hasAnsweredCurrent) {
-                    questionContainer.style.display = 'none';
-                    statusContainer.style.display = 'block';
-                    statusMessage.textContent = data.hasSubmitted ? (data.message || 'Answer received - nice work.') : 'Answer received - nice work.';
-                    statusMessage.className = 'text-green-600 text-2xl font-semibold';
-                    if (statusSubMessage) {
-                        statusSubMessage.textContent = 'Your teacher will reveal the answer shortly...';
-                        statusSubMessage.style.display = 'block';
-                        statusSubMessage.className = 'text-gray-600 text-lg mt-4';
-                    }
-                    var iconEl = statusContainer.querySelector('.material-symbols-outlined');
-                    if (iconEl) {
-                        iconEl.textContent = 'check_circle';
-                        iconEl.className = 'material-symbols-outlined text-6xl text-green-300 mb-4 inline-block';
-                    }
-                } else if (pendingAnswerText === null) {
-                    // Only show question if we're not waiting for confidence input
-                    questionContainer.style.display = 'block';
-                    statusContainer.style.display = 'none';
-                }
-                // If pendingAnswerText is not null, we're showing confidence question - don't change display
+            // 4. Session Status Handling
+            if (data.status === 'CLOSED' || data.sessionPhase === 'ENDED') {
+                if (window.hideCalculatorOnSessionEnd) window.hideCalculatorOnSessionEnd();
+                ViewManager.show('status-container');
+                renderStatusMessage('Session Ended', 'The teacher has closed this session.');
                 return;
             }
 
-            if (data.status === 'RESULTS_HOLD' || data.status === 'RESULTS_REVEALED') {
-                liveSessionActive = false;
-                renderResultsStage(data);
+            if (!data.sessionType && !data.pollId) {
+                ViewManager.show('entry-screen');
                 return;
             }
 
-            // Non-live states
-            resetResultDecorations();
-            questionContainer.style.display = 'none';
-            pendingSubmission = false;
-            if (data.status !== 'PRE_LIVE') {
-                hasAnsweredCurrent = !!data.hasSubmitted;
-            } else {
-                currentPollState = {};
-                questionContainer.style.display = 'none';
-                if (preLiveCard) {
-                    preLiveCard.style.display = 'none';
-                }
-                statusContainer.style.display = 'block';
-                var statusIcon = 'schedule';
-                var statusClass = 'text-veritas-navy';
-                var statusTextClass = 'text-gray-900 text-2xl font-semibold';
+            // 5. Route to specific view handlers
+            var isSecure = (data.sessionType === 'SECURE_ASSESSMENT' || data.sessionType === 'SECURE');
 
-                if (data.status === 'PRE_LIVE') {
-                    hasAnsweredCurrent = false;
-                    statusMessage.textContent = data.message || 'Waiting for your teacher to begin the poll...';
-                    statusIcon = 'schedule';
-                    statusClass = 'text-veritas-navy';
-                    if (statusSubMessage) {
-                        statusSubMessage.textContent = 'This page will update automatically.';
-                        statusSubMessage.style.display = 'block';
-                        statusSubMessage.className = 'text-gray-700 text-base mt-4';
-                    }
-                } else if (data.status === 'PAUSED') {
-                    hasAnsweredCurrent = false;
-                    statusMessage.textContent = data.message || 'Intermission! Your teacher’s cooking up the next one.';
-                    statusIcon = 'hourglass_top';
-                    statusClass = 'text-veritas-navy';
-                    if (statusSubMessage) {
-                        statusSubMessage.style.display = 'none';
-                        statusSubMessage.textContent = '';
-                    }
-                } else if (data.status === 'ENDED') {
-                    hasAnsweredCurrent = false;
-                    statusMessage.textContent = data.message || "That's a wrap! You just finished the poll — nicely done.";
-                    statusIcon = 'emoji_events';
-                    statusClass = 'text-yellow-600';
-                    showExitControls('Exit Poll', 'Leave fullscreen and close this tab now that the poll is complete.');
-                    if (statusSubMessage) {
-                        statusSubMessage.style.display = 'none';
-                        statusSubMessage.textContent = '';
-                    }
-                    // Exit fullscreen when poll ends
-                    if (document.fullscreenElement) {
-                        document.exitFullscreen().catch(function (err) {
-                            console.log('Error exiting fullscreen:', err);
-                        });
-                    }
-                } else if (data.status === 'NOT_ENROLLED') {
-                    hasAnsweredCurrent = false;
-                    statusMessage.textContent = data.message || "You are not enrolled.";
-                    statusTextClass = 'text-red-700 text-2xl font-bold';
-                    statusIcon = 'error';
-                    statusClass = 'text-red-700';
-                    if (statusSubMessage) {
-                        statusSubMessage.style.display = 'none';
-                        statusSubMessage.textContent = '';
-                    }
-                    stopPolling();
-                } else if (data.status === 'ERROR') {
-                    hasAnsweredCurrent = false;
-                    statusMessage.textContent = data.message || "We hit a snag. Try again soon.";
-                    statusTextClass = 'text-red-700 text-2xl font-bold';
-                    statusIcon = 'error';
-                    statusClass = 'text-red-700';
-                    if (statusSubMessage) {
-                        statusSubMessage.style.display = 'none';
-                        statusSubMessage.textContent = '';
-                    }
+            if (isSecure) {
+                // Secure Logic
+                if (data.status === 'LOBBY' || data.sessionPhase === 'LOBBY') {
+                    ViewManager.show('secure-lobby');
+                    renderSecureLobby(data);
                 } else {
-                    hasAnsweredCurrent = false;
-                    statusMessage.textContent = data.message || 'Hang tight — your teacher’s loading the next challenge.';
-                    statusIcon = 'hourglass_top';
-                    statusClass = 'text-veritas-navy';
-                    if (statusSubMessage) {
-                        statusSubMessage.style.display = 'none';
-                        statusSubMessage.textContent = '';
+                    ViewManager.show('individual-timed-session');
+                    showIndividualTimedView(data);
+                }
+            } else {
+                // Live Poll Logic (Legacy)
+                if (data.sessionPhase === 'LOBBY') {
+                    ViewManager.show('pre-live-card');
+                    updatePreLiveCard(data);
+                } else {
+                    ViewManager.show('question-container');
+
+                    // Legacy UI updates
+                    if (data.status === 'PRE_LIVE') {
+                        liveSessionActive = false;
+                        hasAnsweredCurrent = false;
+                        pendingSubmission = false;
+                        currentQuestionKey = null;
+                        toggleSecureLayout(false);
+                        if (questionProgressEl) questionProgressEl.textContent = 'QUESTION 1 OF ?';
+                        ViewManager.show('pre-live-card'); // Redundant but safe
+                    } else {
+                        renderQuestion(data);
                     }
                 }
-                if (preLivePrimary) {
-                    preLivePrimary.textContent = data.message || 'Showtime is moments away.';
-                }
-                if (preLiveSubline) {
-                    preLiveSubline.textContent = data.submessage || 'Your teacher is lining up the first challenge now — stay focused and we’ll launch together.';
-                }
-                return;
             }
 
-            if (preLiveCard) {
-                preLiveCard.style.display = 'none';
-            }
-
-            statusContainer.style.display = 'block';
-            var statusIcon = 'schedule';
-            var statusClass = 'text-veritas-navy';
-            var statusTextClass = 'text-gray-900 text-2xl font-semibold';
-
-            if (data.status === 'PAUSED') {
-                statusMessage.textContent = data.message || 'Poll is paused for a quick breather.';
-                statusIcon = 'pause_circle';
-                statusClass = 'text-veritas-navy';
-                if (statusSubMessage) {
-                    statusSubMessage.textContent = data.submessage || 'Stay ready — we will resume as soon as your teacher unlocks the next prompt.';
-                    statusSubMessage.style.display = 'block';
-                    statusSubMessage.className = 'text-gray-700 text-lg mt-4';
-                }
-            } else if (data.status === 'ENDED') {
-                statusMessage.textContent = data.message || 'That is a wrap! You just finished the poll - nicely done.';
-                statusIcon = 'emoji_events';
-                statusClass = 'text-yellow-600';
-                showExitControls('Exit Poll', 'Exit fullscreen and close this tab. Thank you for participating!');
-                if (statusSubMessage) {
-                    statusSubMessage.style.display = 'none';
-                }
-            } else if (data.status === 'NOT_ENROLLED') {
-                statusMessage.textContent = data.message || 'You are not enrolled.';
-                statusTextClass = 'text-red-700 text-2xl font-bold';
-                statusIcon = 'error';
-                statusClass = 'text-red-700';
-                stopPolling();
-            } else if (data.status === 'ERROR') {
-                statusMessage.textContent = data.message || 'We hit a snag. Try again soon.';
-                statusTextClass = 'text-red-700 text-2xl font-bold';
-                statusIcon = 'error';
-                statusClass = 'text-red-700';
-            } else {
-                statusMessage.textContent = data.message || 'Hang tight - your teacher is loading the next challenge.';
-                statusIcon = 'hourglass_top';
-                statusClass = 'text-veritas-navy';
-            }
-
-            statusMessage.className = statusTextClass;
-            var iconEl = statusContainer.querySelector('.material-symbols-outlined');
-            if (iconEl) {
-                iconEl.textContent = statusIcon;
-                iconEl.className = 'material-symbols-outlined text-6xl mb-4 inline-block ' + statusClass;
-            }
+            // Resume controls logic (legacy cleanup)
+            var resumeControls = document.getElementById('resume-controls');
+            if (resumeControls) resumeControls.style.display = 'none';
         }
 
         function submitAnswer(pollId, questionIndex, answerText) {
@@ -3467,110 +3246,135 @@
         }
 
         // =========================================================================
-        // DRAGGABLE WINDOW LOGIC (Performant transform3d approach)
+        // DRAGGABLE WINDOW LOGIC (Robust Mouse + Touch Support)
         // =========================================================================
 
-        if (calcHeader && calcWindow) {
-            var isDragging = false;
-            var dragStartX = 0;
-            var dragStartY = 0;
-            var windowOffsetX = 0;
-            var windowOffsetY = 0;
+        // =========================================================================
+        // ROBUST DRAG & DROP (Sovereign Shield Implementation)
+        // =========================================================================
 
-            // Get initial transform offset
-            function getTransformOffset() {
-                var style = window.getComputedStyle(calcWindow);
-                var matrix = style.transform;
-                if (matrix === 'none' || !matrix) {
-                    return { x: 0, y: 0 };
-                }
-                var values = matrix.match(/matrix.*\((.+)\)/);
-                if (values && values[1]) {
-                    var parts = values[1].split(', ');
-                    return {
-                        x: parseFloat(parts[4]) || 0,
-                        y: parseFloat(parts[5]) || 0
-                    };
-                }
-                return { x: 0, y: 0 };
+        function initCalculatorDrag() {
+            var header = document.getElementById('calc-header');
+            var win = document.getElementById('calc-window');
+            var iframe = document.getElementById('calc-iframe');
+
+            if (!header || !win) return;
+
+            // Create Drag Shield (Lazy init)
+            var shieldId = 'veritas-drag-shield';
+            var shield = document.getElementById(shieldId);
+            if (!shield) {
+                shield = document.createElement('div');
+                shield.id = shieldId;
+                shield.style.position = 'fixed';
+                shield.style.top = '0';
+                shield.style.left = '0';
+                shield.style.width = '100vw';
+                shield.style.height = '100vh';
+                shield.style.zIndex = '2147483647'; // Max z-index
+                shield.style.cursor = 'move';
+                shield.style.display = 'none';
+                shield.style.background = 'transparent'; // Invisible
+                document.body.appendChild(shield);
             }
 
-            function startDrag(e) {
+            var isDragging = false;
+            var startX, startY, initialLeft, initialTop;
+
+            function onDragStart(e) {
                 if (e.target.closest('#calc-close')) return;
 
                 isDragging = true;
-                var offset = getTransformOffset();
-                windowOffsetX = offset.x;
-                windowOffsetY = offset.y;
 
-                var clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
-                var clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+                // Show Shield to capture all mouse events (prevents iframe theft)
+                shield.style.display = 'block';
 
-                dragStartX = clientX - windowOffsetX;
-                dragStartY = clientY - windowOffsetY;
+                var clientX = e.type.indexOf('touch') !== -1 ? e.touches[0].clientX : e.clientX;
+                var clientY = e.type.indexOf('touch') !== -1 ? e.touches[0].clientY : e.clientY;
 
-                // Disable pointer events on iframe during drag for better UX
-                if (calcIframe) {
-                    calcIframe.style.pointerEvents = 'none';
+                startX = clientX;
+                startY = clientY;
+
+                var rect = win.getBoundingClientRect();
+                initialLeft = rect.left;
+                initialTop = rect.top;
+
+                // Clear transform, switch to static top/left for reliability
+                win.style.transform = 'none';
+                win.style.left = initialLeft + 'px';
+                win.style.top = initialTop + 'px';
+                win.style.right = 'auto';
+                win.style.bottom = 'auto';
+
+                if (e.cancelable && !e.target.tagName.match(/INPUT|TEXTAREA|SELECT|BUTTON/i)) {
+                    e.preventDefault();
                 }
-
-                document.addEventListener('mousemove', onDrag);
-                document.addEventListener('mouseup', stopDrag);
-                document.addEventListener('touchmove', onDrag, { passive: false });
-                document.addEventListener('touchend', stopDrag);
-
-                e.preventDefault();
             }
 
-            function onDrag(e) {
+            function onDragMove(e) {
                 if (!isDragging) return;
 
-                var clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
-                var clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+                // Prevent scrolling on touch
+                if (e.cancelable) e.preventDefault();
 
-                var newX = clientX - dragStartX;
-                var newY = clientY - dragStartY;
+                var clientX = e.type.indexOf('touch') !== -1 ? e.touches[0].clientX : e.clientX;
+                var clientY = e.type.indexOf('touch') !== -1 ? e.touches[0].clientY : e.clientY;
 
-                // Bound to viewport
-                var rect = calcWindow.getBoundingClientRect();
-                var maxX = window.innerWidth - rect.width;
-                var maxY = window.innerHeight - rect.height;
+                var deltaX = clientX - startX;
+                var deltaY = clientY - startY;
 
-                // Account for initial centering offset (left: 50%, translate: -50%)
-                var initialCenterOffset = rect.width / 2;
+                var newLeft = initialLeft + deltaX;
+                var newTop = initialTop + deltaY;
 
-                // Clamp to viewport bounds
-                var clampedX = Math.max(-initialCenterOffset, Math.min(maxX - initialCenterOffset, newX));
-                var clampedY = Math.max(0, Math.min(maxY, newY));
+                // Bounds Checking
+                var maxW = window.innerWidth - win.offsetWidth;
+                var maxH = window.innerHeight - win.offsetHeight;
 
-                calcWindow.style.transform = 'translate3d(' + clampedX + 'px, ' + clampedY + 'px, 0)';
+                newLeft = Math.max(0, Math.min(newLeft, maxW));
+                newTop = Math.max(0, Math.min(newTop, maxH));
 
-                e.preventDefault();
+                win.style.left = newLeft + 'px';
+                win.style.top = newTop + 'px';
             }
 
-            function stopDrag() {
+            function onDragEnd() {
                 isDragging = false;
-
-                // Re-enable pointer events on iframe
-                if (calcIframe) {
-                    calcIframe.style.pointerEvents = '';
-                }
-
-                document.removeEventListener('mousemove', onDrag);
-                document.removeEventListener('mouseup', stopDrag);
-                document.removeEventListener('touchmove', onDrag);
-                document.removeEventListener('touchend', stopDrag);
+                shield.style.display = 'none';
             }
 
-            calcHeader.addEventListener('mousedown', startDrag);
-            calcHeader.addEventListener('touchstart', startDrag, { passive: false });
+            // Attach start listeners to header
+            header.style.cursor = 'move';
+            // Remove old listeners if any (by cloning? No, just add new ones, browser handles)
+            // But to be clean, let's assume this runs once.
+            header.addEventListener('mousedown', onDragStart);
+            header.addEventListener('touchstart', onDragStart, { passive: false });
+
+            // Attach move/end listeners to SHIELD (Sovereign Capture)
+            // This is the key: The events happen on the shield, not the window/document
+            shield.addEventListener('mousemove', onDragMove);
+            shield.addEventListener('touchmove', onDragMove, { passive: false });
+
+            shield.addEventListener('mouseup', onDragEnd);
+            shield.addEventListener('touchend', onDragEnd);
+            shield.addEventListener('mouseleave', onDragEnd);
+        }
+
+        // Initialize Drag
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initCalculatorDrag);
+        } else {
+            initCalculatorDrag();
         }
 
         // Handle calculator visibility when session ends or locks
         function hideCalculatorOnSessionEnd() {
-            if (calcFab) calcFab.classList.add('hidden');
+            var calcFab = document.getElementById('calc-fab');
+            var calcWindow = document.getElementById('calc-window');
+            if (calcFab) calcFab.style.display = 'none';
             if (calcWindow) {
                 calcWindow.classList.add('hidden');
+                calcWindow.classList.remove('active');
+                calcWindow.style.display = 'none';
                 calcWindowOpen = false;
             }
         }
@@ -3578,5 +3382,9 @@
         // Expose function for session state changes
         window.syncCalculatorVisibility = syncCalculatorVisibility;
         window.hideCalculatorOnSessionEnd = hideCalculatorOnSessionEnd;
+        window.updateStudentView = updateStudentView;
+        window.LockManager = LockManager;
+        window.ViewManager = ViewManager;
+
     })();
 </script>

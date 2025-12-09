@@ -2701,24 +2701,51 @@
     }
 
     function onDashboardDataLoaded(data) {
+      // Defensive check: ensure data object exists
+      if (!data) {
+        console.warn('onDashboardDataLoaded received null/undefined data');
+        data = { polls: [], classes: [] };
+      }
+
       mainLoader.style.display = 'none';
       try {
         ALL_POLLS = data.polls || [];
-        refreshClassOptions(data.classes || []);
-        refreshPollViews();
+
+        try {
+          refreshClassOptions(data.classes || []);
+        } catch (err) {
+          console.warn('refreshClassOptions error:', err);
+        }
+
+        try {
+          refreshPollViews();
+        } catch (err) {
+          console.error('refreshPollViews CRITICAL FAILURE:', err);
+          // Non-fatal, dashboard can still load empty
+        }
 
         // Show dashboard on initial load
-        setMainSection('dashboard');
+        try {
+          setMainSection('dashboard');
+        } catch (err) {
+          console.error('setMainSection failed:', err);
+          // Last resort force show
+          if (dashboard) dashboard.style.display = 'block';
+        }
 
         // Load dashboard summary after a short delay
         setTimeout(function () {
-          if (!dashboardSummary) {
-            loadDashboardSummary();
-          }
+          try {
+            if (!dashboardSummary) {
+              loadDashboardSummary();
+            }
+          } catch (e) { console.warn('Summary load failed', e); }
         }, 100);
       } catch (e) {
         console.error('Error loading dashboard:', e);
         handleError(e);
+        // Ensure UI is visible even if errored
+        if (dashboard) dashboard.style.display = 'block';
       }
     }
 
@@ -12522,22 +12549,22 @@
       if (wizardState.isEditMode && wizardState.pollId) {
         // Update existing poll
         google.script.run
-          .withSuccessHandler(function (response) {
+          .withSuccessHandler(async function (response) {
             console.log('Update response:', response);
             if (response && !response.error) {
-              alert('Poll updated successfully!');
+              await veritasAlert('Poll updated successfully!', { title: 'Success' });
               window.location.reload();
             } else {
-              alert('Failed to update: ' + (response.error || response.message || 'Unknown error'));
+              await veritasAlert('Failed to update: ' + (response.error || response.message || 'Unknown error'), { title: 'Error', destructive: true });
               if (publishBtn) {
                 publishBtn.disabled = false;
                 publishBtn.innerHTML = '<span class="material-symbols-outlined">' + actionIcon + '</span> Update Poll';
               }
             }
           })
-          .withFailureHandler(function (error) {
+          .withFailureHandler(async function (error) {
             console.error('Update error:', error);
-            alert('Error: ' + (error.message || error));
+            await veritasAlert('Error: ' + (error.message || error), { title: 'Error', destructive: true });
             if (publishBtn) {
               publishBtn.disabled = false;
               publishBtn.innerHTML = '<span class="material-symbols-outlined">' + actionIcon + '</span> Update Poll';
@@ -12547,22 +12574,22 @@
       } else {
         // Create new poll
         google.script.run
-          .withSuccessHandler(function (response) {
+          .withSuccessHandler(async function (response) {
             console.log('Publish response:', response);
             if (response && !response.error) {
-              alert('Poll published successfully!');
+              await veritasAlert('Poll published successfully!', { title: 'Success' });
               window.location.reload();
             } else {
-              alert('Failed to publish: ' + (response.error || response.message || 'Unknown error'));
+              await veritasAlert('Failed to publish: ' + (response.error || response.message || 'Unknown error'), { title: 'Error', destructive: true });
               if (publishBtn) {
                 publishBtn.disabled = false;
                 publishBtn.innerHTML = '<span class="material-symbols-outlined">' + actionIcon + '</span> Publish Poll';
               }
             }
           })
-          .withFailureHandler(function (error) {
+          .withFailureHandler(async function (error) {
             console.error('Publish error:', error);
-            alert('Error: ' + (error.message || error));
+            await veritasAlert('Error: ' + (error.message || error), { title: 'Error', destructive: true });
             if (publishBtn) {
               publishBtn.disabled = false;
               publishBtn.innerHTML = '<span class="material-symbols-outlined">' + actionIcon + '</span> Publish Poll';

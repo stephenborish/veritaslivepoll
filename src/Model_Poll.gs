@@ -829,6 +829,12 @@ Veritas.Models.Poll.normalizeSecureMetadata = function(metadata) {
   var availableFrom = incoming.availableFrom || '';
   var dueBy = incoming.dueBy || '';
   var missionControlState = incoming.missionControlState || '';
+
+  // NEW: Support for Live Poll proctoring
+  // If liveProctoring is true, Live Polls will enforce fullscreen/tab-switch rules
+  var liveProctoring = incoming.liveProctoring === true ||
+    (incoming.secureSettings && incoming.secureSettings.liveProctoring === true);
+
   var secureSettings = {};
   if (incoming.secureSettings && typeof incoming.secureSettings === 'object') {
     try {
@@ -855,6 +861,10 @@ Veritas.Models.Poll.normalizeSecureMetadata = function(metadata) {
   }
   if (dueBy && !secureSettings.dueBy) {
     secureSettings.dueBy = dueBy;
+  }
+  // Persist liveProctoring setting
+  if (liveProctoring) {
+    secureSettings.liveProctoring = true;
   }
   if (Veritas.Models.Poll.isSecureSessionType(sessionType) && !secureSettings.proctoringRules) {
     secureSettings.proctoringRules = [

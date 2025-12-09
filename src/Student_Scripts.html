@@ -65,6 +65,315 @@
         var secureMetacognitionEnabled = false;
         var securePendingAnswerText = null;
 
+        // =============================================================================
+        // ZERO TOLERANCE PROCTORING - Helper Functions
+        // =============================================================================
+
+        /**
+         * Determines if proctoring should be enabled for the session
+         * Returns true if sessionType === 'SECURE_ASSESSMENT' OR metadata.liveProctoring === true
+         * @param {Object} metadata - Session metadata containing sessionType and liveProctoring flag
+         * @returns {boolean} True if proctoring should be enabled
+         */
+        function shouldEnableProctoring(metadata) {
+            if (!metadata) return false;
+            // Check for secure assessment
+            var sessionType = (metadata.sessionType || '').toString().toUpperCase();
+            if (sessionType === 'SECURE_ASSESSMENT' || sessionType === 'SECURE') {
+                return true;
+            }
+            // Check for live proctoring enabled on Live Poll
+            if (metadata.liveProctoring === true) {
+                return true;
+            }
+            return false;
+        }
+
+        /**
+         * AGGRESSIVE LOCKING - Zero Tolerance Implementation
+         * Immediately locks the session with no grace period, no warnings.
+         * - Hides question UI
+         * - Shows red "LOCKED" overlay
+         * - Persists lock to sessionStorage to prevent refresh bypass
+         * - Sends priority violation report to server
+         * @param {string} reason - The violation reason (e.g., 'exit-fullscreen', 'tab-blur')
+         */
+        function lockSession(reason) {
+            console.log('[Proctor] LOCK SESSION triggered:', reason);
+
+            // IMMEDIATELY block all interaction
+            isInteractionBlocked = true;
+            violationLogged = true;
+
+            // Persist lock state to sessionStorage to prevent refresh bypass
+            try {
+                sessionStorage.setItem('is_locally_locked', 'true');
+                sessionStorage.setItem('lock_reason', reason || 'violation');
+                sessionStorage.setItem('lock_timestamp', Date.now().toString());
+            } catch (e) {
+                console.warn('[Proctor] Could not persist lock to sessionStorage:', e);
+            }
+
+            // Hide question UI - prevent seeing answers during lock
+            if (secureOptionsList) {
+                secureOptionsList.style.visibility = 'hidden';
+            }
+            if (secureQuestionText) {
+                secureQuestionText.style.visibility = 'hidden';
+            }
+            if (secureQuestionImage) {
+                secureQuestionImage.style.visibility = 'hidden';
+            }
+
+            // Show aggressive red LOCKED overlay
+            showLockEnforcementUI('SESSION LOCKED', 'Violation detected: ' + (reason || 'policy violation') + '. Wait for teacher approval.');
+
+            // Send priority violation report to server
+            var activePollId = (currentPollState && currentPollState.pollId) ||
+                (secureLobbyContext && secureLobbyContext.pollId) ||
+                (secureQuestionState && secureQuestionState.pollId);
+
+            if (activePollId) {
+                google.script.run
+                    .withSuccessHandler(function (response) {
+                        console.log('[Proctor] Lock violation reported to server:', response);
+                        if (response && response.success) {
+                            currentLockVersion = response.lockVersion;
+                        }
+                        startProctorPolling();
+                    })
+                    .withFailureHandler(function (error) {
+                        console.error('[Proctor] Failed to report lock violation:', error);
+                        startProctorPolling();
+                    })
+                    .reportStudentViolation(activePollId, SESSION_TOKEN, reason || 'session-locked');
+            }
+        }
+
+        /**
+         * Check if session was locked before (e.g., page refresh bypass attempt)
+         * Called on page load to restore lock state
+         */
+        function checkForPersistedLock() {
+            try {
+                var isLocked = sessionStorage.getItem('is_locally_locked');
+                if (isLocked === 'true') {
+                    var lockReason = sessionStorage.getItem('lock_reason') || 'previous-violation';
+                    console.log('[Proctor] Restoring lock state from sessionStorage:', lockReason);
+                    isInteractionBlocked = true;
+                    violationLogged = true;
+                    showLockEnforcementUI('SESSION LOCKED', 'Your session was locked. Wait for teacher approval.');
+                    return true;
+                }
+            } catch (e) {
+                console.warn('[Proctor] Could not check sessionStorage for lock:', e);
+            }
+            return false;
+        }
+
+        /**
+         * Clear the persisted lock state (called when teacher approves unlock)
+         */
+        function clearPersistedLock() {
+            try {
+                sessionStorage.removeItem('is_locally_locked');
+                sessionStorage.removeItem('lock_reason');
+                sessionStorage.removeItem('lock_timestamp');
+            } catch (e) {
+                console.warn('[Proctor] Could not clear lock from sessionStorage:', e);
+            }
+        }
+
+        // =============================================================================
+        // STORE-AND-FORWARD DATA LAYER - AnswerQueue
+        // =============================================================================
+
+        /**
+         * AnswerQueue - Guarantees exam integrity by storing answers locally before sync
+         * Uses localStorage for persistence across network failures
+         * Implements optimistic UI with background sync
+         */
+        var AnswerQueue = (function() {
+            var QUEUE_PREFIX = 'veritas_queue_';
+            var SYNC_INTERVAL = 2000; // 2 seconds
+            var syncIntervalId = null;
+            var isSyncing = false;
+
+            /**
+             * Get the localStorage key for the current session
+             */
+            function getQueueKey(sessionId) {
+                return QUEUE_PREFIX + (sessionId || 'default');
+            }
+
+            /**
+             * Read the queue from localStorage
+             */
+            function readQueue(sessionId) {
+                try {
+                    var key = getQueueKey(sessionId);
+                    var raw = localStorage.getItem(key);
+                    if (raw) {
+                        return JSON.parse(raw);
+                    }
+                } catch (e) {
+                    console.error('[AnswerQueue] Failed to read queue:', e);
+                }
+                return [];
+            }
+
+            /**
+             * Write the queue to localStorage
+             */
+            function writeQueue(sessionId, queue) {
+                try {
+                    var key = getQueueKey(sessionId);
+                    localStorage.setItem(key, JSON.stringify(queue));
+                } catch (e) {
+                    console.error('[AnswerQueue] Failed to write queue:', e);
+                }
+            }
+
+            /**
+             * Push an answer to the queue
+             * @param {Object} payload - Answer payload (pollId, sessionId, questionIndex, answer, confidenceLevel)
+             */
+            function push(payload) {
+                if (!payload || !payload.sessionId) {
+                    console.warn('[AnswerQueue] Cannot push without sessionId');
+                    return;
+                }
+                var queue = readQueue(payload.sessionId);
+                // Add metadata for tracking
+                payload.queuedAt = Date.now();
+                payload.syncAttempts = 0;
+                queue.push(payload);
+                writeQueue(payload.sessionId, queue);
+                console.log('[AnswerQueue] Answer queued:', payload.actualQuestionIndex);
+            }
+
+            /**
+             * Get pending items count
+             */
+            function getPendingCount(sessionId) {
+                return readQueue(sessionId).length;
+            }
+
+            /**
+             * Process and sync queued answers to server
+             * Called periodically by sync loop
+             */
+            function syncToServer(sessionId, onSuccess, onError) {
+                if (isSyncing) {
+                    console.log('[AnswerQueue] Sync already in progress, skipping');
+                    return;
+                }
+
+                var queue = readQueue(sessionId);
+                if (queue.length === 0) {
+                    return;
+                }
+
+                isSyncing = true;
+                var item = queue[0]; // Process first item (FIFO)
+                item.syncAttempts = (item.syncAttempts || 0) + 1;
+
+                console.log('[AnswerQueue] Syncing answer:', item.actualQuestionIndex, 'attempt:', item.syncAttempts);
+
+                google.script.run
+                    .withSuccessHandler(function(response) {
+                        isSyncing = false;
+                        if (response && response.success) {
+                            // Remove successfully synced item from queue
+                            queue.shift();
+                            writeQueue(sessionId, queue);
+                            console.log('[AnswerQueue] Answer synced successfully:', item.actualQuestionIndex);
+                            if (onSuccess) onSuccess(response, item);
+                            // Continue syncing remaining items
+                            if (queue.length > 0) {
+                                setTimeout(function() {
+                                    syncToServer(sessionId, onSuccess, onError);
+                                }, 100);
+                            }
+                        } else {
+                            // Server returned error but request completed
+                            console.warn('[AnswerQueue] Server rejected answer:', response);
+                            // Check if this is a "already answered" error - remove from queue
+                            var errorMsg = (response && response.error) || '';
+                            if (/already answered|non-current question/i.test(errorMsg)) {
+                                queue.shift();
+                                writeQueue(sessionId, queue);
+                            }
+                            if (onError) onError(response, item);
+                        }
+                    })
+                    .withFailureHandler(function(error) {
+                        isSyncing = false;
+                        console.error('[AnswerQueue] Sync failed:', error);
+                        // Keep item in queue for retry, update queue with new attempt count
+                        writeQueue(sessionId, queue);
+                        if (onError) onError(error, item);
+                    })
+                    .submitIndividualTimedAnswer(
+                        item.pollId,
+                        item.sessionId,
+                        item.actualQuestionIndex,
+                        item.answer,
+                        SESSION_TOKEN,
+                        item.confidenceLevel
+                    );
+            }
+
+            /**
+             * Start the background sync loop
+             */
+            function startSyncLoop(sessionId, onSuccess, onError) {
+                if (syncIntervalId) {
+                    console.log('[AnswerQueue] Sync loop already running');
+                    return;
+                }
+                console.log('[AnswerQueue] Starting sync loop for session:', sessionId);
+                syncIntervalId = setInterval(function() {
+                    syncToServer(sessionId, onSuccess, onError);
+                }, SYNC_INTERVAL);
+            }
+
+            /**
+             * Stop the sync loop
+             */
+            function stopSyncLoop() {
+                if (syncIntervalId) {
+                    clearInterval(syncIntervalId);
+                    syncIntervalId = null;
+                    console.log('[AnswerQueue] Sync loop stopped');
+                }
+            }
+
+            /**
+             * Clear the queue for a session (e.g., when session ends)
+             */
+            function clear(sessionId) {
+                try {
+                    var key = getQueueKey(sessionId);
+                    localStorage.removeItem(key);
+                    console.log('[AnswerQueue] Queue cleared for session:', sessionId);
+                } catch (e) {
+                    console.error('[AnswerQueue] Failed to clear queue:', e);
+                }
+            }
+
+            // Public API
+            return {
+                push: push,
+                getPendingCount: getPendingCount,
+                syncToServer: syncToServer,
+                startSyncLoop: startSyncLoop,
+                stopSyncLoop: stopSyncLoop,
+                clear: clear,
+                readQueue: readQueue
+            };
+        })();
+
         function getModeName() {
             return secureSessionActive ? 'Assessment' : 'Poll';
         }
@@ -1014,14 +1323,18 @@
         function attachProctorVisibilityListeners() {
             if (blurListenerAttached) { return; }
             blurListenerAttached = true;
+            // ZERO TOLERANCE: Immediate lock on window blur
             window.addEventListener('blur', function () {
                 if ((secureSessionActive || liveSessionActive) && !isInteractionBlocked && !violationLogged) {
-                    reportViolationDebounced('window-blur');
+                    console.log('[Proctor] ZERO TOLERANCE: Window blur detected - IMMEDIATE LOCK');
+                    lockSession('window-blur');
                 }
             });
+            // ZERO TOLERANCE: Immediate lock on tab visibility change
             document.addEventListener('visibilitychange', function () {
                 if (document.hidden && (secureSessionActive || liveSessionActive) && !isInteractionBlocked && !violationLogged) {
-                    reportViolationDebounced('tab-hidden');
+                    console.log('[Proctor] ZERO TOLERANCE: Tab hidden detected - IMMEDIATE LOCK');
+                    lockSession('tab-hidden');
                 }
             });
         }
@@ -1286,7 +1599,7 @@
         }
 
         function handleSecureFullscreenChange(event) {
-            // Proctoring is now active for ALL sessions (live polls and secure assessments)
+            // ZERO TOLERANCE PROCTORING - Active for ALL sessions (live polls and secure assessments)
             console.log('[Proctor] Fullscreen change event:', {
                 isFullscreen: event.isFullscreen,
                 hidden: event.hidden,
@@ -1297,10 +1610,10 @@
                 violationLogged: violationLogged
             });
 
-            // Check for tab blur/switch (visibility hidden)
+            // Check for tab blur/switch (visibility hidden) - IMMEDIATE LOCK
             if (event.hidden && !isInteractionBlocked && !violationLogged) {
-                console.log('[Proctor] Tab blur detected - triggering violation');
-                reportViolationDebounced('tab-blur');
+                console.log('[Proctor] ZERO TOLERANCE: Tab blur detected - IMMEDIATE LOCK');
+                lockSession('tab-blur');
                 return;
             }
 
@@ -1311,11 +1624,11 @@
                 return;
             }
 
-            // Check for exiting fullscreen after having entered
-            // FIX: Also check if session is active, not just fullscreenEnteredOnce
-            if ((fullscreenEnteredOnce || secureSessionActive) && !isInteractionBlocked && !violationLogged) {
-                console.log('[Proctor] Fullscreen exit detected - triggering violation');
-                reportViolationDebounced('exit-fullscreen');
+            // Check for exiting fullscreen after having entered - IMMEDIATE LOCK
+            // No grace periods. No warnings. Zero tolerance.
+            if ((fullscreenEnteredOnce || secureSessionActive || liveSessionActive) && !isInteractionBlocked && !violationLogged) {
+                console.log('[Proctor] ZERO TOLERANCE: Fullscreen exit detected - IMMEDIATE LOCK');
+                lockSession('exit-fullscreen');
             }
         }
 

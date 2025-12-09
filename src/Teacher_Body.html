@@ -238,6 +238,14 @@
             </button>
           </div>
         </div>
+
+        <div class="w-px h-6 bg-white/10 mx-1"></div>
+        <button id="live-calculator-toggle" type="button"
+          class="flex items-center gap-2 h-9 px-3 rounded bg-white/10 text-white text-sm font-semibold hover:bg-white/15 transition-colors"
+          aria-pressed="false">
+          <span class="material-symbols-outlined text-base">calculate</span>
+          <span class="hidden sm:inline">Calculator</span>
+        </button>
       </div>
     </div>
 
@@ -1432,6 +1440,24 @@
                     <input type="text" id="wizard-access-code"
                       class="w-full rounded-lg border border-brand-light-gray bg-white px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-shadow"
                       placeholder="e.g. EXAM2025">
+                  </div>
+                  <div class="form-group md:col-span-2">
+                    <div class="flex items-start justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm">
+                      <div>
+                        <div class="flex items-center gap-2 font-semibold">
+                          <span class="material-symbols-outlined text-base">calculate</span>
+                          TI-84 Calculator
+                        </div>
+                        <p class="mt-1 text-amber-800/80">Allow students to use a secure, embedded calculator during this assessment.</p>
+                      </div>
+                      <label class="inline-flex items-center cursor-pointer select-none">
+                        <input id="wizard-calculator-toggle" type="checkbox" class="peer sr-only">
+                        <span class="h-6 w-11 rounded-full bg-amber-200 peer-checked:bg-amber-500 transition-colors relative">
+                          <span class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-all peer-checked:translate-x-5"></span>
+                        </span>
+                        <span class="ml-3 text-sm font-semibold text-amber-900 peer-checked:text-amber-800">Enable</span>
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>

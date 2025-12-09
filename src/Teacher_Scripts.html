@@ -1117,6 +1117,7 @@
     var editingPollId = null;
     var isPollDirty = false;
     var pollSessionType = 'LIVE_POLL';
+    var liveCalculatorEnabled = false;
     var secureAssessmentConfig = {
       timeLimitMinutes: 60,
       accessCode: '',
@@ -1899,6 +1900,7 @@
     var analyticsView = document.getElementById('analytics-view');
     var headerDefault = document.getElementById('header-default');
     var headerLive = document.getElementById('header-live');
+    var liveCalculatorToggle = document.getElementById('live-calculator-toggle');
     var modal = document.getElementById('poll-creator-modal');
     var linksModal = document.getElementById('student-links-modal');
     var pollSortSelect = document.getElementById('poll-sort-select');
@@ -2110,6 +2112,7 @@
     bindClick('header-start-btn', onResumePoll);
     bindClick('header-end-show-btn', onEndQuestionAndShowAnswer);
     bindClick('header-stop-btn', onEndPoll);
+    bindClick('live-calculator-toggle', onToggleLiveCalculator);
 
     // Live View More Actions Menu
     bindClick('live-more-actions-btn', function (e) {
@@ -3651,6 +3654,10 @@
       } else {
         metaItems.push('<span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-sm opacity-80">key</span><span class="opacity-70">No access code</span></span>');
       }
+
+      var calculatorEnabled = selectedPoll.calculatorEnabled === true ||
+        (selectedPoll.secureSettings && selectedPoll.secureSettings.calculatorEnabled === true);
+      metaItems.push('<span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-sm opacity-80">calculate</span><span>' + (calculatorEnabled ? 'Calculator enabled' : 'Calculator off') + '</span></span>');
 
       // Availability window
       var windowLabel = describeSecureAvailability(selectedPoll);
@@ -5405,6 +5412,56 @@
         .resetLiveQuestion(pollId, questionIndex, clearResponses);
     }
 
+    function setLiveCalculatorToggleState(isEnabled, isSecureSession) {
+      liveCalculatorEnabled = !!isEnabled;
+      if (!liveCalculatorToggle) return;
+
+      var disabled = !isSecureSession || !CURRENT_POLL_DATA.pollId;
+      liveCalculatorToggle.disabled = disabled;
+      liveCalculatorToggle.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+      liveCalculatorToggle.setAttribute('aria-pressed', (!disabled && liveCalculatorEnabled) ? 'true' : 'false');
+
+      liveCalculatorToggle.classList.toggle('bg-amber-500', liveCalculatorEnabled && !disabled);
+      liveCalculatorToggle.classList.toggle('text-veritas-navy', liveCalculatorEnabled && !disabled);
+      liveCalculatorToggle.classList.toggle('bg-white/10', !(liveCalculatorEnabled && !disabled));
+    }
+
+    function onToggleLiveCalculator() {
+      if (!liveCalculatorToggle || PREVIEW_MODE) {
+        if (PREVIEW_MODE) { previewOnlyNotice('toggle the calculator'); }
+        return;
+      }
+
+      if (!isSecureSessionTypeClient(pollSessionType)) {
+        handleError('Calculator is only available during Secure Assessments.');
+        return;
+      }
+
+      var pollId = CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId;
+      if (!pollId) {
+        handleError('No active session to update.');
+        return;
+      }
+
+      var targetState = !liveCalculatorEnabled;
+      liveCalculatorToggle.setAttribute('aria-busy', 'true');
+      liveCalculatorToggle.disabled = true;
+
+      google.script.run
+        .withSuccessHandler(function (resp) {
+          liveCalculatorToggle.removeAttribute('aria-busy');
+          liveCalculatorToggle.disabled = false;
+          var enabled = resp && resp.calculatorEnabled === true;
+          setLiveCalculatorToggleState(enabled, true);
+        })
+        .withFailureHandler(function (error) {
+          liveCalculatorToggle.removeAttribute('aria-busy');
+          liveCalculatorToggle.disabled = false;
+          handleError(error);
+        })
+        .toggleSessionCalculator(pollId, targetState);
+    }
+
     function onRevealResults() {
       var revealBtn = document.getElementById('reveal-results-btn');
       if (revealBtn) { revealBtn.disabled = true; }
@@ -5792,6 +5849,9 @@
       var isResultsRevealed = resultsVisibility === 'REVEALED';
       var isPreLive = status === 'PRE_LIVE';
       var isEnded = status === 'ENDED';
+      var calculatorEnabled = metadata.calculatorEnabled === true ||
+        data.calculatorEnabled === true ||
+        (data.secureSettings && data.secureSettings.calculatorEnabled === true);
 
       if (!isLiveSession && !isPreLive) {
         if (status === 'LIVE') {
@@ -5818,6 +5878,9 @@
       CURRENT_POLL_DATA.timerSeconds = data.timerSeconds || null;
       CURRENT_POLL_DATA.options = data.options || [];
       CURRENT_POLL_DATA.metacognition = data.metacognition || null;
+      CURRENT_POLL_DATA.calculatorEnabled = calculatorEnabled;
+
+      setLiveCalculatorToggleState(calculatorEnabled, isSecureSessionTypeClient(pollSessionType));
 
       var questionChanged = previousQuestionIndex === null || data.questionIndex !== previousQuestionIndex;
 
@@ -11316,6 +11379,7 @@
       accessCode: '',
       availabilityStart: null,
       availabilityEnd: null,
+      calculatorEnabled: false,
       proctoringRules: [],
       questions: [],
       showResultsImmediately: false,
@@ -11343,6 +11407,7 @@
         accessCode: '',
         availabilityStart: null,
         availabilityEnd: null,
+        calculatorEnabled: false,
         proctoringRules: ['FULLSCREEN_REQUIRED', 'DETECT_TAB_SWITCH'],
         questions: [],
         showResultsImmediately: false,
@@ -11373,6 +11438,8 @@
             (pollData.secureSettings && pollData.secureSettings.availableFrom) || null;
           wizardState.availabilityEnd = pollData.dueBy ||
             (pollData.secureSettings && pollData.secureSettings.dueBy) || null;
+          wizardState.calculatorEnabled = pollData.calculatorEnabled === true ||
+            (pollData.secureSettings && pollData.secureSettings.calculatorEnabled === true);
         }
 
         // Load questions
@@ -11635,6 +11702,7 @@
         var classSelect = document.getElementById('wizard-class-select');
         var timeLimitInput = document.getElementById('wizard-time-limit');
         var accessCodeInput = document.getElementById('wizard-access-code');
+        var calculatorToggle = document.getElementById('wizard-calculator-toggle');
 
         if (pollNameInput && wizardState.pollName) {
           pollNameInput.value = wizardState.pollName;
@@ -11647,6 +11715,9 @@
         }
         if (accessCodeInput && wizardState.accessCode) {
           accessCodeInput.value = wizardState.accessCode;
+        }
+        if (calculatorToggle) {
+          calculatorToggle.checked = wizardState.calculatorEnabled === true;
         }
 
         // Update mode-specific content if in edit mode
@@ -11753,6 +11824,7 @@
         if (wizardState.mode === 'secure') {
           wizardState.timeLimitMinutes = parseInt(document.getElementById('wizard-time-limit')?.value) || null;
           wizardState.accessCode = document.getElementById('wizard-access-code')?.value || '';
+          wizardState.calculatorEnabled = document.getElementById('wizard-calculator-toggle')?.checked || false;
         }
       }
     }
@@ -12283,6 +12355,7 @@
             if (wizardState.accessCode) {
               html += '<p><strong>Access Code:</strong> ' + escapeHtml(wizardState.accessCode) + '</p>';
             }
+            html += '<p><strong>Calculator:</strong> ' + (wizardState.calculatorEnabled ? 'Enabled' : 'Disabled') + '</p>';
             html += '</div></div>';
           }
 
@@ -12420,6 +12493,7 @@
       if (wizardState.mode === 'secure') {
         metadata.timeLimitMinutes = parseInt(wizardState.timeLimitMinutes) || 60;
         metadata.accessCode = wizardState.accessCode || '';
+        metadata.calculatorEnabled = wizardState.calculatorEnabled === true;
       }
 
       var publishBtn = document.getElementById('wizard-publish-btn');

@@ -11460,6 +11460,23 @@
       // In edit mode, skip step 1 (mode selection) and go directly to step 2
       if (isEdit) {
         goToWizardStep(2);
+
+        // CRITICAL: Reveal secure config section if editing a secure assessment
+        // Step 1 validation normally handles this toggle, but we skip step 1 in edit mode
+        // Replicate the validateWizardStep(1) logic for mode-specific sections
+        var liveSection = document.getElementById('live-config-section');
+        var secureSection = document.getElementById('secure-config-section');
+        var modeLabel = document.getElementById('config-mode-label');
+
+        if (wizardState.mode === 'secure') {
+          if (liveSection) liveSection.classList.add('hidden');
+          if (secureSection) secureSection.classList.remove('hidden');
+          if (modeLabel) modeLabel.textContent = 'Secure Assessment';
+        } else if (wizardState.mode === 'live') {
+          if (liveSection) liveSection.classList.remove('hidden');
+          if (secureSection) secureSection.classList.add('hidden');
+          if (modeLabel) modeLabel.textContent = 'Live Poll';
+        }
       } else {
         goToWizardStep(1);
       }

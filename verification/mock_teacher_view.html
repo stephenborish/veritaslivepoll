@@ -1,0 +1,2447 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <script>
+    window.google = { script: { run: { withSuccessHandler: () => ({ toggleSessionCalculator: () => {} }) } } };
+    var CURRENT_POLL_DATA = { pollId: 'mock-poll-123' };
+  </script>
+</head>
+<body class="light">
+<!-- 🎯 Ambient State Overlay - Provides visual feedback for system states -->
+<div id="ambient-state-overlay" class="ambient-state-overlay state-normal"></div>
+
+<!-- 🔔 Toast Notification Container - For elegant, non-intrusive alerts -->
+<div id="toast-container" class="toast-container"></div>
+
+<div class="flex h-screen w-full flex-col">
+  <!-- Header - Default State -->
+  <header id="header-default"
+    class="flex flex-wrap items-center gap-4 border-b border-solid border-veritas-navy/80 bg-veritas-navy px-6 py-4 shadow-md">
+    <div class="flex items-center gap-3">
+      <button id="dashboard-sidebar-toggle" type="button"
+        class="flex h-10 w-10 items-center justify-center rounded-full bg-brand-white/10 text-brand-white transition-colors hover:bg-brand-white/20 focus:outline-none focus:ring-2 focus:ring-brand-white/60"
+        aria-label="Hide navigation" aria-expanded="true">
+        <span class="material-symbols-outlined text-2xl">menu_open</span>
+      </button>
+      <div class="flex items-center gap-4 cursor-pointer hover:opacity-80 transition-opacity" onclick="showDashboard()"
+        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showDashboard();}" role="button"
+        tabindex="0">
+        <img alt="Malvern Prep Logo" class="h-12 w-auto"
+          src="https://raw.githubusercontent.com/stephenborish/veritasassets/f0a824864d7d66637a13b822bff99fa6830e6123/mplogo.png" />
+        <div class="flex flex-col">
+          <h1 class="text-brand-white text-xl font-bold tracking-wide uppercase" style="letter-spacing: 0.15em;">Veritas
+          </h1>
+          <p class="text-brand-white/70 text-xs tracking-wide">Teacher Dashboard</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wizard Progress Steps in Header (shown only during wizard) -->
+    <div id="header-wizard-progress" class="hidden items-center gap-1 ml-4">
+      <div class="progress-step active flex items-center gap-1" data-step="1">
+        <div
+          class="progress-circle h-6 w-6 rounded-full bg-white/20 text-white text-xs font-bold flex items-center justify-center">
+          1</div>
+        <span class="progress-label text-white/80 text-xs font-medium hidden md:inline">Mode</span>
+      </div>
+      <div class="progress-connector w-4 h-0.5 bg-white/30"></div>
+
+      <div class="progress-step flex items-center gap-1" data-step="2">
+        <div
+          class="progress-circle h-6 w-6 rounded-full bg-white/20 text-white/70 text-xs font-bold flex items-center justify-center">
+          2</div>
+        <span class="progress-label text-white/60 text-xs font-medium hidden md:inline">Configure</span>
+      </div>
+      <div class="progress-connector w-4 h-0.5 bg-white/30"></div>
+
+      <div class="progress-step flex items-center gap-1" data-step="3">
+        <div
+          class="progress-circle h-6 w-6 rounded-full bg-white/20 text-white/70 text-xs font-bold flex items-center justify-center">
+          3</div>
+        <span class="progress-label text-white/60 text-xs font-medium hidden md:inline">Questions</span>
+      </div>
+      <div class="progress-connector w-4 h-0.5 bg-white/30"></div>
+
+      <div class="progress-step flex items-center gap-1" data-step="4">
+        <div
+          class="progress-circle h-6 w-6 rounded-full bg-white/20 text-white/70 text-xs font-bold flex items-center justify-center">
+          4</div>
+        <span class="progress-label text-white/60 text-xs font-medium hidden md:inline">Review</span>
+      </div>
+    </div>
+
+
+    <div id="header-session-controls" class="flex flex-1 flex-wrap items-center justify-center gap-3 text-sm">
+      <div class="min-w-[220px]">
+        <label for="poll-select" class="sr-only">Select Poll to Start Session</label>
+        <select id="poll-select"
+          class="w-full rounded-lg border border-brand-white/30 bg-brand-white/10 px-3 py-2 text-sm text-brand-white placeholder-brand-white/70 focus:border-brand-white focus:outline-none focus:ring-2 focus:ring-veritas-gold/60">
+          <option value="">-- Choose a poll --</option>
+        </select>
+      </div>
+      <div class="flex flex-col gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="start-poll-btn" type="button"
+            class="flex items-center gap-2 h-10 px-5 rounded-lg bg-veritas-gold text-white text-sm font-semibold hover:bg-veritas-gold/90 transition-colors shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+            disabled>
+            <span class="material-symbols-outlined text-lg">play_circle</span>
+            <span>Start Session</span>
+          </button>
+          <button id="send-link-btn" type="button"
+            class="flex items-center gap-2 h-10 px-5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled>
+            <span class="material-symbols-outlined text-lg">mail</span>
+            <span>Send Links</span>
+          </button>
+          <button id="view-links-btn" type="button"
+            class="flex items-center gap-2 h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled>
+            <span class="material-symbols-outlined text-lg">visibility</span>
+            <span>View Links</span>
+          </button>
+        </div>
+        <div id="secure-session-meta"
+          class="hidden flex flex-row items-center gap-6 text-xs text-brand-white/90 bg-white/10 rounded-lg px-3 py-1.5 border border-white/20"
+          aria-live="polite" aria-hidden="true">
+          <!-- Content dynamically populated by updateSecureSessionMeta() -->
+        </div>
+      </div>
+    </div>
+
+    <div class="ml-auto flex items-center gap-3">
+      <div id="loader" class="loader" style="display: block;">
+        <div class="h-6 w-6 animate-spin rounded-full border-2 border-brand-white/80 border-t-transparent"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Header - Live Poll State (COMPACT REDESIGN) -->
+  <header id="header-live" class="shrink-0 bg-veritas-navy shadow-md border-b border-veritas-gold/30 z-20"
+    style="display: none;">
+    <div class="flex w-full items-center justify-between px-4 py-2 h-16">
+
+      <!-- Left: Poll Context -->
+      <div class="flex items-center gap-3 min-w-0">
+        <button id="dashboard-sidebar-toggle-live" type="button"
+          class="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+          aria-label="Toggle navigation">
+          <span class="material-symbols-outlined text-xl">menu</span>
+        </button>
+        <div class="min-w-0 flex flex-col justify-center">
+          <h1 id="header-poll-name" class="text-white font-bold text-sm sm:text-base truncate leading-tight">Poll Name
+          </h1>
+          <div class="flex items-center gap-2 text-xs text-white/70">
+            <span id="live-question-info"
+              class="font-mono tracking-wider uppercase bg-white/10 px-1.5 py-0.5 rounded">Q1 / 10</span>
+            <span id="question-dots" class="hidden sm:flex gap-1"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Timer & Primary Actions (Pushed to far right) -->
+      <div class="flex items-center gap-3">
+        <!-- Timer Control (Moved to Right) -->
+        <div id="timer-main-container"
+          class="flex items-center gap-2 bg-black/20 rounded-lg p-1 border border-white/10 transition-colors">
+          <button id="subtract-10s-btn" type="button"
+            class="w-8 h-8 flex items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+            title="-10s">
+            <span class="material-symbols-outlined text-lg">remove</span>
+          </button>
+          <input type="text" id="timer-display"
+            class="w-20 bg-transparent text-center text-xl font-bold text-white tabular-nums focus:outline-none focus:ring-1 focus:ring-veritas-gold rounded px-1 cursor-pointer hover:bg-white/5"
+            value="00:00" title="Click to edit time">
+          <button id="add-10s-btn" type="button"
+            class="w-8 h-8 flex items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+            title="+10s">
+            <span class="material-symbols-outlined text-lg">add</span>
+          </button>
+
+          <div class="w-px h-5 bg-white/20 mx-1"></div>
+
+          <button id="start-btn" type="button"
+            class="w-8 h-8 flex items-center justify-center rounded bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm transition-colors"
+            title="Start (Space)">
+            <span class="material-symbols-outlined text-xl">play_arrow</span>
+          </button>
+          <button id="pause-btn" type="button"
+            class="hidden w-8 h-8 flex items-center justify-center rounded bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition-colors"
+            title="Pause (Space)">
+            <span class="material-symbols-outlined text-xl">pause</span>
+          </button>
+          <button id="reset-btn" type="button"
+            class="w-8 h-8 flex items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+            title="Reset (R)">
+            <span class="material-symbols-outlined text-lg">refresh</span>
+          </button>
+        </div>
+
+        <div class="w-px h-6 bg-white/10 mx-1"></div>
+        <button id="header-next-btn" type="button"
+          class="hidden sm:flex items-center gap-2 h-9 px-4 rounded bg-white text-veritas-navy font-bold text-sm shadow hover:bg-gray-100 transition-all"
+          title="Next Question (→)">
+          <span>Next</span>
+          <span class="material-symbols-outlined text-base">arrow_forward</span>
+        </button>
+        <button id="header-end-show-btn" type="button"
+          class="flex items-center gap-2 h-9 px-4 rounded bg-veritas-gold text-white font-bold text-sm shadow hover:bg-veritas-gold/90 transition-all"
+          title="End & Reveal (E)">
+          <span class="material-symbols-outlined text-base">visibility</span>
+          <span class="hidden sm:inline">Reveal</span>
+        </button>
+
+        <!-- More Actions Dropdown Trigger -->
+        <div class="relative">
+          <button id="live-more-actions-btn"
+            class="h-9 w-9 flex items-center justify-center rounded text-white hover:bg-white/10 transition-colors"
+            aria-label="More actions" aria-haspopup="true">
+            <span class="material-symbols-outlined text-xl">more_vert</span>
+          </button>
+          <!-- Dropdown Menu -->
+          <div id="live-more-menu"
+            class="hidden absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-50 origin-top-right ring-1 ring-black ring-opacity-5 focus:outline-none"
+            role="menu">
+            <button id="header-edit-poll-btn"
+              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+              role="menuitem">
+              <span class="material-symbols-outlined text-base">edit</span> Edit Poll
+            </button>
+            <div class="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
+            <button id="header-back-btn"
+              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+              role="menuitem">
+              <span class="material-symbols-outlined text-base">arrow_back</span> Previous Question
+            </button>
+            <button id="header-reset-question-btn"
+              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+              role="menuitem">
+              <span class="material-symbols-outlined text-base">replay</span> Reset Question
+            </button>
+            <div class="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
+            <button id="add-30s-btn-preset"
+              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+              role="menuitem">
+              <span class="material-symbols-outlined text-base">av_timer</span> Add 30 Seconds
+            </button>
+            <button id="add-60s-btn-preset"
+              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+              role="menuitem">
+              <span class="material-symbols-outlined text-base">av_timer</span> Add 1 Minute
+            </button>
+            <div class="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
+            <button id="header-send-link-btn"
+              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+              role="menuitem">
+              <span class="material-symbols-outlined text-base">mail</span> Send Links
+            </button>
+            <button id="header-view-links-btn"
+              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+              role="menuitem">
+              <span class="material-symbols-outlined text-base">link</span> View Links
+            </button>
+            <div class="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
+            <button id="header-stop-btn"
+              class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+              role="menuitem">
+              <span class="material-symbols-outlined text-base">stop_circle</span> End Session
+            </button>
+          </div>
+        </div>
+
+        <div class="w-px h-6 bg-white/10 mx-1"></div>
+        <button id="header-calc-toggle" type="button"
+          class="flex items-center gap-2 h-9 px-3 rounded bg-white/10 text-white text-sm font-semibold hover:bg-white/15 transition-colors"
+          aria-pressed="false">
+          <span class="material-symbols-outlined text-base">calculate</span>
+          <span class="hidden sm:inline">Calculator</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Hidden legacy buttons to prevent JS errors -->
+    <button id="header-start-btn" class="hidden"></button>
+  </header>
+
+  <div class="flex flex-grow overflow-hidden">
+    <!-- Left Navigation Sidebar -->
+    <aside id="dashboard-sidebar"
+      class="flex h-full w-64 flex-shrink-0 flex-col border-r border-veritas-navy/25 bg-veritas-navy p-4 text-brand-white shadow-lg">
+      <div class="mb-4 px-1">
+        <p class="text-xs font-semibold uppercase tracking-[0.32em] text-brand-white/60">Navigation</p>
+      </div>
+      <nav class="flex flex-1 flex-col gap-2">
+        <button id="nav-polls-list" data-section-target="dashboard"
+          class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg font-semibold transition-colors text-left"
+          aria-current="page">
+          <span class="material-symbols-outlined">monitoring</span>
+          <span>Live Dashboard</span>
+        </button>
+        <button id="nav-create-poll"
+          class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors font-semibold">
+          <span class="material-symbols-outlined">add_circle</span>
+          <span>Create New Poll</span>
+        </button>
+        <button id="nav-rosters" data-section-target="roster"
+          class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left">
+          <span class="material-symbols-outlined">group</span>
+          <span>Classes &amp; Rosters</span>
+        </button>
+        <button id="nav-archived" data-section-target="archived"
+          class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left">
+          <span class="material-symbols-outlined">inventory_2</span>
+          <span>Archived Polls</span>
+        </button>
+        <button id="nav-analytics" data-section-target="analytics"
+          class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left">
+          <span class="material-symbols-outlined">analytics</span>
+          <span>Analytics Hub</span>
+        </button>
+      </nav>
+      <div class="mt-6 rounded-lg border border-brand-white/10 bg-brand-white/5 px-3 py-3 text-xs text-brand-white/70">
+        <p class="font-semibold uppercase tracking-[0.18em] text-brand-white/60">Tip</p>
+        <p class="mt-1 leading-relaxed">Use the controls in the top bar to quickly start a live session from any poll.
+        </p>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto">
+      <!-- Dashboard View (Default) - Redesigned -->
+      <div id="dashboard" class="p-8 max-w-7xl mx-auto">
+        <!-- Poll Library & Session Management (Combined) -->
+        <div class="dashboard-card">
+          <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <div>
+              <h2 class="text-2xl font-bold text-veritas-navy mb-1">Poll Library & Session Management</h2>
+              <p class="text-gray-600 text-sm">Use the session controls in the header to start a live session, or
+                create, edit, and manage your polls below.</p>
+            </div>
+          </div>
+
+          <!-- Poll Library Controls -->
+          <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <h3 class="text-lg font-semibold text-veritas-navy">Your Polls</h3>
+            <div class="flex flex-wrap items-center gap-3">
+              <label class="flex items-center gap-2 text-sm text-gray-600">
+                <span class="hidden sm:inline">Sort by</span>
+                <select id="poll-sort-select"
+                  class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-veritas-gold">
+                  <option value="updated_desc">Latest activity</option>
+                  <option value="updated_asc">Oldest activity</option>
+                  <option value="name_asc">Name A → Z</option>
+                  <option value="class_asc">Class A → Z</option>
+                </select>
+              </label>
+              <label class="flex items-center gap-2 text-sm text-gray-600">
+                <span class="hidden sm:inline">Class</span>
+                <select id="poll-filter-select"
+                  class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-veritas-gold">
+                  <option value="all">All classes</option>
+                </select>
+              </label>
+              <div id="poll-search-container" class="relative w-full sm:w-64">
+                <span
+                  class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-gray-400 z-10">search</span>
+                <input id="poll-search-input" type="text" placeholder="Search polls, questions..."
+                  class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-8 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-veritas-gold shadow-sm"
+                  aria-label="Search polls" autocomplete="off" />
+                <button type="button"
+                  class="absolute inset-y-0 right-0 flex items-center px-2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                  data-combobox-toggle>
+                  <span class="material-symbols-outlined text-lg">unfold_more</span>
+                </button>
+                <button id="poll-search-clear-btn" type="button"
+                  class="hidden absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                  aria-label="Clear search">
+                  <span class="material-symbols-outlined text-base leading-none">close</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ENHANCED: Toggle between Table and Card View -->
+          <div class="mb-4 flex items-center justify-end gap-2">
+            <span class="text-xs text-gray-500 font-medium">View:</span>
+            <button id="view-cards-btn"
+              class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-veritas-navy/10 text-veritas-navy transition-colors"
+              title="Card view">
+              <span class="material-symbols-outlined text-base align-middle">grid_view</span>
+            </button>
+            <button id="view-table-btn"
+              class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
+              title="Table view">
+              <span class="material-symbols-outlined text-base align-middle">table_rows</span>
+            </button>
+          </div>
+
+          <!-- Card View (Default, More Visual) -->
+          <div id="polls-card-view" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <!-- Poll cards will be dynamically inserted here -->
+          </div>
+
+          <!-- Table View (Optional, More Compact) -->
+          <div id="polls-table-view" class="overflow-hidden rounded-lg border border-gray-200 hidden">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+              <thead class="bg-gray-50 text-gray-600">
+                <tr>
+                  <th class="px-4 py-3 text-left font-semibold">Poll</th>
+                  <th class="px-4 py-3 text-left font-semibold">Class</th>
+                  <th class="px-4 py-3 text-left font-semibold">Questions</th>
+                  <th class="px-4 py-3 text-left font-semibold">Mode</th>
+                  <th class="px-4 py-3 text-left font-semibold">Last Edited</th>
+                  <th class="px-4 py-3 text-right font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="polls-table-body" class="divide-y divide-gray-100 bg-white"></tbody>
+            </table>
+          </div>
+
+          <!-- Enhanced Empty State -->
+          <div id="polls-empty-state"
+            class="hidden text-center p-12 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-2xl">
+            <div class="max-w-lg mx-auto">
+              <div class="inline-block p-4 bg-veritas-navy/10 rounded-full mb-4">
+                <span class="material-symbols-outlined text-5xl text-veritas-navy dark:text-veritas-gold">school</span>
+              </div>
+              <h3 class="text-2xl font-bold text-veritas-navy dark:text-white mb-2">Welcome to Your Poll Library</h3>
+              <p class="text-gray-600 dark:text-gray-400 mb-6">This is where your polls will live. Create your first
+                interactive poll to engage your students and gather real-time feedback.</p>
+              <button onclick="openPollCreator()" class="dashboard-cta-button primary">
+                <span class="material-symbols-outlined">add_circle</span>
+                <span>Create Your First Poll</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Individual Timed Session Monitoring View -->
+      <div id="individual-timed-view" class="p-6" style="display: none;">
+        <div
+          class="bg-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+            <div>
+              <h2 id="individual-session-poll-name"
+                class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">Individual Timed Session</h2>
+              <p id="individual-session-meta" class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm">
+                Monitoring student progress in real-time.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="secure-view-links-btn"
+                class="h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors flex items-center gap-2">
+                <span class="material-symbols-outlined text-lg">link</span>
+                <span>View Links</span>
+              </button>
+              <button id="view-book-report-btn"
+                class="h-10 px-5 rounded-lg bg-veritas-gold text-white text-sm font-bold hover:bg-veritas-gold/90 transition-colors flex items-center gap-2">
+                <span class="material-symbols-outlined text-lg">menu_book</span>
+                <span>Book View</span>
+              </button>
+              <button id="end-individual-session-btn"
+                class="h-10 px-5 rounded-lg bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors">End
+                Session</button>
+            </div>
+          </div>
+          <div id="mission-control-summary" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+            <div class="p-4 rounded-xl border border-brand-light-gray/70 bg-slate-50 dark:bg-brand-dark-gray/20">
+              <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Not Started</p>
+              <p id="summary-not-started" class="text-3xl font-bold text-slate-900 dark:text-white">0</p>
+            </div>
+            <div class="p-4 rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/30">
+              <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">In
+                Progress</p>
+              <p id="summary-in-progress" class="text-3xl font-bold text-emerald-800 dark:text-emerald-100">0</p>
+            </div>
+            <div class="p-4 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20">
+              <p class="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-200">Locked /
+                Paused</p>
+              <p id="summary-locked" class="text-3xl font-bold text-amber-800 dark:text-amber-100">0</p>
+            </div>
+            <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800/40">
+              <p class="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Submitted</p>
+              <p id="summary-completed" class="text-3xl font-bold text-slate-900 dark:text-white">0</p>
+            </div>
+          </div>
+          <div class="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] mb-6">
+            <div class="p-4 rounded-xl border border-brand-light-gray/70 bg-white dark:bg-brand-dark-gray/20 shadow-sm">
+              <div class="flex flex-col gap-3">
+                <div class="flex flex-wrap items-center gap-3">
+                  <span
+                    class="text-sm font-semibold text-brand-dark-gray dark:text-white uppercase tracking-wide">Extend
+                    time</span>
+                  <div class="flex items-center gap-2">
+                    <input id="bulk-time-input" type="number" min="1" step="1" value="5"
+                      class="w-20 rounded-lg border border-slate-200 bg-white/90 px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-veritas-gold"
+                      aria-label="Minutes to extend" />
+                    <span class="text-xs text-slate-500">minutes</span>
+                  </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-3">
+                  <button id="bulk-time-all-btn" type="button"
+                    class="inline-flex items-center gap-2 rounded-full bg-veritas-navy text-white px-4 py-2 text-sm font-semibold shadow hover:bg-veritas-navy/90 transition-colors">
+                    <span class="material-symbols-outlined text-base">schedule_add</span>
+                    <span>Add to entire class</span>
+                  </button>
+                  <button id="bulk-time-selected-btn" type="button"
+                    class="inline-flex items-center gap-2 rounded-full bg-emerald-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-emerald-700 transition-colors disabled:opacity-60"
+                    disabled>
+                    <span class="material-symbols-outlined text-base">group_add</span>
+                    <span id="bulk-selected-label">Add to selected</span>
+                  </button>
+                  <button id="bulk-selection-clear" type="button"
+                    class="text-xs font-semibold text-slate-500 underline hidden">Clear selection</button>
+                </div>
+                <p class="text-xs text-slate-500">Selecting student cards enables targeted adjustments. <span
+                    id="bulk-selection-count">0</span> students selected.</p>
+              </div>
+            </div>
+            <div
+              class="p-4 rounded-xl border border-brand-light-gray/70 bg-slate-50 dark:bg-brand-dark-gray/20 shadow-sm">
+              <h4 class="text-sm font-semibold text-brand-dark-gray dark:text-white mb-2 flex items-center gap-2">
+                <span class="material-symbols-outlined text-base text-veritas-navy">visibility_lock</span>
+                Re-entry monitoring
+              </h4>
+              <p class="text-xs text-slate-500 leading-relaxed">Locked students will surface an "Approve re-entry"
+                action on their tile so you can clear violations without leaving Mission Control.</p>
+            </div>
+          </div>
+          <div id="individual-session-students-grid"
+            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <!-- Student cards will be dynamically inserted here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Poll View (REDESIGNED FOR OPTIMAL TEACHER WORKFLOW) -->
+      <div id="live-view" class="flex flex-col h-full overflow-hidden p-0" style="display: none;">
+
+        <!-- 🚨 Proctoring notifications now use lightweight toasts. Legacy banners removed for a calmer experience. -->
+
+        <!-- New Status Bar (Replaces Session HUD) -->
+        <div id="live-status-bar"
+          class="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex items-center gap-4 sm:gap-6 overflow-x-auto text-sm shadow-sm z-10 h-12">
+          <!-- Responses Metric -->
+          <div class="flex items-center gap-2 whitespace-nowrap">
+            <span class="material-symbols-outlined text-veritas-navy dark:text-gray-400 text-lg">group</span>
+            <span class="font-bold text-gray-900 dark:text-white text-base" id="hud-response-count">0 / 0</span>
+            <span class="text-gray-500 text-xs uppercase tracking-wide font-semibold">Responded</span>
+          </div>
+
+          <div class="w-px h-4 bg-gray-300 dark:bg-gray-700"></div>
+
+          <!-- Accuracy Metric -->
+          <div class="flex items-center gap-2 whitespace-nowrap">
+            <span class="material-symbols-outlined text-emerald-600 text-lg">check_circle</span>
+            <span class="font-bold text-gray-900 dark:text-white text-base" id="hud-accuracy-value">--%</span>
+            <span class="text-gray-500 text-xs uppercase tracking-wide font-semibold">Accuracy</span>
+          </div>
+
+          <div class="w-px h-4 bg-gray-300 dark:bg-gray-700"></div>
+
+          <!-- Locked Metric -->
+          <div class="flex items-center gap-2 whitespace-nowrap">
+            <span class="material-symbols-outlined text-amber-500 text-lg">lock_person</span>
+            <span class="font-bold text-gray-900 dark:text-white text-base" id="hud-lockouts-value">0</span>
+            <span class="text-gray-500 text-xs uppercase tracking-wide font-semibold">Locked</span>
+            <button id="hud-focus-lockouts-btn" class="text-xs text-blue-600 hover:underline ml-1 font-semibold"
+              disabled>VIEW</button>
+          </div>
+
+          <!-- Spacer -->
+          <div class="flex-1"></div>
+
+          <!-- Status Message / Timer Pace (Simplified) -->
+          <div class="flex items-center gap-2 text-xs text-gray-500 whitespace-nowrap hidden sm:flex">
+            <span id="timer-status-message" class="italic hidden">Ready</span>
+            <span id="hud-pace-value"
+              class="font-mono font-semibold bg-gray-100 dark:bg-gray-800 px-1.5 rounded hidden">--:--</span>
+          </div>
+
+          <!-- Hidden placeholders for legacy JS compatibility -->
+          <div id="hud-response-ring" class="hidden"></div>
+          <div id="hud-response-percent" class="hidden"></div>
+          <div id="hud-response-caption" class="hidden"></div>
+          <div id="hud-accuracy-ring" class="hidden"></div>
+          <div id="hud-accuracy-percent" class="hidden"></div>
+          <div id="hud-accuracy-caption" class="hidden"></div>
+          <div id="hud-lockouts-caption" class="hidden"></div>
+          <div id="hud-pace-caption" class="hidden"></div>
+          <div id="hud-pace-chip" class="hidden"></div>
+        </div>
+
+        <!-- Main Content Wrapper (Scrollable) -->
+        <div class="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-800 px-4 pb-4 live-view-shell">
+
+          <div class="flex flex-col lg:flex-row gap-4 h-full live-view-grid">
+            <!-- LEFT COLUMN: Question + Answer Choices (Adaptive Width) -->
+            <div class="flex-1 min-w-0 flex flex-col gap-4">
+
+              <!-- Question Display Area -->
+              <div
+                class="bg-white dark:bg-brand-dark-gray/30 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm shrink-0 live-question-card">
+                <!-- Hidden elements for JS compatibility -->
+                <h2 id="live-question-text-compact" class="hidden"></h2>
+                <span id="live-question-info" class="hidden">Q1 / 10</span>
+                <span id="response-count-header" class="hidden">0 / 0 answered</span>
+
+                <!-- Student-view-style layout: text on left, image on right -->
+                <div id="question-layout-container" class="question-layout-grid">
+                  <div class="question-text-area">
+                    <h2 id="live-question-text" class="question-stem-text">Question text will appear here...</h2>
+                  </div>
+                  <div id="question-image-container" class="question-image-area" style="display: none;">
+                    <img id="live-question-image" alt="Question" src="" class="question-image-clickable">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Answer Choices (Student View Style) -->
+              <div class="flex-1 flex flex-col min-h-0">
+                <div class="flex-1 overflow-y-auto">
+                  <div id="results-bars" class="flex flex-col gap-2" aria-live="polite">
+                    <!-- Answer choices will be populated dynamically in student-view style -->
+                  </div>
+
+                  <!-- Results Reveal Strip -->
+                  <div id="results-reveal-strip" class="mt-4 hidden">
+                    <div
+                      class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-green-600/20 bg-green-600/5 px-4 py-2.5">
+                      <div class="min-w-[200px]">
+                        <p class="text-sm font-semibold text-green-700 dark:text-green-400">Answer revealed to students
+                        </p>
+                        <p id="results-strip-status" class="text-xs text-green-700/70">Students can now see the correct
+                          answer.</p>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <button id="hide-results-btn"
+                          class="flex items-center gap-2 rounded-lg bg-gray-200 text-gray-700 px-3 py-1.5 text-sm font-semibold hover:bg-gray-300 transition-colors"
+                          type="button">
+                          <span class="material-symbols-outlined text-base">visibility_off</span>
+                          <span>Hide</span>
+                        </button>
+                        <button id="strip-next-btn"
+                          class="flex items-center gap-2 rounded-lg bg-veritas-navy text-white px-3 py-1.5 text-sm font-semibold hover:bg-veritas-navy/90 transition-colors"
+                          type="button">
+                          <span>Next</span>
+                          <span class="material-symbols-outlined text-base">arrow_forward</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- RIGHT COLUMN: STUDENTS + CONFIDENCE PULSE (Fixed Width) -->
+            <div class="w-full lg:w-96 flex-none flex flex-col gap-4 h-full overflow-hidden">
+
+              <!-- STUDENTS PANEL -->
+              <div
+                class="flex-1 flex flex-col bg-white dark:bg-brand-dark-gray/30 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden min-h-0 live-student-panel">
+
+                <!-- Student Header with Status Summary -->
+                <div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 px-4 py-2.5">
+                  <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-brand-dark-gray dark:text-brand-white text-base font-bold">Students</h3>
+                    <div class="flex items-center gap-1.5">
+                      <button id="filter-locked-only-btn"
+                        class="h-6 w-6 flex items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200 transition-colors"
+                        title="Show locked only">
+                        <span class="material-symbols-outlined text-sm">lock</span>
+                      </button>
+                      <button id="filter-all-btn"
+                        class="h-6 w-6 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-400 hover:bg-gray-200 transition-colors"
+                        title="Show all">
+                        <span class="material-symbols-outlined text-sm">group</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Status Pills (Always Visible) -->
+                  <div class="flex flex-wrap gap-1">
+                    <div
+                      class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-xs font-semibold text-green-700 dark:text-green-400">
+                      <span>✓ <span id="correct-count">0</span></span>
+                    </div>
+                    <div
+                      class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-xs font-semibold text-red-700 dark:text-red-400">
+                      <span>🔒 <span id="locked-count">0</span></span>
+                    </div>
+                    <div
+                      class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-xs font-semibold text-amber-700 dark:text-amber-400">
+                      <span>⚠ <span id="blocked-count">0</span></span>
+                    </div>
+                    <div
+                      class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-900/30 text-xs font-semibold text-gray-700 dark:text-gray-400">
+                      <span>⏳ <span id="waiting-count">0</span></span>
+                    </div>
+                  </div>
+
+                  <!-- Hidden elements for compatibility -->
+                  <div class="hidden">
+                    <div id="student-search-container">
+                      <input type="text" id="student-search-input" />
+                    </div>
+                    <select id="student-sort-select">
+                      <option value="name">Name</option>
+                      <option value="status">Status</option>
+                      <option value="answer">Answer</option>
+                    </select>
+                    <button id="student-sort-direction-btn"></button>
+                  </div>
+                </div>
+
+                <!-- Student Grid (Scrollable, Compact Tiles) -->
+                <div id="student-status-grid" class="flex-1 overflow-y-auto px-3 py-2" aria-live="polite">
+                  <!-- Students will be populated with full names, inline status, hover actions -->
+                </div>
+              </div>
+              <!-- END STUDENTS PANEL -->
+
+              <!-- CONFIDENCE PULSE PANEL -->
+              <div id="confidence-pulse-container" class="shrink-0">
+                <!-- Confidence pulse will be rendered here dynamically -->
+              </div>
+
+            </div>
+            <!-- END RIGHT COLUMN -->
+
+          </div> <!-- Closes the new .flex.gap-6 -->
+        </div> <!-- Closes the new .flex-1.overflow-y-auto -->
+
+        <!-- Hidden elements for compatibility -->
+        <div class="hidden">
+          <div id="live-session-overview">
+            <p id="live-overview-responses">0 / 0</p>
+            <div id="live-overview-response-progress" style="width: 0%;"></div>
+            <p id="live-overview-response-caption">0%</p>
+            <p id="live-overview-accuracy">0%</p>
+            <p id="live-overview-accuracy-caption"></p>
+            <p id="live-overview-lockouts">0</p>
+            <p id="live-overview-lockouts-caption"></p>
+            <p id="live-overview-waiting">0</p>
+            <p id="live-overview-waiting-caption"></p>
+            <button id="focus-lockouts-btn" type="button" disabled></button>
+          </div>
+          <div id="response-count">0 / 0</div>
+          <div id="violations-alert-panel"></div>
+          <div id="violations-summary"></div>
+          <div id="violations-quick-list"></div>
+          <button id="dismiss-violations-alert"></button>
+          <button id="toggle-exited-panel-btn"></button>
+          <div id="exited-students-list"></div>
+          <button id="toggle-sidebar-btn"></button>
+          <span id="sidebar-toggle-icon"></span>
+          <span id="sidebar-toggle-label"></span>
+        </div>
+
+      </div>
+
+      <!-- ⚡ Floating Action Button (FAB) Cluster - Primary Actions for Live Session -->
+      <div id="fab-container" class="fab-container" style="display: none;">
+        <!-- FAB Menu Items -->
+        <div id="fab-menu" class="fab-menu">
+          <!-- Activity Feed Toggle -->
+          <div class="fab-action">
+            <span class="fab-label">Activity Feed</span>
+            <button id="fab-activity-btn" class="fab-button fab-info" title="View recent activity"
+              aria-label="Toggle activity feed">
+              <span class="material-symbols-outlined">notifications</span>
+            </button>
+          </div>
+
+          <!-- Next Question Action -->
+          <div class="fab-action">
+            <span class="fab-label">Next Question →</span>
+            <button id="fab-next-btn" class="fab-button fab-primary" title="Advance to next question"
+              aria-label="Next question">
+              <span class="material-symbols-outlined">arrow_forward</span>
+            </button>
+          </div>
+
+          <!-- Show Results Action -->
+          <div class="fab-action">
+            <span class="fab-label">Show Results</span>
+            <button id="fab-show-results-btn" class="fab-button fab-success" title="Reveal answer to students"
+              aria-label="Show results">
+              <span class="material-symbols-outlined">visibility</span>
+            </button>
+          </div>
+
+          <!-- Reset Question Action -->
+          <div class="fab-action">
+            <span class="fab-label">Reset Question</span>
+            <button id="fab-reset-btn" class="fab-button fab-info" title="Reset current question"
+              aria-label="Reset question">
+              <span class="material-symbols-outlined">replay</span>
+            </button>
+          </div>
+
+          <!-- Stop Session Action -->
+          <div class="fab-action">
+            <span class="fab-label">End Session</span>
+            <button id="fab-stop-btn" class="fab-button fab-danger" title="End the entire session"
+              aria-label="Stop session">
+              <span class="material-symbols-outlined">stop</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- FAB Main Toggle Button -->
+        <button id="fab-main-toggle" class="fab-main" aria-label="Quick actions menu" aria-expanded="false">
+          <span class="material-symbols-outlined">bolt</span>
+        </button>
+      </div>
+
+      <!-- 📊 Real-Time Activity Feed - Shows recent student actions -->
+      <div id="activity-feed" class="activity-feed">
+        <div class="activity-feed-header">
+          <div class="activity-feed-title">
+            <span class="material-symbols-outlined">notifications</span>
+            <span>Recent Activity</span>
+            <span id="activity-feed-count" class="activity-feed-badge">0</span>
+          </div>
+          <button id="activity-feed-close" class="activity-feed-close" aria-label="Close activity feed">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div id="activity-feed-list" class="activity-feed-list">
+          <!-- Activity items will be dynamically inserted here -->
+          <div class="activity-feed-empty">
+            <span class="material-symbols-outlined">inbox</span>
+            <p>No recent activity</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- End of Live Poll View Redesign -->
+      <!-- Roster Manager View -->
+      <div id="roster-manager" class="p-6 grid grid-cols-1 lg:grid-cols-4 gap-6" style="display: none;">
+        <div
+          class="lg:col-span-1 bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-5 shadow-sm flex flex-col">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-bold text-brand-dark-gray dark:text-brand-white">Classes</h2>
+            <button id="add-class-btn"
+              class="flex items-center justify-center h-9 w-9 rounded-full bg-primary text-brand-white hover:bg-primary/90 transition-colors"
+              title="Add class">
+              <span class="material-symbols-outlined text-base">add</span>
+            </button>
+          </div>
+          <div id="roster-class-list" class="flex-1 overflow-y-auto space-y-2">
+            <!-- Classes will render here -->
+          </div>
+        </div>
+        <div
+          class="lg:col-span-3 bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+            <div>
+              <h2 id="roster-class-title" class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">Select a
+                class</h2>
+              <p class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm">Manage student names and emails for
+                rostered classes.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="rename-class-btn"
+                class="hidden h-9 px-4 rounded-lg bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-sm font-semibold hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors">Rename</button>
+              <button id="delete-class-btn"
+                class="hidden h-9 px-4 rounded-lg bg-red-600/10 text-red-600 dark:text-red-300 dark:bg-red-500/20 text-sm font-semibold hover:bg-red-600/20 dark:hover:bg-red-500/30 transition-colors">Delete</button>
+            </div>
+          </div>
+          <div id="roster-empty-state"
+            class="border border-dashed border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg p-10 text-center text-brand-dark-gray/60 dark:text-brand-white/60">
+            <p>Choose a class on the left to view its roster.</p>
+          </div>
+          <div id="roster-table-wrapper" class="hidden flex flex-col gap-4">
+            <div class="overflow-x-auto border border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg">
+              <table class="min-w-full divide-y divide-brand-light-gray dark:divide-brand-dark-gray text-sm">
+                <thead
+                  class="bg-brand-light-gray/50 dark:bg-brand-dark-gray/40 text-brand-dark-gray dark:text-brand-white">
+                  <tr>
+                    <th class="px-4 py-2 text-left font-semibold w-1/2">Student Name</th>
+                    <th class="px-4 py-2 text-left font-semibold w-1/2">Email</th>
+                    <th class="px-4 py-2 text-center font-semibold w-16">Remove</th>
+                  </tr>
+                </thead>
+                <tbody id="roster-table-body"
+                  class="divide-y divide-brand-light-gray/70 dark:divide-brand-dark-gray/50"></tbody>
+              </table>
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <button id="add-student-row-btn"
+                  class="h-10 px-4 rounded-lg bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-sm font-semibold hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors">+
+                  Add Student</button>
+                <button id="bulk-add-students-btn"
+                  class="h-10 px-4 rounded-lg bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-sm font-semibold hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors">Bulk
+                  Add Students</button>
+                <span id="roster-status" class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60"></span>
+              </div>
+              <button id="save-roster-btn"
+                class="h-10 px-5 rounded-lg bg-primary text-brand-white text-sm font-bold hover:bg-primary/90 transition-colors">Save
+                Roster</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Archived Polls View -->
+      <div id="archived-view" class="p-6 grid grid-cols-1 lg:grid-cols-4 gap-6" style="display: none;">
+        <div
+          class="lg:col-span-1 bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-5 shadow-sm flex flex-col">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-bold text-brand-dark-gray dark:text-brand-white">Archived Polls</h2>
+            <button id="refresh-archived-btn"
+              class="flex items-center justify-center h-9 w-9 rounded-full bg-primary text-brand-white hover:bg-primary/90 transition-colors"
+              title="Refresh">
+              <span class="material-symbols-outlined text-base">refresh</span>
+            </button>
+          </div>
+          <label
+            class="block text-xs font-semibold uppercase tracking-wide text-brand-dark-gray/60 dark:text-brand-white/60 mb-2">Class
+            Filter</label>
+          <select id="archived-class-filter"
+            class="mb-4 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+            <option value="all">All classes</option>
+          </select>
+          <div id="archived-list" class="flex-1 overflow-y-auto space-y-2">
+            <!-- Archived polls list -->
+          </div>
+        </div>
+        <div
+          class="lg:col-span-3 bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm">
+          <div id="archived-empty-state"
+            class="border border-dashed border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg p-10 text-center text-brand-dark-gray/60 dark:text-brand-white/60">
+            <p>Select an archived poll to review student performance.</p>
+          </div>
+          <div id="archived-detail" class="hidden flex flex-col gap-6">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 id="archived-poll-title" class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white"></h2>
+                <p id="archived-poll-meta" class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm"></p>
+              </div>
+              <div class="flex items-center gap-4">
+                <div class="text-right text-sm text-brand-dark-gray/60 dark:text-brand-white/60">
+                  <p><span class="font-semibold text-brand-dark-gray dark:text-brand-white">Questions:</span> <span
+                      id="archived-question-count"></span></p>
+                  <p><span class="font-semibold text-brand-dark-gray dark:text-brand-white">Responses:</span> <span
+                      id="archived-response-count"></span></p>
+                </div>
+                <button id="view-analytics-btn"
+                  class="h-12 px-6 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-brand-white text-sm font-semibold hover:from-blue-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2">
+                  <span class="material-symbols-outlined text-lg">analytics</span>
+                  <span>View Analytics</span>
+                </button>
+              </div>
+            </div>
+            <div id="archived-questions-container" class="space-y-4">
+              <!-- Question breakdowns will render here -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Analytics Hub View -->
+      <div id="analytics-view" class="p-6 flex flex-col gap-6" style="display: none;">
+        <!-- Filter Bar -->
+        <div
+          class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-4 shadow-sm">
+          <div class="flex flex-wrap items-center gap-3 mb-3">
+            <select id="analytics-class-filter"
+              class="rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+              <option value="all">All Classes</option>
+            </select>
+            <div class="flex items-center gap-2">
+              <label class="text-xs font-semibold text-brand-dark-gray/60 dark:text-brand-white/60">From:</label>
+              <input type="date" id="analytics-date-from"
+                class="rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="text-xs font-semibold text-brand-dark-gray/60 dark:text-brand-white/60">To:</label>
+              <input type="date" id="analytics-date-to"
+                class="rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+            </div>
+            <button id="analytics-apply-filters-btn"
+              class="px-4 py-2 rounded-lg bg-primary text-brand-white hover:bg-primary/90 transition-colors text-sm font-semibold">
+              Apply Filters
+            </button>
+            <button id="analytics-clear-filters-btn"
+              class="px-4 py-2 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/50 transition-colors text-sm">
+              Clear
+            </button>
+            <button id="analytics-refresh-btn"
+              class="flex items-center justify-center h-9 w-9 rounded-full bg-primary text-brand-white hover:bg-primary/90 transition-colors"
+              title="Refresh">
+              <span class="material-symbols-outlined text-base">refresh</span>
+            </button>
+            <button id="analytics-export-btn"
+              class="ml-auto flex items-center gap-2 px-4 py-2 rounded-lg bg-veritas-gold text-brand-white hover:bg-veritas-gold/90 transition-colors text-sm font-semibold"
+              title="Export Data">
+              <span class="material-symbols-outlined text-base">download</span>
+              <span>Export</span>
+            </button>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs font-semibold text-brand-dark-gray/60 dark:text-brand-white/60">Quick Filters:</span>
+            <button
+              class="analytics-date-preset px-3 py-1 rounded-md bg-brand-light-gray/30 dark:bg-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray dark:hover:bg-brand-dark-gray transition-colors text-xs font-semibold"
+              data-days="7">
+              Last 7 Days
+            </button>
+            <button
+              class="analytics-date-preset px-3 py-1 rounded-md bg-brand-light-gray/30 dark:bg-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray dark:hover:bg-brand-dark-gray transition-colors text-xs font-semibold"
+              data-days="30">
+              Last 30 Days
+            </button>
+            <button
+              class="analytics-date-preset px-3 py-1 rounded-md bg-brand-light-gray/30 dark:bg-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray dark:hover:bg-brand-dark-gray transition-colors text-xs font-semibold"
+              data-days="90">
+              Last 90 Days
+            </button>
+            <button
+              class="analytics-date-preset px-3 py-1 rounded-md bg-brand-light-gray/30 dark:bg-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray dark:hover:bg-brand-dark-gray transition-colors text-xs font-semibold"
+              data-preset="thisMonth">
+              This Month
+            </button>
+            <button
+              class="analytics-date-preset px-3 py-1 rounded-md bg-brand-light-gray/30 dark:bg-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray dark:hover:bg-brand-dark-gray transition-colors text-xs font-semibold"
+              data-preset="lastMonth">
+              Last Month
+            </button>
+            <button
+              class="analytics-date-preset px-3 py-1 rounded-md bg-brand-light-gray/30 dark:bg-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray dark:hover:bg-brand-dark-gray transition-colors text-xs font-semibold"
+              data-preset="all">
+              All Time
+            </button>
+          </div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div
+          class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 shadow-sm overflow-hidden">
+          <div class="flex border-b border-brand-light-gray dark:border-brand-dark-gray/40">
+            <button id="analytics-tab-overview"
+              class="flex-1 px-6 py-3 font-semibold text-sm transition-colors analytics-tab bg-primary text-brand-white">
+              Overview
+            </button>
+            <button id="analytics-tab-items"
+              class="flex-1 px-6 py-3 font-semibold text-sm transition-colors analytics-tab text-brand-dark-gray/70 dark:text-brand-white/70 hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/30">
+              Item Analysis
+            </button>
+            <button id="analytics-tab-students"
+              class="flex-1 px-6 py-3 font-semibold text-sm transition-colors analytics-tab text-brand-dark-gray/70 dark:text-brand-white/70 hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/30">
+              Student Trends
+            </button>
+          </div>
+
+          <!-- Overview Tab Content -->
+          <div id="analytics-content-overview" class="p-6 analytics-tab-content">
+            <div id="analytics-overview-loading" class="text-center py-12">
+              <div class="flex flex-row gap-2 justify-center mb-4">
+                <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce"></div>
+                <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.3s]"></div>
+                <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.5s]"></div>
+              </div>
+              <p class="text-brand-dark-gray/60 dark:text-brand-white/60">Loading analytics...</p>
+            </div>
+            <div id="analytics-overview-content" class="hidden">
+              <!-- KPI Cards -->
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div id="analytics-kpi-container"></div>
+              </div>
+
+              <!-- Topic Heat Strip -->
+              <div class="bg-background-light dark:bg-brand-dark-gray/40 rounded-xl p-5 mb-6">
+                <h3 class="text-lg font-bold text-brand-dark-gray dark:text-brand-white mb-4">Topic Mastery Over Time
+                </h3>
+                <div id="analytics-topic-heat" class="overflow-x-auto">
+                  <p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No topic data available</p>
+                </div>
+              </div>
+
+              <!-- Item Quality Scatter -->
+              <div class="bg-background-light dark:bg-brand-dark-gray/40 rounded-xl p-5">
+                <h3 class="text-lg font-bold text-brand-dark-gray dark:text-brand-white mb-4">Item Quality Map</h3>
+                <div id="analytics-item-scatter" style="height: 300px;">
+                  <p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No item data available</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Item Analysis Tab Content -->
+          <div id="analytics-content-items" class="p-6 analytics-tab-content hidden">
+            <div id="analytics-items-loading" class="text-center py-12">
+              <div class="flex flex-row gap-2 justify-center mb-4">
+                <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce"></div>
+                <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.3s]"></div>
+                <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.5s]"></div>
+              </div>
+              <p class="text-brand-dark-gray/60 dark:text-brand-white/60">Loading item analysis...</p>
+            </div>
+            <div id="analytics-items-content" class="hidden">
+              <!-- Item Table -->
+              <div class="overflow-x-auto">
+                <table id="analytics-items-table" class="min-w-full text-sm">
+                  <thead
+                    class="sticky top-0 bg-brand-light-gray dark:bg-brand-dark-gray text-xs uppercase tracking-wide text-brand-dark-gray/80 dark:text-brand-white/70">
+                    <tr>
+                      <th
+                        class="py-3 px-4 text-left cursor-pointer hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/80"
+                        data-sort="qNum">Q#</th>
+                      <th
+                        class="py-3 px-4 text-left cursor-pointer hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/80"
+                        data-sort="topic">Topic</th>
+                      <th
+                        class="py-3 px-4 text-left cursor-pointer hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/80"
+                        data-sort="correctPct">Correct%</th>
+                      <th
+                        class="py-3 px-4 text-left cursor-pointer hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/80"
+                        data-sort="rbis">Disc</th>
+                      <th class="py-3 px-4 text-left">Choices</th>
+                      <th
+                        class="py-3 px-4 text-left cursor-pointer hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/80"
+                        data-sort="medianTimeSec">Time(s)</th>
+                      <th class="py-3 px-4 text-left">Flags</th>
+                    </tr>
+                  </thead>
+                  <tbody id="analytics-items-tbody"
+                    class="divide-y divide-brand-light-gray/70 dark:divide-brand-dark-gray/40">
+                    <!-- Items will be rendered here -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Student Trends Tab Content -->
+          <div id="analytics-content-students" class="p-6 analytics-tab-content hidden">
+            <div id="analytics-students-loading" class="text-center py-12">
+              <div class="flex flex-row gap-2 justify-center mb-4">
+                <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce"></div>
+                <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.3s]"></div>
+                <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.5s]"></div>
+              </div>
+              <p class="text-brand-dark-gray/60 dark:text-brand-white/60">Loading student data...</p>
+            </div>
+            <div id="analytics-students-content" class="hidden">
+              <!-- STUDENT INSIGHTS PANEL (2025) -->
+              <div id="student-insights-panel" class="mb-6">
+                <h2 class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white mb-4">Student Insights</h2>
+
+                <!-- Insight Cards Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                  <!-- Struggling Students -->
+                  <div
+                    class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/50 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
+                    onclick="filterStudentsByFlag('struggling')">
+                    <div class="flex items-center gap-3 mb-2">
+                      <span
+                        class="material-symbols-outlined text-red-600 dark:text-red-400 text-2xl">trending_down</span>
+                      <h3 class="font-bold text-red-800 dark:text-red-300 text-sm">Struggling</h3>
+                    </div>
+                    <p class="text-3xl font-black text-red-700 dark:text-red-400" id="struggling-count">0</p>
+                    <p class="text-xs text-red-600/70 dark:text-red-400/70 mt-1">Accuracy < 50%</p>
+                  </div>
+
+                  <!-- Non-Responders -->
+                  <div
+                    class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700/50 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
+                    onclick="filterStudentsByFlag('non-responder')">
+                    <div class="flex items-center gap-3 mb-2">
+                      <span
+                        class="material-symbols-outlined text-orange-600 dark:text-orange-400 text-2xl">person_off</span>
+                      <h3 class="font-bold text-orange-800 dark:text-orange-300 text-sm">Non-Responders</h3>
+                    </div>
+                    <p class="text-3xl font-black text-orange-700 dark:text-orange-400" id="non-responder-count">0</p>
+                    <p class="text-xs text-orange-600/70 dark:text-orange-400/70 mt-1">Participation < 50%</p>
+                  </div>
+
+                  <!-- Rule Violators -->
+                  <div
+                    class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700/50 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
+                    onclick="filterStudentsByFlag('rule-violator')">
+                    <div class="flex items-center gap-3 mb-2">
+                      <span
+                        class="material-symbols-outlined text-yellow-600 dark:text-yellow-400 text-2xl">warning</span>
+                      <h3 class="font-bold text-yellow-800 dark:text-yellow-300 text-sm">Rule Violators</h3>
+                    </div>
+                    <p class="text-3xl font-black text-yellow-700 dark:text-yellow-400" id="rule-violator-count">0</p>
+                    <p class="text-xs text-yellow-600/70 dark:text-yellow-400/70 mt-1">2+ violations</p>
+                  </div>
+
+                  <!-- High Performers -->
+                  <div
+                    class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/50 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
+                    onclick="filterStudentsByFlag('high-performer')">
+                    <div class="flex items-center gap-3 mb-2">
+                      <span
+                        class="material-symbols-outlined text-green-600 dark:text-green-400 text-2xl">trending_up</span>
+                      <h3 class="font-bold text-green-800 dark:text-green-300 text-sm">High Performers</h3>
+                    </div>
+                    <p class="text-3xl font-black text-green-700 dark:text-green-400" id="high-performer-count">0</p>
+                    <p class="text-xs text-green-600/70 dark:text-green-400/70 mt-1">Accuracy ≥ 85%</p>
+                  </div>
+                </div>
+
+                <!-- Student List with Filtering -->
+                <div
+                  class="bg-white dark:bg-brand-dark-gray/30 border border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg overflow-hidden">
+                  <div
+                    class="bg-brand-light-gray/50 dark:bg-brand-dark-gray/50 px-4 py-3 flex items-center justify-between">
+                    <h3 class="font-bold text-brand-dark-gray dark:text-brand-white">All Students</h3>
+                    <div class="flex items-center gap-2">
+                      <button id="clear-student-filter-btn"
+                        class="hidden px-3 py-1 bg-brand-dark-gray/10 hover:bg-brand-dark-gray/20 dark:bg-brand-white/10 dark:hover:bg-brand-white/20 rounded text-xs font-semibold transition-colors"
+                        onclick="clearStudentFilter()">
+                        Clear Filter
+                      </button>
+                      <span id="student-insights-filter-badge"
+                        class="hidden px-2 py-1 bg-primary/20 text-primary text-xs font-bold rounded"></span>
+                    </div>
+                  </div>
+                  <div id="student-insights-table-container" class="overflow-x-auto max-h-96 overflow-y-auto">
+                    <table class="w-full">
+                      <thead class="bg-brand-light-gray/30 dark:bg-brand-dark-gray/30 sticky top-0">
+                        <tr>
+                          <th
+                            class="px-4 py-2 text-left text-xs font-bold text-brand-dark-gray/70 dark:text-brand-white/70 cursor-pointer hover:bg-brand-light-gray/50 dark:hover:bg-brand-dark-gray/50"
+                            onclick="sortStudentsBy('name')">
+                            Student <span class="material-symbols-outlined text-xs">unfold_more</span>
+                          </th>
+                          <th
+                            class="px-4 py-2 text-center text-xs font-bold text-brand-dark-gray/70 dark:text-brand-white/70 cursor-pointer hover:bg-brand-light-gray/50 dark:hover:bg-brand-dark-gray/50"
+                            onclick="sortStudentsBy('accuracy')">
+                            Accuracy <span class="material-symbols-outlined text-xs">unfold_more</span>
+                          </th>
+                          <th
+                            class="px-4 py-2 text-center text-xs font-bold text-brand-dark-gray/70 dark:text-brand-white/70 cursor-pointer hover:bg-brand-light-gray/50 dark:hover:bg-brand-dark-gray/50"
+                            onclick="sortStudentsBy('participation')">
+                            Participation <span class="material-symbols-outlined text-xs">unfold_more</span>
+                          </th>
+                          <th
+                            class="px-4 py-2 text-center text-xs font-bold text-brand-dark-gray/70 dark:text-brand-white/70 cursor-pointer hover:bg-brand-light-gray/50 dark:hover:bg-brand-dark-gray/50"
+                            onclick="sortStudentsBy('violations')">
+                            Violations <span class="material-symbols-outlined text-xs">unfold_more</span>
+                          </th>
+                          <th
+                            class="px-4 py-2 text-left text-xs font-bold text-brand-dark-gray/70 dark:text-brand-white/70">
+                            Flags
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody id="student-insights-table-body">
+                        <!-- Populated by JS -->
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Student Search -->
+              <div id="analytics-student-search-container" class="relative mb-6">
+                <input type="text" id="analytics-student-search" placeholder="Search for a student..."
+                  class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 pl-4 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-sm"
+                  autocomplete="off" />
+                <button type="button"
+                  class="absolute inset-y-0 right-0 flex items-center px-2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                  data-combobox-toggle>
+                  <span class="material-symbols-outlined text-lg">unfold_more</span>
+                </button>
+              </div>
+
+              <!-- Student Detail -->
+              <div id="analytics-student-detail" class="hidden">
+                <div id="analytics-student-summary"
+                  class="bg-background-light dark:bg-brand-dark-gray/40 rounded-xl p-5 mb-6">
+                  <!-- Student summary card -->
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div class="bg-background-light dark:bg-brand-dark-gray/40 rounded-xl p-5">
+                    <h3 class="text-lg font-bold text-brand-dark-gray dark:text-brand-white mb-4">Consistency Trend</h3>
+                    <div id="analytics-student-sparkline"></div>
+                  </div>
+                  <div class="bg-background-light dark:bg-brand-dark-gray/40 rounded-xl p-5">
+                    <h3 class="text-lg font-bold text-brand-dark-gray dark:text-brand-white mb-4">Topic Mastery</h3>
+                    <div id="analytics-student-topics"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div id="analytics-student-empty"
+                class="text-center py-12 text-brand-dark-gray/60 dark:text-brand-white/60">
+                <p>Search for a student to view their analytics</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Poll Creation Wizard View - Compact Design -->
+      <div id="create-poll-view" class="hidden h-full flex flex-col bg-white dark:bg-brand-dark-gray">
+
+        <!-- Compact Header with Inline Progress -->
+        <div
+          class="wizard-header bg-gradient-to-r from-primary to-primary/90 px-4 py-3 flex items-center justify-between gap-4">
+          <div class="flex items-center gap-3 shrink-0">
+            <h2 id="wizard-title" class="text-lg font-bold text-white">Create Poll</h2>
+          </div>
+
+          <!-- Inline Progress Steps (hidden - now in main header) -->
+          <div class="wizard-progress hidden items-center gap-1 flex-1 justify-center max-w-xl">
+            <div class="progress-step active flex items-center gap-1.5" data-step="1">
+              <div
+                class="progress-circle h-7 w-7 rounded-full bg-white/20 text-white text-xs font-bold flex items-center justify-center">
+                1</div>
+              <span class="progress-label text-white/80 text-xs font-medium hidden sm:inline">Mode</span>
+            </div>
+            <div class="progress-connector w-6 h-0.5 bg-white/30"></div>
+
+            <div class="progress-step flex items-center gap-1.5" data-step="2">
+              <div
+                class="progress-circle h-7 w-7 rounded-full bg-white/20 text-white/70 text-xs font-bold flex items-center justify-center">
+                2</div>
+              <span class="progress-label text-white/60 text-xs font-medium hidden sm:inline">Configure</span>
+            </div>
+            <div class="progress-connector w-6 h-0.5 bg-white/30"></div>
+
+            <div class="progress-step flex items-center gap-1.5" data-step="3">
+              <div
+                class="progress-circle h-7 w-7 rounded-full bg-white/20 text-white/70 text-xs font-bold flex items-center justify-center">
+                3</div>
+              <span class="progress-label text-white/60 text-xs font-medium hidden sm:inline">Questions</span>
+            </div>
+            <div class="progress-connector w-6 h-0.5 bg-white/30"></div>
+
+            <div class="progress-step flex items-center gap-1.5" data-step="4">
+              <div
+                class="progress-circle h-7 w-7 rounded-full bg-white/20 text-white/70 text-xs font-bold flex items-center justify-center">
+                4</div>
+              <span class="progress-label text-white/60 text-xs font-medium hidden sm:inline">Review</span>
+            </div>
+          </div>
+
+          <button type="button" onclick="closePollWizard()"
+            class="shrink-0 h-8 w-8 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+            title="Close">
+            <span class="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+
+        <!-- Wizard Body - More Compact -->
+        <div class="wizard-body flex-1 overflow-y-auto px-4 py-4 bg-slate-50 dark:bg-black/10">
+
+          <!-- STEP 1: MODE SELECTION -->
+          <div id="wizard-step-1" class="wizard-step active max-w-4xl mx-auto">
+            <div class="text-center mb-10">
+              <h3 class="text-3xl font-bold text-brand-dark-gray dark:text-white mb-3">Choose Your Poll Mode</h3>
+              <p class="text-lg text-brand-dark-gray/60 dark:text-brand-white/60">Select the type of assessment
+                experience for your students</p>
+            </div>
+
+            <div class="mode-cards grid grid-cols-1 md:grid-cols-2 gap-8">
+              <button type="button"
+                class="mode-card group relative overflow-hidden text-left p-8 rounded-2xl border-2 border-brand-light-gray hover:border-blue-500 hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
+                data-mode="live" onclick="selectPollMode('live')">
+                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <span class="material-symbols-outlined text-9xl text-blue-500">groups</span>
+                </div>
+                <div class="relative z-10">
+                  <div
+                    class="h-14 w-14 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-3xl">groups</span>
+                  </div>
+                  <h4 class="text-xl font-bold text-brand-dark-gray dark:text-white mb-2">Live Poll</h4>
+                  <p class="text-brand-dark-gray/70 dark:text-brand-white/70 mb-6 leading-relaxed">Synchronous,
+                    teacher-paced questions for real-time class engagement and instant feedback.</p>
+                  <div class="flex flex-wrap gap-2">
+                    <span
+                      class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider">Real-time</span>
+                    <span
+                      class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider">Interactive</span>
+                  </div>
+                </div>
+              </button>
+
+              <button type="button"
+                class="mode-card group relative overflow-hidden text-left p-8 rounded-2xl border-2 border-brand-light-gray hover:border-amber-500 hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
+                data-mode="secure" onclick="selectPollMode('secure')">
+                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <span class="material-symbols-outlined text-9xl text-amber-500">lock</span>
+                </div>
+                <div class="relative z-10">
+                  <div
+                    class="h-14 w-14 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-3xl">lock</span>
+                  </div>
+                  <h4 class="text-xl font-bold text-brand-dark-gray dark:text-white mb-2">Secure Assessment</h4>
+                  <p class="text-brand-dark-gray/70 dark:text-brand-white/70 mb-6 leading-relaxed">Asynchronous, timed
+                    exam with secure proctoring features and mission control monitoring.</p>
+                  <div class="flex flex-wrap gap-2">
+                    <span
+                      class="px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-bold uppercase tracking-wider">Timed</span>
+                    <span
+                      class="px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-bold uppercase tracking-wider">Proctored</span>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- STEP 2: CONFIGURATION -->
+          <div id="wizard-step-2" class="wizard-step hidden max-w-3xl mx-auto">
+            <h3 class="text-2xl font-bold text-brand-dark-gray dark:text-white mb-6">Configure Your <span
+                id="config-mode-label" class="text-blue-600">Poll</span></h3>
+
+            <div
+              class="bg-slate-50 dark:bg-white/5 rounded-xl p-6 border border-brand-light-gray dark:border-brand-dark-gray/40 space-y-6">
+              <!-- Poll Name -->
+              <div class="form-group">
+                <label for="wizard-poll-name"
+                  class="block text-sm font-bold text-brand-dark-gray dark:text-white mb-2">Poll Name <span
+                    class="text-red-500">*</span></label>
+                <input type="text" id="wizard-poll-name"
+                  class="w-full rounded-lg border border-brand-light-gray bg-white px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-shadow"
+                  placeholder="e.g., Chapter 5 Review" maxlength="100">
+              </div>
+
+              <!-- Class Selection -->
+              <div class="form-group">
+                <label for="wizard-class-select"
+                  class="block text-sm font-bold text-brand-dark-gray dark:text-white mb-2">Class <span
+                    class="text-red-500">*</span></label>
+                <div class="relative">
+                  <select id="wizard-class-select"
+                    class="w-full rounded-lg border border-brand-light-gray bg-white px-4 py-3 text-base appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-shadow">
+                    <option value="">-- Select a class --</option>
+                  </select>
+                  <div
+                    class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-brand-dark-gray/50">
+                    <span class="material-symbols-outlined">expand_more</span>
+                  </div>
+                </div>
+                <p class="text-xs text-brand-dark-gray/50 mt-2 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm">info</span>
+                  Classes populate from your dashboard rosters.
+                </p>
+              </div>
+
+              <!-- Secure Config -->
+              <div id="secure-config-section"
+                class="config-section hidden pt-6 mt-6 border-t border-brand-light-gray dark:border-brand-dark-gray/20">
+                <h4 class="text-sm font-bold uppercase tracking-wider text-amber-600 mb-4 flex items-center gap-2">
+                  <span class="material-symbols-outlined text-lg">shield_lock</span> Secure Settings
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div class="form-group">
+                    <label for="wizard-time-limit"
+                      class="block text-sm font-bold text-brand-dark-gray dark:text-white mb-2">Time Limit (minutes)
+                      <span class="text-red-500">*</span></label>
+                    <input type="number" id="wizard-time-limit"
+                      class="w-full rounded-lg border border-brand-light-gray bg-white px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-shadow"
+                      min="1" placeholder="45">
+                  </div>
+                  <!-- Add Access Code Field (missing in original) -->
+                  <div class="form-group">
+                    <label for="wizard-access-code"
+                      class="block text-sm font-bold text-brand-dark-gray dark:text-white mb-2">Access Code
+                      (Optional)</label>
+                    <input type="text" id="wizard-access-code"
+                      class="w-full rounded-lg border border-brand-light-gray bg-white px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-shadow"
+                      placeholder="e.g. EXAM2025">
+                  </div>
+                  <div class="form-group md:col-span-2">
+                    <div
+                      class="flex items-start justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm">
+                      <div>
+                        <div class="flex items-center gap-2 font-semibold">
+                          <span class="material-symbols-outlined text-base">calculate</span>
+                          TI-84 Calculator
+                        </div>
+                        <p class="mt-1 text-amber-800/80">Allow students to use a secure, embedded calculator during
+                          this assessment.</p>
+                      </div>
+                      <label class="inline-flex items-center cursor-pointer select-none">
+                        <input id="wizard-calculator-toggle" type="checkbox" class="peer sr-only">
+                        <span
+                          class="h-6 w-11 rounded-full bg-amber-200 peer-checked:bg-amber-500 transition-colors relative">
+                          <span
+                            class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-all peer-checked:translate-x-5"></span>
+                        </span>
+                        <span
+                          class="ml-3 text-sm font-semibold text-amber-900 peer-checked:text-amber-800">Enable</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 3: QUESTIONS - Full Editor -->
+          <div id="wizard-step-3" class="wizard-step hidden">
+            <div class="max-w-5xl mx-auto">
+              <div class="flex items-center justify-between mb-6">
+                <div>
+                  <h3 class="text-2xl font-bold text-brand-dark-gray dark:text-white">Build Your Questions</h3>
+                  <p class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm mt-1">Add questions with multiple
+                    choice answers</p>
+                </div>
+                <span
+                  class="px-3 py-1.5 bg-green-50 text-green-700 text-xs font-bold rounded-full uppercase border border-green-200">
+                  Full Editor
+                </span>
+              </div>
+
+              <!-- Questions Container - Populated by JS -->
+              <div id="wizard-questions-list" class="questions-list space-y-6"></div>
+
+              <button type="button"
+                class="btn-add-question w-full mt-6 py-5 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-brand-light-gray rounded-xl hover:border-primary hover:bg-primary/5 transition-all group bg-white"
+                onclick="addWizardQuestion()">
+                <div
+                  class="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 group-hover:bg-primary/20 transition-all">
+                  <span class="material-symbols-outlined text-2xl">add</span>
+                </div>
+                <span class="font-bold text-brand-dark-gray group-hover:text-primary transition-colors">Add New
+                  Question</span>
+                <span class="text-xs text-brand-dark-gray/50">Click to add a multiple choice question</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- STEP 4: REVIEW -->
+          <div id="wizard-step-4" class="wizard-step hidden max-w-3xl mx-auto">
+            <h3 class="text-2xl font-bold text-brand-dark-gray dark:text-white mb-6">Review & Publish</h3>
+
+            <div class="review-section space-y-6">
+              <div class="review-card bg-white border border-brand-light-gray rounded-xl p-6 shadow-sm">
+                <h4
+                  class="review-heading text-lg font-bold text-brand-dark-gray mb-4 border-b border-brand-light-gray pb-2">
+                  Basic Information</h4>
+                <dl class="review-details grid grid-cols-[140px_1fr] gap-4 text-sm">
+                  <dt class="font-semibold text-brand-dark-gray/60">Mode:</dt>
+                  <dd id="review-mode" class="font-medium text-brand-dark-gray">-</dd>
+                  <dt class="font-semibold text-brand-dark-gray/60">Name:</dt>
+                  <dd id="review-name" class="font-medium text-brand-dark-gray">-</dd>
+                  <dt class="font-semibold text-brand-dark-gray/60">Class:</dt>
+                  <dd id="review-class" class="font-medium text-brand-dark-gray">-</dd>
+                </dl>
+              </div>
+
+              <div class="review-card bg-white border border-brand-light-gray rounded-xl p-6 shadow-sm">
+                <h4
+                  class="review-heading text-lg font-bold text-brand-dark-gray mb-4 border-b border-brand-light-gray pb-2">
+                  Questions</h4>
+                <div id="review-questions-summary" class="text-sm text-brand-dark-gray/80">
+                  <!-- Populated via JS -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="wizard-footer bg-white dark:bg-brand-dark-gray border-t border-brand-light-gray dark:border-brand-dark-gray/40 px-8 py-4 flex items-center justify-between">
+          <button type="button"
+            class="btn-secondary h-12 px-6 rounded-lg font-bold text-brand-dark-gray hover:bg-brand-light-gray/50 transition-colors disabled:opacity-50"
+            id="wizard-back-btn" onclick="wizardGoBack()" disabled>Back</button>
+          <div class="flex items-center gap-3">
+            <button type="button"
+              class="btn-secondary h-12 px-6 rounded-lg font-bold text-red-600 hover:bg-red-50 transition-colors"
+              onclick="closePollWizard()">Cancel</button>
+            <button type="button"
+              class="btn-primary h-12 px-8 rounded-lg bg-primary text-white font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
+              id="wizard-next-btn" onclick="wizardGoNext()">Next</button>
+            <button type="button"
+              class="btn-primary hidden h-12 px-8 rounded-lg bg-green-600 text-white font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 hover:bg-green-700 transition-all flex items-center gap-2"
+              id="wizard-publish-btn" onclick="publishWizardPoll()">
+              <span class="material-symbols-outlined">rocket_launch</span>
+              Publish Poll
+            </button>
+          </div>
+        </div>
+      </div>
+  </div>
+  </main>
+
+</div>
+</div>
+
+<!-- Student Manager Modal -->
+<div id="student-manager-modal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-slate-900/60" data-student-manager-close="true"></div>
+  <div
+    class="relative w-full max-w-2xl mx-auto my-12 bg-white dark:bg-brand-dark-gray rounded-2xl shadow-2xl border border-brand-light-gray dark:border-brand-dark-gray/40">
+    <div class="flex items-start justify-between gap-4 p-6 border-b border-slate-100 dark:border-brand-dark-gray/60">
+      <div>
+        <p class="text-xs font-semibold tracking-[0.2em] uppercase text-slate-500">Student Manager</p>
+        <h3 id="student-manager-name" class="text-2xl font-bold text-brand-dark-gray dark:text-white">Student Name</h3>
+        <p id="student-manager-status" class="text-sm font-semibold text-slate-500">Status</p>
+      </div>
+      <button id="student-manager-close"
+        class="h-10 w-10 inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-brand-dark-gray/70 text-slate-600 dark:text-white hover:bg-slate-200">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div class="p-6 space-y-6">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="p-3 rounded-xl bg-slate-50 dark:bg-brand-dark-gray/40">
+          <p class="text-xs font-semibold uppercase text-slate-500">Question</p>
+          <p id="student-manager-progress" class="text-xl font-bold text-brand-dark-gray dark:text-white">--</p>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-50 dark:bg-brand-dark-gray/40">
+          <p class="text-xs font-semibold uppercase text-slate-500">Time Remaining</p>
+          <p id="student-manager-time" class="text-xl font-bold text-brand-dark-gray dark:text-white">--:--</p>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-50 dark:bg-brand-dark-gray/40">
+          <p class="text-xs font-semibold uppercase text-slate-500">Extra Time</p>
+          <p id="student-manager-extra" class="text-xl font-bold text-brand-dark-gray dark:text-white">+0m</p>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-50 dark:bg-brand-dark-gray/40">
+          <p class="text-xs font-semibold uppercase text-slate-500">Connection</p>
+          <div class="flex items-center gap-2">
+            <span id="student-manager-connection-dot" class="h-3 w-3 rounded-full bg-slate-300"></span>
+            <p id="student-manager-connection" class="text-sm font-semibold text-brand-dark-gray dark:text-white">
+              Unknown</p>
+          </div>
+        </div>
+      </div>
+      <div class="rounded-2xl border border-slate-200 dark:border-brand-dark-gray/60 p-4">
+        <p class="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-3">Time Controls</p>
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="student-manager-add-5"
+            class="inline-flex items-center gap-2 rounded-full bg-emerald-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-emerald-700">
+            <span class="material-symbols-outlined text-base">add</span>
+            +5 min
+          </button>
+          <button id="student-manager-add-10"
+            class="inline-flex items-center gap-2 rounded-full bg-emerald-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-emerald-700">
+            <span class="material-symbols-outlined text-base">add</span>
+            +10 min
+          </button>
+          <button id="student-manager-pause"
+            class="inline-flex items-center gap-2 rounded-full bg-amber-500 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-amber-600">
+            <span class="material-symbols-outlined text-base">pause_circle</span>
+            Pause Timer
+          </button>
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <button id="student-manager-unlock"
+          class="inline-flex items-center gap-2 rounded-full bg-blue-600 text-white px-5 py-2 text-sm font-semibold shadow hover:bg-blue-700">
+          <span class="material-symbols-outlined text-base">lock_open</span>
+          Approve Unlock
+        </button>
+        <button id="student-manager-force-submit"
+          class="inline-flex items-center gap-2 rounded-full bg-red-600 text-white px-5 py-2 text-sm font-semibold shadow hover:bg-red-700">
+          <span class="material-symbols-outlined text-base">task</span>
+          Force Submit
+        </button>
+        <p id="student-manager-message" class="text-sm text-slate-500"></p>
+      </div>
+      <div id="student-manager-loading" class="hidden text-sm text-slate-500">Working...</div>
+    </div>
+  </div>
+</div>
+
+<!-- Book View Modal -->
+<div id="book-view-modal" class="fixed inset-0 z-50 hidden overflow-y-auto">
+  <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onclick="closeBookView()"></div>
+  <div
+    class="relative w-full max-w-[95vw] mx-auto my-8 bg-white dark:bg-brand-dark-gray rounded-2xl shadow-2xl border border-brand-light-gray dark:border-brand-dark-gray/40">
+    <!-- Header -->
+    <div
+      class="sticky top-0 z-10 flex items-start justify-between gap-4 p-6 border-b border-slate-200 dark:border-brand-dark-gray/60 bg-white dark:bg-brand-dark-gray">
+      <div>
+        <div class="flex items-center gap-3 mb-2">
+          <span class="material-symbols-outlined text-3xl text-veritas-gold">menu_book</span>
+          <h2 id="book-view-title" class="text-3xl font-bold text-brand-dark-gray dark:text-white">Assessment Book View
+          </h2>
+        </div>
+        <p id="book-view-subtitle" class="text-sm text-slate-500">Comprehensive student performance analysis</p>
+      </div>
+      <button onclick="closeBookView()"
+        class="h-10 w-10 inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-brand-dark-gray/70 text-slate-600 dark:text-white hover:bg-slate-200 transition-colors">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <div id="book-view-loading" class="p-12 text-center">
+      <div class="flex flex-row gap-2 justify-center mb-4">
+        <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce"></div>
+        <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.3s]"></div>
+        <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.5s]"></div>
+      </div>
+      <p class="mt-4 text-slate-600 dark:text-slate-400">Loading book view data...</p>
+    </div>
+
+    <div id="book-view-content" class="hidden p-6 space-y-6">
+      <!-- Class Overview Section -->
+      <div class="bg-gradient-to-r from-veritas-navy to-veritas-navy/80 rounded-xl p-6 text-white shadow-lg">
+        <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+          <span class="material-symbols-outlined">analytics</span>
+          Class Overview
+        </h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+            <p class="text-sm opacity-80">Total Students</p>
+            <p id="book-class-total-students" class="text-3xl font-bold">0</p>
+          </div>
+          <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+            <p class="text-sm opacity-80">Class Average</p>
+            <p id="book-class-average" class="text-3xl font-bold">0%</p>
+          </div>
+          <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+            <p class="text-sm opacity-80">Median Score</p>
+            <p id="book-class-median" class="text-3xl font-bold">0</p>
+          </div>
+          <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+            <p class="text-sm opacity-80">Std. Deviation</p>
+            <p id="book-class-stddev" class="text-3xl font-bold">0.0</p>
+          </div>
+        </div>
+        <div id="book-class-interpretation" class="mt-4 p-3 bg-white/10 backdrop-blur-sm rounded-lg text-sm">
+          <!-- Interpretation messages will be inserted here -->
+        </div>
+      </div>
+
+      <!-- View Toggle -->
+      <div class="flex gap-3 border-b border-slate-200 dark:border-brand-dark-gray/40">
+        <button id="book-tab-students"
+          class="px-6 py-3 font-semibold text-sm transition-colors border-b-2 border-veritas-gold text-veritas-gold">
+          Student Roster
+        </button>
+        <button id="book-tab-questions"
+          class="px-6 py-3 font-semibold text-sm transition-colors border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-veritas-gold hover:border-veritas-gold/30">
+          Question Analysis
+        </button>
+        <button id="book-tab-matrix"
+          class="px-6 py-3 font-semibold text-sm transition-colors border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-veritas-gold hover:border-veritas-gold/30">
+          Response Matrix
+        </button>
+      </div>
+
+      <!-- Student Roster Tab -->
+      <div id="book-content-students" class="book-tab-content">
+        <div
+          class="bg-white dark:bg-brand-dark-gray/30 rounded-xl border border-slate-200 dark:border-brand-dark-gray/40 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-slate-100 dark:bg-brand-dark-gray/50">
+                <tr>
+                  <th
+                    class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">
+                    Rank</th>
+                  <th
+                    class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">
+                    Student Name</th>
+                  <th
+                    class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">
+                    Score</th>
+                  <th
+                    class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">
+                    Percentage</th>
+                  <th
+                    class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">
+                    Percentile</th>
+                  <th
+                    class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">
+                    Actions</th>
+                </tr>
+              </thead>
+              <tbody id="book-students-table-body" class="divide-y divide-slate-200 dark:divide-brand-dark-gray/40">
+                <!-- Student rows will be inserted here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Question Analysis Tab -->
+      <div id="book-content-questions" class="book-tab-content hidden">
+        <div class="space-y-4" id="book-questions-container">
+          <!-- Question analysis cards will be inserted here -->
+        </div>
+      </div>
+
+      <!-- Response Matrix Tab -->
+      <div id="book-content-matrix" class="book-tab-content hidden">
+        <div
+          class="bg-white dark:bg-brand-dark-gray/30 rounded-xl border border-slate-200 dark:border-brand-dark-gray/40 overflow-hidden">
+          <div class="p-4 bg-slate-100 dark:bg-brand-dark-gray/50">
+            <h3 class="text-lg font-bold text-brand-dark-gray dark:text-white">Complete Response Matrix</h3>
+            <p class="text-sm text-slate-600 dark:text-slate-400">Each cell shows student's answer with
+              correct/incorrect indicator</p>
+          </div>
+          <div class="overflow-x-auto p-4">
+            <table class="w-full text-xs">
+              <thead>
+                <tr id="book-matrix-header-row">
+                  <th
+                    class="sticky left-0 bg-slate-100 dark:bg-brand-dark-gray/50 px-3 py-2 text-left font-semibold border-r border-slate-300 dark:border-brand-dark-gray/60">
+                    Student</th>
+                  <!-- Question headers will be injected here -->
+                  <th class="bg-slate-100 dark:bg-brand-dark-gray/50 px-3 py-2 text-center font-semibold">Total</th>
+                </tr>
+              </thead>
+              <tbody id="book-matrix-table-body">
+                <!-- Matrix rows will be inserted here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Individual Student Detail View (expandable) -->
+      <div id="book-student-detail" class="hidden fixed inset-0 z-50 overflow-y-auto">
+        <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onclick="closeStudentDetail()"></div>
+        <div
+          class="relative w-full max-w-5xl mx-auto my-8 bg-white dark:bg-brand-dark-gray rounded-2xl shadow-2xl border border-brand-light-gray dark:border-brand-dark-gray/40">
+          <div
+            class="sticky top-0 z-10 flex items-start justify-between gap-4 p-6 border-b border-slate-200 dark:border-brand-dark-gray/60 bg-white dark:bg-brand-dark-gray">
+            <div>
+              <h3 id="student-detail-name" class="text-2xl font-bold text-brand-dark-gray dark:text-white">Student Name
+              </h3>
+              <div class="flex items-center gap-4 mt-2 text-sm text-slate-600 dark:text-slate-400">
+                <span>Score: <strong id="student-detail-score">0/0</strong></span>
+                <span>Percentage: <strong id="student-detail-percentage">0%</strong></span>
+                <span>Rank: <strong id="student-detail-rank">0</strong></span>
+                <span>Percentile: <strong id="student-detail-percentile">0th</strong></span>
+              </div>
+            </div>
+            <button onclick="closeStudentDetail()"
+              class="h-10 w-10 inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-brand-dark-gray/70 text-slate-600 dark:text-white hover:bg-red-500 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-red-500"
+              title="Close" aria-label="Close student detail view">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          <div class="p-6 max-h-[70vh] overflow-y-auto">
+            <div id="student-detail-responses" class="space-y-4">
+              <!-- Question-by-question responses will be inserted here -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="book-view-error" class="hidden p-12 text-center">
+      <span class="material-symbols-outlined text-6xl text-red-500">error</span>
+      <p class="mt-4 text-lg font-semibold text-slate-800 dark:text-slate-200">Error Loading Data</p>
+      <p id="book-view-error-message" class="text-slate-600 dark:text-slate-400"></p>
+    </div>
+  </div>
+
+
+
+  <!-- Poll Creator Modal -->
+  <div id="poll-creator-modal"
+    class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div
+      class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div class="sticky top-0 bg-primary px-6 py-4 border-b border-primary/20 z-10 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <img alt="Malvern Prep Logo" class="h-8 w-auto"
+            src="https://raw.githubusercontent.com/stephenborish/veritasassets/f0a824864d7d66637a13b822bff99fa6830e6123/mplogo.png" />
+          <input type="text" id="new-poll-name" placeholder="Chapter 5 Quiz"
+            class="bg-transparent text-brand-white text-xl font-bold border-none focus:ring-0 p-0 placeholder-brand-white/70 min-w-[300px]" />
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="save-status" class="text-sm text-brand-white/80 mr-2">All changes saved</span>
+          <button id="close-modal-btn"
+            class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-brand-white/20 text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-brand-white/30 transition-colors">
+            <span class="truncate">Cancel</span>
+          </button>
+          <button id="save-poll-btn"
+            class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-brand-white text-primary text-sm font-bold leading-normal tracking-[0.015em] hover:bg-brand-light-gray transition-colors">
+            <span class="truncate">Publish Poll</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="flex flex-grow overflow-hidden">
+        <!-- Question Navigator Sidebar -->
+        <aside
+          class="w-64 flex-shrink-0 border-r border-solid border-brand-light-gray dark:border-brand-dark-gray/20 bg-brand-white dark:bg-background-dark overflow-y-auto">
+          <div class="flex h-full flex-col justify-between p-4">
+            <div class="mb-4">
+              <p
+                class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-dark-gray/60 dark:text-brand-white/60 mb-2">
+                Question Order</p>
+              <div class="flex items-start justify-between gap-2">
+                <p id="question-sort-help"
+                  class="flex-1 text-xs leading-relaxed text-brand-dark-gray/60 dark:text-brand-white/60">Drag questions
+                  to reorder them manually.</p>
+                <button id="question-sort-reset-btn" type="button"
+                  class="h-9 px-3 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 bg-brand-white dark:bg-brand-dark-gray/30 text-xs font-semibold text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray/40 dark:hover:bg-brand-dark-gray/50 transition-colors">Reset
+                  order</button>
+              </div>
+            </div>
+            <div id="question-navigator" class="flex flex-col gap-2">
+              <!-- Question items will be added dynamically -->
+            </div>
+            <button id="add-question-btn"
+              class="flex w-full items-center justify-center gap-2 rounded-lg h-10 px-4 bg-primary/20 dark:bg-primary/30 text-primary dark:text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/30 dark:hover:bg-primary/40 transition-colors mt-4">
+              <span class="truncate">+ Add Question</span>
+            </button>
+            <!-- NEW FEATURE: Import from Question Bank -->
+            <button id="import-from-bank-btn"
+              class="flex w-full items-center justify-center gap-2 rounded-lg h-10 px-4 bg-amber-500/20 dark:bg-amber-500/30 text-amber-700 dark:text-amber-200 text-sm font-semibold leading-normal tracking-[0.015em] hover:bg-amber-500/30 dark:hover:bg-amber-500/40 transition-colors mt-2">
+              <span class="material-symbols-outlined text-base">inventory_2</span>
+              <span class="truncate">Import from Bank</span>
+            </button>
+            <!-- AP BIOLOGY 2025 TOPIC TAGGER -->
+            <button id="ai-suggest-btn"
+              class="flex w-full items-center justify-center gap-2 rounded-lg h-10 px-4 bg-green-500/20 dark:bg-green-500/30 text-green-700 dark:text-green-200 text-sm font-semibold leading-normal tracking-[0.015em] hover:bg-green-500/30 dark:hover:bg-green-500/40 transition-colors mt-2">
+              <span class="material-symbols-outlined text-base">science</span>
+              <span class="truncate">🧬 AP Bio Topics</span>
+            </button>
+            <!-- NEW FEATURE: Stimulus/Passage for grouped questions -->
+            <button id="add-stimulus-btn"
+              class="flex w-full items-center justify-center gap-2 rounded-lg h-10 px-4 bg-emerald-500/20 dark:bg-emerald-500/30 text-emerald-700 dark:text-emerald-200 text-sm font-semibold leading-normal tracking-[0.015em] hover:bg-emerald-500/30 dark:hover:bg-emerald-500/40 transition-colors mt-2">
+              <span class="material-symbols-outlined text-base">article</span>
+              <span class="truncate">Add Stimulus/Passage</span>
+            </button>
+          </div>
+        </aside>
+
+        <!-- Editing Workspace -->
+        <main class="flex-1 p-8 overflow-y-auto">
+          <div class="form-group mb-6">
+            <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white"
+              for="class-select">Class</label>
+            <select id="class-select"
+              class="w-full max-w-md rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+              <option value="">-- Select Class --</option>
+            </select>
+          </div>
+
+          <div
+            class="bg-brand-white dark:bg-brand-dark-gray/20 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm mb-6">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p
+                  class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-dark-gray/60 dark:text-brand-white/60">
+                  Session Mode</p>
+                <h3 class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white mt-1">Choose how students will
+                  experience this activity</h3>
+                <p class="text-sm text-brand-dark-gray/70 dark:text-brand-white/70 mt-2">Use Live Poll for synchronous,
+                  teacher-paced checks. Secure Assessment enables timed, randomized, proctored exams.</p>
+              </div>
+              <div
+                class="inline-flex rounded-full border border-brand-light-gray dark:border-brand-dark-gray/50 overflow-hidden">
+                <button type="button" id="builder-mode-live" data-session-type="LIVE_POLL"
+                  class="builder-session-toggle px-4 py-2 text-sm font-semibold transition-colors focus:outline-none">Live
+                  Poll</button>
+                <button type="button" id="builder-mode-secure" data-session-type="SECURE_ASSESSMENT"
+                  class="builder-session-toggle px-4 py-2 text-sm font-semibold transition-colors focus:outline-none">Secure
+                  Assessment</button>
+              </div>
+            </div>
+
+            <div id="secure-assessment-settings" class="mt-5 hidden">
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div>
+                  <label for="secure-time-limit-input"
+                    class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Time Limit
+                    (minutes)</label>
+                  <input id="secure-time-limit-input" type="number" min="5" step="5" placeholder="60"
+                    class="mt-2 w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                  <p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-2">Required for Secure
+                    Assessments. Each student receives a personal countdown.</p>
+                </div>
+                <div>
+                  <label for="secure-access-code-input"
+                    class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Access Code
+                    (optional)</label>
+                  <input id="secure-access-code-input" type="text" maxlength="24" placeholder="BIO101"
+                    class="mt-2 w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 uppercase tracking-[0.2em]" />
+                  <p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-2">Students must enter this code
+                    before the exam begins.</p>
+                </div>
+                <div>
+                  <label for="secure-available-input"
+                    class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Available From</label>
+                  <input id="secure-available-input" type="datetime-local"
+                    class="mt-2 w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                  <p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-2">Students cannot start before
+                    this window opens.</p>
+                </div>
+                <div>
+                  <label for="secure-due-input"
+                    class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Due By</label>
+                  <input id="secure-due-input" type="datetime-local"
+                    class="mt-2 w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                  <p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-2">Sessions end automatically
+                    after this deadline.</p>
+                </div>
+              </div>
+
+              <div
+                class="mt-5 flex items-start gap-3 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
+                <span class="material-symbols-outlined text-blue-600 dark:text-blue-300">shield_lock</span>
+                <div>
+                  <p class="text-sm font-semibold text-blue-900 dark:text-blue-200">Secure Assessment requirements</p>
+                  <p class="text-sm text-blue-900/80 dark:text-blue-100/70 mt-1">Students must stay in fullscreen, avoid
+                    tab switching, and will appear in Mission Control for live monitoring.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
+          <div id="question-builder-workspace">
+            <!-- Question editing workspace will be populated dynamically -->
+          </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NEW FEATURE: Question Bank Import Modal -->
+  <div id="question-bank-modal"
+    class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div
+      class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div class="sticky top-0 bg-amber-600 px-6 py-4 border-b border-amber-700 z-10 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-white text-2xl">inventory_2</span>
+          <div>
+            <h2 class="text-white text-xl font-bold">Question Bank</h2>
+            <p class="text-white/80 text-sm">Import questions from previous polls</p>
+          </div>
+        </div>
+        <button id="close-question-bank-btn"
+          class="h-10 px-4 rounded-lg bg-white/20 text-white text-sm font-bold hover:bg-white/30 transition-colors">
+          Close
+        </button>
+      </div>
+      <div class="p-6 flex-1 overflow-y-auto">
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white">Filter by
+            Poll</label>
+          <select id="bank-poll-filter"
+            class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-white dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50">
+            <option value="">All Polls</option>
+          </select>
+        </div>
+        <div id="bank-questions-container" class="space-y-3 max-h-[50vh] overflow-y-auto">
+          <p class="text-center text-brand-dark-gray/60 dark:text-brand-white/60 py-8">Loading questions...</p>
+        </div>
+      </div>
+      <div
+        class="sticky bottom-0 bg-brand-white dark:bg-brand-dark-gray px-6 py-4 border-t border-brand-light-gray dark:border-brand-dark-gray/40 flex justify-between items-center">
+        <span id="bank-selected-count" class="text-sm text-brand-dark-gray/70 dark:text-brand-white/70">0 questions
+          selected</span>
+        <button id="import-selected-btn"
+          class="h-10 px-6 rounded-lg bg-amber-600 text-white text-sm font-bold hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled>
+          Import Selected
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AP BIOLOGY 2025 TOPIC TAGGER -->
+  <div id="ai-suggestions-modal"
+    class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div
+      class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div
+        class="sticky top-0 bg-gradient-to-r from-green-700 to-emerald-600 px-6 py-4 border-b border-green-800 z-10 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-white text-2xl">science</span>
+          <div>
+            <h2 class="text-white text-xl font-bold">AP Biology 2025 Topic Tagger</h2>
+            <p class="text-white/80 text-sm">Align questions with the official AP Bio curriculum</p>
+          </div>
+        </div>
+        <button id="close-ai-modal-btn"
+          class="h-10 px-4 rounded-lg bg-white/20 text-white text-sm font-bold hover:bg-white/30 transition-colors">
+          Close
+        </button>
+      </div>
+      <div class="p-6 flex-1 overflow-y-auto">
+        <div
+          class="mb-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700/30">
+          <p class="text-sm font-medium text-green-900 dark:text-green-200 mb-2">Current Question:</p>
+          <p id="ai-current-question" class="text-sm text-green-800 dark:text-green-300 italic">"No question text
+            entered"</p>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-sm font-semibold mb-2 text-brand-dark-gray dark:text-brand-white">Select AP Bio
+            Unit</label>
+          <select id="apbio-unit-select"
+            class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-white dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/50">
+            <option value="">-- Select Unit --</option>
+            <option value="Unit 1">Unit 1: Chemistry of Life (8-11%)</option>
+            <option value="Unit 2">Unit 2: Cell Structure and Function (10-13%)</option>
+            <option value="Unit 3">Unit 3: Cellular Energetics (12-16%)</option>
+            <option value="Unit 4">Unit 4: Cell Communication and Cell Cycle (10-15%)</option>
+            <option value="Unit 5">Unit 5: Heredity (8-11%)</option>
+            <option value="Unit 6">Unit 6: Gene Expression and Regulation (12-16%)</option>
+            <option value="Unit 7">Unit 7: Natural Selection (13-20%)</option>
+            <option value="Unit 8">Unit 8: Ecology (10-15%)</option>
+          </select>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-sm font-semibold mb-2 text-brand-dark-gray dark:text-brand-white">Select
+            Topic</label>
+          <select id="apbio-topic-select"
+            class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-white dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/50"
+            disabled>
+            <option value="">-- Select Unit First --</option>
+          </select>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-sm font-semibold mb-2 text-brand-dark-gray dark:text-brand-white">Big Idea
+            Connection</label>
+          <div class="grid grid-cols-2 gap-2">
+            <label
+              class="flex items-center gap-2 p-3 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors">
+              <input type="checkbox" id="bigidea-evo"
+                class="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500">
+              <span class="text-sm text-brand-dark-gray dark:text-brand-white"><strong>EVO</strong> - Evolution</span>
+            </label>
+            <label
+              class="flex items-center gap-2 p-3 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors">
+              <input type="checkbox" id="bigidea-ene"
+                class="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500">
+              <span class="text-sm text-brand-dark-gray dark:text-brand-white"><strong>ENE</strong> - Energetics</span>
+            </label>
+            <label
+              class="flex items-center gap-2 p-3 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors">
+              <input type="checkbox" id="bigidea-ist"
+                class="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500">
+              <span class="text-sm text-brand-dark-gray dark:text-brand-white"><strong>IST</strong> - Information
+                Storage</span>
+            </label>
+            <label
+              class="flex items-center gap-2 p-3 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors">
+              <input type="checkbox" id="bigidea-syi"
+                class="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500">
+              <span class="text-sm text-brand-dark-gray dark:text-brand-white"><strong>SYI</strong> - Systems
+                Interactions</span>
+            </label>
+          </div>
+        </div>
+
+        <div id="apbio-preview"
+          class="p-4 bg-slate-50 dark:bg-slate-800/30 rounded-lg border border-slate-200 dark:border-slate-700/30 hidden">
+          <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Tag Preview
+          </p>
+          <p id="apbio-tag-preview" class="text-sm font-medium text-brand-dark-gray dark:text-brand-white"></p>
+        </div>
+      </div>
+      <div
+        class="sticky bottom-0 bg-brand-white dark:bg-brand-dark-gray px-6 py-4 border-t border-brand-light-gray dark:border-brand-dark-gray/40 flex justify-end gap-3">
+        <button id="cancel-apbio-btn"
+          class="h-10 px-6 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 text-brand-dark-gray dark:text-brand-white text-sm font-bold hover:bg-brand-light-gray/30 transition-colors">
+          Cancel
+        </button>
+        <button id="generate-ai-btn"
+          class="h-10 px-6 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 text-white text-sm font-bold hover:from-green-700 hover:to-emerald-700 transition-colors flex items-center gap-2">
+          <span class="material-symbols-outlined text-base">label</span>
+          Apply Topic Tag
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NEW FEATURE: Stimulus/Passage Modal -->
+  <div id="stimulus-modal"
+    class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div
+      class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div
+        class="sticky top-0 bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-4 border-b border-emerald-700 z-10 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-white text-2xl">article</span>
+          <div>
+            <h2 class="text-white text-xl font-bold">Add Stimulus/Passage</h2>
+            <p class="text-white/80 text-sm">Create a shared passage for multiple questions</p>
+          </div>
+        </div>
+        <button id="close-stimulus-modal-btn"
+          class="h-10 px-4 rounded-lg bg-white/20 text-white text-sm font-bold hover:bg-white/30 transition-colors">
+          Close
+        </button>
+      </div>
+      <div class="p-6 flex-1 overflow-y-auto">
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white">Stimulus
+            Title</label>
+          <input type="text" id="stimulus-title-input"
+            class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-white dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+            placeholder="e.g., Reading Passage 1, Experiment Data Table">
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white">Passage
+            Content</label>
+          <textarea id="stimulus-content-input" rows="8"
+            class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-white dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-y"
+            placeholder="Enter the reading passage, experiment description, data table, or other stimulus material that students should reference when answering the following questions..."></textarea>
+        </div>
+        <div
+          class="mb-4 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-700/30">
+          <p class="text-xs text-emerald-800 dark:text-emerald-200"><span class="font-semibold">Tip:</span> After
+            creating a stimulus, add questions that reference it. The stimulus will be displayed above those questions
+            during the assessment.</p>
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white">Number of Questions
+            to Create</label>
+          <input type="number" id="stimulus-question-count" min="1" max="10" value="2"
+            class="w-32 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-white dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
+        </div>
+      </div>
+      <div
+        class="sticky bottom-0 bg-brand-white dark:bg-brand-dark-gray px-6 py-4 border-t border-brand-light-gray dark:border-brand-dark-gray/40 flex justify-end gap-3">
+        <button id="cancel-stimulus-btn"
+          class="h-10 px-6 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 text-brand-dark-gray dark:text-brand-white text-sm font-bold hover:bg-brand-light-gray/30 transition-colors">
+          Cancel
+        </button>
+        <button id="create-stimulus-btn"
+          class="h-10 px-6 rounded-lg bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition-colors">
+          Create Stimulus & Questions
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Student Links Modal -->
+  <div id="student-links-modal"
+    class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div
+      class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+      <div class="sticky top-0 bg-primary px-6 py-4 border-b border-primary/70">
+        <h2 class="text-brand-white text-2xl font-bold">Student Personalized Links</h2>
+        <p class="text-brand-white/80 text-sm mt-1">Each student has a unique tracking link.</p>
+      </div>
+      <div class="p-6">
+        <div id="links-container" class="max-h-[60vh] overflow-y-auto"></div>
+        <div class="mt-6 pt-4 border-t border-primary/20">
+          <button id="close-links-modal-btn"
+            class="flex items-center justify-center gap-2 rounded-lg h-10 px-6 bg-primary text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90 transition-colors">
+            <span>Close</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk Add Students Modal -->
+  <div id="bulk-add-students-modal"
+    class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div
+      class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div class="sticky top-0 bg-primary px-6 py-4 border-b border-primary/70">
+        <h2 class="text-brand-white text-2xl font-bold">Bulk Add Students</h2>
+        <p class="text-brand-white/80 text-sm mt-1">Add multiple students at once. Enter one student per line in format:
+          Name, Email</p>
+      </div>
+      <div class="p-6 flex-1 overflow-y-auto">
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white">Student Data</label>
+          <textarea id="bulk-student-input"
+            class="w-full h-64 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono"
+            placeholder="John Smith, jsmith@school.edu&#10;Jane Doe, jdoe@school.edu&#10;Bob Johnson, bjohnson@school.edu"></textarea>
+          <p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-2">Format: Name, Email (one per line).
+            Duplicates will be skipped automatically.</p>
+        </div>
+      </div>
+      <div
+        class="sticky bottom-0 bg-brand-white dark:bg-brand-dark-gray px-6 py-4 border-t border-primary/20 flex justify-end gap-3">
+        <button id="cancel-bulk-add-btn"
+          class="h-10 px-5 rounded-lg bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white text-sm font-semibold hover:bg-brand-dark-gray/20 dark:hover:bg-brand-white/20 transition-colors">Cancel</button>
+        <button id="confirm-bulk-add-btn"
+          class="h-10 px-5 rounded-lg bg-primary text-brand-white text-sm font-bold hover:bg-primary/90 transition-colors">Add
+          Students</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Poll Preview Modal -->
+  <div id="poll-preview-modal"
+    class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div
+      class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+      <!-- Header -->
+      <div class="sticky top-0 bg-primary px-6 py-4 border-b border-primary/70">
+        <div class="flex items-center justify-between">
+          <div class="flex-1">
+            <h2 id="preview-poll-name" class="text-brand-white text-2xl font-bold">Poll Preview</h2>
+            <p id="preview-poll-meta" class="text-brand-white/80 text-sm mt-1">Class Name • 5 Questions</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="preview-open-links-btn"
+              class="flex items-center justify-center gap-2 h-10 px-5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors">
+              <span class="material-symbols-outlined text-lg">link</span>
+              <span>View Student Links</span>
+            </button>
+            <button id="close-preview-modal-btn"
+              class="flex items-center justify-center h-10 w-10 rounded-lg bg-brand-white/20 text-brand-white hover:bg-brand-white/30 transition-colors">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div class="flex-1 overflow-hidden flex">
+        <!-- Left Sidebar - Question Navigation -->
+        <div
+          class="w-64 border-r border-brand-light-gray dark:border-brand-dark-gray/40 overflow-y-auto bg-gray-50 dark:bg-brand-dark-gray/20">
+          <div class="p-4">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Questions</h3>
+              <button id="preview-reorder-btn"
+                class="text-xs px-2 py-1 rounded bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white hover:bg-brand-dark-gray/20 dark:hover:bg-brand-white/20 transition-colors">
+                <span class="material-symbols-outlined text-sm align-middle">swap_vert</span>
+              </button>
+            </div>
+            <div id="preview-questions-nav" class="space-y-2">
+              <!-- Question navigation items will be added here -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Content - Question Display -->
+        <div class="flex-1 overflow-y-auto p-6">
+          <div id="preview-question-display">
+            <!-- Question content will be displayed here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer - Navigation Controls -->
+      <div
+        class="sticky bottom-0 bg-brand-white dark:bg-brand-dark-gray px-6 py-4 border-t border-brand-light-gray dark:border-brand-dark-gray/40 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <button id="preview-edit-question-btn"
+            class="h-10 px-4 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
+            <span class="material-symbols-outlined text-sm align-middle mr-1">edit</span>
+            Edit Question
+          </button>
+          <button id="preview-delete-question-btn"
+            class="h-10 px-4 rounded-lg bg-red-600/10 text-red-600 dark:bg-red-500/20 dark:text-red-300 text-sm font-semibold hover:bg-red-600/20 dark:hover:bg-red-500/30 transition-colors">
+            <span class="material-symbols-outlined text-sm align-middle mr-1">delete</span>
+            Delete
+          </button>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="preview-prev-question-btn"
+            class="h-10 px-4 rounded-lg bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white text-sm font-semibold hover:bg-brand-dark-gray/20 dark:hover:bg-brand-white/20 transition-colors">
+            <span class="material-symbols-outlined text-sm align-middle mr-1">arrow_back</span>
+            Previous
+          </button>
+          <span id="preview-question-counter" class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60 px-2">1 /
+            5</span>
+          <button id="preview-next-question-btn"
+            class="h-10 px-4 rounded-lg bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white text-sm font-semibold hover:bg-brand-dark-gray/20 dark:hover:bg-brand-white/20 transition-colors">
+            Next
+            <span class="material-symbols-outlined text-sm align-middle ml-1">arrow_forward</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Post-Poll Analytics Modal -->
+  <div id="post-poll-analytics-modal"
+    class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div
+      class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col">
+      <!-- Header -->
+      <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 border-b border-white/20">
+        <div class="flex items-center justify-between">
+          <div class="flex-1">
+            <h2 id="analytics-poll-name" class="text-brand-white text-2xl font-bold">Psychometric Analysis</h2>
+            <p id="analytics-poll-meta" class="text-brand-white/90 text-sm mt-1">Professional Assessment Quality Report
+            </p>
+          </div>
+          <button id="close-analytics-modal-btn"
+            class="flex items-center justify-center h-10 w-10 rounded-lg bg-brand-white/20 text-brand-white hover:bg-brand-white/30 transition-colors">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div class="flex-1 overflow-y-auto p-6">
+        <div id="analytics-content">
+          <!-- Loading state -->
+          <div id="analytics-loading" class="flex items-center justify-center py-12">
+            <div class="flex flex-col items-center gap-3">
+              <div class="flex flex-row gap-2 justify-center mb-1">
+                <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce"></div>
+                <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.3s]"></div>
+                <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.5s]"></div>
+              </div>
+              <p class="text-brand-dark-gray/60 dark:text-brand-white/60">Computing analytics...</p>
+            </div>
+          </div>
+
+          <!-- Content will be rendered here -->
+          <div id="analytics-report" class="hidden">
+            <!-- Class Overview Section -->
+            <div class="mb-6">
+              <h3 class="text-xl font-bold text-brand-dark-gray dark:text-brand-white mb-4 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">bar_chart</span>
+                Class Overview
+              </h3>
+              <div id="class-overview-content"></div>
+            </div>
+
+            <!-- Metacognition Section -->
+            <div id="metacognition-section" class="mb-6 hidden">
+              <h3 class="text-xl font-bold text-brand-dark-gray dark:text-brand-white mb-4 flex items-center gap-2">
+                <span class="material-symbols-outlined text-purple-600">psychology</span>
+                Metacognition Analysis
+              </h3>
+              <div id="metacognition-content"></div>
+            </div>
+
+            <!-- Item Analysis Section -->
+            <div class="mb-6">
+              <h3 class="text-xl font-bold text-brand-dark-gray dark:text-brand-white mb-4 flex items-center gap-2">
+                <span class="material-symbols-outlined text-blue-600">assignment</span>
+                Item-by-Item Analysis
+              </h3>
+              <div id="item-analysis-content"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div
+        class="sticky bottom-0 bg-brand-white dark:bg-brand-dark-gray px-6 py-4 border-t border-brand-light-gray dark:border-brand-dark-gray/40 flex items-center justify-between">
+        <div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">
+          <p>📊 Powered by professional psychometric analysis</p>
+        </div>
+        <button id="export-analytics-btn"
+          class="h-10 px-5 rounded-lg bg-veritas-gold text-brand-white text-sm font-semibold hover:bg-veritas-gold/90 transition-colors">
+          <span class="material-symbols-outlined text-sm align-middle mr-1">download</span>
+          Export Report
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Poll Creation Wizard View --><script>
+  function bindClick(id, handler) { var el = document.getElementById(id); if (el) el.addEventListener('click', handler); }
+  document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('live-view').style.display = 'flex';
+    document.getElementById('header-default').style.display = 'none';
+    document.getElementById('header-live').style.display = 'flex';
+  });
+</script>
+</body>
+</html>

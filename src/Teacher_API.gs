@@ -1159,3 +1159,97 @@ Veritas.TeacherApi.getAllQuestionsForBank = function() {
     return { questions: questions };
   })();
 };
+
+/**
+ * Send poll link to entire class via email
+ * @param {string} className - Class name
+ * @param {string} pollId - Poll ID (optional)
+ * @returns {Object} Result {success, count, error}
+ */
+Veritas.TeacherApi.sendPollLinkToClass = function(className, pollId) {
+  return withErrorHandling(function() {
+    Veritas.TeacherApi.assertTeacher();
+
+    if (!className) {
+      throw new Error('Class name is required');
+    }
+
+    // 1. Get Roster
+    var roster = DataAccess.roster.getByClass(className) || [];
+    if (roster.length === 0) {
+      return { success: false, error: 'No students found in class: ' + className };
+    }
+
+    // 2. Determine Poll Context (Name & Type)
+    var pollName = 'Veritas Poll';
+    var isSecure = false;
+    var pollInfo = null;
+
+    if (pollId) {
+      var allPolls = DataAccess.polls.getAll();
+      pollInfo = allPolls.find(function(p) { return p.pollId === pollId; });
+      if (pollInfo) {
+        pollName = pollInfo.pollName || 'Veritas Poll';
+        var sessionType = Veritas.Utils.normalizeSheetBoolean(pollInfo.sessionType, false);
+        // Note: sessionType might be a string 'SECURE_ASSESSMENT' or boolean/other depending on version
+        // Let's use robust checking from frontend logic port
+        var typeStr = String(pollInfo.sessionType || '').toUpperCase();
+        if (typeStr === 'SECURE_ASSESSMENT' || typeStr === 'SECURE') {
+          isSecure = true;
+        }
+      }
+    }
+
+    // 3. Prepare Email Template
+    var subject = isSecure
+      ? 'Assessment Link: ' + pollName
+      : 'Join Live Session: ' + pollName;
+
+    var sentCount = 0;
+    var snapshot = TokenManager.getActiveSnapshot();
+    var baseUrl = ScriptApp.getService().getUrl();
+
+    // 4. Iterate and Send
+    roster.forEach(function(student) {
+      if (!student.email) return;
+
+      // Get or create token
+      var tokenInfo = TokenManager.getTokenFromSnapshot(snapshot, student.email, className);
+      var token = tokenInfo ? tokenInfo.token : TokenManager.generateToken(student.email, className);
+
+      // If we generated a new token, update snapshot for subsequent iterations to be safe (though generateToken updates storage)
+      if (!tokenInfo) {
+        snapshot = TokenManager.getActiveSnapshot(); // Refresh snapshot
+      }
+
+      var link = baseUrl + '?token=' + token;
+
+      // Build Body
+      var body = '';
+      if (isSecure) {
+        body = 'Hello ' + (student.name || 'Student') + ',<br><br>' +
+               'Here is your unique link for the assessment: <strong>' + pollName + '</strong>.<br><br>' +
+               '<a href="' + link + '">' + link + '</a><br><br>' +
+               '<strong>Note:</strong> If an access code is required, your teacher will provide it separately.';
+      } else {
+        body = 'Hello ' + (student.name || 'Student') + ',<br><br>' +
+               'Please click the link below to join the live interactive session for <strong>' + pollName + '</strong>.<br><br>' +
+               '<a href="' + link + '">' + link + '</a><br><br>' +
+               'See you in class!';
+      }
+
+      try {
+        MailApp.sendEmail({
+          to: student.email,
+          subject: subject,
+          htmlBody: body
+        });
+        sentCount++;
+      } catch (e) {
+        Logger.log('Failed to send email to ' + student.email, e);
+      }
+    });
+
+    return { success: true, count: sentCount };
+  })();
+};

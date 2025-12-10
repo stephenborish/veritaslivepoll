@@ -2245,6 +2245,14 @@
         }
 
         function startPolling(immediate) {
+            // Guard: Check for persisted lock
+            if (sessionStorage.getItem('veritas_lock_active') === 'true') {
+                if (typeof showLockEnforcementUI === 'function') {
+                    showLockEnforcementUI("LOCKED", "Security violation detected. Wait for teacher approval.");
+                }
+                return;
+            }
+
             // POISON PILL CHECK: If lock is active, immediately show lock UI and return
             if (isPoisonPillActive()) {
                 console.log('[Proctor] POISON PILL ACTIVE in startPolling - blocking resume');

@@ -21,6 +21,7 @@
     var currentMissionControlPollId = null;
     var missionControlStudents = [];
     var missionControlSelectedEmails = new Set();
+    var previouslyLockedEmails = new Set();
     var bulkControlsLoading = false;
     var currentManagedStudent = null;
     var isPaused = false;
@@ -10472,6 +10473,21 @@
       var students = (view && view.students) ? view.students : [];
       missionControlStudents = students.slice();
       grid.innerHTML = '';
+
+      // Check for new violations
+      students.forEach(function(student) {
+        var isLocked = student.proctorStatus === 'LOCKED' || student.status === 'Locked' || (student.status && student.status.indexOf('Locked') === 0);
+        if (isLocked) {
+          if (!previouslyLockedEmails.has(student.email)) {
+            showToast('error', 'Security Violation', student.name + ' has been locked.');
+            previouslyLockedEmails.add(student.email);
+          }
+        } else {
+          if (previouslyLockedEmails.has(student.email)) {
+            previouslyLockedEmails.delete(student.email);
+          }
+        }
+      });
 
       if (students.length === 0) {
         var empty = document.createElement('div');

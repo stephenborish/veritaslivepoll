@@ -21,11 +21,11 @@ Veritas.ExamResponseService.submitExamAnswers = function(examId, studentId, answ
     if (isLocked) {
       // Check ProctorMode
       var examConfig = Veritas.ExamService.getExamConfig(examId);
+      // Hard Lock Contract: Backend must refuse further submissions
       if (examConfig && examConfig.proctorMode === 'hard') {
-        throw new Error('Exam is locked. You cannot submit until unlocked by teacher.');
+        throw new Error('Exam is hard-locked due to a violation. Submission rejected. Please contact your teacher.');
       }
-      // Soft lock permits submission? Usually yes, or maybe just warns.
-      // Spec says: "Soft mode... Student can continue the exam and submit."
+      // Soft Lock Contract: Student can continue the exam and submit.
     }
 
     var ss = Veritas.Data.getSpreadsheet();
@@ -168,12 +168,15 @@ Veritas.ExamResponseService.submitExamAnswers = function(examId, studentId, answ
              isCorrect = (idx === key.correctOptionIndex);
           }
         } else if (ans.questionType === 'SA') {
-          if (correctSA && correctSA.trim() !== '') {
-            var studentAns = (ans.shortAnswerText || '').trim().toLowerCase();
-            var correct = correctSA.trim().toLowerCase();
+          // SA Grading Logic
+          if (correctSA && correctSA.toString().trim() !== '') {
+            var studentAns = (ans.shortAnswerText || '').toString().trim().toLowerCase();
+            var correct = correctSA.toString().trim().toLowerCase();
             isCorrect = (studentAns === correct);
           } else {
-            isCorrect = null; // Needs manual grading
+            // If CorrectShortAnswer is blank:
+            // Store ShortAnswerText. IsCorrect = blank (null). Points = 0.
+            isCorrect = null;
           }
         }
 

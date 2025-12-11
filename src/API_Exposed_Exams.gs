@@ -59,6 +59,44 @@ function reportManualExamLock(examId, studentEmail, reason) {
    return Veritas.ExamProctoringService.reportExamViolation(examId, studentEmail, 'Student', reason);
 }
 
+// Manual Claim
+function claimExamSeat(examId, identifier) {
+  return Veritas.Utils.withLock(function() {
+    if (!Veritas.Config.ALLOW_MANUAL_EXAM_CLAIM) {
+       return { success: false, error: 'Manual claim is disabled.' };
+    }
+
+    // 1. Get Exam Config
+    var examConfig = Veritas.ExamService.getExamConfig(examId);
+    if (!examConfig) return { success: false, error: 'Exam not found.' };
+
+    if (!examConfig.isOpen) return { success: false, error: 'Exam is closed.' };
+
+    // 2. Check Roster
+    var roster = Veritas.Data.Rosters.getByClass(examConfig.classId);
+    var student = roster.find(function(s) {
+       return s.email.toLowerCase() === identifier.toLowerCase() ||
+              s.name.toLowerCase() === identifier.toLowerCase(); // Simple check
+    });
+
+    if (!student) {
+       return { success: false, error: 'Student not found in roster for this exam.' };
+    }
+
+    // 3. Generate Token
+    // We assume TokenManager is available globally or via Veritas.Utils
+    // Main.gs implies TokenManager is global.
+    var token = TokenManager.generateToken(student.email, examConfig.classId);
+
+    // 4. Return Redirect URL
+    var url = ScriptApp.getService().getUrl() +
+              '?mode=examStudent&examId=' + encodeURIComponent(examId) +
+              '&token=' + encodeURIComponent(token);
+
+    return { success: true, redirectUrl: url };
+  });
+}
+
 // Navigation Helper
 function getScriptUrl(qs) {
   var url = ScriptApp.getService().getUrl();

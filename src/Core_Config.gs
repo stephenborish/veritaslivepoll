@@ -20,15 +20,15 @@ Veritas.Config.STUDENT_TOKEN_INDEX_KEY = 'STUDENT_TOKEN_INDEX';
 
 // --- EXAM CONFIGURATION ---
 Veritas.Config.ALLOW_MANUAL_EXAM_CLAIM = false; // Set to true to allow manual student ID entry if token is missing
-// Firebase Config Placeholder - User must populate this
+// Firebase Config
 Veritas.Config.FIREBASE_CONFIG = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyAv0bCe5KIuQx_sou8toBy5DG2PYaB_pBM",
+  authDomain: "classroomproctor.firebaseapp.com",
+  databaseURL: "https://classroomproctor-default-rtdb.firebaseio.com",
+  projectId: "classroomproctor",
+  storageBucket: "classroomproctor.firebasestorage.app",
+  messagingSenderId: "600627073908",
+  appId: "1:600627073908:web:935970f5849b28f6ad5221"
 };
 
 // --- CACHING ---

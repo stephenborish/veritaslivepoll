@@ -18,6 +18,19 @@ Veritas.Config.TOKEN_EXPIRY_DAYS = 30; // Tokens valid for 30 days
 Veritas.Config.STUDENT_TOKEN_MAP_KEY = 'STUDENT_TOKENS';
 Veritas.Config.STUDENT_TOKEN_INDEX_KEY = 'STUDENT_TOKEN_INDEX';
 
+// --- EXAM CONFIGURATION ---
+Veritas.Config.ALLOW_MANUAL_EXAM_CLAIM = false; // Set to true to allow manual student ID entry if token is missing
+// Firebase Config Placeholder - User must populate this
+Veritas.Config.FIREBASE_CONFIG = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
 // --- CACHING ---
 Veritas.Config.CLASS_LINKS_CACHE_PREFIX = 'CLASS_LINKS_';
 
@@ -86,7 +99,13 @@ Veritas.Config.SHEET_NAMES = {
   PROCTOR_STATE: 'ProctorState',
   ASSESSMENT_EVENTS: 'AssessmentEvents',
   ASSESSMENT_ANALYTICS: 'AssessmentAnalytics',
-  LOGS: 'Logs'
+  LOGS: 'Logs',
+  // New Sheets for Exam Mode
+  QUESTION_BANK: 'QuestionBank',
+  EXAMS: 'Exams',
+  EXAM_STATUS: 'ExamStatus',
+  EXAM_RESPONSES: 'ExamResponses',
+  EXAM_ANALYTICS: 'ExamAnalytics'
 };
 
 // --- SHEET HEADER DEFINITIONS ---
@@ -119,6 +138,34 @@ Veritas.Config.SHEET_HEADERS = {
   ],
   ASSESSMENT_ANALYTICS: [
     'PollID', 'ComputedAt', 'MetricType', 'MetricName', 'MetricValue', 'DetailsJSON'
+  ],
+  // New Headers for Exam Mode
+  QUESTION_BANK: [
+    'QuestionId', 'ClassId', 'UnitTag', 'TopicTag', 'Difficulty',
+    'QuestionType', 'StemHtml', 'StemImageFileId',
+    'ChoiceA_Text', 'ChoiceA_ImageFileId',
+    'ChoiceB_Text', 'ChoiceB_ImageFileId',
+    'ChoiceC_Text', 'ChoiceC_ImageFileId',
+    'ChoiceD_Text', 'ChoiceD_ImageFileId',
+    'CorrectOption', 'CorrectShortAnswer', 'Points', 'Active', 'TagsCsv', 'LastUpdated'
+  ],
+  EXAMS: [
+    'ExamId', 'ExamName', 'ClassId', 'SourceType', 'SourcePollId', 'QuestionIdsCsv',
+    'StartTime', 'EndTime', 'IsOpen', 'DurationMinutes', 'RandomizeOrder',
+    'ShowScoreToStudent', 'AllowMultipleAttempts', 'ProctorMode', 'CreatedBy', 'Notes'
+  ],
+  EXAM_STATUS: [
+    'ExamId', 'StudentId', 'DisplayName', 'Locked', 'LastEvent',
+    'LastEventTime', 'ViolationCount', 'TotalScore', 'AttemptNumber', 'Details'
+  ],
+  EXAM_RESPONSES: [
+    'Timestamp', 'ExamId', 'StudentId', 'QuestionId', 'QuestionType',
+    'ChosenOption', 'ShortAnswerText', 'CorrectOption', 'CorrectShortAnswer',
+    'IsCorrect', 'PointsEarned', 'MaxPoints', 'AttemptNumber', 'ElapsedSeconds'
+  ],
+  EXAM_ANALYTICS: [
+    'ExamId', 'QuestionId', 'NumResponses', 'NumCorrect', 'PercentCorrect',
+    'AveragePointsEarned', 'AverageElapsedSeconds', 'PointBiserial', 'LastComputed'
   ]
 };
 

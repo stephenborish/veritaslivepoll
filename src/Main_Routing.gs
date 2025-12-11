@@ -31,8 +31,23 @@ Veritas.Routing.doGet = function(e) {
     // Resolve user identity (token or Google auth)
     var identity = Veritas.Routing.resolveIdentity(e);
 
-    // Route to appropriate view
+    // Handle Explicit Mode Routing (Exam, QuestionBank, Manager)
+    var mode = (e && e.parameter && e.parameter.mode) ? e.parameter.mode : '';
+
+    // Exam Student Mode
+    if (mode === 'examStudent') {
+      return Veritas.Routing.serveExamStudentView(e, identity);
+    }
+
+    // Teacher Exclusive Modes
     if (identity.isTeacher) {
+      if (mode === 'examTeacher') {
+        return Veritas.Routing.serveExamTeacherView(e);
+      } else if (mode === 'questionBank') {
+        return Veritas.Routing.serveQuestionBankView();
+      } else if (mode === 'examManager') {
+        return Veritas.Routing.serveExamManagerView();
+      }
       return Veritas.Routing.serveTeacherView();
     } else if (identity.studentEmail) {
       return Veritas.Routing.serveStudentView(identity.studentEmail, identity.token);
@@ -310,6 +325,108 @@ Veritas.Routing.maybeRedirectForTeacherAccount = function(e, currentUserEmail) {
 // =============================================================================
 // TEMPLATE SERVING
 // =============================================================================
+
+/**
+ * Serve Exam Student view
+ */
+Veritas.Routing.serveExamStudentView = function(e, identity) {
+  var examId = e.parameter.examId;
+  if (!examId) throw new Error('Exam ID is required');
+
+  // Validate Token / Identity
+  // Reuse existing identity resolution (which checks token)
+  if (!identity.studentEmail) {
+    if (Veritas.Config.ALLOW_MANUAL_EXAM_CLAIM) {
+       // Manual fallback logic not implemented in v1 plan, sticking to token requirement mostly.
+       // But if config is true, we could render a claim page.
+       // For now, fail if no identity.
+       throw new Error('Valid token required to access exam.');
+    } else {
+       throw new Error('Valid token required to access exam.');
+    }
+  }
+
+  // Verify Roster Enrollment for Exam Class?
+  var examConfig = Veritas.ExamService.getExamConfig(examId);
+  if (!examConfig) throw new Error('Exam not found');
+
+  if (!examConfig.isOpen) {
+     return HtmlService.createHtmlOutput('<h1>Exam Closed</h1><p>This exam is currently closed.</p>');
+  }
+
+  // Derive Student Key (Sanitized email)
+  var studentKey = identity.studentEmail.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+
+  // Student Info
+  var roster = DataAccess.roster.getByClass(examConfig.classId);
+  var student = roster.find(function(s) { return s.email === identity.studentEmail; });
+  var displayName = student ? student.name : identity.studentEmail;
+
+  var template = HtmlService.createTemplateFromFile('src/ExamStudentView');
+  template.examConfig = examConfig;
+  template.studentInfo = {
+     id: identity.studentEmail,
+     email: identity.studentEmail,
+     displayName: displayName
+  };
+  template.firebaseConfig = Veritas.Config.FIREBASE_CONFIG;
+  template.studentKey = studentKey;
+
+  return template.evaluate()
+    .setTitle("Veritas Exam: " + examConfig.examName)
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1.0');
+};
+
+/**
+ * Serve Exam Teacher Dashboard
+ */
+Veritas.Routing.serveExamTeacherView = function(e) {
+  var examId = e.parameter.examId;
+  if (!examId) throw new Error('Exam ID required');
+
+  var examConfig = Veritas.ExamService.getExamConfig(examId);
+  if (!examConfig) throw new Error('Exam not found');
+
+  var roster = DataAccess.roster.getByClass(examConfig.classId);
+  var rosterMap = {};
+  roster.forEach(function(s) {
+     var key = s.email.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+     rosterMap[key] = { name: s.name, email: s.email };
+  });
+
+  var template = HtmlService.createTemplateFromFile('src/ExamTeacherView');
+  template.examConfig = examConfig;
+  template.firebaseConfig = Veritas.Config.FIREBASE_CONFIG;
+  template.rosterMap = rosterMap;
+
+  return template.evaluate()
+    .setTitle("Exam Monitor: " + examConfig.examName)
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1.0');
+};
+
+/**
+ * Serve Question Bank View
+ */
+Veritas.Routing.serveQuestionBankView = function() {
+  var template = HtmlService.createTemplateFromFile('src/QuestionBankView');
+  return template.evaluate()
+    .setTitle("Veritas Question Bank")
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1.0');
+};
+
+/**
+ * Serve Exam Manager View
+ */
+Veritas.Routing.serveExamManagerView = function() {
+  var template = HtmlService.createTemplateFromFile('src/ExamManagerView');
+  return template.evaluate()
+    .setTitle("Veritas Exam Manager")
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1.0');
+};
 
 /**
  * Serve teacher view

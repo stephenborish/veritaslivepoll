@@ -966,7 +966,13 @@ Veritas.TeacherApi.setupSheet = function() {
       { name: Veritas.Config.SHEET_NAMES.INDIVIDUAL_TIMED_SESSIONS, headers: Veritas.Config.SHEET_HEADERS.INDIVIDUAL_TIMED_SESSIONS },
       { name: Veritas.Config.SHEET_NAMES.PROCTOR_STATE, headers: Veritas.Config.SHEET_HEADERS.PROCTOR_STATE },
       { name: Veritas.Config.SHEET_NAMES.ASSESSMENT_EVENTS, headers: Veritas.Config.SHEET_HEADERS.ASSESSMENT_EVENTS },
-      { name: Veritas.Config.SHEET_NAMES.ASSESSMENT_ANALYTICS, headers: Veritas.Config.SHEET_HEADERS.ASSESSMENT_ANALYTICS }
+      { name: Veritas.Config.SHEET_NAMES.ASSESSMENT_ANALYTICS, headers: Veritas.Config.SHEET_HEADERS.ASSESSMENT_ANALYTICS },
+      // New Exam Sheets
+      { name: Veritas.Config.SHEET_NAMES.QUESTION_BANK, headers: Veritas.Config.SHEET_HEADERS.QUESTION_BANK },
+      { name: Veritas.Config.SHEET_NAMES.EXAMS, headers: Veritas.Config.SHEET_HEADERS.EXAMS },
+      { name: Veritas.Config.SHEET_NAMES.EXAM_STATUS, headers: Veritas.Config.SHEET_HEADERS.EXAM_STATUS },
+      { name: Veritas.Config.SHEET_NAMES.EXAM_RESPONSES, headers: Veritas.Config.SHEET_HEADERS.EXAM_RESPONSES },
+      { name: Veritas.Config.SHEET_NAMES.EXAM_ANALYTICS, headers: Veritas.Config.SHEET_HEADERS.EXAM_ANALYTICS }
     ];
 
     headerConfigs.forEach(function(config) {

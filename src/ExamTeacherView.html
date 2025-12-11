@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <?!= HtmlService.createHtmlOutputFromFile('src/Common_Head').getContent() ?>
+  <?!= HtmlService.createHtmlOutputFromFile('src/Common_Styles').getContent() ?>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <title>Veritas - Exam Monitor</title>
+</head>
+<body class="bg-gray-100 min-h-screen text-gray-900 font-sans">
+
+  <!-- Config Data -->
+  <script>
+    var EXAM_CONFIG = <?!= JSON.stringify(examConfig) ?>;
+    var FIREBASE_CONFIG = <?!= JSON.stringify(firebaseConfig) ?>;
+    var ROSTER_MAP = <?!= JSON.stringify(rosterMap) ?>; // studentKey -> {name, email}
+  </script>
+
+  <!-- Navbar -->
+  <nav class="bg-veritas-navy text-white shadow-lg sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between h-16">
+        <div class="flex items-center space-x-4">
+          <div class="flex-shrink-0 flex items-center">
+             <span class="material-symbols-outlined text-gold mr-2 text-3xl">school</span>
+             <span class="font-serif text-xl font-bold tracking-wide">Veritas Monitor</span>
+          </div>
+          <div class="ml-4 text-sm bg-blue-900/50 px-3 py-1 rounded">
+             <?= examConfig.examName ?>
+          </div>
+        </div>
+        <div class="flex items-center space-x-3">
+          <button onclick="window.close()" class="text-gray-300 hover:text-white">Exit</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- Stats Bar -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+        <div class="text-sm font-bold text-gray-500 uppercase">Active</div>
+        <div class="text-3xl font-bold text-green-600" id="statActive">0</div>
+      </div>
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+        <div class="text-sm font-bold text-gray-500 uppercase">Locked</div>
+        <div class="text-3xl font-bold text-red-600" id="statLocked">0</div>
+      </div>
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+        <div class="text-sm font-bold text-gray-500 uppercase">Finished</div>
+        <div class="text-3xl font-bold text-blue-600" id="statFinished">0</div>
+      </div>
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+        <div class="text-sm font-bold text-gray-500 uppercase">Disconnected</div>
+        <div class="text-3xl font-bold text-gray-400" id="statDisconnected">0</div>
+      </div>
+    </div>
+
+    <!-- Student Grid -->
+    <div id="studentGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      <!-- Tiles populated via JS -->
+    </div>
+
+  </div>
+
+  <script>
+    // State
+    const students = {}; // key -> status
+    let dbRef = null;
+
+    window.onload = function() {
+      initFirebase();
+    };
+
+    function initFirebase() {
+      if (!firebase.apps.length) {
+        firebase.initializeApp(FIREBASE_CONFIG);
+      }
+      const db = firebase.database();
+      dbRef = db.ref(`sessions/${EXAM_CONFIG.examId}/students`);
+
+      // Initial Load & Listen
+      dbRef.on('value', snap => {
+        const data = snap.val() || {};
+        updateGrid(data);
+      });
+    }
+
+    function updateGrid(data) {
+      const grid = document.getElementById('studentGrid');
+
+      // Update stats
+      let active=0, locked=0, finished=0, discon=0;
+
+      // Ensure we have tiles for all rostered students, even if not in Firebase yet
+      // Combine Roster Keys + Firebase Keys
+      const allKeys = new Set([...Object.keys(ROSTER_MAP), ...Object.keys(data)]);
+
+      allKeys.forEach(key => {
+        const status = data[key] || 'OFFLINE';
+        const info = ROSTER_MAP[key] || { name: 'Unknown ('+key+')' };
+
+        let tile = document.getElementById(`tile-${key}`);
+        if (!tile) {
+          tile = createTile(key, info);
+          grid.appendChild(tile);
+        }
+
+        updateTile(tile, status);
+
+        if (status === 'ACTIVE') active++;
+        if (status === 'LOCKED') locked++;
+        if (status === 'FINISHED') finished++;
+        if (status === 'DISCONNECTED') discon++;
+      });
+
+      document.getElementById('statActive').textContent = active;
+      document.getElementById('statLocked').textContent = locked;
+      document.getElementById('statFinished').textContent = finished;
+      document.getElementById('statDisconnected').textContent = discon;
+    }
+
+    function createTile(key, info) {
+      const div = document.createElement('div');
+      div.id = `tile-${key}`;
+      div.className = 'bg-white rounded-lg shadow border-l-4 p-4 transition-all relative overflow-hidden group';
+
+      div.innerHTML = `
+        <div class="flex justify-between items-start mb-2">
+           <div class="font-bold text-gray-900 truncate" title="${info.name}">${info.name}</div>
+           <span class="status-badge px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider">OFFLINE</span>
+        </div>
+        <div class="text-xs text-gray-500 mb-4">${info.email}</div>
+
+        <div class="action-overlay absolute inset-0 bg-white/90 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity p-2 gap-2">
+           <!-- Dynamic Buttons -->
+        </div>
+      `;
+      return div;
+    }
+
+    function updateTile(tile, status) {
+      const badge = tile.querySelector('.status-badge');
+      const overlay = tile.querySelector('.action-overlay');
+
+      // Reset classes
+      tile.className = 'bg-white rounded-lg shadow border-l-4 p-4 transition-all relative overflow-hidden group';
+
+      let badgeClass = 'bg-gray-100 text-gray-800';
+      let borderClass = 'border-gray-200';
+      let buttons = '';
+
+      switch(status) {
+        case 'ACTIVE':
+          badgeClass = 'bg-green-100 text-green-800';
+          borderClass = 'border-green-500';
+          buttons = `<button onclick="setStatus('${tile.id.replace('tile-','')}', 'LOCKED')" class="btn-secondary w-full text-red-600 border-red-200 hover:bg-red-50">Lock Student</button>`;
+          break;
+        case 'LOCKED':
+          badgeClass = 'bg-red-100 text-red-800 animate-pulse';
+          borderClass = 'border-red-600 bg-red-50';
+          buttons = `<button onclick="setStatus('${tile.id.replace('tile-','')}', 'ACTIVE')" class="btn-primary w-full bg-green-600 hover:bg-green-700">Unlock</button>`;
+          break;
+        case 'FINISHED':
+          badgeClass = 'bg-blue-100 text-blue-800';
+          borderClass = 'border-blue-500';
+          buttons = `<span class="text-sm font-bold text-blue-600">Exam Submitted</span>`;
+          break;
+        case 'DISCONNECTED':
+          badgeClass = 'bg-gray-200 text-gray-600';
+          borderClass = 'border-gray-400';
+          // buttons = `<button onclick="setStatus('${tile.id.replace('tile-','')}', 'ACTIVE')" class="btn-secondary w-full">Force Active</button>`;
+          break;
+        case 'OFFLINE':
+          borderClass = 'border-gray-200 opacity-60';
+          break;
+      }
+
+      tile.classList.add(borderClass);
+      badge.className = `status-badge px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider ${badgeClass}`;
+      badge.textContent = status;
+      overlay.innerHTML = buttons;
+    }
+
+    function setStatus(studentKey, newStatus) {
+      if (!dbRef) return;
+
+      // 1. Firebase (Fast)
+      dbRef.child(studentKey).set(newStatus);
+
+      // 2. Server (Canonical)
+      // Resolve studentID from key (reverse lookup or passed in key)
+      // Here key is likely ID-safe string. Server needs original ID/Email.
+      // ROSTER_MAP[key].email
+      const studentEmail = ROSTER_MAP[studentKey].email;
+
+      if (newStatus === 'ACTIVE') {
+         google.script.run.unlockExamStudent(EXAM_CONFIG.examId, studentEmail);
+      } else if (newStatus === 'LOCKED') {
+         google.script.run.reportExamViolation(EXAM_CONFIG.examId, studentEmail, ROSTER_MAP[studentKey].name, 'Manual Teacher Lock');
+      }
+    }
+
+  </script>
+</body>
+</html>

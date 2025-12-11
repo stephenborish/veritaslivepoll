@@ -296,12 +296,14 @@
       if (EXAM_CONFIG.proctorMode === 'hard') return;
 
       document.documentElement.requestFullscreen().then(() => {
-        // Optimistic unlock
+        // 1. Optimistic unlock UI
         unlockExam();
-        // Update Firebase
+
+        // 2. Update Firebase (Sidecar)
         if (dbRef) dbRef.set('ACTIVE');
-        // Notify Server (optional for soft unlock tracking, but strictly server unlock is for Hard mode)
-        // For soft mode, we can just log 'resume' or rely on absence of violation events.
+
+        // 3. Notify Server (Clear Locked flag in Sheet)
+        google.script.run.reportExamResume(EXAM_CONFIG.examId, STUDENT_INFO.id);
       }).catch(err => {
         alert('You must return to fullscreen.');
       });
@@ -452,7 +454,9 @@
        `;
 
        google.script.run.withSuccessHandler(res => {
-          if (dbRef) dbRef.set('FINISHED'); // Or remove?
+          // Set final status in Sidecar
+          if (dbRef) dbRef.set('FINISHED');
+
           document.body.innerHTML = `
             <div class="min-h-screen flex flex-col items-center justify-center bg-green-50 p-4 text-center">
               <span class="material-symbols-outlined text-8xl text-green-600 mb-6">check_circle</span>

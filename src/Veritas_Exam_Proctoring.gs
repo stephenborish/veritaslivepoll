@@ -51,8 +51,6 @@ Veritas.ExamProctoringService.reportExamViolation = function(examId, studentId, 
       sheet.getRange(rowIndex, colMap['LastEvent'] + 1).setValue('violation: ' + reason);
       sheet.getRange(rowIndex, colMap['LastEventTime'] + 1).setValue(timestamp);
       sheet.getRange(rowIndex, colMap['ViolationCount'] + 1).setValue(currentViolationCount + 1);
-
-      // If needed, we could store 'HardLocked' specifically, but 'Locked' + ProctorMode implies it.
     } else {
       // Create new (should normally exist from start, but just in case)
       var newRow = new Array(headers.length);
@@ -71,6 +69,46 @@ Veritas.ExamProctoringService.reportExamViolation = function(examId, studentId, 
 
     Veritas.Logging.info('Exam Violation Reported', { examId: examId, studentId: studentId, reason: reason });
     return { success: true, locked: true, mode: isHardLock ? 'hard' : 'soft' };
+  });
+};
+
+/**
+ * Report Exam Resume (Student Self-Unlock for Soft Mode)
+ * @param {string} examId
+ * @param {string} studentId
+ */
+Veritas.ExamProctoringService.reportExamResume = function(examId, studentId) {
+  return Veritas.Utils.withLock(function() {
+    var examConfig = Veritas.ExamService.getExamConfig(examId);
+    if (!examConfig) return { success: false, error: 'Exam not found' };
+
+    // Strict Hard Mode Check
+    if (examConfig.proctorMode === 'hard') {
+      return { success: false, error: 'Hard Lock active. Teacher unlock required.' };
+    }
+
+    var ss = Veritas.Data.getSpreadsheet();
+    var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.EXAM_STATUS);
+    if (!sheet) return { success: false, error: 'Sheet not found' };
+
+    var data = sheet.getDataRange().getValues();
+    var headers = Veritas.Config.SHEET_HEADERS.EXAM_STATUS;
+    var colMap = {};
+    headers.forEach(function(h, i) { colMap[h] = i; });
+
+    var timestamp = new Date().toISOString();
+
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][colMap['ExamId']] === examId && data[i][colMap['StudentId']] === studentId) {
+        var rowIndex = i + 1;
+        // Clear Locked Flag
+        sheet.getRange(rowIndex, colMap['Locked'] + 1).setValue(false);
+        sheet.getRange(rowIndex, colMap['LastEvent'] + 1).setValue('resume');
+        sheet.getRange(rowIndex, colMap['LastEventTime'] + 1).setValue(timestamp);
+        return { success: true };
+      }
+    }
+    return { success: false, error: 'Student status not found' };
   });
 };
 

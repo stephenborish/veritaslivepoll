@@ -337,12 +337,9 @@ Veritas.Routing.serveExamStudentView = function(e, identity) {
   // Reuse existing identity resolution (which checks token)
   if (!identity.studentEmail) {
     if (Veritas.Config.ALLOW_MANUAL_EXAM_CLAIM) {
-       // Manual fallback logic not implemented in v1 plan, sticking to token requirement mostly.
-       // But if config is true, we could render a claim page.
-       // For now, fail if no identity.
-       throw new Error('Valid token required to access exam.');
+       return Veritas.Routing.serveExamClaimView(examId);
     } else {
-       throw new Error('Valid token required to access exam.');
+       return HtmlService.createHtmlOutput('<h1>Access Denied</h1><p>A valid access token is required for this exam.</p>');
     }
   }
 
@@ -424,6 +421,18 @@ Veritas.Routing.serveExamManagerView = function() {
   var template = HtmlService.createTemplateFromFile('src/ExamManagerView');
   return template.evaluate()
     .setTitle("Veritas Exam Manager")
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1.0');
+};
+
+/**
+ * Serve Exam Claim View
+ */
+Veritas.Routing.serveExamClaimView = function(examId) {
+  var template = HtmlService.createTemplateFromFile('src/ExamClaimView');
+  template.examId = examId;
+  return template.evaluate()
+    .setTitle("Veritas Exam Access")
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1.0');
 };

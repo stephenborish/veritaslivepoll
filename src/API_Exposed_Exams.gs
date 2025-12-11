@@ -44,6 +44,10 @@ function reportExamViolation(examId, studentId, displayName, reason) {
   return Veritas.ExamProctoringService.reportExamViolation(examId, studentId, displayName, reason);
 }
 
+function reportExamResume(examId, studentId) {
+  return Veritas.ExamProctoringService.reportExamResume(examId, studentId);
+}
+
 function submitExamAnswers(examId, studentId, answers) {
   return Veritas.ExamResponseService.submitExamAnswers(examId, studentId, answers);
 }

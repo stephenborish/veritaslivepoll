@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0,0" />
+  <script>
+    // Mock google.script.run
+    const google = {
+      script: {
+        run: {
+          withSuccessHandler: function(cb) {
+            this.cb = cb;
+            return this;
+          },
+          getClasses: function() {
+            setTimeout(() => this.cb(['Class A', 'Class B']), 10);
+          },
+          getBankQuestions: function(filters) {
+            setTimeout(() => this.cb([
+              { questionId: 'Q1', stemHtml: 'What is 2+2?', unitTag: 'Math', difficulty: 'Easy', questionType: 'MC' },
+              { questionId: 'Q2', stemHtml: 'Explain gravity', unitTag: 'Physics', difficulty: 'Hard', questionType: 'SA' }
+            ]), 10);
+          },
+          getScriptUrl: function(mode) {
+             setTimeout(() => this.cb('#mock_' + mode), 10);
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-gray-50 min-h-screen text-gray-900 font-sans">
+  <!-- Inject Body Content from src/QuestionBankView.html -->
+
+
+  <!-- Navbar -->
+  <nav class="bg-veritas-navy text-white shadow-lg sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between h-16">
+        <div class="flex items-center space-x-4">
+          <div class="flex-shrink-0 flex items-center">
+            <span class="material-symbols-outlined text-gold mr-2 text-3xl">school</span>
+            <span class="font-serif text-xl font-bold tracking-wide">Veritas</span>
+          </div>
+          <div class="hidden md:flex space-x-4 ml-8">
+            <a href="#" onclick="navTo('dashboard')" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-white/10 transition-colors">Polls</a>
+            <a href="#" onclick="navTo('questionBank')" class="px-3 py-2 rounded-md text-sm font-medium bg-white/20 text-white">Question Bank</a>
+            <a href="#" onclick="navTo('examManager')" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-white/10 transition-colors">Exams</a>
+          </div>
+        </div>
+        <div class="flex items-center space-x-3">
+          <span class="text-sm text-gray-300 hidden sm:block"><?= Session.getActiveUser().getEmail() ?></span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- Header & Actions -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900">Question Bank</h1>
+        <p class="text-gray-500 mt-1">Manage and organize your assessment items</p>
+      </div>
+      <button onclick="openQuestionModal()" class="btn-primary flex items-center gap-2 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all">
+        <span class="material-symbols-outlined">add_circle</span>
+        <span>New Question</span>
+      </button>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Class</label>
+          <select id="filterClass" class="w-full form-select rounded-lg border-gray-300 text-sm focus:ring-veritas-navy focus:border-veritas-navy" onchange="loadQuestions()">
+            <option value="">All Classes</option>
+            <!-- Populated via JS -->
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Unit</label>
+          <input type="text" id="filterUnit" class="w-full form-input rounded-lg border-gray-300 text-sm focus:ring-veritas-navy focus:border-veritas-navy" placeholder="e.g. Unit 1" oninput="debounceLoad()">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Topic</label>
+          <input type="text" id="filterTopic" class="w-full form-input rounded-lg border-gray-300 text-sm focus:ring-veritas-navy focus:border-veritas-navy" placeholder="e.g. Enzymes" oninput="debounceLoad()">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Difficulty</label>
+          <select id="filterDifficulty" class="w-full form-select rounded-lg border-gray-300 text-sm focus:ring-veritas-navy focus:border-veritas-navy" onchange="loadQuestions()">
+            <option value="">Any</option>
+            <option value="Easy">Easy</option>
+            <option value="Medium">Medium</option>
+            <option value="Hard">Hard</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Questions Table -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">ID</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Question Stem</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Tags</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Diff</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Type</th>
+              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="questionsTableBody" class="bg-white divide-y divide-gray-200">
+            <tr>
+              <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                <div class="flex flex-col items-center justify-center">
+                  <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-veritas-navy mb-3"></div>
+                  <p>Loading questions...</p>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Question Modal -->
+  <div id="questionModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="closeQuestionModal()"></div>
+
+      <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+      <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+        <form id="questionForm" onsubmit="handleSave(event)">
+          <input type="hidden" name="questionId">
+
+          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4" id="modalTitle">Edit Question</h3>
+
+            <!-- Grid Layout -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Class</label>
+                <select name="classId" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-veritas-navy focus:border-veritas-navy sm:text-sm">
+                  <option value="">-- Global --</option>
+                  <!-- Populated via JS -->
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Type</label>
+                <select name="questionType" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-veritas-navy focus:border-veritas-navy sm:text-sm" onchange="toggleTypeFields()">
+                  <option value="MC">Multiple Choice</option>
+                  <option value="SA">Short Answer</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Unit Tag</label>
+                <input type="text" name="unitTag" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-veritas-navy focus:border-veritas-navy sm:text-sm">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Topic Tag</label>
+                <input type="text" name="topicTag" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-veritas-navy focus:border-veritas-navy sm:text-sm">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Difficulty</label>
+                <select name="difficulty" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-veritas-navy focus:border-veritas-navy sm:text-sm">
+                  <option value="Easy">Easy</option>
+                  <option value="Medium" selected>Medium</option>
+                  <option value="Hard">Hard</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700">Question Stem (HTML allowed)</label>
+              <textarea name="stemHtml" rows="3" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-veritas-navy focus:border-veritas-navy sm:text-sm" required></textarea>
+            </div>
+
+            <!-- MC Fields -->
+            <div id="mcFields">
+              <div class="mb-2 font-medium text-sm text-gray-700">Choices</div>
+              <div class="space-y-3">
+                <div class="flex gap-2 items-center">
+                  <span class="w-6 font-bold text-gray-500">A</span>
+                  <input type="text" name="choiceA_Text" class="flex-1 border-gray-300 rounded-md shadow-sm text-sm" placeholder="Option A text">
+                  <input type="radio" name="correctOption" value="A" class="text-veritas-navy focus:ring-veritas-navy">
+                </div>
+                <div class="flex gap-2 items-center">
+                  <span class="w-6 font-bold text-gray-500">B</span>
+                  <input type="text" name="choiceB_Text" class="flex-1 border-gray-300 rounded-md shadow-sm text-sm" placeholder="Option B text">
+                  <input type="radio" name="correctOption" value="B" class="text-veritas-navy focus:ring-veritas-navy">
+                </div>
+                <div class="flex gap-2 items-center">
+                  <span class="w-6 font-bold text-gray-500">C</span>
+                  <input type="text" name="choiceC_Text" class="flex-1 border-gray-300 rounded-md shadow-sm text-sm" placeholder="Option C text">
+                  <input type="radio" name="correctOption" value="C" class="text-veritas-navy focus:ring-veritas-navy">
+                </div>
+                <div class="flex gap-2 items-center">
+                  <span class="w-6 font-bold text-gray-500">D</span>
+                  <input type="text" name="choiceD_Text" class="flex-1 border-gray-300 rounded-md shadow-sm text-sm" placeholder="Option D text">
+                  <input type="radio" name="correctOption" value="D" class="text-veritas-navy focus:ring-veritas-navy">
+                </div>
+              </div>
+            </div>
+
+            <!-- SA Fields -->
+            <div id="saFields" class="hidden">
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">Correct Answer (Exact Match)</label>
+                <input type="text" name="correctShortAnswer" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-veritas-navy focus:border-veritas-navy sm:text-sm" placeholder="e.g. Mitochondria">
+                <p class="mt-1 text-xs text-gray-500">Leave blank for manual grading.</p>
+              </div>
+            </div>
+
+            <div class="mt-4 flex gap-4">
+               <div class="w-24">
+                 <label class="block text-sm font-medium text-gray-700">Points</label>
+                 <input type="number" name="points" value="1" min="0" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-veritas-navy focus:border-veritas-navy sm:text-sm">
+               </div>
+               <div class="flex-1">
+                 <label class="block text-sm font-medium text-gray-700">Tags (CSV)</label>
+                 <input type="text" name="tagsCsv" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-veritas-navy focus:border-veritas-navy sm:text-sm" placeholder="Bio, Chapter1, Review">
+               </div>
+            </div>
+
+          </div>
+          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+            <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-veritas-navy text-base font-medium text-white hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-veritas-navy sm:ml-3 sm:w-auto sm:text-sm">Save</button>
+            <button type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm" onclick="closeQuestionModal()">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let allQuestions = [];
+    let loadTimer = null;
+
+    // Init
+    window.onload = function() {
+      loadClasses();
+      loadQuestions();
+    };
+
+    function navTo(mode) {
+      google.script.run
+        .withSuccessHandler(url => window.location.href = url)
+        .getScriptUrl(mode); // Assumes helper exists or uses generic exec URL
+      // Fallback if getScriptUrl not available
+      const url = new URL(window.location.href);
+      url.searchParams.set('mode', mode);
+      window.location.href = url.toString();
+    }
+
+    function loadClasses() {
+      google.script.run.withSuccessHandler(classes => {
+        const selects = document.querySelectorAll('select[name="classId"], #filterClass');
+        selects.forEach(sel => {
+           // Keep first option
+           const first = sel.options[0];
+           sel.innerHTML = '';
+           sel.appendChild(first);
+           classes.forEach(c => {
+             const opt = document.createElement('option');
+             opt.value = c;
+             opt.textContent = c;
+             sel.appendChild(opt);
+           });
+        });
+      }).getClasses(); // Helper from existing code
+    }
+
+    function loadQuestions() {
+      const filters = {
+        classId: document.getElementById('filterClass').value,
+        unitTag: document.getElementById('filterUnit').value,
+        topicTag: document.getElementById('filterTopic').value,
+        difficulty: document.getElementById('filterDifficulty').value // Filtering logic for Difficulty handled in client or server? Server supports it.
+      };
+
+      const tbody = document.getElementById('questionsTableBody');
+      tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-12 text-center text-gray-500"><div class="animate-spin inline-block rounded-full h-6 w-6 border-b-2 border-veritas-navy mr-2"></div>Loading...</td></tr>';
+
+      google.script.run.withSuccessHandler(questions => {
+        allQuestions = questions;
+        renderQuestions(questions);
+      }).getBankQuestions(filters);
+    }
+
+    function debounceLoad() {
+      clearTimeout(loadTimer);
+      loadTimer = setTimeout(loadQuestions, 500);
+    }
+
+    function renderQuestions(questions) {
+      const tbody = document.getElementById('questionsTableBody');
+      tbody.innerHTML = '';
+
+      if (questions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">No questions found.</td></tr>';
+        return;
+      }
+
+      questions.forEach(q => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-gray-50 transition-colors';
+        tr.innerHTML = `
+          <td class="px-6 py-4 whitespace-nowrap text-xs font-mono text-gray-500">${q.questionId}</td>
+          <td class="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">${q.stemHtml}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
+            ${[q.unitTag, q.topicTag].filter(Boolean).map(t => `<span class="px-2 py-0.5 rounded bg-gray-100 mr-1">${t}</span>`).join('')}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-xs">
+            <span class="px-2 py-1 rounded-full ${getDiffColor(q.difficulty)}">${q.difficulty}</span>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${q.questionType}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+            <button onclick='editQuestion(${JSON.stringify(q)})' class="text-veritas-navy hover:text-blue-900 mr-3">Edit</button>
+            <button onclick="deleteQuestion('${q.questionId}')" class="text-red-600 hover:text-red-900">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function getDiffColor(diff) {
+      switch((diff||'').toLowerCase()) {
+        case 'easy': return 'bg-green-100 text-green-800';
+        case 'hard': return 'bg-red-100 text-red-800';
+        default: return 'bg-yellow-100 text-yellow-800';
+      }
+    }
+
+    // Modal Logic
+    function openQuestionModal(q) {
+      const modal = document.getElementById('questionModal');
+      const form = document.getElementById('questionForm');
+      form.reset();
+
+      if (q) {
+        document.getElementById('modalTitle').textContent = 'Edit Question';
+        // Populate fields
+        form.questionId.value = q.questionId;
+        form.classId.value = q.classId || '';
+        form.questionType.value = q.questionType;
+        form.unitTag.value = q.unitTag || '';
+        form.topicTag.value = q.topicTag || '';
+        form.difficulty.value = q.difficulty || 'Medium';
+        form.stemHtml.value = q.stemHtml || '';
+        form.points.value = q.points || 1;
+        form.tagsCsv.value = q.tagsCsv || '';
+
+        form.choiceA_Text.value = q.choiceA_Text || '';
+        form.choiceB_Text.value = q.choiceB_Text || '';
+        form.choiceC_Text.value = q.choiceC_Text || '';
+        form.choiceD_Text.value = q.choiceD_Text || '';
+
+        if (q.questionType === 'MC' && q.correctOption) {
+           const radio = form.querySelector(`input[value="${q.correctOption}"]`);
+           if (radio) radio.checked = true;
+        }
+        form.correctShortAnswer.value = q.correctShortAnswer || '';
+      } else {
+        document.getElementById('modalTitle').textContent = 'New Question';
+        form.questionId.value = '';
+      }
+
+      toggleTypeFields();
+      modal.classList.remove('hidden');
+    }
+
+    function editQuestion(q) {
+      openQuestionModal(q);
+    }
+
+    function closeQuestionModal() {
+      document.getElementById('questionModal').classList.add('hidden');
+    }
+
+    function toggleTypeFields() {
+      const type = document.querySelector('select[name="questionType"]').value;
+      const mcFields = document.getElementById('mcFields');
+      const saFields = document.getElementById('saFields');
+
+      if (type === 'MC') {
+        mcFields.classList.remove('hidden');
+        saFields.classList.add('hidden');
+      } else {
+        mcFields.classList.add('hidden');
+        saFields.classList.remove('hidden');
+      }
+    }
+
+    function handleSave(e) {
+      e.preventDefault();
+      const form = e.target;
+
+      const qData = {
+        questionId: form.questionId.value || null,
+        classId: form.classId.value,
+        questionType: form.questionType.value,
+        unitTag: form.unitTag.value,
+        topicTag: form.topicTag.value,
+        difficulty: form.difficulty.value,
+        stemHtml: form.stemHtml.value,
+        points: Number(form.points.value),
+        tagsCsv: form.tagsCsv.value,
+        // MC
+        choiceA_Text: form.choiceA_Text.value,
+        choiceB_Text: form.choiceB_Text.value,
+        choiceC_Text: form.choiceC_Text.value,
+        choiceD_Text: form.choiceD_Text.value,
+        correctOption: form.querySelector('input[name="correctOption"]:checked')?.value || '',
+        // SA
+        correctShortAnswer: form.correctShortAnswer.value
+      };
+
+      // Basic validation
+      if (qData.questionType === 'MC') {
+        if (!qData.correctOption) {
+           alert('Please select a correct option.');
+           return;
+        }
+      }
+
+      const btn = form.querySelector('button[type="submit"]');
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+
+      google.script.run.withSuccessHandler(() => {
+        closeQuestionModal();
+        loadQuestions();
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }).saveBankQuestion(qData);
+    }
+
+    function deleteQuestion(id) {
+      if(confirm('Are you sure?')) {
+        google.script.run.withSuccessHandler(res => {
+          if (res.success) loadQuestions();
+          else alert(res.error);
+        }).deleteBankQuestion(id);
+      }
+    }
+  </script>
+</body>
+</html>

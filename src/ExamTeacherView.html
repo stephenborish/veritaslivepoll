@@ -5,9 +5,9 @@
   <?!= HtmlService.createHtmlOutputFromFile('src/Common_Head').getContent() ?>
   <?!= HtmlService.createHtmlOutputFromFile('src/Common_Styles').getContent() ?>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <!-- Firebase SDKs (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
   <title>Veritas - Exam Monitor</title>
 </head>
@@ -74,15 +74,22 @@
     const students = {}; // key -> status
     let dbRef = null;
 
+    // --- FIREBASE INIT ---
+    (function() {
+      if (FIREBASE_CONFIG) {
+        firebase.initializeApp(FIREBASE_CONFIG);
+        window.VERITAS_FIREBASE_DB = firebase.database();
+      }
+    })();
+
     window.onload = function() {
-      initFirebase();
+      initFirebaseSession();
     };
 
-    function initFirebase() {
-      if (!firebase.apps.length) {
-        firebase.initializeApp(FIREBASE_CONFIG);
-      }
-      const db = firebase.database();
+    function initFirebaseSession() {
+      const db = window.VERITAS_FIREBASE_DB;
+      if (!db) return;
+
       dbRef = db.ref(`sessions/${EXAM_CONFIG.examId}/students`);
 
       // Initial Load & Listen

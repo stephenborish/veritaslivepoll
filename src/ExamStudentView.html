@@ -5,9 +5,9 @@
   <?!= HtmlService.createHtmlOutputFromFile('src/Common_Head').getContent() ?>
   <?!= HtmlService.createHtmlOutputFromFile('src/Common_Styles').getContent() ?>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <!-- Firebase SDKs (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
   <style>
     .proctor-overlay {
@@ -178,12 +178,20 @@
     let isLocked = false;
     let dbRef = null;
 
+    // --- FIREBASE INIT ---
+    (function() {
+      if (FIREBASE_CONFIG) {
+        firebase.initializeApp(FIREBASE_CONFIG);
+        window.VERITAS_FIREBASE_DB = firebase.database();
+      }
+    })();
+
     // --- INIT ---
     function startExam() {
       // 1. Request Fullscreen
       document.documentElement.requestFullscreen().then(() => {
-        // 2. Init Firebase
-        initFirebase();
+        // 2. Init Firebase logic
+        initFirebaseSession();
 
         // 3. Init UI
         document.getElementById('entryScreen').classList.add('hidden');
@@ -203,11 +211,10 @@
       });
     }
 
-    function initFirebase() {
-      if (!firebase.apps.length) {
-        firebase.initializeApp(FIREBASE_CONFIG);
-      }
-      const db = firebase.database();
+    function initFirebaseSession() {
+      const db = window.VERITAS_FIREBASE_DB;
+      if (!db) return;
+
       dbRef = db.ref(`sessions/${EXAM_CONFIG.examId}/students/${STUDENT_KEY}`);
 
       // Set initial state

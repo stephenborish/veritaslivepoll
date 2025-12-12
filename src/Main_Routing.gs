@@ -359,7 +359,7 @@ Veritas.Routing.serveExamStudentView = function(e, identity) {
   var student = roster.find(function(s) { return s.email === identity.studentEmail; });
   var displayName = student ? student.name : identity.studentEmail;
 
-  var template = HtmlService.createTemplateFromFile('src/ExamStudentView');
+  var template = HtmlService.createTemplateFromFile('ExamStudentView');
   template.examConfig = examConfig;
   template.studentInfo = {
      id: identity.studentEmail,
@@ -392,7 +392,7 @@ Veritas.Routing.serveExamTeacherView = function(e) {
      rosterMap[key] = { name: s.name, email: s.email };
   });
 
-  var template = HtmlService.createTemplateFromFile('src/ExamTeacherView');
+  var template = HtmlService.createTemplateFromFile('ExamTeacherView');
   template.examConfig = examConfig;
   template.firebaseConfig = Veritas.Config.FIREBASE_CONFIG;
   template.rosterMap = rosterMap;
@@ -407,7 +407,7 @@ Veritas.Routing.serveExamTeacherView = function(e) {
  * Serve Question Bank View
  */
 Veritas.Routing.serveQuestionBankView = function() {
-  var template = HtmlService.createTemplateFromFile('src/QuestionBankView');
+  var template = HtmlService.createTemplateFromFile('QuestionBankView');
   return template.evaluate()
     .setTitle("Veritas Question Bank")
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
@@ -418,7 +418,7 @@ Veritas.Routing.serveQuestionBankView = function() {
  * Serve Exam Manager View
  */
 Veritas.Routing.serveExamManagerView = function() {
-  var template = HtmlService.createTemplateFromFile('src/ExamManagerView');
+  var template = HtmlService.createTemplateFromFile('ExamManagerView');
   return template.evaluate()
     .setTitle("Veritas Exam Manager")
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
@@ -429,7 +429,7 @@ Veritas.Routing.serveExamManagerView = function() {
  * Serve Exam Claim View
  */
 Veritas.Routing.serveExamClaimView = function(examId) {
-  var template = HtmlService.createTemplateFromFile('src/ExamClaimView');
+  var template = HtmlService.createTemplateFromFile('ExamClaimView');
   template.examId = examId;
   return template.evaluate()
     .setTitle("Veritas Exam Access")
@@ -442,7 +442,7 @@ Veritas.Routing.serveExamClaimView = function(examId) {
  * @returns {HtmlOutput} Teacher interface
  */
 Veritas.Routing.serveTeacherView = function() {
-  var template = HtmlService.createTemplateFromFile('src/Teacher_View');
+  var template = HtmlService.createTemplateFromFile('Teacher_View');
 
   return template.evaluate()
     .setTitle("Veritas Live Poll")
@@ -457,7 +457,7 @@ Veritas.Routing.serveTeacherView = function() {
  * @returns {HtmlOutput} Student interface
  */
 Veritas.Routing.serveStudentView = function(studentEmail, token) {
-  var template = HtmlService.createTemplateFromFile('src/Student_View');
+  var template = HtmlService.createTemplateFromFile('Student_View');
   template.studentEmail = studentEmail;
   template.sessionToken = token || '';
 

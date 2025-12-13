@@ -679,6 +679,14 @@ function sendPollLinkToClass(className, pollId) {
 }
 
 /**
+ * Authorize email access (manual helper)
+ * @returns {boolean} True
+ */
+function authorizeEmail() {
+  return Veritas.TeacherApi.authorizeEmail();
+}
+
+/**
  * Toggle session calculator
  * @param {string} pollId - Poll ID
  * @returns {boolean} New state

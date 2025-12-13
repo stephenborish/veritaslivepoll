@@ -972,7 +972,8 @@ Veritas.TeacherApi.setupSheet = function() {
       { name: Veritas.Config.SHEET_NAMES.EXAMS, headers: Veritas.Config.SHEET_HEADERS.EXAMS },
       { name: Veritas.Config.SHEET_NAMES.EXAM_STATUS, headers: Veritas.Config.SHEET_HEADERS.EXAM_STATUS },
       { name: Veritas.Config.SHEET_NAMES.EXAM_RESPONSES, headers: Veritas.Config.SHEET_HEADERS.EXAM_RESPONSES },
-      { name: Veritas.Config.SHEET_NAMES.EXAM_ANALYTICS, headers: Veritas.Config.SHEET_HEADERS.EXAM_ANALYTICS }
+      { name: Veritas.Config.SHEET_NAMES.EXAM_ANALYTICS, headers: Veritas.Config.SHEET_HEADERS.EXAM_ANALYTICS },
+      { name: Veritas.Config.SHEET_NAMES.EMAIL_LOG, headers: Veritas.Config.SHEET_HEADERS.EMAIL_LOG }
     ];
 
     headerConfigs.forEach(function(config) {
@@ -1167,10 +1168,49 @@ Veritas.TeacherApi.getAllQuestionsForBank = function() {
 };
 
 /**
+ * Log email attempt to Sheet
+ * @private
+ */
+function logEmailAttempt_(contextId, recipientCount, subject, status, error) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = Veritas.TeacherApi.ensureSheet(ss, Veritas.Config.SHEET_NAMES.EMAIL_LOG);
+    var timestamp = new Date().toISOString();
+    var teacherEmail = Session.getActiveUser().getEmail(); // Active user who clicked button
+
+    // Auto-heal headers if missing
+    Veritas.TeacherApi.ensureHeaders(sheet, Veritas.Config.SHEET_HEADERS.EMAIL_LOG);
+
+    sheet.appendRow([
+      timestamp,
+      teacherEmail,
+      contextId || 'Unknown',
+      recipientCount,
+      subject,
+      status,
+      error || ''
+    ]);
+  } catch (e) {
+    console.error('Failed to log email attempt:', e);
+  }
+}
+
+/**
+ * Authorize email access (helper to trigger scope prompt)
+ * @returns {boolean} True
+ */
+Veritas.TeacherApi.authorizeEmail = function() {
+  // This function exists solely to trigger the authorization flow in the editor
+  // if scopes were missing. It doesn't send anything.
+  GmailApp.getInboxUnreadCount();
+  return true;
+};
+
+/**
  * Send poll link to entire class via email
  * @param {string} className - Class name
  * @param {string} pollId - Poll ID (optional)
- * @returns {Object} Result {success, count, error}
+ * @returns {Object} Result {success: bool, sentCount: int, failedCount: int, failures: Array}
  */
 Veritas.TeacherApi.sendPollLinkToClass = function(className, pollId) {
   return withErrorHandling(function() {
@@ -1183,6 +1223,7 @@ Veritas.TeacherApi.sendPollLinkToClass = function(className, pollId) {
     // 1. Get Roster
     var roster = DataAccess.roster.getByClass(className) || [];
     if (roster.length === 0) {
+      logEmailAttempt_(pollId || className, 0, 'N/A', 'FAILED', 'No students found in class');
       return { success: false, error: 'No students found in class: ' + className };
     }
 
@@ -1196,9 +1237,6 @@ Veritas.TeacherApi.sendPollLinkToClass = function(className, pollId) {
       pollInfo = allPolls.find(function(p) { return p.pollId === pollId; });
       if (pollInfo) {
         pollName = pollInfo.pollName || 'Veritas Poll';
-        var sessionType = Veritas.Utils.normalizeSheetBoolean(pollInfo.sessionType, false);
-        // Note: sessionType might be a string 'SECURE_ASSESSMENT' or boolean/other depending on version
-        // Let's use robust checking from frontend logic port
         var typeStr = String(pollInfo.sessionType || '').toUpperCase();
         if (typeStr === 'SECURE_ASSESSMENT' || typeStr === 'SECURE') {
           isSecure = true;
@@ -1212,50 +1250,80 @@ Veritas.TeacherApi.sendPollLinkToClass = function(className, pollId) {
       : 'Join Live Session: ' + pollName;
 
     var sentCount = 0;
+    var failedCount = 0;
+    var failures = [];
     var snapshot = TokenManager.getActiveSnapshot();
     var baseUrl = ScriptApp.getService().getUrl();
 
     // 4. Iterate and Send
     roster.forEach(function(student) {
-      if (!student.email) return;
-
-      // Get or create token
-      var tokenInfo = TokenManager.getTokenFromSnapshot(snapshot, student.email, className);
-      var token = tokenInfo ? tokenInfo.token : TokenManager.generateToken(student.email, className);
-
-      // If we generated a new token, update snapshot for subsequent iterations to be safe (though generateToken updates storage)
-      if (!tokenInfo) {
-        snapshot = TokenManager.getActiveSnapshot(); // Refresh snapshot
-      }
-
-      var link = baseUrl + '?token=' + token;
-
-      // Build Body
-      var body = '';
-      if (isSecure) {
-        body = 'Hello ' + (student.name || 'Student') + ',<br><br>' +
-               'Here is your unique link for the assessment: <strong>' + pollName + '</strong>.<br><br>' +
-               '<a href="' + link + '">' + link + '</a><br><br>' +
-               '<strong>Note:</strong> If an access code is required, your teacher will provide it separately.';
-      } else {
-        body = 'Hello ' + (student.name || 'Student') + ',<br><br>' +
-               'Please click the link below to join the live interactive session for <strong>' + pollName + '</strong>.<br><br>' +
-               '<a href="' + link + '">' + link + '</a><br><br>' +
-               'See you in class!';
+      if (!student.email) {
+        failedCount++;
+        failures.push({ name: student.name, email: 'MISSING', error: 'No email address' });
+        return;
       }
 
       try {
-        GmailApp.sendEmail(student.email, subject, '', {
-          htmlBody: body,
+        // Get or create token
+        var tokenInfo = TokenManager.getTokenFromSnapshot(snapshot, student.email, className);
+        var token = tokenInfo ? tokenInfo.token : TokenManager.generateToken(student.email, className);
+
+        // If we generated a new token, update snapshot for subsequent iterations
+        if (!tokenInfo) {
+          snapshot = TokenManager.getActiveSnapshot();
+        }
+
+        var link = baseUrl + '?token=' + token;
+
+        // Build Body
+        var bodyHtml = '';
+        var bodyPlain = '';
+
+        if (isSecure) {
+          bodyHtml = '<p>Hello ' + (student.name || 'Student') + ',</p>' +
+                 '<p>Here is your unique link for the assessment: <strong>' + pollName + '</strong>.</p>' +
+                 '<p><a href="' + link + '" style="background-color:#002e6d;color:#ffffff;padding:10px 20px;text-decoration:none;border-radius:5px;">Start Assessment</a></p>' +
+                 '<p>Or copy this link: ' + link + '</p>' +
+                 '<p><strong>Note:</strong> If an access code is required, your teacher will provide it separately.</p>';
+          bodyPlain = 'Hello ' + (student.name || 'Student') + ',\n\n' +
+                  'Here is your unique link for the assessment: ' + pollName + '.\n\n' +
+                  link + '\n\n' +
+                  'Note: If an access code is required, your teacher will provide it separately.';
+        } else {
+          bodyHtml = '<p>Hello ' + (student.name || 'Student') + ',</p>' +
+                 '<p>Please click the link below to join the live interactive session for <strong>' + pollName + '</strong>.</p>' +
+                 '<p><a href="' + link + '" style="background-color:#002e6d;color:#ffffff;padding:10px 20px;text-decoration:none;border-radius:5px;">Join Session</a></p>' +
+                 '<p>Or copy this link: ' + link + '</p>' +
+                 '<p>See you in class!</p>';
+          bodyPlain = 'Hello ' + (student.name || 'Student') + ',\n\n' +
+                  'Please click the link below to join the live interactive session for ' + pollName + '.\n\n' +
+                  link + '\n\n' +
+                  'See you in class!';
+        }
+
+        GmailApp.sendEmail(student.email, subject, bodyPlain, {
+          htmlBody: bodyHtml,
           name: 'Veritas Live Poll'
         });
         sentCount++;
       } catch (e) {
-        Logger.log('Failed to send email to ' + student.email, e);
+        console.error('Failed to send email to ' + student.email, e);
+        failedCount++;
+        failures.push({ name: student.name, email: student.email, error: e.toString() });
       }
     });
 
-    return { success: true, count: sentCount };
+    // 5. Log Result
+    var status = failedCount === 0 ? 'SENT' : (sentCount > 0 ? 'PARTIAL' : 'FAILED');
+    var errorDetails = failures.length > 0 ? JSON.stringify(failures) : '';
+    logEmailAttempt_(pollId || className, roster.length, subject, status, errorDetails);
+
+    return {
+      success: true,
+      sentCount: sentCount,
+      failedCount: failedCount,
+      failures: failures
+    };
   })();
 };
 

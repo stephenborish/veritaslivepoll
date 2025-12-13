@@ -260,6 +260,14 @@
           <span class="material-symbols-outlined text-lg">close</span>
         </button>
       </div>
+
+<!-- Debug Overlay (Hidden by default) -->
+<div id="debug-overlay" class="fixed top-0 left-0 w-full h-full bg-black/90 z-[9999] hidden p-4 font-mono text-green-400 text-xs overflow-auto pointer-events-none">
+    <div class="pointer-events-auto absolute top-4 right-4">
+        <button onclick="document.getElementById('debug-overlay').classList.add('hidden')" class="bg-red-500/20 text-red-500 px-3 py-1 rounded border border-red-500/50">CLOSE</button>
+    </div>
+    <div id="debug-content" class="whitespace-pre-wrap">Waiting for debug data...</div>
+</div>
       <div class="flex-1 bg-black relative overflow-hidden">
         <div id="calc-loader" class="absolute inset-0 flex items-center justify-center text-white/50 text-sm">Loading...</div>
         <iframe id="calc-iframe" src="about:blank" data-src="https://mpcalc-aaa91.web.app/" class="w-full h-full border-0" allow="fullscreen" title="TI-84 Calculator"></iframe>

@@ -82,6 +82,11 @@
             ],
             show: function (viewId) {
                 var self = this;
+
+                // Special handling: 'student-container' wraps 'question-container', 'pre-live-card', etc.
+                // If showing a child of student-container, we must also show student-container
+                var isStudentContent = ['question-container', 'pre-live-card', 'status-container'].indexOf(viewId) !== -1;
+
                 this.views.forEach(function (id) {
                     var el = document.getElementById(id);
                     if (!el) return;
@@ -89,7 +94,10 @@
                     if (id === viewId) {
                         el.style.display = 'block';
                         el.classList.remove('hidden');
-                        void el.offsetWidth; // Force reflow
+                    } else if (id === 'student-container' && isStudentContent) {
+                        // Ensure parent container is visible
+                        el.style.display = 'block';
+                        el.classList.remove('hidden');
                     } else {
                         el.style.display = 'none';
                         el.classList.add('hidden');
@@ -97,6 +105,22 @@
                 });
                 console.log('[ViewManager] Active View:', viewId);
             }
+        };
+
+        // Global Error Trapping
+        window.onerror = function(msg, url, line, col, error) {
+            var debugContent = document.getElementById('debug-content');
+            if (debugContent) {
+                var timestamp = new Date().toLocaleTimeString();
+                debugContent.innerHTML += `\n[${timestamp}] ERROR: ${msg}\nLine: ${line}`;
+
+                // Auto-show debug overlay on critical errors if safe
+                var overlay = document.getElementById('debug-overlay');
+                if (overlay && msg.indexOf('ScriptError') === -1) { // Ignore common script interruptions
+                    overlay.classList.remove('hidden');
+                }
+            }
+            return false;
         };
 
         var LockManager = {

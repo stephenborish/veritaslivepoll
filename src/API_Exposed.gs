@@ -669,15 +669,22 @@ function endQuestionAndRevealResults() {
 }
 
 /**
- * Send poll link to entire class via email (DEPRECATED - not implemented)
+ * Send poll link to entire class via email
  * @param {string} className - Class name
- * @returns {Object} Error response
+ * @param {string} pollId - Poll ID (optional)
+ * @returns {Object} Result {success, count, error}
  */
-function sendPollLinkToClass(className) {
-  return {
-    success: false,
-    error: 'Email distribution feature not implemented. Please use the "View Links" button to access individual student links.'
-  };
+function sendPollLinkToClass(className, pollId) {
+  return Veritas.TeacherApi.sendPollLinkToClass(className, pollId);
+}
+
+/**
+ * Toggle session calculator
+ * @param {string} pollId - Poll ID
+ * @returns {boolean} New state
+ */
+function toggleSessionCalculator(pollId) {
+  return Veritas.TeacherApi.toggleSessionCalculator(pollId);
 }
 
 // =============================================================================

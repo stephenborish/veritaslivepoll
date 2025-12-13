@@ -1245,10 +1245,9 @@ Veritas.TeacherApi.sendPollLinkToClass = function(className, pollId) {
       }
 
       try {
-        MailApp.sendEmail({
-          to: student.email,
-          subject: subject,
-          htmlBody: body
+        GmailApp.sendEmail(student.email, subject, '', {
+          htmlBody: body,
+          name: 'Veritas Live Poll'
         });
         sentCount++;
       } catch (e) {
@@ -1257,5 +1256,28 @@ Veritas.TeacherApi.sendPollLinkToClass = function(className, pollId) {
     });
 
     return { success: true, count: sentCount };
+  })();
+};
+
+/**
+ * Toggle session calculator state
+ * @param {string} pollId - Poll ID (optional check)
+ * @returns {boolean} New state
+ */
+Veritas.TeacherApi.toggleSessionCalculator = function(pollId) {
+  return withErrorHandling(function() {
+    Veritas.TeacherApi.assertTeacher();
+
+    var statusValues = DataAccess.liveStatus.get();
+    var metadata = (statusValues.metadata) ? statusValues.metadata : {};
+
+    // Toggle state
+    var newState = !metadata.calculatorEnabled;
+    metadata.calculatorEnabled = newState;
+
+    // Persist
+    DataAccess.liveStatus.set(statusValues[0], statusValues[1], statusValues[2], metadata);
+
+    return newState;
   })();
 };

@@ -7691,7 +7691,6 @@
 
       google.script.run
         .withSuccessHandler(async function (response) {
-          await veritasAlert('✅ Successfully sent ' + response.count + ' poll links.', { title: 'Send poll links' });
           setButtonLoading(btn, false);
           if (viewLinksBtn) {
             if (restoreViewLinks) {
@@ -7699,9 +7698,32 @@
               viewLinksBtn.removeAttribute('aria-disabled');
             }
           }
+
+          if (response.success && response.failedCount === 0) {
+            showToast('success', 'Emails Sent', 'Successfully sent ' + response.sentCount + ' links.');
+          } else {
+            // Partial or full failure
+            var msg = 'Sent: ' + response.sentCount + ', Failed: ' + response.failedCount + '.';
+            if (response.failures && response.failures.length > 0) {
+              msg += '\n\nFailures:\n' + response.failures.map(function(f) { return f.name + ': ' + f.error; }).join('\n');
+            }
+            if (response.error) {
+              msg = 'Error: ' + response.error;
+            }
+
+            await veritasAlert(msg, {
+              title: 'Email Delivery Report',
+              destructive: true
+            });
+
+            // Show fallback instructions
+            if (viewLinksBtn) {
+                viewLinksBtn.click(); // Auto-open links view as fallback
+                showToast('info', 'Fallback', 'Opening link list for manual distribution.', 4000);
+            }
+          }
         })
-        .withFailureHandler(function (err) {
-          handleError(err);
+        .withFailureHandler(function (error) {
           setButtonLoading(btn, false);
           if (viewLinksBtn) {
             if (restoreViewLinks) {
@@ -7709,8 +7731,20 @@
               viewLinksBtn.removeAttribute('aria-disabled');
             }
           }
+
+          var errorStr = (error && error.toString()) || '';
+          if (errorStr.indexOf('Authorization is required') !== -1 || errorStr.indexOf('ScriptApp.invalidateAuth') !== -1) {
+             veritasConfirm('Email sending requires authorization. Would you like to run the authorization check now?', { title: 'Authorization Required' })
+               .then(function(yes) {
+                  if(yes) {
+                    google.script.run.authorizeEmail(); // Trigger auth prompt
+                  }
+               });
+          } else {
+             handleError(error);
+          }
         })
-        .sendPollLinkToClass(className);
+        .sendPollLinkToClass(className, CURRENT_POLL_DATA.pollId);
     }
 
     async function onViewLinks() {

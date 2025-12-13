@@ -105,11 +105,13 @@ Veritas.Config.SHEET_NAMES = {
   EXAMS: 'Exams',
   EXAM_STATUS: 'ExamStatus',
   EXAM_RESPONSES: 'ExamResponses',
-  EXAM_ANALYTICS: 'ExamAnalytics'
+  EXAM_ANALYTICS: 'ExamAnalytics',
+  EMAIL_LOG: 'EmailLog'
 };
 
 // --- SHEET HEADER DEFINITIONS ---
 Veritas.Config.SHEET_HEADERS = {
+  EMAIL_LOG: ['Timestamp', 'TeacherEmail', 'ContextId', 'RecipientCount', 'Subject', 'Status', 'ErrorDetails'],
   CLASSES: ['ClassName', 'Description'],
   ROSTERS: ['ClassName', 'StudentName', 'StudentEmail'],
   POLLS: [

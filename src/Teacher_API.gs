@@ -1168,27 +1168,31 @@ Veritas.TeacherApi.getAllQuestionsForBank = function() {
 };
 
 /**
- * Log email attempt to Sheet
+ * Log email attempt to Sheet with detailed context
  * @private
  */
-function logEmailAttempt_(contextId, recipientCount, subject, status, error) {
+function logEmailAttempt_(details) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = Veritas.TeacherApi.ensureSheet(ss, Veritas.Config.SHEET_NAMES.EMAIL_LOG);
     var timestamp = new Date().toISOString();
-    var teacherEmail = Session.getActiveUser().getEmail(); // Active user who clicked button
 
     // Auto-heal headers if missing
     Veritas.TeacherApi.ensureHeaders(sheet, Veritas.Config.SHEET_HEADERS.EMAIL_LOG);
 
     sheet.appendRow([
       timestamp,
-      teacherEmail,
-      contextId || 'Unknown',
-      recipientCount,
-      subject,
-      status,
-      error || ''
+      details.senderEmail,
+      details.className,
+      details.pollId,
+      details.isSecure,
+      details.baseUrl,
+      details.status,
+      details.subject,
+      details.rosterCount,
+      details.sentCount,
+      details.failedCount,
+      details.errorDetails || ''
     ]);
   } catch (e) {
     console.error('Failed to log email attempt:', e);
@@ -1210,11 +1214,13 @@ Veritas.TeacherApi.authorizeEmail = function() {
  * Send poll link to entire class via email
  * @param {string} className - Class name
  * @param {string} pollId - Poll ID (optional)
- * @returns {Object} Result {success: bool, sentCount: int, failedCount: int, failures: Array}
+ * @returns {Object} Result {success: bool, status: str, sentCount: int, failedCount: int, failures: Array}
  */
 Veritas.TeacherApi.sendPollLinkToClass = function(className, pollId) {
   return withErrorHandling(function() {
     Veritas.TeacherApi.assertTeacher();
+    var senderEmail = Session.getActiveUser().getEmail();
+    var baseUrl = ScriptApp.getService().getUrl();
 
     if (!className) {
       throw new Error('Class name is required');
@@ -1223,8 +1229,21 @@ Veritas.TeacherApi.sendPollLinkToClass = function(className, pollId) {
     // 1. Get Roster
     var roster = DataAccess.roster.getByClass(className) || [];
     if (roster.length === 0) {
-      logEmailAttempt_(pollId || className, 0, 'N/A', 'FAILED', 'No students found in class');
-      return { success: false, error: 'No students found in class: ' + className };
+      logEmailAttempt_({
+        senderEmail: senderEmail,
+        className: className,
+        pollId: pollId || 'N/A',
+        status: 'FAILED',
+        errorDetails: 'No students found in class'
+      });
+      return {
+        success: false,
+        status: 'FAILED',
+        sentCount: 0,
+        failedCount: 0,
+        failures: [],
+        error: 'No students found in class: ' + className
+      };
     }
 
     // 2. Determine Poll Context (Name & Type)
@@ -1253,73 +1272,110 @@ Veritas.TeacherApi.sendPollLinkToClass = function(className, pollId) {
     var failedCount = 0;
     var failures = [];
     var snapshot = TokenManager.getActiveSnapshot();
-    var baseUrl = ScriptApp.getService().getUrl();
 
     // 4. Iterate and Send
     roster.forEach(function(student) {
-      if (!student.email) {
+      var email = String(student.email || '').trim();
+      var name = student.name || 'Student';
+
+      if (!email) {
         failedCount++;
-        failures.push({ name: student.name, email: 'MISSING', error: 'No email address' });
+        failures.push({ name: name, email: 'MISSING', error: 'No email address provided in roster' });
         return;
       }
 
       try {
         // Get or create token
-        var tokenInfo = TokenManager.getTokenFromSnapshot(snapshot, student.email, className);
-        var token = tokenInfo ? tokenInfo.token : TokenManager.generateToken(student.email, className);
+        var tokenInfo = TokenManager.getTokenFromSnapshot(snapshot, email, className);
+        var token = tokenInfo ? tokenInfo.token : TokenManager.generateToken(email, className);
 
         // If we generated a new token, update snapshot for subsequent iterations
         if (!tokenInfo) {
           snapshot = TokenManager.getActiveSnapshot();
         }
 
-        var link = baseUrl + '?token=' + token;
+        // --- ROBUST URL CONSTRUCTION ---
+        // 1. Encode token
+        // 2. Add pollId if present
+        // 3. Add explicit mode param for deterministic routing
+        var link = baseUrl
+          + '?token=' + encodeURIComponent(token)
+          + (pollId ? '&pollId=' + encodeURIComponent(pollId) : '')
+          + (isSecure ? '&mode=examStudent' : '&mode=student'); // Use correct mode values
 
         // Build Body
         var bodyHtml = '';
         var bodyPlain = '';
 
         if (isSecure) {
-          bodyHtml = '<p>Hello ' + (student.name || 'Student') + ',</p>' +
+          bodyHtml = '<p>Hello ' + name + ',</p>' +
                  '<p>Here is your unique link for the assessment: <strong>' + pollName + '</strong>.</p>' +
                  '<p><a href="' + link + '" style="background-color:#002e6d;color:#ffffff;padding:10px 20px;text-decoration:none;border-radius:5px;">Start Assessment</a></p>' +
                  '<p>Or copy this link: ' + link + '</p>' +
                  '<p><strong>Note:</strong> If an access code is required, your teacher will provide it separately.</p>';
-          bodyPlain = 'Hello ' + (student.name || 'Student') + ',\n\n' +
+          bodyPlain = 'Hello ' + name + ',\n\n' +
                   'Here is your unique link for the assessment: ' + pollName + '.\n\n' +
                   link + '\n\n' +
                   'Note: If an access code is required, your teacher will provide it separately.';
         } else {
-          bodyHtml = '<p>Hello ' + (student.name || 'Student') + ',</p>' +
+          bodyHtml = '<p>Hello ' + name + ',</p>' +
                  '<p>Please click the link below to join the live interactive session for <strong>' + pollName + '</strong>.</p>' +
                  '<p><a href="' + link + '" style="background-color:#002e6d;color:#ffffff;padding:10px 20px;text-decoration:none;border-radius:5px;">Join Session</a></p>' +
                  '<p>Or copy this link: ' + link + '</p>' +
                  '<p>See you in class!</p>';
-          bodyPlain = 'Hello ' + (student.name || 'Student') + ',\n\n' +
+          bodyPlain = 'Hello ' + name + ',\n\n' +
                   'Please click the link below to join the live interactive session for ' + pollName + '.\n\n' +
                   link + '\n\n' +
                   'See you in class!';
         }
 
-        GmailApp.sendEmail(student.email, subject, bodyPlain, {
+        GmailApp.sendEmail(email, subject, bodyPlain, {
           htmlBody: bodyHtml,
           name: 'Veritas Live Poll'
         });
         sentCount++;
       } catch (e) {
-        console.error('Failed to send email to ' + student.email, e);
+        console.error('Failed to send email to ' + email, e);
         failedCount++;
-        failures.push({ name: student.name, email: student.email, error: e.toString() });
+        failures.push({ name: name, email: email, error: e.toString() });
       }
     });
 
-    // 5. Log Result
-    var status = failedCount === 0 ? 'SENT' : (sentCount > 0 ? 'PARTIAL' : 'FAILED');
+    // 5. Determine Status & Log
+    var status = (failedCount === 0 && sentCount > 0) ? 'SENT'
+               : (sentCount > 0 ? 'PARTIAL' : 'FAILED');
+
+    // Only return success:true if fully SENT. Otherwise false so UI handles it as warning/error.
+    // Actually, UI can handle success:true with PARTIAL status if we design it that way,
+    // but standard practice suggests:
+    // SENT -> success: true
+    // PARTIAL -> success: false (or warning)
+    // FAILED -> success: false
+    // To match user requirement: "UI must NEVER report success when emails were not actually sent."
+    // Let's set success = (status === 'SENT').
+
+    var success = (status === 'SENT');
+    // Edge case: empty roster handled above. If sentCount=0 because all failed -> FAILED -> success=false.
+
     var errorDetails = failures.length > 0 ? JSON.stringify(failures) : '';
-    logEmailAttempt_(pollId || className, roster.length, subject, status, errorDetails);
+
+    logEmailAttempt_({
+      senderEmail: senderEmail,
+      className: className,
+      pollId: pollId || 'N/A',
+      isSecure: isSecure,
+      baseUrl: baseUrl,
+      status: status,
+      subject: subject,
+      rosterCount: roster.length,
+      sentCount: sentCount,
+      failedCount: failedCount,
+      errorDetails: errorDetails
+    });
 
     return {
-      success: true,
+      success: success,
+      status: status,
       sentCount: sentCount,
       failedCount: failedCount,
       failures: failures

@@ -2,8 +2,8 @@
 <html>
 <head>
   <base target="_top">
-  <?!= HtmlService.createHtmlOutputFromFile('src/Common_Head').getContent() ?>
-  <?!= HtmlService.createHtmlOutputFromFile('src/Common_Styles').getContent() ?>
+  <?!= include('Common_Head') ?>
+  <?!= include('Common_Styles') ?>
   <title>Veritas - Exam Manager</title>
 </head>
 <body class="bg-gray-50 min-h-screen text-gray-900 font-sans">

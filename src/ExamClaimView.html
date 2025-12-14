@@ -2,8 +2,8 @@
 <html>
 <head>
   <base target="_top">
-  <?!= HtmlService.createHtmlOutputFromFile('src/Common_Head').getContent() ?>
-  <?!= HtmlService.createHtmlOutputFromFile('src/Common_Styles').getContent() ?>
+  <?!= include('Common_Head') ?>
+  <?!= include('Common_Styles') ?>
   <title>Veritas - Claim Exam Seat</title>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-4">

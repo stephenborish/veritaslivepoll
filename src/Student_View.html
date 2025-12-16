@@ -7,13 +7,24 @@
   <?!= include('Common_TailwindConfig'); ?>
   <?!= include('Proctoring_Shared'); ?>
 
-  <script>window.SESSION_TOKEN = '<?= sessionToken ?>';</script>
+  <!-- Firebase SDKs (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+  <script>
+    window.SESSION_TOKEN = '<?= sessionToken ?>';
+    var FIREBASE_CONFIG = <?!= JSON.stringify(firebaseConfig) ?>;
+    var Veritas = Veritas || {};
+    Veritas.Config = Veritas.Config || {};
+    Veritas.Config.DEBUG_FIREBASE = <?!= Veritas.Config.DEBUG_FIREBASE ? 'true' : 'false' ?>;
+  </script>
 
   <?!= include('Common_Styles'); ?>
   <?!= include('Student_Styles'); ?>
 </head>
 <body class="light">
   <?!= include('Student_Body'); ?>
+  <?!= include('Common_Scripts'); ?>
   <?!= include('Student_Scripts'); ?>
 </body>
 </html>

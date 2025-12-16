@@ -41,6 +41,10 @@
       allRespondedCelebrated: false
     };
     var lockToastState = {};
+    var firebaseDb = null;
+    var firebaseRef = null;
+    var realtimeStatuses = {}; // key -> status
+    var realtimeConnected = false;
 
     // OPTIMIZATION: Adaptive polling with backoff (like student view)
     var pollFailureCount = 0;
@@ -6673,6 +6677,10 @@
         return;
       }
 
+      // 1. FIREBASE WRITE (Instant)
+      setFirebaseStatus(email, 'ACTIVE');
+
+      // 2. SERVER WRITE (Canonical)
       google.script.run
         .withSuccessHandler(async function (response) {
           if (response.ok) {
@@ -6829,6 +6837,13 @@
 
       var restore = setButtonLoadingState(buttonElement, 'Blocking...');
       try {
+        // 1. FIREBASE WRITE (Instant)
+        // 'BLOCKED' or 'LOCKED' depending on implementation. The user asked for "Lock/Unlock buttons that write to RTDB".
+        // The contract says: ACTIVE | LOCKED | DISCONNECTED | FINISHED
+        // So we write 'LOCKED'.
+        setFirebaseStatus(student.email, 'LOCKED');
+
+        // 2. SERVER WRITE (Canonical)
         await runTeacherBlock(student.email, pollId, '');
         pollForResults();
       } catch (error) {
@@ -10493,6 +10508,156 @@
 
     console.log('✓ Teacher Panel Ready (Enhanced UI)');
 
+    // --- FIREBASE MISSION CONTROL ---
+    function initFirebaseMissionControl(pollId) {
+        if (!FIREBASE_CONFIG || !pollId) return;
+
+        // Prevent double init
+        if (firebaseRef && currentMissionControlPollId === pollId) return;
+
+        if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+            firebase.initializeApp(FIREBASE_CONFIG);
+        }
+
+        if (typeof firebase !== 'undefined') {
+            firebaseDb = firebase.database();
+
+            // Unsubscribe previous
+            if (firebaseRef) {
+                firebaseRef.off();
+            }
+
+            var path = 'sessions/' + pollId + '/students';
+            firebaseRef = firebaseDb.ref(path);
+
+            // Connection State
+            var connectedRef = firebaseDb.ref('.info/connected');
+            connectedRef.on('value', function(snap) {
+                realtimeConnected = snap.val() === true;
+                updateRealtimeIndicator();
+                updateDebugHud();
+            });
+
+            // Listen for changes
+            firebaseRef.on('value', function(snapshot) {
+                realtimeStatuses = snapshot.val() || {};
+                updateRealtimeUI();
+                updateDebugHud();
+            });
+
+            console.log('[Firebase] Mission Control initialized for', path);
+        }
+    }
+
+    function updateRealtimeIndicator() {
+        var indicator = document.getElementById('realtime-indicator');
+        if (!indicator) {
+            var headerMeta = document.getElementById('individual-session-meta');
+            if (headerMeta) {
+                var badge = document.createElement('span');
+                badge.id = 'realtime-indicator';
+                badge.className = 'ml-4 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold';
+                headerMeta.appendChild(badge);
+            }
+        }
+
+        var badgeEl = document.getElementById('realtime-indicator');
+        if (badgeEl) {
+            if (realtimeConnected) {
+                badgeEl.className = 'ml-4 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-700 border border-green-200';
+                badgeEl.innerHTML = '<span class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span> Realtime Active';
+            } else {
+                badgeEl.className = 'ml-4 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 border border-red-200';
+                badgeEl.innerHTML = '<span class="h-2 w-2 rounded-full bg-red-500"></span> Realtime OFF (Polling mode)';
+            }
+        }
+    }
+
+    async function updateRealtimeUI() {
+        // Loop through local `missionControlStudents` and update their status if Firebase has newer data
+        if (!missionControlStudents || !currentMissionControlPollId) return;
+
+        var updatesFound = false;
+
+        // Parallel async is okay here since we just flag updatesFound
+        await Promise.all(missionControlStudents.map(async function(student) {
+            var key = await window.VeritasShared.generateStudentKey(student.email, currentMissionControlPollId);
+            var rtStatus = realtimeStatuses[key];
+
+            if (rtStatus) {
+                // Map RT status to local status strings
+                // Firebase: ACTIVE, LOCKED, DISCONNECTED, FINISHED
+                // Local: "In Progress", "Locked", "Offline", "Submitted", "Not Started"
+
+                var newStatus = student.status;
+                var newConnection = student.connection ? student.connection.status : 'GRAY';
+
+                if (rtStatus === 'ACTIVE') {
+                    // Only override if not already something final
+                    if (student.status !== 'Submitted') {
+                        // If it was Locked, this is an Unlock
+                        newStatus = 'In Progress';
+                    }
+                    newConnection = 'GREEN';
+                } else if (rtStatus === 'LOCKED') {
+                    newStatus = 'Locked';
+                    student.proctorStatus = 'LOCKED'; // Force proctor flag
+                    newConnection = 'GREEN'; // Still connected, just locked
+                } else if (rtStatus === 'DISCONNECTED') {
+                    newConnection = 'RED';
+                } else if (rtStatus === 'FINISHED') {
+                    newStatus = 'Submitted';
+                    newConnection = 'GREEN';
+                }
+
+                // If changed, update and flag for render
+                if (student.status !== newStatus || (student.connection && student.connection.status !== newConnection)) {
+                    student.status = newStatus;
+                    if (!student.connection) student.connection = {};
+                    student.connection.status = newConnection;
+                    updatesFound = true;
+                }
+            }
+        }));
+
+        if (updatesFound) {
+            // Re-render the grid
+            renderIndividualStudentCards({ students: missionControlStudents });
+        }
+    }
+
+    async function setFirebaseStatus(email, status) {
+        if (!firebaseRef || !email || !currentMissionControlPollId) return;
+        var key = await window.VeritasShared.generateStudentKey(email, currentMissionControlPollId);
+        firebaseRef.child(key).set(status);
+    }
+
+    // DEBUG HUD
+    function updateDebugHud() {
+        if (!Veritas.Config.DEBUG_FIREBASE) return;
+
+        var hud = document.getElementById('firebase-debug-hud');
+        if (!hud) {
+            hud = document.createElement('div');
+            hud.id = 'firebase-debug-hud';
+            hud.style.cssText = 'position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,0.8);color:lime;font-family:monospace;font-size:10px;padding:10px;z-index:9999;pointer-events:none;max-width:300px;';
+            document.body.appendChild(hud);
+        }
+
+        var html = '<strong>Firebase RTDB Debug</strong><br>';
+        html += 'Connected: ' + realtimeConnected + '<br>';
+        html += 'PollId: ' + currentMissionControlPollId + '<br>';
+        html += 'Students: ' + Object.keys(realtimeStatuses).length + '<br>';
+
+        // Sample first student
+        var keys = Object.keys(realtimeStatuses);
+        if (keys.length > 0) {
+            html += 'Sample (' + keys[0].substring(0,8) + '...): ' + realtimeStatuses[keys[0]];
+        }
+
+        hud.innerHTML = html;
+    }
+
     // --- Individual Timed Session ---
     function onStartIndividualTimed() {
       var pollId = pollSelect.value;
@@ -10540,6 +10705,14 @@
         var limitLabel = view.timeLimitMinutes ? view.timeLimitMinutes + ' min limit' : 'Untimed';
         metaEl.textContent = limitLabel + ' • ' + (view.students ? view.students.length : 0) + ' learners';
       }
+
+      // INIT FIREBASE (or re-assert UI if already init)
+      initFirebaseMissionControl(view.pollId);
+      // Force UI update if already connected (because metaEl might have been wiped)
+      if (realtimeConnected) {
+          updateRealtimeIndicator();
+      }
+
       renderIndividualStudentCards(view);
       pollIndividualSessionState();
 
@@ -10885,6 +11058,8 @@
           missionControlPollFailures = 0;
           missionControlBackoffMs = 0;
           renderIndividualStudentCards(view);
+          // Re-apply realtime statuses immediately to prevent flickering
+          updateRealtimeUI();
         })
         .withFailureHandler(function (error) {
           var errorMsg = error && error.message ? error.message : String(error);
@@ -11500,6 +11675,9 @@
     if (studentManagerUnlock) {
       studentManagerUnlock.addEventListener('click', function () {
         if (!currentManagedStudent || !currentMissionControlPollId) { return; }
+        // 1. FIREBASE (Instant)
+        setFirebaseStatus(currentManagedStudent.email, 'ACTIVE');
+        // 2. SERVER (Sync)
         approveStudentUnlock(currentManagedStudent.email, currentMissionControlPollId, currentManagedStudent.lockVersion || 0, studentManagerUnlock);
       });
     }

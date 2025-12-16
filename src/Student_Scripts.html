@@ -28,6 +28,119 @@
         var secureCountdownTotal = 0;
         var bodyEl = document.body;
         var secureCloseTimer = null;
+        var firebaseDb = null;
+        var firebaseRef = null;
+        var studentKey = null;
+
+        // --- FIREBASE INIT ---
+        async function initFirebaseSidecar(pollId, studentEmail) {
+            if (!FIREBASE_CONFIG || !pollId || !studentEmail) return;
+
+            if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+                firebase.initializeApp(FIREBASE_CONFIG);
+            }
+
+            if (typeof firebase !== 'undefined') {
+                firebaseDb = firebase.database();
+                // Deterministic key generation
+                studentKey = await window.VeritasShared.generateStudentKey(studentEmail, pollId);
+
+                var path = 'sessions/' + pollId + '/students/' + studentKey;
+                firebaseRef = firebaseDb.ref(path);
+
+                // 1. Set Initial State with Read-Before-Write
+                // Only set ACTIVE if current is null/undefined or DISCONNECTED.
+                // Do NOT overwrite LOCKED or FINISHED.
+                firebaseRef.once('value').then(function(snapshot) {
+                    var current = snapshot.val();
+                    if (!current || current === 'DISCONNECTED') {
+                        firebaseRef.set('ACTIVE');
+                    }
+                });
+
+                // 2. On Disconnect -> DISCONNECTED
+                firebaseRef.onDisconnect().set('DISCONNECTED');
+
+                // 3. Listen for changes (Remote Lock/Unlock)
+                firebaseRef.on('value', function(snapshot) {
+                    var status = snapshot.val();
+                    handleRemoteStatusChange(status);
+                    updateDebugHud(status);
+                });
+
+                // Connection State for HUD
+                firebaseDb.ref('.info/connected').on('value', function(snap) {
+                    var connected = snap.val() === true;
+                    updateDebugHud(null, connected);
+                });
+
+                console.log('[Firebase] Sidecar initialized for', path);
+            }
+        }
+
+        function updateDebugHud(status, connected) {
+            if (!FIREBASE_CONFIG || !Veritas.Config.DEBUG_FIREBASE) return;
+
+            var hud = document.getElementById('firebase-debug-hud');
+            if (!hud) {
+                hud = document.createElement('div');
+                hud.id = 'firebase-debug-hud';
+                hud.style.cssText = 'position:fixed;bottom:10px;left:10px;background:rgba(0,0,0,0.8);color:lime;font-family:monospace;font-size:10px;padding:10px;z-index:9999;pointer-events:none;max-width:300px;';
+                document.body.appendChild(hud);
+            }
+
+            // We store state on the DOM element dataset for merging updates
+            if (status !== undefined && status !== null) hud.dataset.status = status;
+            if (connected !== undefined && connected !== null) hud.dataset.connected = connected;
+
+            var currentStatus = hud.dataset.status || 'UNKNOWN';
+            var isConnected = hud.dataset.connected === 'true';
+
+            var html = '<strong>Firebase RTDB Debug (Student)</strong><br>';
+            html += 'Connected: ' + isConnected + '<br>';
+            html += 'StudentKey: ' + (studentKey ? studentKey.substring(0, 8) + '...' : 'N/A') + '<br>';
+            html += 'Status: ' + currentStatus;
+
+            hud.innerHTML = html;
+        }
+
+        function handleRemoteStatusChange(status) {
+            console.log('[Firebase] Remote status update:', status);
+            if (status === 'LOCKED') {
+                // Server commanded lock
+                if (!LockManager.isLocked()) {
+                    LockManager.lock('Teacher Remote Lock');
+                }
+            } else if (status === 'ACTIVE') {
+                // Server commanded unlock
+                if (LockManager.isLocked()) {
+                    // Force unlock via server approval flow
+                    // We simulate the server approval response here for speed
+                    console.log('[Firebase] Remote unlock received');
+                    // We rely on the existing polling loop to pick up the "official" unlock
+                    // BUT for instant UX, we can optimistically unlock if we trust the source.
+                    // Given the prompt says "Student cannot self-unlock; only teacher can set ACTIVE",
+                    // and this event comes from Firebase (written by teacher), we trust it.
+                    LockManager.unlock();
+
+                    // Clear Poison Pill immediately
+                    try {
+                        sessionStorage.removeItem('veritas_lock_active');
+                        sessionStorage.removeItem('is_locally_locked');
+                        sessionStorage.removeItem('lock_reason');
+                    } catch(e) {}
+
+                    // Resume polling
+                    startPolling(true);
+                }
+            }
+        }
+
+        function reportFirebaseViolation(reason) {
+            if (firebaseRef) {
+                firebaseRef.set('LOCKED');
+            }
+        }
 
         var secureCountdownController = window.SecureAssessmentShared.createCountdown({
             onTick: function (seconds) {
@@ -1466,6 +1579,9 @@
                 console.log('[Proctor] Violation detected:', reason, '- blocking interaction immediately');
                 isInteractionBlocked = true;
                 showLockEnforcementUI('Fullscreen required', 'Reporting violation to teacher...');
+
+                // FIREBASE: Instant Lock
+                reportFirebaseViolation(reason);
             }
 
             if (violationDebounceTimer) {
@@ -1488,6 +1604,10 @@
                 violationLogged = true;
                 isInteractionBlocked = true;
                 console.log('[Proctor] Reporting violation to server:', reason, 'pollId:', activePollId);
+
+                // FIREBASE: Ensure locked state is set
+                reportFirebaseViolation(reason);
+
                 showLockEnforcementUI('Fullscreen required', 'Return to fullscreen and wait for your teacher to resume the assessment.');
                 google.script.run
                     .withSuccessHandler(function (response) {
@@ -2618,6 +2738,12 @@
 
             data = data || {};
             console.log('[ViewManager] Update View State:', data);
+
+            // FIREBASE INIT CHECK (Lazy)
+            if (!firebaseRef && data.pollId && data.studentEmail) {
+                // Now async, but that's fine, it will init in background
+                initFirebaseSidecar(data.pollId, data.studentEmail);
+            }
 
             // 1. SOVEREIGN LOCK CHECK
             // If local machine is locked, it STAYS locked unless Server Explicitly Approves Unlock

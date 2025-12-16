@@ -5975,7 +5975,9 @@
 
       // FIX: Initialize Firebase for Live Polls (was only being done for Individual Timed)
       // This enables real-time proctoring status on the teacher dashboard for Live Polls
+      // Set currentMissionControlPollId BEFORE init so the double-init guard works
       if (CURRENT_POLL_DATA.pollId) {
+        currentMissionControlPollId = CURRENT_POLL_DATA.pollId;
         initFirebaseMissionControl(CURRENT_POLL_DATA.pollId);
       }
       CURRENT_POLL_DATA.totalQuestions = data.totalQuestions;

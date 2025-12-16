@@ -19,7 +19,7 @@ Veritas.Config.STUDENT_TOKEN_MAP_KEY = 'STUDENT_TOKENS';
 Veritas.Config.STUDENT_TOKEN_INDEX_KEY = 'STUDENT_TOKEN_INDEX';
 
 // --- EXAM CONFIGURATION ---
-Veritas.Config.DEBUG_FIREBASE = true; // Toggle for on-screen debug HUD
+Veritas.Config.DEBUG_FIREBASE = false; // Toggle for on-screen debug HUD (set true to show Firebase connection status)
 Veritas.Config.ALLOW_MANUAL_EXAM_CLAIM = false; // Set to true to allow manual student ID entry if token is missing
 // Firebase Config
 Veritas.Config.FIREBASE_CONFIG = {

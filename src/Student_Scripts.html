@@ -33,6 +33,8 @@
         var studentKey = null;
 
         // --- FIREBASE INIT ---
+        var currentFirebasePollId = null; // Store pollId for debug HUD
+
         async function initFirebaseSidecar(pollId, studentEmail) {
             if (!FIREBASE_CONFIG || !pollId || !studentEmail) return;
 
@@ -44,6 +46,7 @@
                 firebaseDb = firebase.database();
                 // Deterministic key generation
                 studentKey = await window.VeritasShared.generateStudentKey(studentEmail, pollId);
+                currentFirebasePollId = pollId; // Store for debug HUD
 
                 var path = 'sessions/' + pollId + '/students/' + studentKey;
                 firebaseRef = firebaseDb.ref(path);
@@ -65,41 +68,44 @@
                 firebaseRef.on('value', function(snapshot) {
                     var status = snapshot.val();
                     handleRemoteStatusChange(status);
-                    updateDebugHud(status);
+                    updateDebugHud(status, null, currentFirebasePollId);
                 });
 
                 // Connection State for HUD
                 firebaseDb.ref('.info/connected').on('value', function(snap) {
                     var connected = snap.val() === true;
-                    updateDebugHud(null, connected);
+                    updateDebugHud(null, connected, currentFirebasePollId);
                 });
 
                 console.log('[Firebase] Sidecar initialized for', path);
             }
         }
 
-        function updateDebugHud(status, connected) {
+        function updateDebugHud(status, connected, pollId) {
             if (!FIREBASE_CONFIG || !Veritas.Config.DEBUG_FIREBASE) return;
 
             var hud = document.getElementById('firebase-debug-hud');
             if (!hud) {
                 hud = document.createElement('div');
                 hud.id = 'firebase-debug-hud';
-                hud.style.cssText = 'position:fixed;bottom:10px;left:10px;background:rgba(0,0,0,0.8);color:lime;font-family:monospace;font-size:10px;padding:10px;z-index:9999;pointer-events:none;max-width:300px;';
+                hud.style.cssText = 'position:fixed;bottom:10px;left:10px;background:rgba(0,0,0,0.8);color:lime;font-family:monospace;font-size:10px;padding:10px;z-index:9999;pointer-events:none;max-width:300px;border-radius:4px;';
                 document.body.appendChild(hud);
             }
 
             // We store state on the DOM element dataset for merging updates
             if (status !== undefined && status !== null) hud.dataset.status = status;
             if (connected !== undefined && connected !== null) hud.dataset.connected = connected;
+            if (pollId !== undefined && pollId !== null) hud.dataset.pollId = pollId;
 
             var currentStatus = hud.dataset.status || 'UNKNOWN';
             var isConnected = hud.dataset.connected === 'true';
+            var currentPollId = hud.dataset.pollId || 'N/A';
 
-            var html = '<strong>Firebase RTDB Debug (Student)</strong><br>';
-            html += 'Connected: ' + isConnected + '<br>';
+            var html = '<strong>🔥 Firebase Debug (Student)</strong><br>';
+            html += '<span style="color:' + (isConnected ? '#4ade80' : '#f87171') + '">●</span> Connected: ' + isConnected + '<br>';
+            html += 'PollId: ' + currentPollId + '<br>';
             html += 'StudentKey: ' + (studentKey ? studentKey.substring(0, 8) + '...' : 'N/A') + '<br>';
-            html += 'Status: ' + currentStatus;
+            html += 'Status: <span style="color:' + (currentStatus === 'LOCKED' ? '#f87171' : currentStatus === 'ACTIVE' ? '#4ade80' : '#facc15') + '">' + currentStatus + '</span>';
 
             hud.innerHTML = html;
         }
@@ -2824,6 +2830,143 @@
             // Resume controls logic (legacy cleanup)
             var resumeControls = document.getElementById('resume-controls');
             if (resumeControls) resumeControls.style.display = 'none';
+        }
+
+        // =============================================================================
+        // LIVE POLL QUESTION RENDERER (FIX: Was undefined, causing blank question view)
+        // =============================================================================
+        function renderQuestion(data) {
+            // Defensive guard: if critical elements are missing, show error
+            if (!questionContainer || !optionsList || !questionTextEl) {
+                console.error('[renderQuestion] Critical DOM elements missing');
+                var errorOverlay = document.getElementById('render-error-overlay');
+                if (!errorOverlay) {
+                    errorOverlay = document.createElement('div');
+                    errorOverlay.id = 'render-error-overlay';
+                    errorOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;color:white;font-family:sans-serif;';
+                    errorOverlay.innerHTML = '<h2 style="font-size:24px;margin-bottom:16px;">Unable to Load Question</h2><p style="max-width:400px;text-align:center;">Critical UI elements are missing. Please refresh the page or contact your teacher.</p>';
+                    document.body.appendChild(errorOverlay);
+                }
+                return;
+            }
+
+            currentPollState = data;
+            console.log('[renderQuestion] Rendering Live Poll question:', data);
+
+            // Derive question key for change detection
+            var resetTimestamp = (data.metadata && data.metadata.resetAt) ? data.metadata.resetAt : '';
+            var newQuestionKey = data.pollId + ':' + data.questionIndex + ':' + resetTimestamp;
+
+            // Check if question has changed
+            var questionChanged = (currentQuestionKey !== newQuestionKey);
+            if (questionChanged) {
+                console.log('[renderQuestion] Question changed from', currentQuestionKey, 'to', newQuestionKey);
+                currentQuestionKey = newQuestionKey;
+                hasAnsweredCurrent = !!data.hasSubmitted;
+                pendingSubmission = false;
+                currentOptionLayout = [];
+                liveSessionActive = true;
+            }
+
+            // Update metacognition setting for this question
+            currentMetacognitionEnabled = !!data.metacognitionEnabled;
+
+            // Update question progress (fixes "QUESTION --" display)
+            updateQuestionProgress(data.questionIndex, data.totalQuestions);
+
+            // Show question container, hide status
+            questionContainer.style.display = 'block';
+            if (statusContainer) statusContainer.style.display = 'none';
+
+            // Set question text
+            if (questionTextEl) {
+                questionTextEl.textContent = data.questionText || '';
+            }
+
+            // Handle question image
+            var hasQuestionImage = !!data.questionImageURL;
+            if (questionImageEl) {
+                if (hasQuestionImage) {
+                    questionImageEl.src = data.questionImageURL;
+                    questionImageEl.style.display = 'block';
+                } else {
+                    questionImageEl.style.display = 'none';
+                }
+            }
+            if (questionLayout) {
+                questionLayout.classList.toggle('no-image', !hasQuestionImage);
+            }
+            if (questionVisual) {
+                questionVisual.style.display = hasQuestionImage ? 'flex' : 'none';
+            }
+
+            // Hide subline (used for results stage)
+            if (questionSublineEl) {
+                questionSublineEl.classList.add('hidden');
+                questionSublineEl.textContent = '';
+            }
+            if (noResponsesMessageEl) {
+                noResponsesMessageEl.classList.add('hidden');
+                noResponsesMessageEl.textContent = '';
+            }
+
+            // Clear results decorations
+            questionContainer.classList.remove('results-stage', 'showing-results');
+
+            // Render options only if question changed or options empty
+            if (questionChanged || optionsList.children.length === 0) {
+                var options = data.options || [];
+                var letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+
+                // Apply shuffle if enabled (and question just changed)
+                if (questionChanged && data.shuffleOptions) {
+                    options = shuffle(options.slice());
+                }
+
+                optionsList.innerHTML = '';
+                currentOptionLayout = [];
+
+                options.forEach(function(option, index) {
+                    var normalized = {
+                        text: (typeof option === 'string') ? option : (option.text || ''),
+                        imageURL: (typeof option === 'object') ? (option.imageURL || option.imageUrl || '') : ''
+                    };
+                    var letter = letters[index] || (index + 1).toString();
+                    var btn = createOptionButton(normalized, letter, data.pollId, data.questionIndex);
+
+                    // Disable if already answered
+                    if (hasAnsweredCurrent) {
+                        btn.disabled = true;
+                        btn.classList.add('answer-option-disabled');
+                    }
+
+                    var listItem = document.createElement('li');
+                    listItem.appendChild(btn);
+                    optionsList.appendChild(listItem);
+
+                    currentOptionLayout.push({
+                        text: normalized.text,
+                        imageURL: normalized.imageURL
+                    });
+                });
+            } else if (hasAnsweredCurrent) {
+                // Ensure buttons are disabled if already answered
+                var buttons = optionsList.querySelectorAll('button');
+                buttons.forEach(function(btn) {
+                    btn.disabled = true;
+                });
+            }
+
+            // If already answered, show waiting state
+            if (hasAnsweredCurrent && statusMessage) {
+                statusMessage.textContent = 'Answer received - nice work.';
+                statusMessage.className = 'text-green-700 text-2xl font-semibold';
+                if (statusSubMessage) {
+                    statusSubMessage.textContent = 'Your teacher will reveal the answer shortly...';
+                    statusSubMessage.style.display = 'block';
+                    statusSubMessage.className = 'text-gray-700 text-lg mt-4';
+                }
+            }
         }
 
         function submitAnswer(pollId, questionIndex, answerText) {

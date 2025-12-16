@@ -13,6 +13,9 @@
 
   <script>
     var FIREBASE_CONFIG = <?!= JSON.stringify(firebaseConfig) ?>;
+    var Veritas = Veritas || {};
+    Veritas.Config = Veritas.Config || {};
+    Veritas.Config.DEBUG_FIREBASE = <?!= Veritas.Config.DEBUG_FIREBASE ? 'true' : 'false' ?>;
   </script>
 
   <!-- Google Charts -->
@@ -23,6 +26,7 @@
 </head>
 <body class="light">
   <?!= include('Teacher_Body'); ?>
+  <?!= include('Common_Scripts'); ?>
   <?!= include('Teacher_Scripts'); ?>
 </body>
 </html>

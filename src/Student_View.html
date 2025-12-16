@@ -14,6 +14,9 @@
   <script>
     window.SESSION_TOKEN = '<?= sessionToken ?>';
     var FIREBASE_CONFIG = <?!= JSON.stringify(firebaseConfig) ?>;
+    var Veritas = Veritas || {};
+    Veritas.Config = Veritas.Config || {};
+    Veritas.Config.DEBUG_FIREBASE = <?!= Veritas.Config.DEBUG_FIREBASE ? 'true' : 'false' ?>;
   </script>
 
   <?!= include('Common_Styles'); ?>
@@ -21,6 +24,7 @@
 </head>
 <body class="light">
   <?!= include('Student_Body'); ?>
+  <?!= include('Common_Scripts'); ?>
   <?!= include('Student_Scripts'); ?>
 </body>
 </html>

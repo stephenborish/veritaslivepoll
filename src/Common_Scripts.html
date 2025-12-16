@@ -1,0 +1,46 @@
+<script>
+(function(global) {
+  'use strict';
+
+  // Deterministic Student Key Generation (SHA-256)
+  // This matches the user's requirement for a collision-resistant key.
+  // We use Web Crypto API which is available in modern browsers.
+
+  async function generateStudentHash(email, pollId) {
+    if (!email) return 'unknown_student';
+
+    // Normalize: lowercase, trim
+    const normalized = email.toLowerCase().trim();
+
+    // Namespace with pollId if provided (optional but good for isolation)
+    const data = pollId ? `${pollId}:${normalized}` : normalized;
+
+    const encoder = new TextEncoder();
+    const dataBuffer = encoder.encode(data);
+
+    try {
+      const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      // Convert to hex string
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      // Return first 16 chars as key (enough entropy for this context)
+      return hashHex.substring(0, 16);
+    } catch (e) {
+      console.warn('Web Crypto unavailable, falling back to simple hash', e);
+      // Fallback for very old browsers (unlikely in this context but safe)
+      var hash = 0;
+      for (var i = 0; i < data.length; i++) {
+        var char = data.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+      }
+      return 'fb_' + Math.abs(hash).toString(16);
+    }
+  }
+
+  // Export
+  global.VeritasShared = global.VeritasShared || {};
+  global.VeritasShared.generateStudentKey = generateStudentHash;
+
+})(this);
+</script>

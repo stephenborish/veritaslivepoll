@@ -33,7 +33,7 @@
         var studentKey = null;
 
         // --- FIREBASE INIT ---
-        function initFirebaseSidecar(pollId, studentEmail) {
+        async function initFirebaseSidecar(pollId, studentEmail) {
             if (!FIREBASE_CONFIG || !pollId || !studentEmail) return;
 
             if (typeof firebase !== 'undefined' && !firebase.apps.length) {
@@ -42,16 +42,20 @@
 
             if (typeof firebase !== 'undefined') {
                 firebaseDb = firebase.database();
-                // Deterministic key generation: sanitize email
-                studentKey = studentEmail.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                // Deterministic key generation
+                studentKey = await window.VeritasShared.generateStudentKey(studentEmail, pollId);
+
                 var path = 'sessions/' + pollId + '/students/' + studentKey;
                 firebaseRef = firebaseDb.ref(path);
 
-                // 1. Set Initial State
-                // Don't overwrite if already LOCKED unless we are resuming
-                firebaseRef.transaction(function(currentData) {
-                    if (currentData === 'LOCKED') return; // Respect lock
-                    return 'ACTIVE';
+                // 1. Set Initial State with Read-Before-Write
+                // Only set ACTIVE if current is null/undefined or DISCONNECTED.
+                // Do NOT overwrite LOCKED or FINISHED.
+                firebaseRef.once('value').then(function(snapshot) {
+                    var current = snapshot.val();
+                    if (!current || current === 'DISCONNECTED') {
+                        firebaseRef.set('ACTIVE');
+                    }
                 });
 
                 // 2. On Disconnect -> DISCONNECTED
@@ -61,10 +65,43 @@
                 firebaseRef.on('value', function(snapshot) {
                     var status = snapshot.val();
                     handleRemoteStatusChange(status);
+                    updateDebugHud(status);
+                });
+
+                // Connection State for HUD
+                firebaseDb.ref('.info/connected').on('value', function(snap) {
+                    var connected = snap.val() === true;
+                    updateDebugHud(null, connected);
                 });
 
                 console.log('[Firebase] Sidecar initialized for', path);
             }
+        }
+
+        function updateDebugHud(status, connected) {
+            if (!FIREBASE_CONFIG || !Veritas.Config.DEBUG_FIREBASE) return;
+
+            var hud = document.getElementById('firebase-debug-hud');
+            if (!hud) {
+                hud = document.createElement('div');
+                hud.id = 'firebase-debug-hud';
+                hud.style.cssText = 'position:fixed;bottom:10px;left:10px;background:rgba(0,0,0,0.8);color:lime;font-family:monospace;font-size:10px;padding:10px;z-index:9999;pointer-events:none;max-width:300px;';
+                document.body.appendChild(hud);
+            }
+
+            // We store state on the DOM element dataset for merging updates
+            if (status !== undefined && status !== null) hud.dataset.status = status;
+            if (connected !== undefined && connected !== null) hud.dataset.connected = connected;
+
+            var currentStatus = hud.dataset.status || 'UNKNOWN';
+            var isConnected = hud.dataset.connected === 'true';
+
+            var html = '<strong>Firebase RTDB Debug (Student)</strong><br>';
+            html += 'Connected: ' + isConnected + '<br>';
+            html += 'StudentKey: ' + (studentKey ? studentKey.substring(0, 8) + '...' : 'N/A') + '<br>';
+            html += 'Status: ' + currentStatus;
+
+            hud.innerHTML = html;
         }
 
         function handleRemoteStatusChange(status) {
@@ -2703,8 +2740,8 @@
             console.log('[ViewManager] Update View State:', data);
 
             // FIREBASE INIT CHECK (Lazy)
-            // We do this here because we need the pollId and student email from the data payload
             if (!firebaseRef && data.pollId && data.studentEmail) {
+                // Now async, but that's fine, it will init in background
                 initFirebaseSidecar(data.pollId, data.studentEmail);
             }
 

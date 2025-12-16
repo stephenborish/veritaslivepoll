@@ -10567,21 +10567,64 @@
                 badgeEl.className = 'ml-4 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-700 border border-green-200';
                 badgeEl.innerHTML = '<span class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span> Realtime Active';
             } else {
-                badgeEl.className = 'ml-4 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold bg-gray-100 text-gray-500 border border-gray-200';
-                badgeEl.innerHTML = '<span class="h-2 w-2 rounded-full bg-gray-400"></span> Offline (Polling)';
+                badgeEl.className = 'ml-4 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 border border-red-200';
+                badgeEl.innerHTML = '<span class="h-2 w-2 rounded-full bg-red-500"></span> Realtime OFF (Polling mode)';
             }
         }
     }
 
-    function updateRealtimeUI() {
+    async function updateRealtimeUI() {
         // Loop through local `missionControlStudents` and update their status if Firebase has newer data
-        if (!missionControlStudents) return;
+        if (!missionControlStudents || !currentMissionControlPollId) return;
 
         var updatesFound = false;
-        missionControlStudents.forEach(function(student) {
-            // Key generation must match student side: sanitize email
-            var key = student.email.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+
+        // Parallel async is okay here since we just flag updatesFound
+        await Promise.all(missionControlStudents.map(async function(student) {
+            var key = await window.VeritasShared.generateStudentKey(student.email, currentMissionControlPollId);
             var rtStatus = realtimeStatuses[key];
+
+            if (rtStatus) {
+                // Map RT status to local status strings
+                // Firebase: ACTIVE, LOCKED, DISCONNECTED, FINISHED
+                // Local: "In Progress", "Locked", "Offline", "Submitted", "Not Started"
+
+                var newStatus = student.status;
+                var newConnection = student.connection ? student.connection.status : 'GRAY';
+
+                if (rtStatus === 'ACTIVE') {
+                    // Only override if not already something final
+                    if (student.status !== 'Submitted') {
+                        // If it was Locked, this is an Unlock
+                        newStatus = 'In Progress';
+                    }
+                    newConnection = 'GREEN';
+                } else if (rtStatus === 'LOCKED') {
+                    newStatus = 'Locked';
+                    student.proctorStatus = 'LOCKED'; // Force proctor flag
+                    newConnection = 'GREEN'; // Still connected, just locked
+                } else if (rtStatus === 'DISCONNECTED') {
+                    newConnection = 'RED';
+                } else if (rtStatus === 'FINISHED') {
+                    newStatus = 'Submitted';
+                    newConnection = 'GREEN';
+                }
+
+                // If changed, update and flag for render
+                if (student.status !== newStatus || (student.connection && student.connection.status !== newConnection)) {
+                    student.status = newStatus;
+                    if (!student.connection) student.connection = {};
+                    student.connection.status = newConnection;
+                    updatesFound = true;
+                }
+            }
+        }));
+
+        if (updatesFound) {
+            // Re-render the grid
+            renderIndividualStudentCards({ students: missionControlStudents });
+        }
+    }
 
             if (rtStatus) {
                 // Map RT status to local status strings
@@ -10625,9 +10668,9 @@
         }
     }
 
-    function setFirebaseStatus(email, status) {
-        if (!firebaseRef || !email) return;
-        var key = email.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    async function setFirebaseStatus(email, status) {
+        if (!firebaseRef || !email || !currentMissionControlPollId) return;
+        var key = await window.VeritasShared.generateStudentKey(email, currentMissionControlPollId);
         firebaseRef.child(key).set(status);
     }
 

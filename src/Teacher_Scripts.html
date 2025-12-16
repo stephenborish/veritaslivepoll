@@ -2148,20 +2148,12 @@
     bindClick('header-end-show-btn', onEndQuestionAndShowAnswer);
     bindClick('header-stop-btn', onEndPoll);
 
-    document.getElementById('header-calc-toggle')?.addEventListener('click', () => {
-      google.script.run
-        .withSuccessHandler(enabled => {
-          const btn = document.getElementById('header-calc-toggle');
-          if (!btn) return;
-          // Visual feedback for enabled state:
-          if (enabled) {
-            btn.classList.add('text-green-500');
-          } else {
-            btn.classList.remove('text-green-500');
-          }
-        })
-        .toggleSessionCalculator(CURRENT_POLL_DATA.pollId); // must match backend function name
-    });
+    // FIX TASK D: Wire calculator button to proper handler (onToggleLiveCalculator)
+    // Remove duplicate handler and use the comprehensive one defined below
+    var calcToggleBtn = document.getElementById('header-calc-toggle');
+    if (calcToggleBtn) {
+      calcToggleBtn.addEventListener('click', onToggleLiveCalculator);
+    }
 
     // Live View More Actions Menu
     bindClick('live-more-actions-btn', function (e) {
@@ -5546,18 +5538,22 @@
       liveCalculatorToggle.disabled = true;
 
       google.script.run
-        .withSuccessHandler(function (resp) {
+        .withSuccessHandler(function (enabled) {
           liveCalculatorToggle.removeAttribute('aria-busy');
           liveCalculatorToggle.disabled = false;
-          var enabled = resp && resp.calculatorEnabled === true;
-          setLiveCalculatorToggleState(enabled, true);
+          // FIX TASK D: Server returns boolean directly, not {calculatorEnabled: true}
+          var isEnabled = enabled === true;
+          setLiveCalculatorToggleState(isEnabled, true);
+          // Show toast feedback
+          showToast('success', isEnabled ? 'Calculator enabled' : 'Calculator disabled',
+                    isEnabled ? 'Students can now access the calculator.' : 'Calculator has been disabled for students.');
         })
         .withFailureHandler(function (error) {
           liveCalculatorToggle.removeAttribute('aria-busy');
           liveCalculatorToggle.disabled = false;
           handleError(error);
         })
-        .toggleSessionCalculator(pollId, targetState);
+        .toggleSessionCalculator(pollId);
     }
 
     function onRevealResults() {
@@ -5973,11 +5969,10 @@
       CURRENT_POLL_DATA.questionIndex = data.questionIndex;
       CURRENT_POLL_DATA.correctAnswer = data.correctAnswer;
 
-      // FIX: Initialize Firebase for Live Polls (was only being done for Individual Timed)
-      // This enables real-time proctoring status on the teacher dashboard for Live Polls
-      // Set currentMissionControlPollId BEFORE init so the double-init guard works
+      // FIX TASK A: Initialize Firebase for ALL proctored sessions (Live Polls + Secure Assessment)
+      // This enables real-time proctoring status on the teacher dashboard
+      // DO NOT set currentMissionControlPollId here - let initFirebaseMissionControl handle it
       if (CURRENT_POLL_DATA.pollId) {
-        currentMissionControlPollId = CURRENT_POLL_DATA.pollId;
         initFirebaseMissionControl(CURRENT_POLL_DATA.pollId);
       }
       CURRENT_POLL_DATA.totalQuestions = data.totalQuestions;
@@ -10520,8 +10515,18 @@
     function initFirebaseMissionControl(pollId) {
         if (!FIREBASE_CONFIG || !pollId) return;
 
-        // Prevent double init
-        if (firebaseRef && currentMissionControlPollId === pollId) return;
+        // FIX TASK A: Cleanup previous listeners when pollId changes to prevent leaks
+        if (firebaseRef && currentMissionControlPollId !== pollId) {
+            console.log('[Firebase] Cleaning up listeners for previous pollId:', currentMissionControlPollId);
+            firebaseRef.off();
+            firebaseRef = null;
+        }
+
+        // Prevent double init for same pollId
+        if (firebaseRef && currentMissionControlPollId === pollId) {
+            console.log('[Firebase] Already subscribed to pollId:', pollId);
+            return;
+        }
 
         if (typeof firebase !== 'undefined' && !firebase.apps.length) {
             firebase.initializeApp(FIREBASE_CONFIG);
@@ -10530,18 +10535,15 @@
         if (typeof firebase !== 'undefined') {
             firebaseDb = firebase.database();
 
-            // Unsubscribe previous
-            if (firebaseRef) {
-                firebaseRef.off();
-            }
-
             var path = 'sessions/' + pollId + '/students';
             firebaseRef = firebaseDb.ref(path);
+            currentMissionControlPollId = pollId;
 
             // Connection State
             var connectedRef = firebaseDb.ref('.info/connected');
             connectedRef.on('value', function(snap) {
                 realtimeConnected = snap.val() === true;
+                console.log('[Firebase] Connection status changed:', realtimeConnected ? 'CONNECTED' : 'DISCONNECTED', 'pollId:', pollId);
                 updateRealtimeIndicator();
                 updateDebugHud();
             });
@@ -10549,11 +10551,12 @@
             // Listen for changes
             firebaseRef.on('value', function(snapshot) {
                 realtimeStatuses = snapshot.val() || {};
+                console.log('[Firebase] Status update received for pollId:', pollId, 'Students:', Object.keys(realtimeStatuses).length);
                 updateRealtimeUI();
                 updateDebugHud();
             });
 
-            console.log('[Firebase] Mission Control initialized for', path);
+            console.log('[Firebase] Mission Control initialized for', path, 'Connected:', realtimeConnected);
         }
     }
 
@@ -10582,61 +10585,93 @@
     }
 
     async function updateRealtimeUI() {
-        // Loop through local `missionControlStudents` and update their status if Firebase has newer data
-        if (!missionControlStudents || !currentMissionControlPollId) return;
-
         var updatesFound = false;
 
-        // Parallel async is okay here since we just flag updatesFound
-        await Promise.all(missionControlStudents.map(async function(student) {
-            var key = await window.VeritasShared.generateStudentKey(student.email, currentMissionControlPollId);
-            var rtStatus = realtimeStatuses[key];
+        // FIX TASK A: Update BOTH Mission Control (Individual Timed) AND Live Poll student lists
+        // This ensures realtime updates work for ALL proctored sessions, not just Individual Timed
 
-            if (rtStatus) {
-                // Map RT status to local status strings
-                // Firebase: ACTIVE, LOCKED, DISCONNECTED, FINISHED
-                // Local: "In Progress", "Locked", "Offline", "Submitted", "Not Started"
+        // 1. Update Mission Control students (Individual Timed / Secure Assessment)
+        if (missionControlStudents && currentMissionControlPollId) {
+            await Promise.all(missionControlStudents.map(async function(student) {
+                var key = await window.VeritasShared.generateStudentKey(student.email, currentMissionControlPollId);
+                var rtStatus = realtimeStatuses[key];
 
-                var newStatus = student.status;
-                var newConnection = student.connection ? student.connection.status : 'GRAY';
+                if (rtStatus) {
+                    var newStatus = student.status;
+                    var newConnection = student.connection ? student.connection.status : 'GRAY';
 
-                if (rtStatus === 'ACTIVE') {
-                    // Only override if not already something final
-                    if (student.status !== 'Submitted') {
-                        // If it was Locked, this is an Unlock
-                        newStatus = 'In Progress';
+                    if (rtStatus === 'ACTIVE') {
+                        if (student.status !== 'Submitted') {
+                            newStatus = 'In Progress';
+                        }
+                        newConnection = 'GREEN';
+                    } else if (rtStatus === 'LOCKED') {
+                        newStatus = 'Locked';
+                        student.proctorStatus = 'LOCKED';
+                        newConnection = 'GREEN';
+                    } else if (rtStatus === 'DISCONNECTED') {
+                        newConnection = 'RED';
+                    } else if (rtStatus === 'FINISHED') {
+                        newStatus = 'Submitted';
+                        newConnection = 'GREEN';
                     }
-                    newConnection = 'GREEN';
-                } else if (rtStatus === 'LOCKED') {
-                    newStatus = 'Locked';
-                    student.proctorStatus = 'LOCKED'; // Force proctor flag
-                    newConnection = 'GREEN'; // Still connected, just locked
-                } else if (rtStatus === 'DISCONNECTED') {
-                    newConnection = 'RED';
-                } else if (rtStatus === 'FINISHED') {
-                    newStatus = 'Submitted';
-                    newConnection = 'GREEN';
-                }
 
-                // If changed, update and flag for render
-                if (student.status !== newStatus || (student.connection && student.connection.status !== newConnection)) {
-                    student.status = newStatus;
-                    if (!student.connection) student.connection = {};
-                    student.connection.status = newConnection;
-                    updatesFound = true;
+                    if (student.status !== newStatus || (student.connection && student.connection.status !== newConnection)) {
+                        student.status = newStatus;
+                        if (!student.connection) student.connection = {};
+                        student.connection.status = newConnection;
+                        updatesFound = true;
+                    }
                 }
+            }));
+
+            if (updatesFound) {
+                renderIndividualStudentCards({ students: missionControlStudents });
             }
-        }));
+        }
 
-        if (updatesFound) {
-            // Re-render the grid
-            renderIndividualStudentCards({ students: missionControlStudents });
+        // 2. Update Live Poll students (currentStudentStatusData)
+        if (currentStudentStatusData && currentStudentStatusData.length > 0 && CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId) {
+            var livePollUpdatesFound = false;
+            await Promise.all(currentStudentStatusData.map(async function(student) {
+                var key = await window.VeritasShared.generateStudentKey(student.email, CURRENT_POLL_DATA.pollId);
+                var rtStatus = realtimeStatuses[key];
+
+                if (rtStatus) {
+                    var newStatus = student.status;
+
+                    // Map Firebase status to Live Poll status strings
+                    if (rtStatus === 'ACTIVE') {
+                        if (student.status !== 'Submitted') {
+                            newStatus = 'In Progress';
+                        }
+                    } else if (rtStatus === 'LOCKED') {
+                        newStatus = 'LOCKED';
+                        student.proctorStatus = 'LOCKED';
+                    } else if (rtStatus === 'DISCONNECTED') {
+                        // Keep current status but could add offline indicator
+                    } else if (rtStatus === 'FINISHED') {
+                        newStatus = 'Submitted';
+                    }
+
+                    if (student.status !== newStatus) {
+                        student.status = newStatus;
+                        livePollUpdatesFound = true;
+                    }
+                }
+            }));
+
+            if (livePollUpdatesFound) {
+                renderStudentStatus();
+            }
         }
     }
 
     async function setFirebaseStatus(email, status) {
-        if (!firebaseRef || !email || !currentMissionControlPollId) return;
-        var key = await window.VeritasShared.generateStudentKey(email, currentMissionControlPollId);
+        // FIX TASK A: Support both Mission Control and Live Poll pollIds
+        var activePollId = currentMissionControlPollId || (CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId);
+        if (!firebaseRef || !email || !activePollId) return;
+        var key = await window.VeritasShared.generateStudentKey(email, activePollId);
         firebaseRef.child(key).set(status);
     }
 

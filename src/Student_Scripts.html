@@ -278,7 +278,31 @@
                 hideLockEnforcementUI();
             },
             renderLockScreen: function (reason) {
-                showLockEnforcementUI('SESSION LOCKED', 'Violation: ' + (reason || 'Security Policy') + '. Wait for teacher approval.');
+                // FIX TASK C: Show specific violation reason with fun-but-serious copy
+                var reasonText = reason || 'violation';
+                var title = 'Locked: proctoring violation';
+                var body = '';
+                var emoji = '🔒';
+
+                // Parse specific violation types
+                if (reasonText.toLowerCase().indexOf('fullscreen') >= 0 || reasonText.toLowerCase().indexOf('exit') >= 0) {
+                    title = 'Locked: fullscreen exited';
+                    body = 'You exited fullscreen. That\'s a proctoring violation.';
+                    emoji = '🚫';
+                } else if (reasonText.toLowerCase().indexOf('blur') >= 0 || reasonText.toLowerCase().indexOf('tab') >= 0 || reasonText.toLowerCase().indexOf('switch') >= 0) {
+                    title = 'Locked: tab switched';
+                    body = 'You switched tabs or lost focus. That\'s a proctoring violation.';
+                    emoji = '👀';
+                } else if (reasonText.toLowerCase().indexOf('visibility') >= 0) {
+                    title = 'Locked: screen focus lost';
+                    body = 'You left the exam window. That\'s a proctoring violation.';
+                    emoji = '⚠️';
+                } else {
+                    body = 'Security violation detected (' + reasonText + ').';
+                }
+
+                var fullMessage = title + '\n\n' + body + '\n\nYour teacher must approve re-entry.\n\nRaise your hand. Don\'t refresh or you\'ll stay locked.\n\n' + emoji + ' No sneaky tabs — I see you (teacher does too).';
+                showLockEnforcementUI(title, fullMessage);
             }
         };
 
@@ -737,6 +761,14 @@
         }
 
         function showIndividualTimedView(state) {
+            // FIX TASK B: LOCK GUARD - If locked, do not show question view
+            // This prevents lock bypass via view updates or server state changes
+            if (LockManager.isLocked()) {
+                console.log('[Proctor] showIndividualTimedView BLOCKED - Lock active');
+                LockManager.renderLockScreen(sessionStorage.getItem('lock_reason'));
+                return; // HALT RENDER - SECURITY BLOCK
+            }
+
             // FIX: Force hide ALL other screens to prevent "Start Screen Leak" cheating risk
             hideSecureLobby();
             if (studentLoader) studentLoader.style.display = 'none';
@@ -806,6 +838,15 @@
 
         function renderSecureQuestion(state) {
             if (!state) return;
+
+            // FIX TASK B: LOCK GUARD - If locked, do not render question content
+            // This prevents lock bypass via question navigation or view refresh
+            if (LockManager.isLocked()) {
+                console.log('[Proctor] renderSecureQuestion BLOCKED - Lock active');
+                LockManager.renderLockScreen(sessionStorage.getItem('lock_reason'));
+                return; // HALT RENDER - SECURITY BLOCK
+            }
+
             // Capture metacognition setting for this question
             secureMetacognitionEnabled = !!(state.question && state.question.metacognitionEnabled);
             var progressValue = typeof state.progressIndex === 'number'
@@ -1247,9 +1288,11 @@
             } else if (type === 'ENDED') {
                 icon = 'info';
             } else if (type === 'LOCKED') {
-                iconClass = 'text-red-300';
-                messageClass = 'text-red-300 text-xl font-semibold';
-                subClass = 'text-red-200 text-base mt-4';
+                // FIX TASK C: High-contrast styling for lock overlay (no pale pink-on-white)
+                icon = 'lock';
+                iconClass = 'text-red-600';
+                messageClass = 'text-gray-900 text-2xl font-bold';
+                subClass = 'text-gray-800 text-base mt-4 whitespace-pre-line';
                 showExitAction = false;
             }
             showStatusPanel({
@@ -2836,6 +2879,14 @@
         // LIVE POLL QUESTION RENDERER (FIX: Was undefined, causing blank question view)
         // =============================================================================
         function renderQuestion(data) {
+            // FIX TASK B: LOCK GUARD - If locked, do not render question content
+            // This prevents lock bypass via question rendering in Live Poll mode
+            if (LockManager.isLocked()) {
+                console.log('[Proctor] renderQuestion BLOCKED - Lock active');
+                LockManager.renderLockScreen(sessionStorage.getItem('lock_reason'));
+                return; // HALT RENDER - SECURITY BLOCK
+            }
+
             // Defensive guard: if critical elements are missing, show error
             if (!questionContainer || !optionsList || !questionTextEl) {
                 console.error('[renderQuestion] Critical DOM elements missing');
@@ -3440,14 +3491,14 @@
             console.log('Showing locked message');
             stopPolling();
             recoveringFromOutage = false;
-            var modeName = getModeNameLowerCase();
+            // FIX TASK C: High-contrast styling for lock message
             showStatusPanel({
                 icon: 'lock',
-                iconClass: 'text-veritas-navy',
-                message: message || 'Oops - you left fullscreen. Your ' + modeName + ' has been paused until your teacher lets you back in.',
-                messageClass: 'text-gray-900 text-xl font-semibold',
-                subtext: subMessage || '',
-                subClass: 'text-gray-700 text-base mt-4',
+                iconClass: 'text-red-600',
+                message: message || 'Locked: proctoring violation',
+                messageClass: 'text-gray-900 text-2xl font-bold',
+                subtext: subMessage || 'Your teacher must approve re-entry.',
+                subClass: 'text-gray-800 text-base mt-4 whitespace-pre-line',
                 showResume: false,
                 lockScroll: true
             });

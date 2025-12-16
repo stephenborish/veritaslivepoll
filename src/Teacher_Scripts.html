@@ -5972,6 +5972,12 @@
       CURRENT_POLL_DATA.pollId = data.pollId || pollSelect.value;
       CURRENT_POLL_DATA.questionIndex = data.questionIndex;
       CURRENT_POLL_DATA.correctAnswer = data.correctAnswer;
+
+      // FIX: Initialize Firebase for Live Polls (was only being done for Individual Timed)
+      // This enables real-time proctoring status on the teacher dashboard for Live Polls
+      if (CURRENT_POLL_DATA.pollId) {
+        initFirebaseMissionControl(CURRENT_POLL_DATA.pollId);
+      }
       CURRENT_POLL_DATA.totalQuestions = data.totalQuestions;
       CURRENT_POLL_DATA.timerSeconds = data.timerSeconds || null;
       CURRENT_POLL_DATA.options = data.options || [];

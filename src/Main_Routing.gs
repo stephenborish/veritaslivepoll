@@ -443,6 +443,7 @@ Veritas.Routing.serveExamClaimView = function(examId) {
  */
 Veritas.Routing.serveTeacherView = function() {
   var template = HtmlService.createTemplateFromFile('Teacher_View');
+  template.firebaseConfig = Veritas.Config.FIREBASE_CONFIG;
 
   return template.evaluate()
     .setTitle("Veritas Live Poll")
@@ -460,6 +461,7 @@ Veritas.Routing.serveStudentView = function(studentEmail, token) {
   var template = HtmlService.createTemplateFromFile('Student_View');
   template.studentEmail = studentEmail;
   template.sessionToken = token || '';
+  template.firebaseConfig = Veritas.Config.FIREBASE_CONFIG;
 
   return template.evaluate()
     .setTitle("Veritas Live Poll")

@@ -28,6 +28,82 @@
         var secureCountdownTotal = 0;
         var bodyEl = document.body;
         var secureCloseTimer = null;
+        var firebaseDb = null;
+        var firebaseRef = null;
+        var studentKey = null;
+
+        // --- FIREBASE INIT ---
+        function initFirebaseSidecar(pollId, studentEmail) {
+            if (!FIREBASE_CONFIG || !pollId || !studentEmail) return;
+
+            if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+                firebase.initializeApp(FIREBASE_CONFIG);
+            }
+
+            if (typeof firebase !== 'undefined') {
+                firebaseDb = firebase.database();
+                // Deterministic key generation: sanitize email
+                studentKey = studentEmail.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                var path = 'sessions/' + pollId + '/students/' + studentKey;
+                firebaseRef = firebaseDb.ref(path);
+
+                // 1. Set Initial State
+                // Don't overwrite if already LOCKED unless we are resuming
+                firebaseRef.transaction(function(currentData) {
+                    if (currentData === 'LOCKED') return; // Respect lock
+                    return 'ACTIVE';
+                });
+
+                // 2. On Disconnect -> DISCONNECTED
+                firebaseRef.onDisconnect().set('DISCONNECTED');
+
+                // 3. Listen for changes (Remote Lock/Unlock)
+                firebaseRef.on('value', function(snapshot) {
+                    var status = snapshot.val();
+                    handleRemoteStatusChange(status);
+                });
+
+                console.log('[Firebase] Sidecar initialized for', path);
+            }
+        }
+
+        function handleRemoteStatusChange(status) {
+            console.log('[Firebase] Remote status update:', status);
+            if (status === 'LOCKED') {
+                // Server commanded lock
+                if (!LockManager.isLocked()) {
+                    LockManager.lock('Teacher Remote Lock');
+                }
+            } else if (status === 'ACTIVE') {
+                // Server commanded unlock
+                if (LockManager.isLocked()) {
+                    // Force unlock via server approval flow
+                    // We simulate the server approval response here for speed
+                    console.log('[Firebase] Remote unlock received');
+                    // We rely on the existing polling loop to pick up the "official" unlock
+                    // BUT for instant UX, we can optimistically unlock if we trust the source.
+                    // Given the prompt says "Student cannot self-unlock; only teacher can set ACTIVE",
+                    // and this event comes from Firebase (written by teacher), we trust it.
+                    LockManager.unlock();
+
+                    // Clear Poison Pill immediately
+                    try {
+                        sessionStorage.removeItem('veritas_lock_active');
+                        sessionStorage.removeItem('is_locally_locked');
+                        sessionStorage.removeItem('lock_reason');
+                    } catch(e) {}
+
+                    // Resume polling
+                    startPolling(true);
+                }
+            }
+        }
+
+        function reportFirebaseViolation(reason) {
+            if (firebaseRef) {
+                firebaseRef.set('LOCKED');
+            }
+        }
 
         var secureCountdownController = window.SecureAssessmentShared.createCountdown({
             onTick: function (seconds) {
@@ -1466,6 +1542,9 @@
                 console.log('[Proctor] Violation detected:', reason, '- blocking interaction immediately');
                 isInteractionBlocked = true;
                 showLockEnforcementUI('Fullscreen required', 'Reporting violation to teacher...');
+
+                // FIREBASE: Instant Lock
+                reportFirebaseViolation(reason);
             }
 
             if (violationDebounceTimer) {
@@ -1488,6 +1567,10 @@
                 violationLogged = true;
                 isInteractionBlocked = true;
                 console.log('[Proctor] Reporting violation to server:', reason, 'pollId:', activePollId);
+
+                // FIREBASE: Ensure locked state is set
+                reportFirebaseViolation(reason);
+
                 showLockEnforcementUI('Fullscreen required', 'Return to fullscreen and wait for your teacher to resume the assessment.');
                 google.script.run
                     .withSuccessHandler(function (response) {
@@ -2618,6 +2701,12 @@
 
             data = data || {};
             console.log('[ViewManager] Update View State:', data);
+
+            // FIREBASE INIT CHECK (Lazy)
+            // We do this here because we need the pollId and student email from the data payload
+            if (!firebaseRef && data.pollId && data.studentEmail) {
+                initFirebaseSidecar(data.pollId, data.studentEmail);
+            }
 
             // 1. SOVEREIGN LOCK CHECK
             // If local machine is locked, it STAYS locked unless Server Explicitly Approves Unlock

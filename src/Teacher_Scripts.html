@@ -5271,6 +5271,13 @@
 
         google.script.run
           .withSuccessHandler(function (result) {
+            // Soft-fail check
+            if (result && (result.success === false || result.error)) {
+              setButtonLoading(startPollBtn, false);
+              var msg = result.message || result.error || 'Unknown error starting secure session';
+              veritasAlert(msg, { title: 'Unable to Start Session', destructive: true });
+              return;
+            }
             setButtonLoading(startPollBtn, false);
             showIndividualTimedDashboard(result);
           })
@@ -5296,6 +5303,13 @@
       // Default to live session
       google.script.run
         .withSuccessHandler(function (data) {
+          // Soft-fail check
+          if (data && (data.success === false || data.error)) {
+            setButtonLoading(startPollBtn, false);
+            var msg = data.message || data.error || 'Unknown error starting poll';
+            veritasAlert(msg, { title: 'Unable to Start Poll', destructive: true });
+            return;
+          }
           setButtonLoading(startPollBtn, false);
           updateLiveView(data);
         })
@@ -5322,7 +5336,15 @@
         return;
       }
       google.script.run
-        .withSuccessHandler(updateLiveView)
+        .withSuccessHandler(function(data) {
+          // Soft-fail check
+          if (data && (data.success === false || data.error)) {
+            var msg = data.message || data.error || 'Unknown error resuming poll';
+            veritasAlert(msg, { title: 'Unable to Resume Poll', destructive: true });
+            return;
+          }
+          updateLiveView(data);
+        })
         .withFailureHandler(handleError)
         .resumePoll();
     }
@@ -10481,6 +10503,13 @@
       setButtonLoading(startPollBtn, true, 'Starting...');
       google.script.run
         .withSuccessHandler(function (view) {
+          // Soft-fail check
+          if (view && (view.success === false || view.error)) {
+            setButtonLoading(startPollBtn, false);
+            var msg = view.message || view.error || 'Unknown error starting session';
+            veritasAlert(msg, { title: 'Unable to Start Session', destructive: true });
+            return;
+          }
           setButtonLoading(startPollBtn, false);
           showIndividualTimedView(view);
         })

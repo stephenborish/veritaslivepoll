@@ -10626,48 +10626,6 @@
         }
     }
 
-            if (rtStatus) {
-                // Map RT status to local status strings
-                // Firebase: ACTIVE, LOCKED, DISCONNECTED, FINISHED
-                // Local: "In Progress", "Locked", "Offline", "Submitted", "Not Started"
-
-                var newStatus = student.status;
-                var newConnection = student.connection ? student.connection.status : 'GRAY';
-
-                if (rtStatus === 'ACTIVE') {
-                    // Only override if not already something final
-                    if (student.status !== 'Submitted') {
-                        // If it was Locked, this is an Unlock
-                        newStatus = 'In Progress';
-                    }
-                    newConnection = 'GREEN';
-                } else if (rtStatus === 'LOCKED') {
-                    newStatus = 'Locked';
-                    student.proctorStatus = 'LOCKED'; // Force proctor flag
-                    newConnection = 'GREEN'; // Still connected, just locked
-                } else if (rtStatus === 'DISCONNECTED') {
-                    newConnection = 'RED';
-                } else if (rtStatus === 'FINISHED') {
-                    newStatus = 'Submitted';
-                    newConnection = 'GREEN';
-                }
-
-                // If changed, update and flag for render
-                if (student.status !== newStatus || (student.connection && student.connection.status !== newConnection)) {
-                    student.status = newStatus;
-                    if (!student.connection) student.connection = {};
-                    student.connection.status = newConnection;
-                    updatesFound = true;
-                }
-            }
-        });
-
-        if (updatesFound) {
-            // Re-render the grid
-            renderIndividualStudentCards({ students: missionControlStudents });
-        }
-    }
-
     async function setFirebaseStatus(email, status) {
         if (!firebaseRef || !email || !currentMissionControlPollId) return;
         var key = await window.VeritasShared.generateStudentKey(email, currentMissionControlPollId);
@@ -11100,6 +11058,8 @@
           missionControlPollFailures = 0;
           missionControlBackoffMs = 0;
           renderIndividualStudentCards(view);
+          // Re-apply realtime statuses immediately to prevent flickering
+          updateRealtimeUI();
         })
         .withFailureHandler(function (error) {
           var errorMsg = error && error.message ? error.message : String(error);

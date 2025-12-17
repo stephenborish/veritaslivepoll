@@ -130,25 +130,10 @@
                     LockManager.lock('Teacher Remote Lock');
                 }
             } else if (status === 'ACTIVE') {
-                // Server commanded unlock
+                // Teacher signalled unlock; defer to authoritative server confirmation
+                // This prevents accidental unlocks from stale or spoofed RTDB writes.
                 if (LockManager.isLocked()) {
-                    // Force unlock via server approval flow
-                    // We simulate the server approval response here for speed
-                    console.log('[Firebase] Remote unlock received');
-                    // We rely on the existing polling loop to pick up the "official" unlock
-                    // BUT for instant UX, we can optimistically unlock if we trust the source.
-                    // Given the prompt says "Student cannot self-unlock; only teacher can set ACTIVE",
-                    // and this event comes from Firebase (written by teacher), we trust it.
-                    LockManager.unlock();
-
-                    // Clear Poison Pill immediately
-                    try {
-                        sessionStorage.removeItem('veritas_lock_active');
-                        sessionStorage.removeItem('is_locally_locked');
-                        sessionStorage.removeItem('lock_reason');
-                    } catch(e) {}
-
-                    // Resume polling
+                    console.log('[Firebase] Unlock requested - awaiting server confirmation');
                     startPolling(true);
                 }
             }
@@ -198,6 +183,11 @@
         var secureFullscreenManager = window.SecureAssessmentShared.createFullscreenManager(document, {
             onChange: handleSecureFullscreenChange
         });
+
+        // Local session state guards (prevent UI rewind)
+        var lastSubmittedQuestionIndex = null;
+        var pendingMetacogQuestionIndex = null;
+        var metacogSubmittedFor = null;
 
         if (timerVisibilityToggle) {
             timerVisibilityToggle.addEventListener('click', function () {
@@ -2554,6 +2544,20 @@
             scheduleNextPoll(retryDelay);
         }
 
+        function showWaitingForNextPhase(message) {
+            if (questionContainer) questionContainer.style.display = 'none';
+            if (statusContainer) statusContainer.style.display = 'block';
+            if (statusMessage) {
+                statusMessage.textContent = message || 'Submitted. Waiting for your teacher...';
+                statusMessage.className = 'text-green-700 text-2xl font-semibold';
+            }
+            if (statusSubMessage) {
+                statusSubMessage.textContent = 'Hang tight while the next step gets ready.';
+                statusSubMessage.style.display = 'block';
+                statusSubMessage.className = 'text-gray-700 text-lg mt-4';
+            }
+        }
+
         function pollForStatus() {
             if (isInteractionBlocked || pollInFlight) return;
             pollInFlight = true;
@@ -2837,6 +2841,14 @@
             data = data || {};
             console.log('[ViewManager] Update View State:', data);
 
+            var currentIndex = typeof data.questionIndex === 'number' ? data.questionIndex : null;
+
+            // Maintain submission guardrails so polling cannot rewind UI
+            if (data.hasSubmitted === true && currentIndex !== null) {
+                lastSubmittedQuestionIndex = currentIndex;
+                metacogSubmittedFor = metacogSubmittedFor === null ? null : metacogSubmittedFor;
+            }
+
             // FIREBASE INIT CHECK (Lazy)
             if (!firebaseRef && data.pollId && data.studentEmail) {
                 // Now async, but that's fine, it will init in background
@@ -2864,6 +2876,12 @@
             // 2. View Mutex - Hide all views first
             // Note: ViewManager.show() handles hiding others, but calling this explicitly ensures clean slate
             // if we have logic branching below.
+
+            // 2b. If we've already submitted for this question, never re-render the prompt unless in reveal phase
+            if (currentIndex !== null && lastSubmittedQuestionIndex === currentIndex && data.status === 'LIVE') {
+                showWaitingForNextPhase('Answer received - waiting for the next step.');
+                return;
+            }
 
             // 3. Calculator Sync
             var calcEnabled = data.calculatorEnabled === true;
@@ -2914,6 +2932,15 @@
                         if (questionProgressEl) questionProgressEl.textContent = 'QUESTION 1 OF ?';
                         ViewManager.show('pre-live-card'); // Redundant but safe
                     } else {
+                        if (pendingMetacogQuestionIndex === currentIndex && metacogSubmittedFor !== currentIndex) {
+                            showConfidenceQuestion(data.pollId, currentIndex);
+                            return;
+                        }
+
+                        if (data.hasSubmitted === true && currentIndex !== null) {
+                            showWaitingForNextPhase('Answer received - waiting for the next step.');
+                            return;
+                        }
                         renderQuestion(data);
                     }
                 }
@@ -2966,6 +2993,8 @@
                 pendingSubmission = false;
                 currentOptionLayout = [];
                 liveSessionActive = true;
+                pendingMetacogQuestionIndex = null;
+                metacogSubmittedFor = null;
             }
 
             // Update metacognition setting for this question
@@ -3111,6 +3140,8 @@
             statusContainer.style.display = 'block';
             questionContainer.style.display = 'none';
 
+            pendingMetacogQuestionIndex = questionIndex;
+
             statusMessage.textContent = 'How confident are you in your answer?';
             statusMessage.className = 'text-gray-800 text-xl font-semibold mb-4';
 
@@ -3156,6 +3187,8 @@
         function submitAnswerWithConfidence(pollId, questionIndex, answerText, confidence) {
             hasAnsweredCurrent = true;
             pendingSubmission = true;
+            metacogSubmittedFor = questionIndex;
+            pendingMetacogQuestionIndex = null;
             statusMessage.textContent = 'Transmitting your response...';
             statusMessage.className = 'text-gray-900 text-2xl font-semibold';
             if (statusSubMessage) {

@@ -10,7 +10,7 @@
     var studentTableSort = { column: 'lastName', direction: 'asc' };
     var pollInterval = null;
     var missionControlHeartbeat = window.SecureAssessmentShared.createHeartbeat({
-      intervalMs: 6000, // Increased from 3000ms to reduce 429 errors
+      intervalMs: 2500,
       onBeat: function () {
         pollIndividualSessionState();
       }
@@ -2755,13 +2755,24 @@
           // Non-fatal, dashboard can still load empty
         }
 
-        // Show dashboard on initial load
-        try {
-          setMainSection('dashboard');
-        } catch (err) {
-          console.error('setMainSection failed:', err);
-          // Last resort force show
-          if (dashboard) dashboard.style.display = 'block';
+        // Auto-route to active session to prevent state amnesia
+        if (data.activePollId && data.activePoll) {
+          try {
+            CURRENT_POLL_DATA = data.activePoll;
+            updateLiveView(data.activePoll);
+            setMainSection('live');
+          } catch (err) {
+            console.error('Failed to auto-route to active poll', err);
+            if (dashboard) dashboard.style.display = 'block';
+          }
+        } else {
+          try {
+            setMainSection('dashboard');
+          } catch (err) {
+            console.error('setMainSection failed:', err);
+            // Last resort force show
+            if (dashboard) dashboard.style.display = 'block';
+          }
         }
 
         // Load dashboard summary after a short delay

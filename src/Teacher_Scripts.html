@@ -10540,24 +10540,67 @@
             firebaseRef = firebaseDb.ref(path);
             currentMissionControlPollId = pollId;
 
+            // P0-2 FIX: Store actual subscribed path
+            actualSubscribedPath = firebaseRef.toString();
+
             // Connection State
             var connectedRef = firebaseDb.ref('.info/connected');
             connectedRef.on('value', function(snap) {
                 realtimeConnected = snap.val() === true;
                 console.log('[Firebase] Connection status changed:', realtimeConnected ? 'CONNECTED' : 'DISCONNECTED', 'pollId:', pollId);
+                // P0-2 FIX: Record event
+                lastRTDBEvent = { timestamp: Date.now(), type: 'connection' };
                 updateRealtimeIndicator();
                 updateDebugHud();
+            });
+
+            // Listen for student status changes
+            firebaseRef.on('child_changed', function(snapshot) {
+                // P0-2 FIX: Record status change
+                var studentKey = snapshot.key;
+                var newStatus = snapshot.val();
+                lastStatusChange = { studentKey: studentKey, status: newStatus, timestamp: Date.now() };
+                lastRTDBEvent = { timestamp: Date.now(), type: 'child_changed' };
+                console.log('[Firebase] Student status changed:', studentKey.substring(0, 8) + '...', '→', newStatus);
+            });
+
+            firebaseRef.on('child_added', function(snapshot) {
+                lastRTDBEvent = { timestamp: Date.now(), type: 'child_added' };
             });
 
             // Listen for changes
             firebaseRef.on('value', function(snapshot) {
                 realtimeStatuses = snapshot.val() || {};
                 console.log('[Firebase] Status update received for pollId:', pollId, 'Students:', Object.keys(realtimeStatuses).length);
+                lastRTDBEvent = { timestamp: Date.now(), type: 'value' };
                 updateRealtimeUI();
                 updateDebugHud();
             });
 
+            // P0-3 FIX: Listen to violations node
+            violationsRef = firebaseDb.ref('sessions/' + pollId + '/violations');
+            violationsRef.on('child_added', function(snapshot) {
+                var studentKey = snapshot.key;
+                var violation = snapshot.val();
+                if (violation && violation.reason) {
+                    lastViolation = { studentKey: studentKey, reason: violation.reason, timestamp: Date.now() };
+                    console.log('[Firebase] Violation detected:', studentKey.substring(0, 8) + '...', '-', violation.reason);
+                    updateDebugHud();
+                }
+            });
+
+            violationsRef.on('child_changed', function(snapshot) {
+                var studentKey = snapshot.key;
+                var violation = snapshot.val();
+                if (violation && violation.reason) {
+                    lastViolation = { studentKey: studentKey, reason: violation.reason, timestamp: Date.now() };
+                    console.log('[Firebase] Violation updated:', studentKey.substring(0, 8) + '...', '-', violation.reason);
+                    updateDebugHud();
+                }
+            });
+
             console.log('[Firebase] Mission Control initialized for', path, 'Connected:', realtimeConnected);
+            console.log('[Firebase] Actual subscription:', actualSubscribedPath);
         }
     }
 
@@ -10678,6 +10721,11 @@
 
     // DEBUG HUD - Enhanced for verification
     var lastTeacherAction = { action: 'None', timestamp: null };
+    var lastRTDBEvent = { timestamp: null, type: 'None' };
+    var lastStatusChange = { studentKey: null, status: null, timestamp: null };
+    var lastViolation = { studentKey: null, reason: null, timestamp: null };
+    var actualSubscribedPath = null;
+    var violationsRef = null;
 
     function updateDebugHud() {
         if (!Veritas.Config.DEBUG_FIREBASE) return;
@@ -10686,7 +10734,7 @@
         if (!hud) {
             hud = document.createElement('div');
             hud.id = 'firebase-debug-hud';
-            hud.style.cssText = 'position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,0.95);color:#4ade80;font-family:monospace;font-size:11px;padding:12px;z-index:9999;pointer-events:none;max-width:350px;border:2px solid #4ade80;border-radius:8px;';
+            hud.style.cssText = 'position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,0.95);color:#4ade80;font-family:monospace;font-size:11px;padding:12px;z-index:9999;pointer-events:none;max-width:380px;border:2px solid #4ade80;border-radius:8px;line-height:1.4;';
             document.body.appendChild(hud);
         }
 
@@ -10694,18 +10742,38 @@
         var html = '<strong style="color:#fff">🔥 FIREBASE DEBUG (TEACHER)</strong><br>';
         html += connDot + ' <strong>.info/connected:</strong> ' + realtimeConnected + '<br>';
         html += '<strong>PollId (sessionKey):</strong> ' + (currentMissionControlPollId || 'None') + '<br>';
-        html += '<strong>RTDB Path:</strong> sessions/' + (currentMissionControlPollId || '{pollId}') + '/students<br>';
+
+        // P0-2 FIX: Show ACTUAL subscribed path (not string-built)
+        html += '<strong>Actual RTDB Path:</strong> ' + (actualSubscribedPath || 'Not subscribed') + '<br>';
         html += '<strong>Students observed:</strong> ' + Object.keys(realtimeStatuses).length + '<br>';
 
-        // Show sample statuses
+        // Show sample statuses with violation reasons
         var keys = Object.keys(realtimeStatuses);
         if (keys.length > 0) {
             html += '<strong>Sample statuses:</strong><br>';
-            keys.slice(0, 3).forEach(function(key) {
+            keys.slice(0, 2).forEach(function(key) {
                 var statusColor = realtimeStatuses[key] === 'LOCKED' ? '#f87171' :
                                  realtimeStatuses[key] === 'ACTIVE' ? '#4ade80' : '#facc15';
                 html += '  • ' + key.substring(0, 8) + '...: <span style="color:' + statusColor + '">' + realtimeStatuses[key] + '</span><br>';
             });
+        }
+
+        // P0-2 FIX: Show last RTDB event timestamp
+        if (lastRTDBEvent.timestamp) {
+            var eventElapsed = Math.round((Date.now() - lastRTDBEvent.timestamp) / 1000);
+            html += '<strong>Last RTDB event:</strong> ' + lastRTDBEvent.type + ' (' + eventElapsed + 's ago)<br>';
+        }
+
+        // P0-2 FIX: Show last status change
+        if (lastStatusChange.timestamp && lastStatusChange.studentKey) {
+            var changeElapsed = Math.round((Date.now() - lastStatusChange.timestamp) / 1000);
+            html += '<strong>Last change:</strong> ' + lastStatusChange.studentKey.substring(0, 8) + '... → ' + lastStatusChange.status + ' (' + changeElapsed + 's ago)<br>';
+        }
+
+        // P0-3 FIX: Show last violation reason
+        if (lastViolation.timestamp && lastViolation.studentKey) {
+            var violationElapsed = Math.round((Date.now() - lastViolation.timestamp) / 1000);
+            html += '<strong style="color:#f87171">Last violation:</strong> ' + lastViolation.studentKey.substring(0, 8) + '... - ' + lastViolation.reason + ' (' + violationElapsed + 's ago)<br>';
         }
 
         // Last teacher action

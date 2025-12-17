@@ -155,9 +155,25 @@
         }
 
         function reportFirebaseViolation(reason) {
+            // P0-4 FIX: Store lock reason in sessionStorage
+            if (reason) {
+                sessionStorage.setItem('lock_reason', reason);
+            }
+
             if (firebaseRef) {
                 firebaseRef.set('LOCKED');
+
+                // P0-3 FIX: Store violation reason in separate RTDB node for teacher visibility
+                if (reason && pollId && studentKey) {
+                    var violationsRef = firebaseDb.ref('sessions/' + pollId + '/violations/' + studentKey);
+                    violationsRef.set({
+                        reason: reason,
+                        timestamp: firebase.database.ServerValue.TIMESTAMP
+                    });
+                }
             }
+
+            updateDebugHud('LOCKED', null, pollId);
         }
 
         var secureCountdownController = window.SecureAssessmentShared.createCountdown({
@@ -1623,7 +1639,9 @@
         var liveSessionActive = false;
 
         function triggerSecurityViolation(reason) {
+            // P0-4 FIX: Store violation reason for HUD display
             sessionStorage.setItem('veritas_lock_active', 'true');
+            sessionStorage.setItem('lock_reason', reason || 'violation');
 
             if (typeof showLockEnforcementUI === 'function') {
                 showLockEnforcementUI("LOCKED", "Security violation detected. Wait for teacher approval.");

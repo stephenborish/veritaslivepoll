@@ -1925,6 +1925,7 @@
     var headerDefault = document.getElementById('header-default');
     var headerLive = document.getElementById('header-live');
     var liveCalculatorToggle = document.getElementById('header-calc-toggle');
+    var liveCalculatorStateText = document.getElementById('header-calc-state');
     var modal = document.getElementById('poll-creator-modal');
     var linksModal = document.getElementById('student-links-modal');
     var pollSortSelect = document.getElementById('poll-sort-select');
@@ -5520,10 +5521,17 @@
       liveCalculatorToggle.disabled = disabled;
       liveCalculatorToggle.setAttribute('aria-disabled', disabled ? 'true' : 'false');
       liveCalculatorToggle.setAttribute('aria-pressed', liveCalculatorEnabled ? 'true' : 'false');
+      liveCalculatorToggle.dataset.state = liveCalculatorEnabled ? 'on' : 'off';
 
       liveCalculatorToggle.classList.toggle('bg-amber-500', liveCalculatorEnabled && !disabled);
       liveCalculatorToggle.classList.toggle('text-veritas-navy', liveCalculatorEnabled && !disabled);
       liveCalculatorToggle.classList.toggle('bg-white/10', !(liveCalculatorEnabled && !disabled));
+
+      if (liveCalculatorStateText) {
+        liveCalculatorStateText.textContent = liveCalculatorEnabled ? 'On' : 'Off';
+        liveCalculatorStateText.classList.toggle('text-veritas-gold', liveCalculatorEnabled);
+        liveCalculatorStateText.classList.toggle('opacity-80', !liveCalculatorEnabled);
+      }
     }
 
     function onToggleLiveCalculator() {

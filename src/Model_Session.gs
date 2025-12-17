@@ -2222,7 +2222,12 @@ Veritas.Models.Session.getStudentProctorState = function(token) {
 
     var state = Veritas.Models.Session.ProctorAccess.getState(pollId, studentEmail, currentSessionId);
 
-    // ANTIDOTE: When status is 'OK', include unlock_granted: true to clear the client "Poison Pill"
+    // CRITICAL FIX: Do NOT set unlock_granted here. Unlock_granted must ONLY
+    // be returned by explicit unlock paths:
+    // 1. studentConfirmFullscreen() - after teacher approval + fullscreen re-entry
+    // 2. teacherUnblockStudent() - after teacher unblocks a BLOCKED student
+    // This prevents auto-unlock when polling returns status='OK' for fresh students
+    // or students who refresh while in OK state.
     var response = {
       success: true,
       status: state.status,
@@ -2234,10 +2239,8 @@ Veritas.Models.Session.getStudentProctorState = function(token) {
       unlockApprovedAt: state.unlockApprovedAt
     };
 
-    // Only set unlock_granted when the student is truly unlocked
-    if (state.status === 'OK') {
-      response.unlock_granted = true;
-    }
+    // DO NOT set unlock_granted based on status alone - that causes auto-unlock bug!
+    // unlock_granted is ONLY returned by explicit unlock endpoints.
 
     return response;
   })();

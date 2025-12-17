@@ -1264,9 +1264,10 @@ Veritas.TeacherApi.sendPollLinkToClass = function(className, pollId) {
     }
 
     // 3. Prepare Email Template
+    // TERMINOLOGY FIX: Use "secure assessment" for secure, "live poll" for live
     var subject = isSecure
-      ? 'Assessment Link: ' + pollName
-      : 'Join Live Session: ' + pollName;
+      ? 'Secure Assessment: ' + pollName
+      : 'Live Poll: ' + pollName;
 
     var sentCount = 0;
     var failedCount = 0;
@@ -1307,24 +1308,25 @@ Veritas.TeacherApi.sendPollLinkToClass = function(className, pollId) {
         var bodyHtml = '';
         var bodyPlain = '';
 
+        // TERMINOLOGY: "secure assessment" for secure, "live poll" for live
         if (isSecure) {
           bodyHtml = '<p>Hello ' + name + ',</p>' +
-                 '<p>Here is your unique link for the assessment: <strong>' + pollName + '</strong>.</p>' +
-                 '<p><a href="' + link + '" style="background-color:#002e6d;color:#ffffff;padding:10px 20px;text-decoration:none;border-radius:5px;">Start Assessment</a></p>' +
+                 '<p>Here is your unique link for the secure assessment: <strong>' + pollName + '</strong>.</p>' +
+                 '<p><a href="' + link + '" style="background-color:#002e6d;color:#ffffff;padding:10px 20px;text-decoration:none;border-radius:5px;">Start Secure Assessment</a></p>' +
                  '<p>Or copy this link: ' + link + '</p>' +
                  '<p><strong>Note:</strong> If an access code is required, your teacher will provide it separately.</p>';
           bodyPlain = 'Hello ' + name + ',\n\n' +
-                  'Here is your unique link for the assessment: ' + pollName + '.\n\n' +
+                  'Here is your unique link for the secure assessment: ' + pollName + '.\n\n' +
                   link + '\n\n' +
                   'Note: If an access code is required, your teacher will provide it separately.';
         } else {
           bodyHtml = '<p>Hello ' + name + ',</p>' +
-                 '<p>Please click the link below to join the live interactive session for <strong>' + pollName + '</strong>.</p>' +
-                 '<p><a href="' + link + '" style="background-color:#002e6d;color:#ffffff;padding:10px 20px;text-decoration:none;border-radius:5px;">Join Session</a></p>' +
+                 '<p>Please click the link below to join the live poll: <strong>' + pollName + '</strong>.</p>' +
+                 '<p><a href="' + link + '" style="background-color:#002e6d;color:#ffffff;padding:10px 20px;text-decoration:none;border-radius:5px;">Join Live Poll</a></p>' +
                  '<p>Or copy this link: ' + link + '</p>' +
                  '<p>See you in class!</p>';
           bodyPlain = 'Hello ' + name + ',\n\n' +
-                  'Please click the link below to join the live interactive session for ' + pollName + '.\n\n' +
+                  'Please click the link below to join the live poll: ' + pollName + '.\n\n' +
                   link + '\n\n' +
                   'See you in class!';
         }

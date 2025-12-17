@@ -5969,6 +5969,13 @@
       CURRENT_POLL_DATA.questionIndex = data.questionIndex;
       CURRENT_POLL_DATA.correctAnswer = data.correctAnswer;
 
+      // FIX: Update pollSessionType from server data to ensure calculator toggle works correctly
+      // This fixes the bug where calculator button does nothing because pollSessionType wasn't updated
+      if (data.sessionType) {
+        pollSessionType = normalizeSessionTypeClient(data.sessionType);
+        CURRENT_POLL_DATA.sessionType = data.sessionType;
+      }
+
       // FIX TASK A: Initialize Firebase for ALL proctored sessions (Live Polls + Secure Assessment)
       // This enables real-time proctoring status on the teacher dashboard
       // DO NOT set currentMissionControlPollId here - let initFirebaseMissionControl handle it
@@ -5981,7 +5988,9 @@
       CURRENT_POLL_DATA.metacognition = data.metacognition || null;
       CURRENT_POLL_DATA.calculatorEnabled = calculatorEnabled;
 
-      setLiveCalculatorToggleState(calculatorEnabled, isSecureSessionTypeClient(pollSessionType));
+      // FIX: Use the actual session type from server data for calculator toggle
+      var isSecureSession = isSecureSessionTypeClient(data.sessionType || pollSessionType);
+      setLiveCalculatorToggleState(calculatorEnabled, isSecureSession);
 
       var questionChanged = previousQuestionIndex === null || data.questionIndex !== previousQuestionIndex;
 
@@ -10513,6 +10522,38 @@
     console.log('✓ Teacher Panel Ready (Enhanced UI)');
 
     // --- FIREBASE MISSION CONTROL ---
+
+    // CRITICAL FIX: Initialize Firebase app eagerly at page load
+    // This ensures firebase.apps.length === 1 immediately, not just when a poll is active.
+    // The user reported firebase.apps.length === 0 on teacher panel - this fixes it.
+    (function initFirebaseEagerly() {
+        if (typeof firebase !== 'undefined' && FIREBASE_CONFIG) {
+            if (!firebase.apps.length) {
+                try {
+                    firebase.initializeApp(FIREBASE_CONFIG);
+                    console.log('[Firebase] App initialized eagerly at page load');
+                    console.log('[Firebase] databaseURL:', FIREBASE_CONFIG.databaseURL);
+                    console.log('[Firebase] apps.length:', firebase.apps.length);
+                } catch (e) {
+                    console.error('[Firebase] Failed to initialize app:', e);
+                }
+            } else {
+                console.log('[Firebase] App already initialized, apps.length:', firebase.apps.length);
+            }
+            // Store firebaseDb reference for later use
+            if (!firebaseDb) {
+                firebaseDb = firebase.database();
+            }
+        } else {
+            if (typeof firebase === 'undefined') {
+                console.error('[Firebase] SDK not loaded! Check script tags in Teacher_View.html');
+            }
+            if (!FIREBASE_CONFIG) {
+                console.error('[Firebase] FIREBASE_CONFIG not available!');
+            }
+        }
+    })();
+
     function initFirebaseMissionControl(pollId) {
         if (!FIREBASE_CONFIG || !pollId) return;
 
@@ -10529,8 +10570,11 @@
             return;
         }
 
+        // Firebase app should already be initialized by initFirebaseEagerly()
+        // But check again just in case
         if (typeof firebase !== 'undefined' && !firebase.apps.length) {
             firebase.initializeApp(FIREBASE_CONFIG);
+            console.log('[Firebase] Late init in initFirebaseMissionControl');
         }
 
         if (typeof firebase !== 'undefined') {

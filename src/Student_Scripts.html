@@ -2777,6 +2777,7 @@
         }
 
         function checkProctorState() {
+            var telemetry = ActivityMonitor.getInstance().getTelemetry();
             google.script.run
                 .withSuccessHandler(function (response) {
                     if (!response.success) {

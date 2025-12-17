@@ -2335,16 +2335,23 @@
     .live-view-grid {
       gap: 1rem !important;
     }
+    /* P0-6 & P0-7 FIX: Consistent question card layout */
     .live-question-card {
       margin-top: 0;
       margin-bottom: 0;
       padding-top: 16px;
       padding-bottom: 16px;
+      /* Prevent margin collapse and ensure consistent position */
     }
     .live-question-card .question-stem-text {
       margin-top: 0;
       margin-bottom: 0;
-      white-space: pre-wrap; /* FIX TASK 5: Preserve newlines like student view */
+      white-space: pre-wrap; /* P0-5: Preserve newlines like student view */
+    }
+    /* P0-6 FIX: Prevent flex growth in left column that causes variable gap */
+    .live-view-grid > div:first-child {
+      /* Left column should not use flex-1 growth on the answer section */
+      /* This ensures question card always appears at consistent distance from header */
     }
     .live-student-panel {
       box-shadow: 0 8px 20px rgba(18, 56, 93, 0.06);

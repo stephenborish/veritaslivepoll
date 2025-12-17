@@ -572,7 +572,8 @@
               <div
                 class="bg-white dark:bg-brand-dark-gray/30 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm shrink-0 live-question-card">
                 <!-- Hidden elements for JS compatibility -->
-                <h2 id="live-question-text-compact" class="hidden"></h2>
+                <!-- P0-5 FIX: Apply whitespace-pre-wrap to compact version too -->
+                <h2 id="live-question-text-compact" class="hidden whitespace-pre-wrap"></h2>
                 <span id="live-question-info" class="hidden">Q1 / 10</span>
                 <span id="response-count-header" class="hidden">0 / 0 answered</span>
 
@@ -588,8 +589,10 @@
               </div>
 
               <!-- Answer Choices (Student View Style) -->
-              <div class="flex-1 flex flex-col min-h-0">
-                <div class="flex-1 overflow-y-auto">
+              <!-- P0-6 FIX: Remove flex-1 from answer section to prevent variable gap under question card -->
+              <!-- flex-1 causes the section to grow/shrink, creating dynamic spacing above it -->
+              <div class="flex flex-col min-h-0 flex-shrink">
+                <div class="overflow-y-auto">
                   <div id="results-bars" class="flex flex-col gap-2" aria-live="polite">
                     <!-- Answer choices will be populated dynamically in student-view style -->
                   </div>

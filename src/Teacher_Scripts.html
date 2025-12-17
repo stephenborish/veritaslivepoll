@@ -27,6 +27,7 @@
     var isPaused = false;
     var isLiveSession = false;
     var isNavigating = false; // Flag to prevent polling during question navigation
+    var navigationRequestInFlight = false; // Prevent double-advances
     var questionCounter = 0;
     var questions = [];
     var questionIdCounter = 0;
@@ -5424,6 +5425,11 @@
     }
 
     function onNextQuestion() {
+      if (navigationRequestInFlight) {
+        console.warn('Navigation already in progress; ignoring extra Next click');
+        return;
+      }
+      navigationRequestInFlight = true;
       if (pollInterval) clearInterval(pollInterval);
       pauseTimerCountdown();
       stopVisualTimer();
@@ -5437,6 +5443,7 @@
       isNavigating = true; // Set flag to prevent polling during navigation
       if (PREVIEW_MODE) {
         isNavigating = false;
+        navigationRequestInFlight = false;
         previewOnlyNotice('advance to the next question');
         return;
       }
@@ -5446,10 +5453,12 @@
           // Clear navigation flag after a short delay to ensure state is fully synced
           setTimeout(function () {
             isNavigating = false;
+            navigationRequestInFlight = false;
           }, 500);
         })
         .withFailureHandler(function (error) {
           isNavigating = false;
+          navigationRequestInFlight = false;
           handleError(error);
         })
         .nextQuestion();
@@ -5506,10 +5515,11 @@
       liveCalculatorEnabled = !!isEnabled;
       if (!liveCalculatorToggle) return;
 
-      var disabled = !isSecureSession || !CURRENT_POLL_DATA.pollId;
+      // Allow calculator for live poll and secure sessions; only disable when no active poll
+      var disabled = !CURRENT_POLL_DATA.pollId;
       liveCalculatorToggle.disabled = disabled;
       liveCalculatorToggle.setAttribute('aria-disabled', disabled ? 'true' : 'false');
-      liveCalculatorToggle.setAttribute('aria-pressed', (!disabled && liveCalculatorEnabled) ? 'true' : 'false');
+      liveCalculatorToggle.setAttribute('aria-pressed', liveCalculatorEnabled ? 'true' : 'false');
 
       liveCalculatorToggle.classList.toggle('bg-amber-500', liveCalculatorEnabled && !disabled);
       liveCalculatorToggle.classList.toggle('text-veritas-navy', liveCalculatorEnabled && !disabled);
@@ -5519,11 +5529,6 @@
     function onToggleLiveCalculator() {
       if (!liveCalculatorToggle || PREVIEW_MODE) {
         if (PREVIEW_MODE) { previewOnlyNotice('toggle the calculator'); }
-        return;
-      }
-
-      if (!isSecureSessionTypeClient(pollSessionType)) {
-        handleError('Calculator is only available during Secure Assessments.');
         return;
       }
 
@@ -6895,6 +6900,10 @@
       var tile = document.createElement('div');
 
       var status = student.status || 'Unknown';
+      var statusLower = status.toString().toLowerCase();
+      var isLocked = statusLower.indexOf('locked') === 0;
+      var isBlocked = statusLower.indexOf('blocked') === 0;
+      var normalizedStatus = isLocked ? 'LOCKED' : (isBlocked ? 'BLOCKED' : status);
       var isCorrect = student.isCorrect === true;
       var isIncorrect = student.isCorrect === false;
       var name = formatStudentName(student);
@@ -6939,7 +6948,7 @@
         }
       };
 
-      var style = statusStyles[status] || statusStyles.default;
+      var style = statusStyles[normalizedStatus] || statusStyles.default;
       tile.className = 'student-tile ' + style.tileClass;
 
       var badges = [];
@@ -6965,10 +6974,10 @@
       }
       html += '</div>';
       html += '<div class="student-actions">';
-      if (status === 'LOCKED') {
+      if (normalizedStatus === 'LOCKED') {
         html += '<button class="approve-reentry-btn student-action-btn" title="Approve re-entry" data-email="' + escapeHtml(student.email) + '" data-lock-version="' + (student.lockVersion || 0) + '"><span class="material-symbols-outlined text-base text-rose-600">lock_open</span></button>';
       }
-      if (status === 'BLOCKED' || violationCount > 0) {
+      if (normalizedStatus === 'BLOCKED' || violationCount > 0) {
         html += '<button class="resume-access-btn student-action-btn" title="Allow student to resume" data-email="' + escapeHtml(student.email || '') + '"><span class="material-symbols-outlined text-base text-emerald-600">door_open</span></button>';
       }
       html += '</div>';
@@ -6976,7 +6985,7 @@
 
       tile.innerHTML = html;
 
-      if (status === 'LOCKED') {
+      if (normalizedStatus === 'LOCKED') {
         var approveBtn = tile.querySelector('.approve-reentry-btn');
         if (approveBtn) {
           approveBtn.addEventListener('click', function (e) {
@@ -10711,7 +10720,7 @@
                         }
                         newConnection = 'GREEN';
                     } else if (rtStatus === 'LOCKED') {
-                        newStatus = 'Locked';
+                        newStatus = 'LOCKED';
                         student.proctorStatus = 'LOCKED';
                         newConnection = 'GREEN';
                     } else if (rtStatus === 'DISCONNECTED') {
@@ -10945,11 +10954,12 @@
         pruneMissionSelection(students);
         students.forEach(function (student) {
           var statusClass = 'bg-slate-100 text-slate-700';
-          if (student.status && student.status.indexOf('In Progress') === 0) {
+          var statusLower = (student.status || '').toString().toLowerCase();
+          if (statusLower.indexOf('in progress') === 0) {
             statusClass = 'bg-emerald-50 text-emerald-700';
-          } else if (student.status && student.status.indexOf('Locked') === 0) {
+          } else if (statusLower.indexOf('locked') === 0) {
             statusClass = 'bg-red-50 text-red-700';
-          } else if (student.status === 'Blocked') {
+          } else if (statusLower.indexOf('blocked') === 0) {
             statusClass = 'bg-red-50 text-red-700';
           } else if (student.status === 'Awaiting Fullscreen') {
             statusClass = 'bg-blue-50 text-blue-700';
@@ -10990,14 +11000,14 @@
             ? `${Math.round(student.scorePct)}% of exam`
             : '';
           var progressFillClass = 'bg-emerald-500';
-          if (student.status && student.status.indexOf('Locked') === 0) {
+          if (statusLower.indexOf('locked') === 0) {
             progressFillClass = 'bg-red-500';
-          } else if (student.status === 'Blocked') {
+          } else if (statusLower.indexOf('blocked') === 0) {
             progressFillClass = 'bg-red-500';
           } else if (student.status === 'Paused') {
             progressFillClass = 'bg-amber-500';
           }
-          var requiresUnlock = student.proctorStatus === 'LOCKED' || student.proctorStatus === 'BLOCKED';
+          var requiresUnlock = student.proctorStatus === 'LOCKED' || student.proctorStatus === 'BLOCKED' || statusLower.indexOf('locked') === 0 || statusLower.indexOf('blocked') === 0;
 
           var card = document.createElement('div');
           var baseCardClass = 'mission-student-card rounded-2xl border border-slate-200 dark:border-brand-dark-gray/60 bg-white dark:bg-brand-dark-gray/30 p-4 shadow-sm flex flex-col gap-3 transition-all';

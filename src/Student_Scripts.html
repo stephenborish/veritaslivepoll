@@ -2877,9 +2877,24 @@
             // Note: ViewManager.show() handles hiding others, but calling this explicitly ensures clean slate
             // if we have logic branching below.
 
+            // Normalize results visibility early for deterministic guards
+            var resultsVisibility = data.resultsVisibility || (data.status === 'RESULTS_REVEALED' ? 'REVEALED' : null);
+
             // 2b. If we've already submitted for this question, never re-render the prompt unless in reveal phase
-            if (currentIndex !== null && lastSubmittedQuestionIndex === currentIndex && data.status === 'LIVE') {
+            if (currentIndex !== null && lastSubmittedQuestionIndex === currentIndex && data.status === 'LIVE' && resultsVisibility !== 'REVEALED') {
                 showWaitingForNextPhase('Answer received - waiting for the next step.');
+                return;
+            }
+
+            // RESULTS / REVEAL HANDLING
+            if (data.resultsVisibility === 'REVEALED' || data.status === 'RESULTS_REVEALED') {
+                var normalizedStatus = data.status || 'RESULTS_REVEALED';
+                data.status = normalizedStatus;
+                renderResultsStage(data);
+                return;
+            }
+            if (data.status === 'RESULTS_HOLD') {
+                showWaitingForNextPhase('Answers locked. Waiting for your teacher to reveal results.');
                 return;
             }
 

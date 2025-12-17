@@ -61,6 +61,7 @@ Veritas.StudentApi.getStudentPollStatus = function(token, context) {
     var statusValues = DataAccess.liveStatus.get();
     var pollId = statusValues[0];
     var metadata = (statusValues && statusValues.metadata) ? statusValues.metadata : {};
+    var calculatorEnabled = metadata && metadata.calculatorEnabled === true;
     var currentSessionId = metadata && metadata.sessionId ? metadata.sessionId : null;
     var questionIndex = statusValues[1];
     var pollStatus = statusValues[2];
@@ -84,6 +85,7 @@ Veritas.StudentApi.getStudentPollStatus = function(token, context) {
     };
 
     var studentEmail = Veritas.StudentApi.getStudentEmail(token);
+    var proctorState = Veritas.Models.Session.ProctorAccess.getState(pollId, studentEmail, currentSessionId);
     var heartbeatInfo = StateVersionManager.noteHeartbeat(studentEmail);
     var stateSnapshot = StateVersionManager.get();
     var now = new Date();
@@ -133,10 +135,12 @@ Veritas.StudentApi.getStudentPollStatus = function(token, context) {
     var envelope = function(payload) {
       var response = {
         pollId: payload.pollId || stateSnapshot.pollId || pollId,
+        studentEmail: studentEmail,
         questionIndex: payload.questionIndex !== undefined ? payload.questionIndex : (typeof stateSnapshot.questionIndex === 'number' ? stateSnapshot.questionIndex : undefined),
         status: payload.status || fallbackPhase(),
         message: payload.message,
         hasSubmitted: payload.hasSubmitted,
+        calculatorEnabled: calculatorEnabled,
         stateVersion: stateSnapshot.version,
         stateUpdatedAt: stateSnapshot.updatedAt,
         authoritativeStatus: stateSnapshot.status,
@@ -149,6 +153,13 @@ Veritas.StudentApi.getStudentPollStatus = function(token, context) {
         lastHeartbeatAt: heartbeatInfo.previousSeen || null,
         advisedPollIntervalMs: advisedPollIntervalMs
       };
+
+      // Pass through proctor state so the client can render locks/unlocks deterministically
+      response.isLocked = proctorState && proctorState.status && proctorState.status !== 'OK';
+      response.lockReason = proctorState ? proctorState.lockReason : null;
+      response.unlockApproved = proctorState ? proctorState.unlockApproved : false;
+      response.lockVersion = proctorState ? proctorState.lockVersion : null;
+      response.sessionType = metadata && metadata.sessionType ? metadata.sessionType : (payload.sessionType || response.sessionType);
 
       // Copy all other payload properties
       for (var key in payload) {

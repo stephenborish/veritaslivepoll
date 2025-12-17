@@ -736,7 +736,7 @@ Veritas.Models.Session.beginIndividualTimedAttempt = function(pollId, sessionId,
 /**
  * Get current state for student in secure assessment
  */
-Veritas.Models.Session.getIndividualTimedSessionState = function(token) {
+Veritas.Models.Session.getIndividualTimedSessionState = function(token, telemetry) {
   return withErrorHandling(function() {
     const studentEmail = TokenManager.getStudentEmail(token);
     if (!studentEmail) {
@@ -763,6 +763,8 @@ Veritas.Models.Session.getIndividualTimedSessionState = function(token) {
 
     // Enforce proctor lock state for secure assessments before proceeding
     var proctorState = Veritas.Models.Session.ProctorAccess.getState(pollId, studentEmail, sessionId);
+
+    Veritas.Models.Session.ProctorTelemetryStore.record(pollId, studentEmail, telemetry);
     if (proctorState.status && proctorState.status !== 'OK') {
       return Veritas.Models.Session.applyConnectionMetaToPayload({
         status: proctorState.status,
@@ -1160,6 +1162,8 @@ Veritas.Models.Session.getIndividualTimedSessionTeacherView = function(pollId, s
 
     const studentEmails = roster.map(function(s) { return s.email; });
     const proctorStates = Veritas.Models.Session.ProctorAccess.getStatesBatch(pollId, studentEmails, effectiveSessionId);
+    const telemetryMap = Veritas.Models.Session.ProctorTelemetryStore.getBatch(pollId, studentEmails);
+    const nowMs = Date.now();
 
     const responsesByStudent = new Map();
     const pollResponses = DataAccess.responses.getByPoll(pollId) || [];
@@ -1193,6 +1197,7 @@ Veritas.Models.Session.getIndividualTimedSessionTeacherView = function(pollId, s
       const email = student.email;
       const state = studentStateMap.get(email);
       const proctorState = proctorStates.get(email) || { status: 'OK', lockVersion: 0 };
+      const telemetry = telemetryMap.get(email) || {};
 
       let status = 'Not Started';
       let statusTone = 'idle';
@@ -1203,6 +1208,9 @@ Veritas.Models.Session.getIndividualTimedSessionTeacherView = function(pollId, s
       let pauseActive = false;
       let connectionMeta = { status: 'GRAY', heartbeatLagMs: null, lastHeartbeatAt: null };
       let summaryBucket = 'notStarted';
+      const lastInteractionMs = telemetry.lastInteraction ? Number(telemetry.lastInteraction) : null;
+      const isIdle = lastInteractionMs ? (now - lastInteractionMs > 30000) : false;
+      const timeOnQuestion = typeof telemetry.timeOnQuestion === 'number' ? telemetry.timeOnQuestion : null;
 
       if (state) {
         const timingState = Veritas.Models.Session.computeSecureTimingState(state, poll, liveMetadata);
@@ -1319,7 +1327,14 @@ Veritas.Models.Session.getIndividualTimedSessionTeacherView = function(pollId, s
         startTime: state ? state.startTime : null,
         endTime: state ? state.endTime : null,
         violationCode: state ? state.violationCode || '' : '',
-        questionIndex: state ? state.currentQuestionIndex || 0 : 0
+        questionIndex: state ? state.currentQuestionIndex || 0 : 0,
+        telemetry: {
+          lastInteraction: lastInteractionMs,
+          isIdle: isIdle,
+          activityStatus: isIdle ? 'IDLE' : 'ACTIVE',
+          usingCalculator: telemetry.isCalculatorActive === true,
+          timeOnQuestion: timeOnQuestion
+        }
       };
     });
 
@@ -1730,6 +1745,72 @@ Veritas.Models.Session.ProctorTelemetry = {
         Logger.error('Telemetry sheet write failed', e);
       }
     }
+  }
+};
+
+/**
+ * ProctorTelemetryStore - lightweight cache for last-known activity telemetry per student
+ */
+Veritas.Models.Session.ProctorTelemetryStore = {
+  _cache: function() {
+    return CacheService.getDocumentCache();
+  },
+
+  _key: function(pollId, studentEmail) {
+    return ['telemetry', pollId || 'none', studentEmail || 'none'].join('::');
+  },
+
+  record: function(pollId, studentEmail, telemetry) {
+    if (!pollId || !studentEmail || !telemetry) return;
+    try {
+      var sanitized = {
+        lastInteraction: telemetry.lastInteraction || null,
+        currentQuestionStart: telemetry.currentQuestionStart || null,
+        isCalculatorActive: telemetry.isCalculatorActive === true,
+        timeOnQuestion: telemetry.timeOnQuestion || null,
+        recordedAt: Date.now()
+      };
+      this._cache().put(this._key(pollId, studentEmail), JSON.stringify(sanitized), 21600); // 6 hours
+    } catch (e) {
+      // Best-effort cache write; do not break proctor flow
+    }
+  },
+
+  get: function(pollId, studentEmail) {
+    if (!pollId || !studentEmail) return null;
+    try {
+      var raw = this._cache().get(this._key(pollId, studentEmail));
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  },
+
+  getBatch: function(pollId, studentEmails) {
+    var map = new Map();
+    if (!pollId || !Array.isArray(studentEmails)) return map;
+    var cache = this._cache();
+    var keys = studentEmails.map(function(email) { return ['telemetry', pollId, email].join('::'); });
+    try {
+      var values = cache.getAll(keys);
+      studentEmails.forEach(function(email, idx) {
+        var raw = values[keys[idx]];
+        if (raw) {
+          try {
+            map.set(email, JSON.parse(raw));
+          } catch (e) {
+            map.set(email, null);
+          }
+        }
+      });
+    } catch (e) {
+      // Fallback to single fetch if getAll fails
+      studentEmails.forEach(function(email) {
+        var entry = Veritas.Models.Session.ProctorTelemetryStore.get(pollId, email);
+        if (entry) map.set(email, entry);
+      });
+    }
+    return map;
   }
 };
 
@@ -2207,7 +2288,7 @@ Veritas.Models.Session.reportStudentViolation = function(pollId, studentEmail, r
 /**
  * Get student proctor state for polling
  */
-Veritas.Models.Session.getStudentProctorState = function(token) {
+Veritas.Models.Session.getStudentProctorState = function(token, telemetry) {
   return withErrorHandling(function() {
     var studentEmail = token ? TokenManager.getStudentEmail(token) : TokenManager.getCurrentStudentEmail();
 
@@ -2225,6 +2306,8 @@ Veritas.Models.Session.getStudentProctorState = function(token) {
     }
 
     var state = Veritas.Models.Session.ProctorAccess.getState(pollId, studentEmail, currentSessionId);
+
+    Veritas.Models.Session.ProctorTelemetryStore.record(pollId, studentEmail, telemetry);
 
     // CRITICAL FIX: Do NOT set unlock_granted here. Unlock_granted must ONLY
     // be returned by explicit unlock paths:

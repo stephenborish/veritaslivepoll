@@ -376,8 +376,8 @@ function endIndividualTimedSession(pollId) {
  * @param {string} token - Session token
  * @returns {Object} Session state
  */
-function getIndividualTimedSessionState(token) {
-  return Veritas.StudentApi.getIndividualTimedSessionState(token);
+function getIndividualTimedSessionState(token, telemetry) {
+  return Veritas.StudentApi.getIndividualTimedSessionState(token, telemetry);
 }
 
 /**
@@ -606,8 +606,8 @@ function studentConfirmFullscreen(expectedLockVersion, token) {
  * @param {string} token - Session token
  * @returns {Object} Proctor state
  */
-function getStudentProctorState(token) {
-  return Veritas.StudentApi.getStudentProctorState(token);
+function getStudentProctorState(token, telemetry) {
+  return Veritas.StudentApi.getStudentProctorState(token, telemetry);
 }
 
 // =============================================================================

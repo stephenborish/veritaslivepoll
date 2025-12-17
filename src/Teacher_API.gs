@@ -91,9 +91,26 @@ Veritas.TeacherApi.getTeacherDashboardData = function() {
       pollCount: polls.length
     });
 
+    var activePollId = null;
+    var activePoll = null;
+    try {
+      var liveStatus = DataAccess.liveStatus.get();
+      activePollId = liveStatus && liveStatus[0];
+      if (activePollId) {
+        activePoll = Veritas.Models.Session.getLivePollData(activePollId, liveStatus[1]);
+        if (activePoll) {
+          activePoll.activePollId = activePollId;
+        }
+      }
+    } catch (e) {
+      Logger.log('No active poll detected or failed to load: ' + e);
+    }
+
     return {
       classes: classes,
-      polls: polls
+      polls: polls,
+      activePollId: activePollId,
+      activePoll: activePoll
     };
   })();
 };

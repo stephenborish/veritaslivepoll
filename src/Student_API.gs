@@ -477,13 +477,13 @@ Veritas.StudentApi.submitLivePollAnswer = function(pollId, questionIndex, answer
  * @param {string} token - Session token
  * @returns {Object} Proctor state envelope
  */
-Veritas.StudentApi.getStudentProctorState = function(token) {
+Veritas.StudentApi.getStudentProctorState = function(token, telemetry) {
   return withErrorHandling(function() {
     // Validate token early to prevent expired/invalid links from polling
     Veritas.StudentApi.validateToken(token);
 
     // Delegate to session model which reads current live session metadata
-    return Veritas.Models.Session.getStudentProctorState(token);
+    return Veritas.Models.Session.getStudentProctorState(token, telemetry);
   })();
 };
 
@@ -496,12 +496,12 @@ Veritas.StudentApi.getStudentProctorState = function(token) {
  * @param {string} token - Session token
  * @returns {Object} Session state
  */
-Veritas.StudentApi.getIndividualTimedSessionState = function(token) {
+Veritas.StudentApi.getIndividualTimedSessionState = function(token, telemetry) {
   return withErrorHandling(function() {
     Veritas.StudentApi.validateToken(token);
 
     // Delegate to Models layer (token contains student identity)
-    return Veritas.Models.Session.getIndividualTimedSessionState(token);
+    return Veritas.Models.Session.getIndividualTimedSessionState(token, telemetry);
   })();
 };
 

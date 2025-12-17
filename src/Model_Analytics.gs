@@ -1885,6 +1885,8 @@ Veritas.Models.Analytics.getLivePollData = function(pollId, questionIndex) {
     // OPTIMIZATION: Batch load all proctor states in a single operation
     var studentEmails = roster.map(function(s) { return s.email; });
     var proctorStates = Veritas.Models.Session.ProctorAccess.getStatesBatch(pollId, studentEmails, currentSessionId);
+    var telemetryMap = Veritas.Models.Session.ProctorTelemetryStore.getBatch(pollId, studentEmails);
+    var nowMs = Date.now();
 
     var studentStatusList = roster.map(function(student) {
       var email = student.email;
@@ -1900,6 +1902,10 @@ Veritas.Models.Analytics.getLivePollData = function(pollId, questionIndex) {
       var displayName = nameParts.displayName || fullName;
       var shortName = Veritas.Models.Analytics.formatStudentName(student.name);
 
+      var telemetry = telemetryMap.get(email) || {};
+      var lastInteractionMs = telemetry.lastInteraction ? Number(telemetry.lastInteraction) : null;
+      var isIdle = lastInteractionMs ? (nowMs - lastInteractionMs > 30000) : false;
+      var timeOnQuestion = typeof telemetry.timeOnQuestion === 'number' ? telemetry.timeOnQuestion : null;
       var baseStudent = {
         name: fullName || displayName,
         displayName: displayName,
@@ -1918,7 +1924,14 @@ Veritas.Models.Analytics.getLivePollData = function(pollId, questionIndex) {
         timestamp: submission ? submission.timestamp : 0,
         sessionViolations: proctorState.sessionViolations || 0,
         sessionExits: proctorState.sessionExits || 0,
-        confidence: submission ? (submission.confidence || null) : null
+        confidence: submission ? (submission.confidence || null) : null,
+        telemetry: {
+          lastInteraction: lastInteractionMs,
+          isIdle: isIdle,
+          activityStatus: isIdle ? 'IDLE' : 'ACTIVE',
+          usingCalculator: telemetry.isCalculatorActive === true,
+          timeOnQuestion: timeOnQuestion
+        }
       };
 
       if (proctorState.status === 'BLOCKED') {

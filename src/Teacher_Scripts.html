@@ -10527,23 +10527,33 @@
     // This ensures firebase.apps.length === 1 immediately, not just when a poll is active.
     // The user reported firebase.apps.length === 0 on teacher panel - this fixes it.
     (function initFirebaseEagerly() {
+        var debugInfo = {
+            firebasePresent: typeof firebase !== 'undefined',
+            configPresent: typeof FIREBASE_CONFIG !== 'undefined' && !!FIREBASE_CONFIG,
+            databaseURL: (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG) ? FIREBASE_CONFIG.databaseURL : null,
+            appsLengthBefore: (typeof firebase !== 'undefined' && firebase.apps) ? firebase.apps.length : 'n/a',
+            initCalled: false,
+            success: false
+        };
+
         if (typeof firebase !== 'undefined' && FIREBASE_CONFIG) {
             if (!firebase.apps.length) {
                 try {
                     firebase.initializeApp(FIREBASE_CONFIG);
-                    console.log('[Firebase] App initialized eagerly at page load');
-                    console.log('[Firebase] databaseURL:', FIREBASE_CONFIG.databaseURL);
-                    console.log('[Firebase] apps.length:', firebase.apps.length);
+                    debugInfo.initCalled = true;
+                    debugInfo.success = true;
                 } catch (e) {
                     console.error('[Firebase] Failed to initialize app:', e);
+                    debugInfo.error = e.message;
                 }
             } else {
-                console.log('[Firebase] App already initialized, apps.length:', firebase.apps.length);
+                debugInfo.success = true; // Already initialized
             }
             // Store firebaseDb reference for later use
-            if (!firebaseDb) {
+            if (!firebaseDb && firebase.apps.length > 0) {
                 firebaseDb = firebase.database();
             }
+            debugInfo.appsLengthAfter = firebase.apps.length;
         } else {
             if (typeof firebase === 'undefined') {
                 console.error('[Firebase] SDK not loaded! Check script tags in Teacher_View.html');
@@ -10552,6 +10562,13 @@
                 console.error('[Firebase] FIREBASE_CONFIG not available!');
             }
         }
+
+        // Single clean debug log line as requested
+        console.log('[Firebase Init] databaseURL=' + debugInfo.databaseURL +
+                    ', firebasePresent=' + debugInfo.firebasePresent +
+                    ', appsLength=' + debugInfo.appsLengthAfter +
+                    ', initCalled=' + debugInfo.initCalled +
+                    ', success=' + debugInfo.success);
     })();
 
     function initFirebaseMissionControl(pollId) {

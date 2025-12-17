@@ -1265,9 +1265,11 @@ Veritas.TeacherApi.sendPollLinkToClass = function(className, pollId) {
 
     // 3. Prepare Email Template
     // TERMINOLOGY FIX: Use "secure assessment" for secure, "live poll" for live
+    // Include date for clarity (matches user's prior format)
+    var emailDate = Utilities.formatDate(new Date(), 'America/New_York', 'MMMM d, yyyy');
     var subject = isSecure
-      ? 'Secure Assessment: ' + pollName
-      : 'Live Poll: ' + pollName;
+      ? 'Your VERITAS Secure Assessment Link – ' + emailDate
+      : 'Your VERITAS Live Poll Link – ' + emailDate;
 
     var sentCount = 0;
     var failedCount = 0;
@@ -1304,31 +1306,91 @@ Veritas.TeacherApi.sendPollLinkToClass = function(className, pollId) {
           + (pollId ? '&pollId=' + encodeURIComponent(pollId) : '')
           + (isSecure ? '&mode=examStudent' : '&mode=student'); // Use correct mode values
 
-        // Build Body
+        // Build Body - Professional VERITAS branding with clear instructions
         var bodyHtml = '';
         var bodyPlain = '';
+        var dateStr = Utilities.formatDate(new Date(), 'America/New_York', 'MMMM d, yyyy');
 
         // TERMINOLOGY: "secure assessment" for secure, "live poll" for live
         if (isSecure) {
-          bodyHtml = '<p>Hello ' + name + ',</p>' +
-                 '<p>Here is your unique link for the secure assessment: <strong>' + pollName + '</strong>.</p>' +
-                 '<p><a href="' + link + '" style="background-color:#002e6d;color:#ffffff;padding:10px 20px;text-decoration:none;border-radius:5px;">Start Secure Assessment</a></p>' +
-                 '<p>Or copy this link: ' + link + '</p>' +
-                 '<p><strong>Note:</strong> If an access code is required, your teacher will provide it separately.</p>';
-          bodyPlain = 'Hello ' + name + ',\n\n' +
-                  'Here is your unique link for the secure assessment: ' + pollName + '.\n\n' +
-                  link + '\n\n' +
-                  'Note: If an access code is required, your teacher will provide it separately.';
+          // Secure Assessment email - includes proctoring instructions
+          bodyHtml = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">' +
+            '<div style="background:#002e6d;padding:20px;text-align:center;border-radius:8px 8px 0 0;">' +
+            '<h1 style="color:#ffffff;margin:0;font-size:24px;">VERITAS</h1>' +
+            '<p style="color:#ffffff;margin:5px 0 0 0;font-size:14px;">Secure Assessment</p>' +
+            '</div>' +
+            '<div style="background:#f8f9fa;padding:25px;border:1px solid #e9ecef;border-top:none;">' +
+            '<p style="font-size:16px;color:#333;">Hello ' + name + ',</p>' +
+            '<p style="font-size:16px;color:#333;">You have been invited to complete a <strong>secure assessment</strong>:</p>' +
+            '<p style="font-size:18px;color:#002e6d;font-weight:bold;text-align:center;margin:20px 0;">' + pollName + '</p>' +
+            '<div style="text-align:center;margin:25px 0;">' +
+            '<a href="' + link + '" style="background-color:#002e6d;color:#ffffff;padding:14px 28px;text-decoration:none;border-radius:6px;font-size:16px;font-weight:bold;display:inline-block;">Begin Secure Assessment</a>' +
+            '</div>' +
+            '<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:15px;margin:20px 0;">' +
+            '<p style="margin:0 0 10px 0;font-weight:bold;color:#856404;">⚠️ Important Instructions:</p>' +
+            '<ul style="margin:0;padding-left:20px;color:#856404;">' +
+            '<li>Stay in <strong>fullscreen mode</strong> during the entire assessment</li>' +
+            '<li>Do <strong>not</strong> switch tabs, windows, or applications</li>' +
+            '<li>Do <strong>not</strong> refresh or close the browser</li>' +
+            '<li>Violations will be recorded and reported to your teacher</li>' +
+            '</ul>' +
+            '</div>' +
+            '<p style="font-size:13px;color:#666;margin-top:20px;">If the button above doesn\'t work, copy and paste this link into your browser:</p>' +
+            '<p style="font-size:12px;color:#002e6d;word-break:break-all;">' + link + '</p>' +
+            '<p style="font-size:13px;color:#666;margin-top:15px;"><em>Note: If an access code is required, your teacher will provide it separately.</em></p>' +
+            '</div>' +
+            '<div style="background:#002e6d;padding:15px;text-align:center;border-radius:0 0 8px 8px;">' +
+            '<p style="color:#ffffff;margin:0;font-size:12px;">Powered by Veritas Live Poll</p>' +
+            '</div>' +
+            '</body></html>';
+
+          bodyPlain = 'VERITAS SECURE ASSESSMENT\n' +
+            '========================\n\n' +
+            'Hello ' + name + ',\n\n' +
+            'You have been invited to complete a secure assessment:\n' +
+            pollName + '\n\n' +
+            'Your unique link: ' + link + '\n\n' +
+            'IMPORTANT INSTRUCTIONS:\n' +
+            '- Stay in fullscreen mode during the entire assessment\n' +
+            '- Do NOT switch tabs, windows, or applications\n' +
+            '- Do NOT refresh or close the browser\n' +
+            '- Violations will be recorded and reported to your teacher\n\n' +
+            'Note: If an access code is required, your teacher will provide it separately.\n\n' +
+            '---\n' +
+            'Powered by Veritas Live Poll';
+
         } else {
-          bodyHtml = '<p>Hello ' + name + ',</p>' +
-                 '<p>Please click the link below to join the live poll: <strong>' + pollName + '</strong>.</p>' +
-                 '<p><a href="' + link + '" style="background-color:#002e6d;color:#ffffff;padding:10px 20px;text-decoration:none;border-radius:5px;">Join Live Poll</a></p>' +
-                 '<p>Or copy this link: ' + link + '</p>' +
-                 '<p>See you in class!</p>';
-          bodyPlain = 'Hello ' + name + ',\n\n' +
-                  'Please click the link below to join the live poll: ' + pollName + '.\n\n' +
-                  link + '\n\n' +
-                  'See you in class!';
+          // Live Poll email - simpler, more friendly
+          bodyHtml = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">' +
+            '<div style="background:#002e6d;padding:20px;text-align:center;border-radius:8px 8px 0 0;">' +
+            '<h1 style="color:#ffffff;margin:0;font-size:24px;">VERITAS</h1>' +
+            '<p style="color:#ffffff;margin:5px 0 0 0;font-size:14px;">Live Poll</p>' +
+            '</div>' +
+            '<div style="background:#f8f9fa;padding:25px;border:1px solid #e9ecef;border-top:none;">' +
+            '<p style="font-size:16px;color:#333;">Hello ' + name + ',</p>' +
+            '<p style="font-size:16px;color:#333;">You\'re invited to join a <strong>live poll</strong>:</p>' +
+            '<p style="font-size:18px;color:#002e6d;font-weight:bold;text-align:center;margin:20px 0;">' + pollName + '</p>' +
+            '<div style="text-align:center;margin:25px 0;">' +
+            '<a href="' + link + '" style="background-color:#002e6d;color:#ffffff;padding:14px 28px;text-decoration:none;border-radius:6px;font-size:16px;font-weight:bold;display:inline-block;">Join Live Poll</a>' +
+            '</div>' +
+            '<p style="font-size:13px;color:#666;margin-top:20px;">If the button above doesn\'t work, copy and paste this link into your browser:</p>' +
+            '<p style="font-size:12px;color:#002e6d;word-break:break-all;">' + link + '</p>' +
+            '<p style="font-size:16px;color:#333;margin-top:20px;">See you in class! 🎓</p>' +
+            '</div>' +
+            '<div style="background:#002e6d;padding:15px;text-align:center;border-radius:0 0 8px 8px;">' +
+            '<p style="color:#ffffff;margin:0;font-size:12px;">Powered by Veritas Live Poll</p>' +
+            '</div>' +
+            '</body></html>';
+
+          bodyPlain = 'VERITAS LIVE POLL\n' +
+            '================\n\n' +
+            'Hello ' + name + ',\n\n' +
+            'You\'re invited to join a live poll:\n' +
+            pollName + '\n\n' +
+            'Your unique link: ' + link + '\n\n' +
+            'See you in class!\n\n' +
+            '---\n' +
+            'Powered by Veritas Live Poll';
         }
 
         GmailApp.sendEmail(email, subject, bodyPlain, {

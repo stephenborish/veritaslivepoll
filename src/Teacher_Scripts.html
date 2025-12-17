@@ -27,6 +27,7 @@
     var isPaused = false;
     var isLiveSession = false;
     var isNavigating = false; // Flag to prevent polling during question navigation
+    var navigationRequestInFlight = false; // Prevent double-advances
     var questionCounter = 0;
     var questions = [];
     var questionIdCounter = 0;
@@ -5424,6 +5425,11 @@
     }
 
     function onNextQuestion() {
+      if (navigationRequestInFlight) {
+        console.warn('Navigation already in progress; ignoring extra Next click');
+        return;
+      }
+      navigationRequestInFlight = true;
       if (pollInterval) clearInterval(pollInterval);
       pauseTimerCountdown();
       stopVisualTimer();
@@ -5437,6 +5443,7 @@
       isNavigating = true; // Set flag to prevent polling during navigation
       if (PREVIEW_MODE) {
         isNavigating = false;
+        navigationRequestInFlight = false;
         previewOnlyNotice('advance to the next question');
         return;
       }
@@ -5446,10 +5453,12 @@
           // Clear navigation flag after a short delay to ensure state is fully synced
           setTimeout(function () {
             isNavigating = false;
+            navigationRequestInFlight = false;
           }, 500);
         })
         .withFailureHandler(function (error) {
           isNavigating = false;
+          navigationRequestInFlight = false;
           handleError(error);
         })
         .nextQuestion();

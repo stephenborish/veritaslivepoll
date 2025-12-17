@@ -2330,10 +2330,14 @@
 
     /* Live view spacing adjustments */
     .live-view-shell {
-      padding-top: 6px;
+      padding-top: 0;
+      min-height: calc(100vh - 4rem);
+      height: calc(100vh - 4rem);
     }
     .live-view-grid {
       gap: 1rem !important;
+      height: 100%;
+      align-items: flex-start;
     }
     /* P0-6 & P0-7 FIX: Consistent question card layout */
     .live-question-card {

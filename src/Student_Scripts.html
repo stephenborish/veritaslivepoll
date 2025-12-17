@@ -268,15 +268,13 @@
         var LockManager = {
             isLocked: function () {
                 try {
-                    return sessionStorage.getItem('veritas_lock_active') === 'true' ||
-                        localStorage.getItem('veritas_lock_active') === 'true';
+                    return sessionStorage.getItem('veritas_lock_active') === 'true';
                 } catch (e) { return false; }
             },
             lock: function (reason) {
                 console.warn('[LockManager] LOCKING:', reason);
                 try {
                     sessionStorage.setItem('veritas_lock_active', 'true');
-                    localStorage.setItem('veritas_lock_active', 'true');
                     sessionStorage.setItem('lock_reason', reason || 'unknown');
                 } catch (e) { }
 
@@ -295,7 +293,6 @@
                 console.log('[LockManager] UNLOCKING');
                 try {
                     sessionStorage.removeItem('veritas_lock_active');
-                    localStorage.removeItem('veritas_lock_active');
                     sessionStorage.removeItem('lock_reason');
                 } catch (e) { }
                 hideLockEnforcementUI();
@@ -465,9 +462,7 @@
  */
         function isPoisonPillActive() {
             try {
-                var sessionLock = sessionStorage.getItem('veritas_lock_active') === 'true';
-                var localLock = localStorage.getItem('veritas_lock_active') === 'true';
-                return sessionLock || localLock;
+                return sessionStorage.getItem('veritas_lock_active') === 'true';
             } catch (e) {
                 return false;
             }
@@ -480,10 +475,8 @@
             try {
                 if (active) {
                     sessionStorage.setItem('veritas_lock_active', 'true');
-                    localStorage.setItem('veritas_lock_active', 'true');
                 } else {
                     sessionStorage.removeItem('veritas_lock_active');
-                    localStorage.removeItem('veritas_lock_active');
                 }
             } catch (e) {
                 console.error('Failed to set poison pill', e);
@@ -1710,13 +1703,15 @@
                 if (!secureSessionActive || isEnteringFullscreen || isInteractionBlocked || isTeacherBlocked) return;
 
                 // 2. IFRAME SAFE HARBOR (Calculator / Tools)
-                if (document.activeElement && document.activeElement.tagName === 'IFRAME') {
-                    console.log('[Proctor] Ignored blur - interaction with iframe');
+                var calculatorFrame = document.getElementById('calc-iframe');
+                if (document.activeElement && calculatorFrame && document.activeElement === calculatorFrame) {
+                    console.log('[Proctor] Ignored blur - interaction with calculator iframe');
                     return;
                 }
 
                 // 3. LOCK IF VIOLATION CONFIRMED
                 console.warn('[Proctor] Blur detected - LOCKING');
+                try { sessionStorage.setItem('veritas_lock_active', 'true'); } catch (e) { }
                 violationLogged = true;
                 triggerSecurityViolation('tab_switch');
             });
@@ -2831,17 +2826,39 @@
         // =============================================================================
 
         function updateStudentView(data) {
-            if (sessionStorage.getItem('veritas_lock_active') === 'true') {
-                if (typeof showLockEnforcementUI === 'function') {
-                    showLockEnforcementUI("LOCKED", "Security violation detected. Wait for teacher approval.");
+            var poisonPillActive = false;
+            try {
+                poisonPillActive = sessionStorage.getItem('veritas_lock_active') === 'true';
+            } catch (e) { poisonPillActive = false; }
+
+            if (poisonPillActive) {
+                if (data && data.unlock_granted === true) {
+                    clearPersistedLock();
+                    poisonPillActive = false;
+                    if (typeof hideLockEnforcementUI === 'function') { hideLockEnforcementUI(); }
+                } else {
+                    if (typeof showLockEnforcementUI === 'function') {
+                        showLockEnforcementUI("LOCKED", "Security violation detected. Wait for teacher approval.");
+                    }
+                    isInteractionBlocked = true;
+                    startProctorPolling();
+                    return;
                 }
-                return;
             }
 
             data = data || {};
             console.log('[ViewManager] Update View State:', data);
 
             var currentIndex = typeof data.questionIndex === 'number' ? data.questionIndex : null;
+
+            // STRICT VIEW MUTEX: prevent ghost/double screens
+            ['entry-screen', 'secure-lobby', 'student-container'].forEach(function (viewId) {
+                var viewEl = document.getElementById(viewId);
+                if (viewEl) {
+                    viewEl.style.display = 'none';
+                    viewEl.classList.add('hidden');
+                }
+            });
 
             // Maintain submission guardrails so polling cannot rewind UI
             if (data.hasSubmitted === true && currentIndex !== null) {
@@ -2913,8 +2930,17 @@
             }
 
             if (!data.sessionType && !data.pollId) {
+                if (entryScreen) {
+                    entryScreen.style.display = 'block';
+                    entryScreen.classList.remove('hidden');
+                }
                 ViewManager.show('entry-screen');
                 return;
+            }
+
+            if (studentContainer) {
+                studentContainer.style.display = 'block';
+                studentContainer.classList.remove('hidden');
             }
 
             // 5. Route to specific view handlers
@@ -2923,6 +2949,11 @@
             if (isSecure) {
                 // Secure Logic
                 if (data.status === 'LOBBY' || data.sessionPhase === 'LOBBY') {
+                    var lobbyView = document.getElementById('secure-lobby');
+                    if (lobbyView) {
+                        lobbyView.style.display = 'block';
+                        lobbyView.classList.remove('hidden');
+                    }
                     ViewManager.show('secure-lobby');
                     renderSecureLobby(data);
                 } else {

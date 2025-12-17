@@ -610,6 +610,10 @@ Veritas.Models.Session.toggleSessionCalculator = function(pollId, isEnabled) {
     }
 
     const liveStatus = DataAccess.liveStatus.get();
+    if (!liveStatus || !liveStatus.length) {
+      throw new Error('No active session to update calculator state.');
+    }
+
     const activePollId = liveStatus[0];
     const questionIndex = liveStatus[1];
     const status = liveStatus[2];

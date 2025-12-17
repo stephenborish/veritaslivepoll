@@ -166,6 +166,73 @@
             updateDebugHud('LOCKED', null, activePollId);
         }
 
+        // ================================
+        // UNIFIED ACTIVITY MONITOR
+        // ================================
+        var ActivityMonitor = (function () {
+            var instance;
+
+            function create() {
+                var lastInteraction = Date.now();
+                var currentQuestionStart = Date.now();
+                var isCalculatorActive = false;
+
+                function markInteraction() {
+                    lastInteraction = Date.now();
+                }
+
+                function setQuestionStart(timestamp) {
+                    currentQuestionStart = timestamp || Date.now();
+                }
+
+                function setCalculatorState(active) {
+                    isCalculatorActive = !!active;
+                }
+
+                function getTelemetry() {
+                    var now = Date.now();
+                    var idleMs = now - lastInteraction;
+                    var status = idleMs > 30000 ? 'IDLE' : (isCalculatorActive ? 'CALCULATOR' : 'ACTIVE');
+                    return {
+                        status: status,
+                        lastInteraction: lastInteraction,
+                        currentQuestionStart: currentQuestionStart,
+                        timeOnQuestion: Math.max(0, now - currentQuestionStart),
+                        usingCalculator: isCalculatorActive
+                    };
+                }
+
+                function attachListeners() {
+                    ['click', 'mousemove', 'keydown', 'touchstart'].forEach(function (evt) {
+                        document.addEventListener(evt, markInteraction, { passive: true });
+                    });
+                    var calcFrame = document.getElementById('calc-iframe');
+                    if (calcFrame) {
+                        calcFrame.addEventListener('focus', function () { setCalculatorState(true); markInteraction(); });
+                        calcFrame.addEventListener('blur', function () { setCalculatorState(false); });
+                    }
+                }
+
+                attachListeners();
+
+                return {
+                    markInteraction: markInteraction,
+                    setQuestionStart: setQuestionStart,
+                    setCalculatorState: setCalculatorState,
+                    getTelemetry: getTelemetry
+                };
+            }
+
+            return {
+                getInstance: function () {
+                    if (!instance) {
+                        instance = create();
+                    }
+                    return instance;
+                }
+            };
+        })();
+
         var secureCountdownController = window.SecureAssessmentShared.createCountdown({
             onTick: function (seconds) {
                 updateSecureTimerDisplay(seconds);
@@ -828,6 +895,7 @@
                 securePendingAnswerText = null;
                 secureMetacognitionEnabled = false;
                 hideSecureConfidencePrompt();
+                ActivityMonitor.getInstance().setQuestionStart(Date.now());
             }
             secureSubmitting = false;
             secureTimeExpired = false;
@@ -1026,6 +1094,7 @@
                 confidenceLevel: confidenceLevel
             };
 
+            var telemetry = ActivityMonitor.getInstance().getTelemetry();
             google.script.run
                 .withSuccessHandler(function (response) {
                     setSecureSubmitLoading(false);
@@ -1402,6 +1471,7 @@
 
             if (securePollInFlight) return;
             securePollInFlight = true;
+            var telemetry = ActivityMonitor.getInstance().getTelemetry();
             google.script.run
                 .withSuccessHandler(function (state) {
                     securePollInFlight = false;
@@ -1453,7 +1523,7 @@
                     securePollInFlight = false;
                     handleError(error);
                 })
-                .getIndividualTimedSessionState(SESSION_TOKEN);
+                .getIndividualTimedSessionState(SESSION_TOKEN, telemetry);
         }
 
         if (secureSubmitBtn) {
@@ -1626,18 +1696,19 @@
         var blurListenerAttached = false;
         var liveSessionActive = false;
 
-        function triggerSecurityViolation(reason) {
-            // P0-4 FIX: Store violation reason for HUD display
-            sessionStorage.setItem('veritas_lock_active', 'true');
-            sessionStorage.setItem('lock_reason', reason || 'violation');
-
-            if (typeof showLockEnforcementUI === 'function') {
-                showLockEnforcementUI("LOCKED", "Security violation detected. Wait for teacher approval.");
-            }
-
+        function handleViolation(reason) {
+            try {
+                sessionStorage.setItem('veritas_lock_active', 'true');
+                sessionStorage.setItem('lock_reason', reason || 'violation');
+            } catch (e) { }
+            LockManager.lock(reason || 'proctoring_violation');
             if (typeof reportViolationDebounced === 'function') {
                 reportViolationDebounced(reason);
             }
+        }
+
+        function triggerSecurityViolation(reason) {
+            handleViolation(reason);
         }
 
         function reportViolationDebounced(reason) {
@@ -2560,7 +2631,8 @@
                 lastStateVersion: lastStateVersion,
                 lastSuccessAt: lastSuccessfulPollAt,
                 failureCount: pollFailureCount,
-                advisedInterval: lastAdvisedInterval
+                advisedInterval: lastAdvisedInterval,
+                telemetry: ActivityMonitor.getInstance().getTelemetry()
             };
 
             google.script.run
@@ -2775,7 +2847,7 @@
                 .withFailureHandler(function (error) {
                     console.error('Proctor state check error:', error);
                 })
-                .getStudentProctorState(SESSION_TOKEN);
+                .getStudentProctorState(SESSION_TOKEN, telemetry);
         }
 
         function hideAllViews() {
@@ -2846,6 +2918,7 @@
                 }
             }
 
+            hideAllViews();
             data = data || {};
             console.log('[ViewManager] Update View State:', data);
 

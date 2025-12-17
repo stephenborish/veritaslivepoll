@@ -1202,12 +1202,24 @@ function logEmailAttempt_(details) {
 /**
  * Authorize email access (helper to trigger scope prompt)
  * @returns {boolean} True
+ *
+ * NOTE: With gmail.send scope, we can only SEND emails, not read inbox.
+ * The authorization prompt will be triggered automatically when
+ * sendPollLinkToClass() is first called. This function now just
+ * verifies the GmailApp service is accessible.
  */
 Veritas.TeacherApi.authorizeEmail = function() {
-  // This function exists solely to trigger the authorization flow in the editor
-  // if scopes were missing. It doesn't send anything.
-  GmailApp.getInboxUnreadCount();
-  return true;
+  // Just verify GmailApp exists and is accessible
+  // The actual OAuth prompt happens when sendPollLinkToClass is called
+  if (typeof GmailApp === 'undefined') {
+    throw new Error('GmailApp service not available');
+  }
+  // Return success - the real auth prompt happens on first actual send
+  return {
+    success: true,
+    message: 'Gmail service available. Authorization will be prompted on first email send.',
+    scope: 'gmail.send'
+  };
 };
 
 /**

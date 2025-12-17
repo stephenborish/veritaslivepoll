@@ -279,15 +279,34 @@ Veritas.Data.Rosters = {
     var rosterSheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.ROSTERS);
     var values = Veritas.Data.getDataRangeValues(rosterSheet);
 
-    return values
+    // FIX: Deduplicate by email to prevent duplicate student entries on teacher dashboard
+    // Use a Map keyed by lowercase email to handle case variations
+    var studentMap = new Map();
+
+    values
       .filter(function(row) { return row[0] === className; })
-      .map(function(row) {
-        return {
-          name: (row[1] || '').toString().trim(),
-          email: (row[2] || '').toString().trim()
-        };
-      })
-      .filter(function(entry) { return entry.name !== '' && entry.email !== ''; })
+      .forEach(function(row) {
+        var name = (row[1] || '').toString().trim();
+        var email = (row[2] || '').toString().trim();
+        var emailKey = email.toLowerCase();
+
+        // Skip empty entries
+        if (!name || !email) return;
+
+        // Keep the first occurrence of each email (or update if name is more complete)
+        if (!studentMap.has(emailKey)) {
+          studentMap.set(emailKey, { name: name, email: email });
+        } else {
+          // If duplicate email found, keep the one with the longer/more complete name
+          var existing = studentMap.get(emailKey);
+          if (name.length > existing.name.length) {
+            studentMap.set(emailKey, { name: name, email: email });
+          }
+        }
+      });
+
+    // Convert map to array and sort by name
+    return Array.from(studentMap.values())
       .sort(function(a, b) { return a.name.localeCompare(b.name); });
   },
 

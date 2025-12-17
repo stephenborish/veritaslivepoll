@@ -5969,6 +5969,13 @@
       CURRENT_POLL_DATA.questionIndex = data.questionIndex;
       CURRENT_POLL_DATA.correctAnswer = data.correctAnswer;
 
+      // FIX: Update pollSessionType from server data to ensure calculator toggle works correctly
+      // This fixes the bug where calculator button does nothing because pollSessionType wasn't updated
+      if (data.sessionType) {
+        pollSessionType = normalizeSessionTypeClient(data.sessionType);
+        CURRENT_POLL_DATA.sessionType = data.sessionType;
+      }
+
       // FIX TASK A: Initialize Firebase for ALL proctored sessions (Live Polls + Secure Assessment)
       // This enables real-time proctoring status on the teacher dashboard
       // DO NOT set currentMissionControlPollId here - let initFirebaseMissionControl handle it
@@ -5981,7 +5988,9 @@
       CURRENT_POLL_DATA.metacognition = data.metacognition || null;
       CURRENT_POLL_DATA.calculatorEnabled = calculatorEnabled;
 
-      setLiveCalculatorToggleState(calculatorEnabled, isSecureSessionTypeClient(pollSessionType));
+      // FIX: Use the actual session type from server data for calculator toggle
+      var isSecureSession = isSecureSessionTypeClient(data.sessionType || pollSessionType);
+      setLiveCalculatorToggleState(calculatorEnabled, isSecureSession);
 
       var questionChanged = previousQuestionIndex === null || data.questionIndex !== previousQuestionIndex;
 
@@ -10513,6 +10522,55 @@
     console.log('✓ Teacher Panel Ready (Enhanced UI)');
 
     // --- FIREBASE MISSION CONTROL ---
+
+    // CRITICAL FIX: Initialize Firebase app eagerly at page load
+    // This ensures firebase.apps.length === 1 immediately, not just when a poll is active.
+    // The user reported firebase.apps.length === 0 on teacher panel - this fixes it.
+    (function initFirebaseEagerly() {
+        var debugInfo = {
+            firebasePresent: typeof firebase !== 'undefined',
+            configPresent: typeof FIREBASE_CONFIG !== 'undefined' && !!FIREBASE_CONFIG,
+            databaseURL: (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG) ? FIREBASE_CONFIG.databaseURL : null,
+            appsLengthBefore: (typeof firebase !== 'undefined' && firebase.apps) ? firebase.apps.length : 'n/a',
+            initCalled: false,
+            success: false
+        };
+
+        if (typeof firebase !== 'undefined' && FIREBASE_CONFIG) {
+            if (!firebase.apps.length) {
+                try {
+                    firebase.initializeApp(FIREBASE_CONFIG);
+                    debugInfo.initCalled = true;
+                    debugInfo.success = true;
+                } catch (e) {
+                    console.error('[Firebase] Failed to initialize app:', e);
+                    debugInfo.error = e.message;
+                }
+            } else {
+                debugInfo.success = true; // Already initialized
+            }
+            // Store firebaseDb reference for later use
+            if (!firebaseDb && firebase.apps.length > 0) {
+                firebaseDb = firebase.database();
+            }
+            debugInfo.appsLengthAfter = firebase.apps.length;
+        } else {
+            if (typeof firebase === 'undefined') {
+                console.error('[Firebase] SDK not loaded! Check script tags in Teacher_View.html');
+            }
+            if (!FIREBASE_CONFIG) {
+                console.error('[Firebase] FIREBASE_CONFIG not available!');
+            }
+        }
+
+        // Single clean debug log line as requested
+        console.log('[Firebase Init] databaseURL=' + debugInfo.databaseURL +
+                    ', firebasePresent=' + debugInfo.firebasePresent +
+                    ', appsLength=' + debugInfo.appsLengthAfter +
+                    ', initCalled=' + debugInfo.initCalled +
+                    ', success=' + debugInfo.success);
+    })();
+
     function initFirebaseMissionControl(pollId) {
         if (!FIREBASE_CONFIG || !pollId) return;
 
@@ -10529,8 +10587,11 @@
             return;
         }
 
+        // Firebase app should already be initialized by initFirebaseEagerly()
+        // But check again just in case
         if (typeof firebase !== 'undefined' && !firebase.apps.length) {
             firebase.initializeApp(FIREBASE_CONFIG);
+            console.log('[Firebase] Late init in initFirebaseMissionControl');
         }
 
         if (typeof firebase !== 'undefined') {

@@ -2727,10 +2727,11 @@
                             currentLockVersion = response.lockVersion;
                         }
                         showTeacherBlockedMessage();
-                    } else if (response.status === 'OK' || response.unlock_granted === true) {
-                        // ANTIDOTE: Server has explicitly granted unlock
-                        // This is the ONLY place where the Poison Pill can be cleared
-                        console.log('[Proctor] Server granted unlock - clearing Poison Pill');
+                    } else if (response.unlock_granted === true) {
+                        // ANTIDOTE: Server has EXPLICITLY granted unlock via teacher action
+                        // This ONLY comes from studentConfirmFullscreen() or teacherUnblockStudent()
+                        // NEVER from getStudentProctorState() polling - that was the auto-unlock bug!
+                        console.log('[Proctor] Server EXPLICITLY granted unlock (unlock_granted=true) - clearing Poison Pill');
                         clearPersistedLock();
 
                         if (proctorPollInterval) {
@@ -2742,15 +2743,28 @@
                         violationLogged = false;
                         fullscreenEnteredOnce = false; // Reset for new fullscreen session
                         hideConnectivityBanner();
-                        isInteractionBlocked = false;
-                        isTeacherBlocked = false;
-                        violationLogged = false;
-                        fullscreenEnteredOnce = false; // Reset for new fullscreen session
-                        hideConnectivityBanner();
                         secureSessionActive = true; // RESUME SESSIONS MUST BE ACTIVE
                         startPolling(true);
                         if (lastUnlockedState && lastUnlockedState.status && lastUnlockedState.status !== 'LOCKED' && lastUnlockedState.status !== 'AWAITING_FULLSCREEN') {
                             updateStudentView(lastUnlockedState);
+                        }
+                    } else if (response.status === 'OK') {
+                        // Student status is OK but no explicit unlock_granted
+                        // This means either:
+                        // 1. Fresh student who was never locked - OK to continue
+                        // 2. Student was locked but somehow status is OK without unlock_granted - BUG, keep polling
+                        // To be safe, if poison pill is active, KEEP LOCKED and keep polling.
+                        if (isPoisonPillActive()) {
+                            console.warn('[Proctor] Status is OK but Poison Pill still active - keeping lock (waiting for unlock_granted)');
+                            showLockEnforcementUI();
+                            // Keep polling - don't clear interval
+                        } else {
+                            // Normal case: student was never locked, continue normally
+                            console.log('[Proctor] Status OK, no prior lock - continuing normally');
+                            if (proctorPollInterval) {
+                                clearInterval(proctorPollInterval);
+                                proctorPollInterval = null;
+                            }
                         }
                     }
                 })

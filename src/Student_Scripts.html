@@ -88,7 +88,7 @@
             if (!hud) {
                 hud = document.createElement('div');
                 hud.id = 'firebase-debug-hud';
-                hud.style.cssText = 'position:fixed;bottom:10px;left:10px;background:rgba(0,0,0,0.8);color:lime;font-family:monospace;font-size:10px;padding:10px;z-index:9999;pointer-events:none;max-width:300px;border-radius:4px;';
+                hud.style.cssText = 'position:fixed;bottom:10px;left:10px;background:rgba(0,0,0,0.95);color:#4ade80;font-family:monospace;font-size:11px;padding:12px;z-index:9999;pointer-events:none;max-width:350px;border:2px solid #4ade80;border-radius:8px;';
                 document.body.appendChild(hud);
             }
 
@@ -101,11 +101,23 @@
             var isConnected = hud.dataset.connected === 'true';
             var currentPollId = hud.dataset.pollId || 'N/A';
 
-            var html = '<strong>🔥 Firebase Debug (Student)</strong><br>';
-            html += '<span style="color:' + (isConnected ? '#4ade80' : '#f87171') + '">●</span> Connected: ' + isConnected + '<br>';
-            html += 'PollId: ' + currentPollId + '<br>';
-            html += 'StudentKey: ' + (studentKey ? studentKey.substring(0, 8) + '...' : 'N/A') + '<br>';
-            html += 'Status: <span style="color:' + (currentStatus === 'LOCKED' ? '#f87171' : currentStatus === 'ACTIVE' ? '#4ade80' : '#facc15') + '">' + currentStatus + '</span>';
+            var connDot = isConnected ? '<span style="color:#4ade80">●</span>' : '<span style="color:#f87171">●</span>';
+            var html = '<strong style="color:#fff">🔥 FIREBASE DEBUG (STUDENT)</strong><br>';
+            html += connDot + ' <strong>.info/connected:</strong> ' + isConnected + '<br>';
+            html += '<strong>PollId (sessionKey):</strong> ' + currentPollId + '<br>';
+            html += '<strong>StudentKey:</strong> ' + (studentKey ? studentKey.substring(0, 12) + '...' : 'N/A') + '<br>';
+
+            var statusColor = currentStatus === 'LOCKED' ? '#f87171' : currentStatus === 'ACTIVE' ? '#4ade80' : '#facc15';
+            html += '<strong>RTDB Status:</strong> <span style="color:' + statusColor + '">' + currentStatus + '</span><br>';
+
+            // Show last violation reason
+            var lockReason = '';
+            try {
+                lockReason = sessionStorage.getItem('lock_reason') || 'None';
+            } catch (e) {
+                lockReason = 'N/A';
+            }
+            html += '<strong>Last violation:</strong> ' + lockReason;
 
             hud.innerHTML = html;
         }

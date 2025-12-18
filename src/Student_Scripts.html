@@ -3269,8 +3269,17 @@
                 console.log('Metacognition is NOT enabled - submitting answer directly');
                 hasAnsweredCurrent = true;
                 pendingSubmission = true;
+                // Show immediate feedback while waiting for server response
                 statusContainer.style.display = 'block';
                 questionContainer.style.display = 'none';
+                if (statusMessage) {
+                    statusMessage.textContent = 'Transmitting response...';
+                    statusMessage.className = 'text-veritas-navy text-2xl font-semibold';
+                }
+                if (statusSubMessage) {
+                    statusSubMessage.textContent = '';
+                    statusSubMessage.style.display = 'none';
+                }
                 submitAnswerToServer(pollId, questionIndex, answerText, null);
             }
         }
@@ -3364,10 +3373,10 @@
                         }, 2000);
                     } else {
                         pendingAnswerText = null;
-                        statusMessage.textContent = 'Answer received - nice work.';
+                        statusMessage.textContent = 'Response Received';
                         statusMessage.className = 'text-green-700 text-2xl font-semibold';
                         if (statusSubMessage) {
-                            statusSubMessage.textContent = 'Your teacher will reveal the answer shortly...';
+                            statusSubMessage.textContent = 'Data transmitted. Stand by for results...';
                             statusSubMessage.style.display = 'block';
                             statusSubMessage.className = 'text-gray-700 text-lg mt-4';
                         }

@@ -6920,9 +6920,16 @@
 
       var status = student.status || 'Unknown';
       var statusLower = status.toString().toLowerCase();
-      var isLocked = statusLower.indexOf('locked') === 0;
-      var isBlocked = statusLower.indexOf('blocked') === 0;
-      var normalizedStatus = isLocked ? 'LOCKED' : (isBlocked ? 'BLOCKED' : status);
+
+      // ENHANCED STATUS DETECTION: Check multiple indicators of locked state
+      var isLocked = statusLower === 'locked' || statusLower.indexOf('locked') === 0;
+      var isBlocked = statusLower === 'blocked' || statusLower.indexOf('blocked') === 0;
+      var isAwaitingFullscreen = statusLower === 'awaiting_fullscreen' || statusLower.indexOf('awaiting') === 0;
+
+      // Priority: LOCKED > AWAITING_FULLSCREEN > BLOCKED > original status
+      var normalizedStatus = isLocked ? 'LOCKED' :
+                             isAwaitingFullscreen ? 'AWAITING_FULLSCREEN' :
+                             (isBlocked ? 'BLOCKED' : status);
       var isCorrect = student.isCorrect === true;
       var isIncorrect = student.isCorrect === false;
       var name = formatStudentName(student);

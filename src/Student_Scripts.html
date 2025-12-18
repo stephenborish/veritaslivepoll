@@ -893,6 +893,15 @@
             setSecureConnectionIndicatorVisible(true);
             attachProctorVisibilityListeners();
             secureQuestionState = state;
+
+            // CRITICAL: Persist pollId for violation reporting (secure question path)
+            if (state && state.pollId) {
+                window.currentPollId = state.pollId;
+                try {
+                    sessionStorage.setItem('veritas_active_poll_id', state.pollId);
+                } catch (e) { /* Storage may be unavailable */ }
+            }
+
             if (entryScreen) entryScreen.style.display = 'none';
             if (secureLobbyCard) secureLobbyCard.style.display = 'none';
             var nextQuestionKey = deriveSecureQuestionKey(state);
@@ -2004,6 +2013,14 @@
                 windowStatus: (state.availability && state.availability.windowStatus) || state.windowStatus || 'OPEN',
                 lobbyKey: nextLobbyKey
             };
+
+            // CRITICAL: Persist pollId for violation reporting (secure session path)
+            if (state.pollId) {
+                window.currentPollId = state.pollId;
+                try {
+                    sessionStorage.setItem('veritas_active_poll_id', state.pollId);
+                } catch (e) { /* Storage may be unavailable */ }
+            }
 
             if (shouldAutoReloadForSecureWindow(previousWindowStatus, secureLobbyContext.windowStatus)) {
                 triggerSecureWindowReload();

@@ -12220,6 +12220,52 @@
       setMainSection('dashboard');
     }
 
+    /**
+     * Complete the wizard after successful publish/update.
+     * Updates poll data, resets wizard state, and navigates to dashboard.
+     * @param {Array} polls - Updated array of all polls from the server
+     */
+    function completeWizardPublish(polls) {
+      // Update poll data with the response (array of all polls)
+      if (Array.isArray(polls)) {
+        refreshPollData(polls);
+      }
+
+      // Reset wizard state
+      wizardState = {
+        currentStep: 1,
+        mode: null,
+        pollName: '',
+        className: '',
+        timeLimitMinutes: null,
+        accessCode: '',
+        availabilityStart: null,
+        availabilityEnd: null,
+        calculatorEnabled: false,
+        proctoringRules: [],
+        questions: [],
+        showResultsImmediately: false,
+        pollId: null,
+        isEditMode: false
+      };
+      wizardQuestionIdCounter = 0;
+      wizardEditingQuestionIndex = null;
+
+      // Hide wizard progress in main header and restore session controls
+      var headerWizardProgress = document.getElementById('header-wizard-progress');
+      var headerSessionControls = document.getElementById('header-session-controls');
+      if (headerWizardProgress) {
+        headerWizardProgress.classList.add('hidden');
+        headerWizardProgress.classList.remove('flex');
+      }
+      if (headerSessionControls) {
+        headerSessionControls.classList.remove('hidden');
+      }
+
+      // Navigate to dashboard
+      setMainSection('dashboard');
+    }
+
     // Load wizard with existing poll data for editing
     function loadWizardWithData(pollId) {
       if (!pollId) return;
@@ -13128,7 +13174,8 @@
             console.log('Update response:', response);
             if (response && !response.error) {
               await veritasAlert('Poll updated successfully!', { title: 'Success' });
-              window.location.reload();
+              // Update poll data and navigate to dashboard instead of reloading
+              completeWizardPublish(response);
             } else {
               await veritasAlert('Failed to update: ' + (response.error || response.message || 'Unknown error'), { title: 'Error', destructive: true });
               if (publishBtn) {
@@ -13153,7 +13200,8 @@
             console.log('Publish response:', response);
             if (response && !response.error) {
               await veritasAlert('Poll published successfully!', { title: 'Success' });
-              window.location.reload();
+              // Update poll data and navigate to dashboard instead of reloading
+              completeWizardPublish(response);
             } else {
               await veritasAlert('Failed to publish: ' + (response.error || response.message || 'Unknown error'), { title: 'Error', destructive: true });
               if (publishBtn) {

@@ -2684,16 +2684,19 @@
       box-shadow: 0 0 0 4px rgba(18, 56, 93, 0.1);
     }
 
-    .progress-label {
+    /* Progress labels in the wizard modal (light background) */
+    .wizard-progress .progress-label {
       font-size: 0.875rem;
       font-weight: 500;
       color: #6b7280;
     }
 
-    .progress-step.active .progress-label {
+    .wizard-progress .progress-step.active .progress-label {
       color: #12385d;
       font-weight: 600;
     }
+
+    /* Header progress labels use Tailwind classes (text-white/80 etc.) - no override needed */
 
     .progress-connector {
       flex: 1;
@@ -3168,7 +3171,8 @@
         padding: 1rem;
       }
 
-      .progress-label {
+      /* Only hide wizard modal progress labels on small screens */
+      .wizard-progress .progress-label {
         display: none;
       }
 

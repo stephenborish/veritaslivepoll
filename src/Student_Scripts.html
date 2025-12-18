@@ -456,8 +456,8 @@
                 secureQuestionImage.style.visibility = 'hidden';
             }
 
-            // Show aggressive red LOCKED overlay
-            showLockEnforcementUI('SESSION LOCKED', 'Violation detected: ' + (reason || 'policy violation') + '. Wait for teacher approval.');
+            // Show lock overlay with professional messaging
+            showLockEnforcementUI('Assessment Paused', 'Proctoring protocol activated. Your teacher will grant re-entry.');
 
             // Send priority violation report to server
             var activePollId = (currentPollState && currentPollState.pollId) ||
@@ -497,7 +497,7 @@
                     console.log('[Proctor] POISON PILL ACTIVE - Restoring lock state from sessionStorage:', lockReason);
                     isInteractionBlocked = true;
                     violationLogged = true;
-                    showLockEnforcementUI('SESSION LOCKED', 'Your session was locked. Wait for teacher approval.');
+                    showLockEnforcementUI('Assessment Paused', 'Proctoring protocol active. Your teacher will grant re-entry.');
                     // Start proctor polling to wait for server unlock
                     startProctorPolling();
                     return true;
@@ -1415,7 +1415,7 @@
                 secureFocusContainer.style.display = 'block';
             }
             disableSecureOptions(true);
-            showSecureOverlay('LOCKED', message || 'Your session has been paused.', subtext || 'Wait for your teacher to unlock you.');
+            showSecureOverlay('LOCKED', message || 'Assessment Paused', subtext || 'Fullscreen exit detected. Your teacher will re-admit you shortly.');
             // Hide calculator when locked
             if (typeof hideCalculatorOnSessionEnd === 'function') {
                 hideCalculatorOnSessionEnd();
@@ -1465,7 +1465,7 @@
             if (isPoisonPillActive()) {
                 console.log('[Proctor] POISON PILL ACTIVE in pollForIndividualSessionState - blocking');
                 isInteractionBlocked = true;
-                showLockEnforcementUI('SESSION LOCKED', 'Your session was locked. Wait for teacher approval.');
+                showLockEnforcementUI('Assessment Paused', 'Proctoring protocol active. Your teacher will grant re-entry.');
                 return;
             }
 
@@ -1492,24 +1492,24 @@
                         var isTerminalLock = state.locked === true || lockReason === 'FORCED_SUBMIT' || lockReason === 'TIME_EXPIRED' || lockMessage.indexOf('ended') >= 0 || lockMessage.indexOf('submitted') >= 0;
                         if (state.completed || state.status === 'COMPLETED') {
                             updateSecureConnectionIndicators(state);
-                            finalizeSecureSession('COMPLETED', state.message || 'Assessment submitted!', 'Stay in fullscreen until released.');
+                            finalizeSecureSession('COMPLETED', state.message || 'Transmission Complete', 'Your responses have been secured. Use the exit button below when dismissed.');
                         } else if (state.status === 'ENDED') {
                             updateSecureConnectionIndicators(state);
-                            finalizeSecureSession('ENDED', state.message || 'This assessment is no longer active.', 'You may exit once your teacher confirms.');
+                            finalizeSecureSession('ENDED', state.message || 'Session Concluded', 'Use the exit button below to leave the secure environment.');
                         } else if (isTerminalLock) {
                             updateSecureConnectionIndicators(state);
-                            finalizeSecureSession('ENDED', state.message || 'This assessment has been closed.', 'Your responses have been secured.');
+                            finalizeSecureSession('ENDED', state.message || 'Assessment Finalized', 'Your responses have been secured. You may now exit.');
                         } else if (state.status === 'LOCKED') {
                             if (secureFocusContainer) secureFocusContainer.style.display = 'block';
                             secureQuestionState = null;
                             secureCurrentQuestionKey = null;
                             secureSelectedOptionIndex = null;
                             updateSecureConnectionIndicators(state);
-                            showSecureLockout(state.message || 'Your session has been paused.', 'Wait for your teacher to unlock you.');
+                            showSecureLockout(state.message || 'Assessment Paused', 'Your teacher will grant re-entry shortly.');
                         } else if (isInteractionBlocked) {
                             updateSecureConnectionIndicators(state);
                             setSecureConnectionIndicatorVisible(true);
-                            showSecureLockout(state.message || 'Your session has been paused.', 'Wait for your teacher to unlock you.');
+                            showSecureLockout(state.message || 'Assessment Paused', 'Your teacher will grant re-entry shortly.');
                         } else if (state.question && (state.status === 'ACTIVE' || !state.status)) {
                             showIndividualTimedView(state);
                         } else {
@@ -1716,7 +1716,7 @@
             if (!isInteractionBlocked && !violationLogged && secureSessionActive) {
                 console.log('[Proctor] Violation detected:', reason, '- blocking interaction immediately');
                 isInteractionBlocked = true;
-                showLockEnforcementUI('Fullscreen required', 'Reporting violation to teacher...');
+                showLockEnforcementUI('Assessment Paused', 'Proctoring event detected...');
 
                 // FIREBASE: Instant Lock
                 reportFirebaseViolation(reason);
@@ -1731,11 +1731,22 @@
                     return;
                 }
 
+                // ROBUST POLL ID RESOLUTION: Check all sources to avoid silent failures
                 var activePollId = (currentPollState && currentPollState.pollId) ||
-                    (secureLobbyContext && secureLobbyContext.pollId);
+                    (secureLobbyContext && secureLobbyContext.pollId) ||
+                    window.currentPollId;
+
+                // FALLBACK: Check sessionStorage if all in-memory sources failed
+                if (!activePollId) {
+                    try {
+                        activePollId = sessionStorage.getItem('veritas_active_poll_id');
+                    } catch (e) { /* Storage may be unavailable */ }
+                }
 
                 if (!activePollId) {
-                    console.warn('[Proctor] Cannot report violation: no active poll ID');
+                    console.error('[Proctor] CRITICAL: Cannot report violation - no poll ID found in any source');
+                    // Still show lock UI even without server report
+                    showLockEnforcementUI('Assessment Paused', 'A policy violation was detected. Your teacher has been notified.');
                     return;
                 }
 
@@ -1746,19 +1757,19 @@
                 // FIREBASE: Ensure locked state is set with pollId for teacher visibility
                 reportFirebaseViolation(reason, activePollId);
 
-                showLockEnforcementUI('Fullscreen required', 'Return to fullscreen and wait for your teacher to resume the assessment.');
+                showLockEnforcementUI('Assessment Paused', 'Notifying your teacher...');
                 google.script.run
                     .withSuccessHandler(function (response) {
                         console.log('[Proctor] Violation reported, server response:', response);
                         if (response.success) {
                             currentLockVersion = response.lockVersion;
-                            showLockEnforcementUI('Fullscreen required', 'Your teacher will let you back in once they confirm fullscreen.');
+                            showLockEnforcementUI('Assessment Paused', 'Your teacher has been notified and will grant re-entry.');
                             startProctorPolling();
                         }
                     })
                     .withFailureHandler(function (error) {
                         console.error('[Proctor] Violation report failed:', error);
-                        showLockEnforcementUI('Fullscreen required', 'Please contact your teacher to resume.');
+                        showLockEnforcementUI('Assessment Paused', 'Connection issue detected. Stay on this screen—your teacher will re-admit you.');
                     })
                     .reportStudentViolation(activePollId, SESSION_TOKEN, reason);
             }, 100);
@@ -2001,7 +2012,7 @@
             if (secureFocusContainer) secureFocusContainer.style.display = 'none';
             toggleSecureLayout(false);
             if (questionProgressEl) {
-                questionProgressEl.textContent = 'WAITING TO BEGIN';
+                questionProgressEl.textContent = 'STANDBY';
             }
             if (secureLobbyCard) secureLobbyCard.style.display = 'block';
 
@@ -2532,7 +2543,7 @@
             // Guard: Check for persisted lock
             if (sessionStorage.getItem('veritas_lock_active') === 'true') {
                 if (typeof showLockEnforcementUI === 'function') {
-                    showLockEnforcementUI("LOCKED", "Security violation detected. Wait for teacher approval.");
+                    showLockEnforcementUI('Assessment Paused', 'Proctoring protocol active. Your teacher will grant re-entry.');
                 }
                 return;
             }
@@ -2541,7 +2552,7 @@
             if (isPoisonPillActive()) {
                 console.log('[Proctor] POISON PILL ACTIVE in startPolling - blocking resume');
                 isInteractionBlocked = true;
-                showLockEnforcementUI('SESSION LOCKED', 'Your session was locked. Wait for teacher approval.');
+                showLockEnforcementUI('Assessment Paused', 'Proctoring protocol active. Your teacher will grant re-entry.');
                 startProctorPolling();
                 return;
             }
@@ -2614,11 +2625,11 @@
             if (questionContainer) questionContainer.style.display = 'none';
             if (statusContainer) statusContainer.style.display = 'block';
             if (statusMessage) {
-                statusMessage.textContent = message || 'Submitted. Waiting for your teacher...';
+                statusMessage.textContent = message || 'Response Locked In';
                 statusMessage.className = 'text-green-700 text-2xl font-semibold';
             }
             if (statusSubMessage) {
-                statusSubMessage.textContent = 'Hang tight while the next step gets ready.';
+                statusSubMessage.textContent = 'Data transmitted. Awaiting next phase...';
                 statusSubMessage.style.display = 'block';
                 statusSubMessage.className = 'text-gray-700 text-lg mt-4';
             }
@@ -2911,7 +2922,7 @@
                     if (typeof hideLockEnforcementUI === 'function') { hideLockEnforcementUI(); }
                 } else {
                     if (typeof showLockEnforcementUI === 'function') {
-                        showLockEnforcementUI("LOCKED", "Security violation detected. Wait for teacher approval.");
+                        showLockEnforcementUI('Assessment Paused', 'Proctoring protocol active. Your teacher will grant re-entry.');
                     }
                     isInteractionBlocked = true;
                     startProctorPolling();
@@ -2922,6 +2933,14 @@
             hideAllViews();
             data = data || {};
             console.log('[ViewManager] Update View State:', data);
+
+            // CRITICAL FIX: Persist pollId globally and to sessionStorage for violation reporting
+            if (data.pollId) {
+                window.currentPollId = data.pollId;
+                try {
+                    sessionStorage.setItem('veritas_active_poll_id', data.pollId);
+                } catch (e) { /* Storage may be unavailable */ }
+            }
 
             var currentIndex = typeof data.questionIndex === 'number' ? data.questionIndex : null;
 
@@ -2973,7 +2992,7 @@
 
             // 2b. If we've already submitted for this question, never re-render the prompt unless in reveal phase
             if (currentIndex !== null && lastSubmittedQuestionIndex === currentIndex && data.status === 'LIVE' && resultsVisibility !== 'REVEALED') {
-                showWaitingForNextPhase('Answer received - waiting for the next step.');
+                showWaitingForNextPhase('Response Captured');
                 return;
             }
 
@@ -2985,7 +3004,7 @@
                 return;
             }
             if (data.status === 'RESULTS_HOLD') {
-                showWaitingForNextPhase('Answers locked. Waiting for your teacher to reveal results.');
+                showWaitingForNextPhase('Results Pending Analysis');
                 return;
             }
 
@@ -2999,7 +3018,7 @@
             if (data.status === 'CLOSED' || data.sessionPhase === 'ENDED') {
                 if (window.hideCalculatorOnSessionEnd) window.hideCalculatorOnSessionEnd();
                 ViewManager.show('status-container');
-                renderStatusMessage('Session Ended', 'The teacher has closed this session.');
+                renderStatusMessage('Session Concluded', 'The live session has ended. Thanks for participating!');
                 return;
             }
 
@@ -3058,7 +3077,7 @@
                         }
 
                         if (data.hasSubmitted === true && currentIndex !== null) {
-                            showWaitingForNextPhase('Answer received - waiting for the next step.');
+                            showWaitingForNextPhase('Response Captured');
                             return;
                         }
                         renderQuestion(data);
@@ -3693,13 +3712,13 @@
             console.log('Showing locked message');
             stopPolling();
             recoveringFromOutage = false;
-            // FIX TASK C: High-contrast styling for lock message
+            // Professional lock message with science-themed copy
             showStatusPanel({
                 icon: 'lock',
                 iconClass: 'text-red-600',
-                message: message || 'Locked: proctoring violation',
+                message: message || 'Assessment Paused',
                 messageClass: 'text-gray-900 text-2xl font-bold',
-                subtext: subMessage || 'Your teacher must approve re-entry.',
+                subtext: subMessage || 'Proctoring protocol triggered. Your teacher can see this and will grant re-entry.',
                 subClass: 'text-gray-800 text-base mt-4 whitespace-pre-line',
                 showResume: false,
                 lockScroll: true
@@ -3721,11 +3740,11 @@
             isInteractionBlocked = true;
             isTeacherBlocked = true;
             showStatusPanel({
-                icon: 'block',
-                iconClass: 'text-veritas-navy',
-                message: 'Your teacher has paused responses for this question.',
+                icon: 'pause_circle',
+                iconClass: 'text-amber-600',
+                message: 'Session Paused',
                 messageClass: 'text-gray-900 text-xl font-semibold',
-                subtext: 'Stay in fullscreen and wait for your teacher to unblock you.',
+                subtext: 'Your teacher has temporarily frozen responses. Hold position.',
                 subClass: 'text-gray-700 text-base mt-4',
                 showResume: false,
                 lockScroll: true
@@ -3742,9 +3761,11 @@
             }
             showStatusPanel({
                 icon: 'fullscreen',
-                iconClass: 'text-veritas-navy',
-                message: 'You are cleared for re-entry. Go fullscreen to get back in.',
+                iconClass: 'text-emerald-600',
+                message: 'Cleared for Re-Entry',
                 messageClass: 'text-gray-900 text-xl font-semibold',
+                subtext: 'Click below to return to fullscreen and rejoin the session.',
+                subClass: 'text-gray-600 text-base mt-2',
                 showResume: true,
                 lockScroll: true
             });

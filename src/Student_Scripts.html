@@ -148,7 +148,15 @@
             // Extract pollId from available sources if not provided
             var activePollId = pollId ||
                 (currentPollState && currentPollState.pollId) ||
-                (secureLobbyContext && secureLobbyContext.pollId);
+                (secureLobbyContext && secureLobbyContext.pollId) ||
+                window.currentPollId;
+
+            // FALLBACK: Check sessionStorage
+            if (!activePollId) {
+                try {
+                    activePollId = sessionStorage.getItem('veritas_active_poll_id');
+                } catch (e) { /* Storage may be unavailable */ }
+            }
 
             if (firebaseRef) {
                 firebaseRef.set('LOCKED');

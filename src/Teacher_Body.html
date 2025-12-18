@@ -687,6 +687,17 @@
                   </div>
                 </div>
 
+                <!-- LOCKED STUDENTS ALERT (Visible when students are locked) -->
+                <div id="locked-students-alert" class="hidden mx-3 mt-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class="material-symbols-outlined text-red-600 dark:text-red-400 text-xl">warning</span>
+                    <span id="locked-alert-title" class="font-bold text-red-800 dark:text-red-200 text-sm">Students Need Attention</span>
+                  </div>
+                  <div id="locked-students-buttons" class="flex flex-wrap gap-2">
+                    <!-- Unlock buttons will be populated here -->
+                  </div>
+                </div>
+
                 <!-- Student Grid (Scrollable, Compact Tiles) -->
                 <div id="student-status-grid" class="flex-1 overflow-y-auto px-3 py-2" aria-live="polite">
                   <!-- Students will be populated with full names, inline status, hover actions -->

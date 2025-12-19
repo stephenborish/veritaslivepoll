@@ -297,6 +297,53 @@ Veritas.TeacherApi.getStudentHistoricalAnalytics = function(studentEmail) {
   })();
 };
 
+// =============================================================================
+// STUDENT ACTIVITY TRACKING
+// =============================================================================
+
+/**
+ * Get activity summary for a poll
+ * @param {string} pollId - Poll ID
+ * @param {string} sessionId - Optional session ID
+ * @returns {Object} Activity summary by student
+ */
+Veritas.TeacherApi.getActivitySummaryForPoll = function(pollId, sessionId) {
+  return withErrorHandling(function() {
+    Veritas.TeacherApi.assertTeacher();
+
+    return Veritas.Models.StudentActivity.getActivitySummaryForPoll(pollId, sessionId);
+  })();
+};
+
+/**
+ * Get real-time activity metrics for current question
+ * @param {string} pollId - Poll ID
+ * @param {number} questionIndex - Question index
+ * @returns {Object} Real-time metrics
+ */
+Veritas.TeacherApi.getRealTimeActivityMetrics = function(pollId, questionIndex) {
+  return withErrorHandling(function() {
+    Veritas.TeacherApi.assertTeacher();
+
+    return Veritas.Models.StudentActivity.getRealTimeMetrics(pollId, questionIndex);
+  })();
+};
+
+/**
+ * Get detailed activity for a specific student
+ * @param {string} pollId - Poll ID
+ * @param {string} studentEmail - Student email
+ * @param {number} questionIndex - Optional question index filter
+ * @returns {Array<Object>} Activity events
+ */
+Veritas.TeacherApi.getStudentActivityDetail = function(pollId, studentEmail, questionIndex) {
+  return withErrorHandling(function() {
+    Veritas.TeacherApi.assertTeacher();
+
+    return Veritas.Models.StudentActivity.getActivitiesForStudent(pollId, studentEmail, questionIndex);
+  })();
+};
+
 /**
  * Get dashboard summary data
  * @returns {Object} Dashboard summary

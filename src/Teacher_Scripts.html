@@ -7401,6 +7401,7 @@
             restartPollingWithNewInterval();
           }
           updateLiveView(data);
+          updateActivityMetrics(pollId, questionIndex);
         })
         .withFailureHandler(function (e) {
           console.warn('Poll refresh error:', e);
@@ -7415,6 +7416,42 @@
           }
         })
         .getLivePollData(pollId, questionIndex);
+    }
+
+    /**
+     * Update activity metrics panel with real-time data
+     */
+    function updateActivityMetrics(pollId, questionIndex) {
+      google.script.run
+        .withSuccessHandler(function(metrics) {
+          var avgTimeEl = document.getElementById('activity-avg-time');
+          var changesEl = document.getElementById('activity-answer-changes');
+          var activeEl = document.getElementById('activity-active-students');
+          var focusLossEl = document.getElementById('activity-focus-loss');
+          var lastUpdatedEl = document.getElementById('activity-last-updated');
+
+          if (avgTimeEl) {
+            avgTimeEl.textContent = metrics.averageTimeOnQuestion + 's';
+          }
+          if (changesEl) {
+            changesEl.textContent = metrics.answerChanges || 0;
+          }
+          if (activeEl) {
+            activeEl.textContent = metrics.activeStudents || 0;
+          }
+          if (focusLossEl) {
+            focusLossEl.textContent = metrics.focusLossEvents || 0;
+          }
+          if (lastUpdatedEl) {
+            var now = new Date();
+            var timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            lastUpdatedEl.textContent = timeStr;
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('Failed to fetch activity metrics:', error);
+        })
+        .getRealTimeActivityMetrics(pollId, questionIndex);
     }
 
     function restartPollingWithNewInterval() {

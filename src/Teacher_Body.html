@@ -691,6 +691,32 @@
                 <div id="student-status-grid" class="flex-1 overflow-y-auto px-3 py-2" aria-live="polite">
                   <!-- Students will be populated with full names, inline status, hover actions -->
                 </div>
+
+                <!-- Activity Metrics Panel -->
+                <div id="activity-metrics-panel" class="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 px-4 py-3 bg-gray-50 dark:bg-gray-900/30">
+                  <div class="flex items-center justify-between mb-2">
+                    <h4 class="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wide">Activity</h4>
+                    <span id="activity-last-updated" class="text-xs text-gray-500 dark:text-gray-500"></span>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div class="bg-white dark:bg-gray-800/50 rounded-lg px-2.5 py-2 border border-gray-200 dark:border-gray-700">
+                      <div class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Avg Time</div>
+                      <div id="activity-avg-time" class="text-lg font-bold text-gray-900 dark:text-gray-100">--</div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800/50 rounded-lg px-2.5 py-2 border border-gray-200 dark:border-gray-700">
+                      <div class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Changes</div>
+                      <div id="activity-answer-changes" class="text-lg font-bold text-gray-900 dark:text-gray-100">--</div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800/50 rounded-lg px-2.5 py-2 border border-gray-200 dark:border-gray-700">
+                      <div class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Active Now</div>
+                      <div id="activity-active-students" class="text-lg font-bold text-green-600 dark:text-green-400">--</div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800/50 rounded-lg px-2.5 py-2 border border-gray-200 dark:border-gray-700">
+                      <div class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Focus Loss</div>
+                      <div id="activity-focus-loss" class="text-lg font-bold text-orange-600 dark:text-orange-400">--</div>
+                    </div>
+                  </div>
+                </div>
               </div>
               <!-- END STUDENTS PANEL -->
 

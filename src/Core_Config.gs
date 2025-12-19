@@ -100,6 +100,7 @@ Veritas.Config.SHEET_NAMES = {
   PROCTOR_STATE: 'ProctorState',
   ASSESSMENT_EVENTS: 'AssessmentEvents',
   ASSESSMENT_ANALYTICS: 'AssessmentAnalytics',
+  STUDENT_ACTIVITY: 'StudentActivity',
   LOGS: 'Logs',
   // New Sheets for Exam Mode
   QUESTION_BANK: 'QuestionBank',
@@ -145,6 +146,10 @@ Veritas.Config.SHEET_HEADERS = {
   ],
   ASSESSMENT_ANALYTICS: [
     'PollID', 'ComputedAt', 'MetricType', 'MetricName', 'MetricValue', 'DetailsJSON'
+  ],
+  STUDENT_ACTIVITY: [
+    'ActivityID', 'Timestamp', 'PollID', 'SessionID', 'QuestionIndex', 'StudentEmail',
+    'EventType', 'EventData', 'ClientTimestamp', 'ServerProcessedAt'
   ],
   // New Headers for Exam Mode
   QUESTION_BANK: [

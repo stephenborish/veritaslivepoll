@@ -81,6 +81,189 @@
             }
         }
 
+        // =============================================================================
+        // STUDENT ACTIVITY TRACKER MODULE
+        // =============================================================================
+
+        /**
+         * Activity Tracker - Singleton for tracking granular student activity
+         */
+        var ActivityTracker = (function() {
+            var instance = null;
+
+            function createInstance() {
+                var activityBuffer = [];
+                var currentPollId = null;
+                var currentSessionId = null;
+                var currentQuestionIndex = null;
+                var questionStartTime = null;
+                var lastAnswer = null;
+                var focusState = document.hasFocus();
+                var flushInterval = null;
+                var FLUSH_INTERVAL_MS = 5000; // Send batch every 5 seconds
+                var MAX_BUFFER_SIZE = 50; // Flush if buffer exceeds 50 events
+
+                function init(pollId, sessionId, questionIndex) {
+                    currentPollId = pollId;
+                    currentSessionId = sessionId || '';
+                    currentQuestionIndex = questionIndex;
+                    questionStartTime = Date.now();
+                    lastAnswer = null;
+
+                    // Start periodic flush
+                    if (!flushInterval) {
+                        flushInterval = setInterval(flushActivities, FLUSH_INTERVAL_MS);
+                    }
+
+                    // Track focus events
+                    if (!window._activityTrackerFocusAttached) {
+                        window.addEventListener('focus', onFocusGained);
+                        window.addEventListener('blur', onFocusLost);
+                        window._activityTrackerFocusAttached = true;
+                    }
+
+                    // Record question view
+                    recordActivity('QUESTION_VIEW', {
+                        viewedAt: Date.now(),
+                        questionIndex: questionIndex
+                    });
+                }
+
+                function setQuestionStart(timestamp) {
+                    questionStartTime = timestamp || Date.now();
+                }
+
+                function recordActivity(eventType, eventData) {
+                    if (!currentPollId) return;
+
+                    var activity = {
+                        pollId: currentPollId,
+                        sessionId: currentSessionId,
+                        questionIndex: currentQuestionIndex !== undefined ? currentQuestionIndex : '',
+                        eventType: eventType,
+                        eventData: eventData || {},
+                        clientTimestamp: new Date().toISOString()
+                    };
+
+                    activityBuffer.push(activity);
+
+                    // Flush if buffer is full
+                    if (activityBuffer.length >= MAX_BUFFER_SIZE) {
+                        flushActivities();
+                    }
+                }
+
+                function recordAnswerSelected(answer, isChange) {
+                    var eventType = isChange ? 'ANSWER_CHANGED' : 'ANSWER_SELECTED';
+                    var timeOnQuestion = questionStartTime ? Date.now() - questionStartTime : 0;
+
+                    recordActivity(eventType, {
+                        answer: answer,
+                        previousAnswer: lastAnswer,
+                        timeOnQuestionMs: timeOnQuestion
+                    });
+
+                    lastAnswer = answer;
+                }
+
+                function recordAnswerSubmitted(answer, confidenceLevel) {
+                    var timeOnQuestion = questionStartTime ? Date.now() - questionStartTime : 0;
+
+                    recordActivity('ANSWER_SUBMITTED', {
+                        answer: answer,
+                        confidenceLevel: confidenceLevel || null,
+                        timeOnQuestionMs: timeOnQuestion,
+                        totalTimeMs: timeOnQuestion
+                    });
+                }
+
+                function recordOptionClick(optionIndex, optionText) {
+                    recordActivity('OPTION_CLICKED', {
+                        optionIndex: optionIndex,
+                        optionText: optionText
+                    });
+                }
+
+                function onFocusGained() {
+                    focusState = true;
+                    recordActivity('FOCUS_GAINED', {
+                        timestamp: Date.now()
+                    });
+                }
+
+                function onFocusLost() {
+                    focusState = false;
+                    recordActivity('FOCUS_LOST', {
+                        timestamp: Date.now()
+                    });
+                }
+
+                function flushActivities() {
+                    if (activityBuffer.length === 0 || !SESSION_TOKEN) return;
+
+                    var toSend = activityBuffer.slice();
+                    activityBuffer = [];
+
+                    // Send batch to server
+                    google.script.run
+                        .withSuccessHandler(function() {
+                            console.log('[ActivityTracker] Flushed ' + toSend.length + ' events');
+                        })
+                        .withFailureHandler(function(error) {
+                            console.error('[ActivityTracker] Flush failed:', error);
+                            // Re-add to buffer on failure (at front)
+                            activityBuffer = toSend.concat(activityBuffer);
+                        })
+                        .recordActivitiesBatch(SESSION_TOKEN, toSend);
+                }
+
+                function reset() {
+                    flushActivities(); // Flush before reset
+                    currentPollId = null;
+                    currentSessionId = null;
+                    currentQuestionIndex = null;
+                    questionStartTime = null;
+                    lastAnswer = null;
+                }
+
+                function destroy() {
+                    if (flushInterval) {
+                        clearInterval(flushInterval);
+                        flushInterval = null;
+                    }
+                    flushActivities(); // Final flush
+                }
+
+                return {
+                    init: init,
+                    setQuestionStart: setQuestionStart,
+                    recordActivity: recordActivity,
+                    recordAnswerSelected: recordAnswerSelected,
+                    recordAnswerSubmitted: recordAnswerSubmitted,
+                    recordOptionClick: recordOptionClick,
+                    flushActivities: flushActivities,
+                    reset: reset,
+                    destroy: destroy
+                };
+            }
+
+            return {
+                getInstance: function() {
+                    if (!instance) {
+                        instance = createInstance();
+                    }
+                    return instance;
+                }
+            };
+        })();
+
+        // Global shorthand
+        var activityTracker = ActivityTracker.getInstance();
+
+        // =============================================================================
+        // END ACTIVITY TRACKER
+        // =============================================================================
+
         function updateDebugHud(status, connected, pollId) {
             if (!FIREBASE_CONFIG || !Veritas.Config.DEBUG_FIREBASE) return;
 
@@ -3134,6 +3317,9 @@
                 liveSessionActive = true;
                 pendingMetacogQuestionIndex = null;
                 metacogSubmittedFor = null;
+
+                // Initialize activity tracker for this question
+                activityTracker.init(data.pollId, data.sessionId || '', data.questionIndex);
             }
 
             // Update metacognition setting for this question
@@ -3333,6 +3519,9 @@
         }
 
         function submitAnswerWithConfidence(pollId, questionIndex, answerText, confidence) {
+            // Track answer submission
+            activityTracker.recordAnswerSubmitted(answerText, confidence);
+
             hasAnsweredCurrent = true;
             pendingSubmission = true;
             metacogSubmittedFor = questionIndex;
@@ -3435,6 +3624,11 @@
                 if (event && event.target && event.target.closest('.option-image')) {
                     return;
                 }
+
+                // Track option click
+                var optionIndex = Array.from(btn.parentElement.parentElement.children).indexOf(btn.parentElement);
+                activityTracker.recordOptionClick(optionIndex, option.text);
+
                 submitAnswer(pollId, questionIndex, option.text);
             });
 

@@ -2736,6 +2736,113 @@ Veritas.Models.Session.shuffleArray = function(array) {
 };
 
 /**
+ * Generate deterministic shuffle seed for a student + question
+ * @param {string} studentEmail - Student email
+ * @param {string} pollId - Poll ID
+ * @param {number} questionIndex - Question index
+ * @returns {number} Seed value
+ */
+Veritas.Models.Session.generateShuffleSeed = function(studentEmail, pollId, questionIndex) {
+  var input = studentEmail + '|' + pollId + '|' + questionIndex;
+  var hash = 0;
+  for (var i = 0; i < input.length; i++) {
+    var char = input.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash);
+};
+
+/**
+ * Seeded random number generator (for deterministic shuffling)
+ * @param {number} seed - Seed value
+ * @returns {Function} Random function
+ */
+Veritas.Models.Session.seededRandom = function(seed) {
+  var m = 0x80000000; // 2^31
+  var a = 1103515245;
+  var c = 12345;
+  var state = seed ? seed : Math.floor(Math.random() * (m - 1));
+
+  return function() {
+    state = (a * state + c) % m;
+    return state / (m - 1);
+  };
+};
+
+/**
+ * Shuffle array with deterministic seed (for reproducible randomization)
+ * @param {Array} array - Array to shuffle
+ * @param {number} seed - Seed value
+ * @returns {Array} Shuffled array
+ */
+Veritas.Models.Session.shuffleArraySeeded = function(array, seed) {
+  var shuffled = array.slice();
+  var random = Veritas.Models.Session.seededRandom(seed);
+
+  for (var i = shuffled.length - 1; i > 0; i--) {
+    var j = Math.floor(random() * (i + 1));
+    var temp = shuffled[i];
+    shuffled[i] = shuffled[j];
+    shuffled[j] = temp;
+  }
+  return shuffled;
+};
+
+/**
+ * Randomize question options for a student (live poll)
+ * @param {Object} question - Question object
+ * @param {string} studentEmail - Student email
+ * @param {string} pollId - Poll ID
+ * @param {number} questionIndex - Question index
+ * @returns {Object} Question with randomized options and mapping
+ */
+Veritas.Models.Session.randomizeQuestionOptions = function(question, studentEmail, pollId, questionIndex) {
+  if (!question || !Array.isArray(question.options) || question.options.length === 0) {
+    return {
+      question: question,
+      answerOrder: [],
+      originalIndexMap: {}
+    };
+  }
+
+  // Generate deterministic seed for this student + question combination
+  var seed = Veritas.Models.Session.generateShuffleSeed(studentEmail, pollId, questionIndex);
+
+  // Create array of indices
+  var indices = question.options.map(function(_, idx) { return idx; });
+
+  // Shuffle indices with seed
+  var shuffledIndices = Veritas.Models.Session.shuffleArraySeeded(indices, seed);
+
+  // Create shuffled options
+  var shuffledOptions = shuffledIndices.map(function(originalIdx) {
+    return question.options[originalIdx];
+  });
+
+  // Create mapping from shuffled position to original position
+  var originalIndexMap = {};
+  shuffledIndices.forEach(function(originalIdx, shuffledIdx) {
+    originalIndexMap[shuffledIdx] = originalIdx;
+  });
+
+  // Create new question object with shuffled options
+  var randomizedQuestion = {};
+  for (var key in question) {
+    if (question.hasOwnProperty(key)) {
+      randomizedQuestion[key] = question[key];
+    }
+  }
+  randomizedQuestion.options = shuffledOptions;
+
+  return {
+    question: randomizedQuestion,
+    answerOrder: shuffledIndices,
+    originalIndexMap: originalIndexMap
+  };
+};
+
+/**
  * Log assessment event for audit trail
  */
 Veritas.Models.Session.logAssessmentEvent = function(pollId, sessionId, studentEmail, eventType, payload) {

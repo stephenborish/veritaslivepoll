@@ -316,19 +316,28 @@ Veritas.StudentApi.getStudentPollStatus = function(token, context) {
 
       Logger.log('Sending to student - metacognitionEnabled: ' + normalizedQuestion.metacognitionEnabled);
 
+      // RANDOMIZE ANSWER OPTIONS FOR LIVE POLLS
+      var randomizationResult = Veritas.Models.Session.randomizeQuestionOptions(
+        normalizedQuestion,
+        studentEmail,
+        pollId,
+        questionIndex
+      );
+
       var livePayload = {
         status: 'LIVE',
         pollId: pollId,
         questionIndex: questionIndex,
         totalQuestions: poll.questions.length,
         hasSubmitted: false,
-        metadata: metadata
+        metadata: metadata,
+        answerOrder: randomizationResult.answerOrder // Send order to client for answer mapping
       };
 
-      // Copy normalized question properties
-      for (var prop in normalizedQuestion) {
-        if (normalizedQuestion.hasOwnProperty(prop)) {
-          livePayload[prop] = normalizedQuestion[prop];
+      // Copy randomized question properties
+      for (var prop in randomizationResult.question) {
+        if (randomizationResult.question.hasOwnProperty(prop)) {
+          livePayload[prop] = randomizationResult.question[prop];
         }
       }
 
@@ -593,6 +602,52 @@ Veritas.StudentApi.studentConfirmFullscreen = function(expectedLockVersion, toke
 
     // Delegate to Models layer
     return Veritas.Models.Session.studentConfirmFullscreen(expectedLockVersion, token);
+  })();
+};
+
+// =============================================================================
+// STUDENT ACTIVITY TRACKING
+// =============================================================================
+
+/**
+ * Record student activity event
+ * @param {string} token - Session token
+ * @param {Object} activityData - Activity event data
+ * @returns {Object} Result
+ */
+Veritas.StudentApi.recordActivity = function(token, activityData) {
+  return withErrorHandling(function() {
+    var tokenData = Veritas.StudentApi.validateToken(token);
+    var studentEmail = tokenData.email;
+
+    // Add student email from token
+    activityData.studentEmail = studentEmail;
+
+    // Delegate to Models layer
+    return Veritas.Models.StudentActivity.recordActivity(activityData);
+  })();
+};
+
+/**
+ * Record multiple activity events in batch
+ * @param {string} token - Session token
+ * @param {Array<Object>} activities - Array of activity events
+ * @returns {Object} Result with count
+ */
+Veritas.StudentApi.recordActivitiesBatch = function(token, activities) {
+  return withErrorHandling(function() {
+    var tokenData = Veritas.StudentApi.validateToken(token);
+    var studentEmail = tokenData.email;
+
+    // Add student email to each activity
+    if (Array.isArray(activities)) {
+      activities.forEach(function(activity) {
+        activity.studentEmail = studentEmail;
+      });
+    }
+
+    // Delegate to Models layer
+    return Veritas.Models.StudentActivity.recordActivitiesBatch(activities);
   })();
 };
 

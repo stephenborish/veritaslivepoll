@@ -133,8 +133,8 @@
 
     .question-stem-text {
       font-family: "Noto Serif", serif;
-      font-size: 1.4rem;
-      line-height: 1.6;
+      font-size: clamp(1.05rem, 0.9vw + 0.95rem, 1.25rem);
+      line-height: 1.55;
       font-weight: 400;
       color: #000000;
       margin: 0;
@@ -151,27 +151,37 @@
       width: 100%;
     }
 
+    .question-image-frame {
+      width: clamp(220px, 32vw, 520px);
+      max-height: min(420px, 50vh);
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 10px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
     .question-image-clickable {
-      max-height: 300px;
+      max-height: 100%;
       width: 100%;
       object-fit: contain;
-      border-radius: 12px;
-      border: 1px solid #e5e7eb;
-      padding: 8px;
-      background: #ffffff;
+      border-radius: 8px;
       cursor: zoom-in;
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      transition: transform 0.2s ease;
     }
 
     .question-image-clickable:hover {
       transform: scale(1.02);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
     }
 
-    .dark .question-image-clickable {
-      background: rgba(36, 36, 36, 0.5);
-      border-color: rgba(255, 255, 255, 0.2);
+    .dark .question-image-frame {
+      background: rgba(36, 36, 36, 0.55);
+      border-color: rgba(255, 255, 255, 0.18);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
     }
 
     .teacher-result-card {
@@ -330,6 +340,17 @@
     .teacher-result-card.is-correct .teacher-result-student {
       background: rgba(46, 125, 50, 0.2);
       color: var(--success-green);
+    }
+
+    /* Live view layout guards to prevent clipping at the bottom of the dashboard */
+    #live-view,
+    .live-view-shell,
+    .live-view-grid {
+      min-height: 0;
+    }
+
+    .live-view-grid > * {
+      min-height: 0;
     }
 
     .dark .teacher-question-image {

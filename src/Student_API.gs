@@ -668,3 +668,10 @@ function getStudentPollStatus(token, context) {
 function submitLivePollAnswer(pollId, questionIndex, answerText, token, confidenceLevel) {
   return Veritas.StudentApi.submitLivePollAnswer(pollId, questionIndex, answerText, token, confidenceLevel);
 }
+
+/**
+ * Legacy wrapper to expose batch activity recording to client
+ */
+function recordActivitiesBatch(token, activities) {
+  return Veritas.StudentApi.recordActivitiesBatch(token, activities);
+}

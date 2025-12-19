@@ -6429,6 +6429,43 @@
     var studentCorrectnessFilter = 'all';
     var violationsAlertDismissed = false;
 
+    function normalizeProctorStatus(status) {
+      if (status === null || status === undefined) { return null; }
+      var normalized = status.toString().trim().toLowerCase();
+      var collapsed = normalized.replace(/\s+/g, '_');
+      if (collapsed.indexOf('blocked') === 0) { return 'BLOCKED'; }
+      if (collapsed.indexOf('awaiting_fullscreen') === 0 || collapsed.indexOf('awaitingfullscreen') === 0 || collapsed.indexOf('awaiting_full_screen') === 0) {
+        return 'AWAITING_FULLSCREEN';
+      }
+      if ((collapsed.indexOf('locked') === 0 || (collapsed.indexOf('locked') > 0 && collapsed.indexOf('unlocked') === -1)) ||
+          (collapsed.indexOf('approval') !== -1 && collapsed.indexOf('unlocked') === -1)) {
+        return 'LOCKED';
+      }
+      return null;
+    }
+
+    function deriveProctorStatus(student) {
+      if (!student) { return null; }
+      return normalizeProctorStatus(student.status || student.proctorStatus || null);
+    }
+
+    function isLockedStatus(student) {
+      return deriveProctorStatus(student) === 'LOCKED';
+    }
+
+    function isAwaitingFullscreenStatus(student) {
+      return deriveProctorStatus(student) === 'AWAITING_FULLSCREEN';
+    }
+
+    function isBlockedStatus(student) {
+      return deriveProctorStatus(student) === 'BLOCKED';
+    }
+
+    function needsUnlockAttention(student) {
+      var normalized = deriveProctorStatus(student);
+      return normalized === 'LOCKED' || normalized === 'AWAITING_FULLSCREEN';
+    }
+
     function updateViolationsAlert(flaggedStudents) {
       var alertPanel = document.getElementById('violations-alert-panel');
       var quickList = document.getElementById('violations-quick-list');
@@ -6442,10 +6479,11 @@
       alertPanel.classList.remove('hidden');
 
       var lockedCount = flaggedStudents.filter(function (student) {
-        return student.status === 'LOCKED' || student.status === 'AWAITING_FULLSCREEN';
+        var normalized = deriveProctorStatus(student);
+        return normalized === 'LOCKED' || normalized === 'AWAITING_FULLSCREEN';
       }).length;
       var blockedCount = flaggedStudents.filter(function (student) {
-        return student.status === 'BLOCKED';
+        return deriveProctorStatus(student) === 'BLOCKED';
       }).length;
       var total = flaggedStudents.length;
 
@@ -6466,12 +6504,12 @@
 
       var html = '';
       flaggedStudents.forEach(function (student) {
-        if (student.status === 'BLOCKED') {
+        if (isBlockedStatus(student)) {
           html += '<button class="quick-unblock-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-semibold transition-colors" data-email="' + student.email + '">';
           html += '<span class="material-symbols-outlined text-base">lock_open</span>';
           html += '<span>Unblock ' + escapeHtml(formatStudentName(student)) + '</span>';
           html += '</button>';
-        } else {
+        } else if (needsUnlockAttention(student)) {
           html += '<button class="quick-approve-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-white text-sm font-semibold transition-colors" data-email="' + student.email + '" data-poll-id="' + CURRENT_POLL_DATA.pollId + '" data-lock-version="' + (student.lockVersion || 0) + '">';
           html += '<span class="material-symbols-outlined text-base">lock_open</span>';
           html += '<span>Approve ' + escapeHtml(formatStudentName(student)) + '</span>';
@@ -6504,7 +6542,9 @@
       }
 
       var actionable = flaggedStudents.filter(function (student) {
-        return student && (student.status === 'LOCKED' || student.status === 'AWAITING_FULLSCREEN');
+        if (!student) { return false; }
+        var normalized = deriveProctorStatus(student);
+        return normalized === 'LOCKED' || normalized === 'AWAITING_FULLSCREEN';
       });
 
       var activeEmails = new Set();
@@ -6527,7 +6567,8 @@
         lockToastState[email] = lockVersion;
 
         var studentName = formatStudentName(student);
-        var context = student.status === 'AWAITING_FULLSCREEN'
+        var normalized = deriveProctorStatus(student);
+        var context = normalized === 'AWAITING_FULLSCREEN'
           ? 'needs to re-confirm fullscreen before continuing.'
           : 'exited fullscreen or switched tabs.';
 
@@ -6625,7 +6666,7 @@
       if (!CURRENT_POLL_DATA || !CURRENT_POLL_DATA.pollId) return;
 
       var lockedStudents = currentStudentStatusData.filter(function (s) {
-        return s.status === 'LOCKED';
+        return isLockedStatus(s);
       });
 
       if (lockedStudents.length === 0) {
@@ -6986,17 +7027,10 @@
       var tile = document.createElement('div');
 
       var status = student.status || 'Unknown';
-      var statusLower = status.toString().toLowerCase();
-
-      // ENHANCED STATUS DETECTION: Check multiple indicators of locked state
-      var isLocked = statusLower === 'locked' || statusLower.indexOf('locked') === 0;
-      var isBlocked = statusLower === 'blocked' || statusLower.indexOf('blocked') === 0;
-      var isAwaitingFullscreen = statusLower === 'awaiting_fullscreen' || statusLower.indexOf('awaiting') === 0;
-
-      // Priority: LOCKED > AWAITING_FULLSCREEN > BLOCKED > original status
-      var normalizedStatus = isLocked ? 'LOCKED' :
-                             isAwaitingFullscreen ? 'AWAITING_FULLSCREEN' :
-                             (isBlocked ? 'BLOCKED' : status);
+      var normalizedStatus = deriveProctorStatus(student) || status;
+      var isLocked = normalizedStatus === 'LOCKED';
+      var isAwaitingFullscreen = normalizedStatus === 'AWAITING_FULLSCREEN';
+      var isBlocked = normalizedStatus === 'BLOCKED';
       var isCorrect = student.isCorrect === true;
       var isIncorrect = student.isCorrect === false;
       var name = formatStudentName(student);
@@ -7164,16 +7198,17 @@
       var actionsCell = document.createElement('td');
       actionsCell.className = 'px-3 py-2 text-sm text-right space-x-2';
       var actionElements = [];
+      var normalizedStatus = deriveProctorStatus(student) || student.status;
       if (student.status === 'Submitted') {
         actionElements.push(createResetButton(student));
         actionElements.push(createBlockButton(student));
       } else if (student.status === 'Waiting...') {
         actionElements.push(createBlockButton(student));
-      } else if (student.status === 'LOCKED') {
+      } else if (normalizedStatus === 'LOCKED') {
         actionElements.push(createUnlockButton(student));
-      } else if (student.status === 'AWAITING_FULLSCREEN') {
+      } else if (normalizedStatus === 'AWAITING_FULLSCREEN') {
         actionElements.push(createBlockButton(student));
-      } else if (student.status === 'BLOCKED') {
+      } else if (normalizedStatus === 'BLOCKED') {
         actionElements.push(createUnblockButton(student));
       }
       actionElements.forEach(function (el) { actionsCell.appendChild(el); });
@@ -7210,8 +7245,8 @@
 
       // CRITICAL: Always include LOCKED/BLOCKED students regardless of filter for visibility
       var isLockedOrBlocked = function(s) {
-        var st = (s.status || '').toUpperCase();
-        return st === 'LOCKED' || st === 'AWAITING_FULLSCREEN' || st === 'BLOCKED';
+        var normalized = deriveProctorStatus(s);
+        return normalized === 'LOCKED' || normalized === 'AWAITING_FULLSCREEN' || normalized === 'BLOCKED';
       };
 
       if (studentStatusFilter === 'waiting') {
@@ -7219,9 +7254,12 @@
       } else if (studentStatusFilter === 'submitted') {
         students = students.filter(function (s) { return s.status === 'Submitted' || isLockedOrBlocked(s); });
       } else if (studentStatusFilter === 'locked') {
-        students = students.filter(function (s) { return s.status === 'LOCKED' || s.status === 'AWAITING_FULLSCREEN'; });
+        students = students.filter(function (s) {
+          var normalized = deriveProctorStatus(s);
+          return normalized === 'LOCKED' || normalized === 'AWAITING_FULLSCREEN';
+        });
       } else if (studentStatusFilter === 'blocked') {
-        students = students.filter(function (s) { return s.status === 'BLOCKED'; });
+        students = students.filter(function (s) { return deriveProctorStatus(s) === 'BLOCKED'; });
       }
 
       if (studentCorrectnessFilter === 'correct') {
@@ -7259,7 +7297,9 @@
       };
 
       function statusRank(status) {
-        return statusOrder[status] !== undefined ? statusOrder[status] : 5;
+        var normalized = normalizeProctorStatus(status);
+        var key = normalized || status;
+        return statusOrder[key] !== undefined ? statusOrder[key] : 5;
       }
 
       function correctnessRank(student) {
@@ -7315,13 +7355,14 @@
         if (student.status === 'Submitted' && student.isCorrect === true) {
           correctCount++;
         }
-        if (student.status === 'LOCKED' || student.status === 'AWAITING_FULLSCREEN') {
+        var normalized = deriveProctorStatus(student);
+        if (normalized === 'LOCKED' || normalized === 'AWAITING_FULLSCREEN') {
           lockedCount++;
           flaggedStudents.push(student);
-          if (student.status === 'LOCKED') {
+          if (normalized === 'LOCKED') {
             lockedStudents.push(student);
           }
-        } else if (student.status === 'BLOCKED') {
+        } else if (normalized === 'BLOCKED') {
           blockedCount++;
           flaggedStudents.push(student);
         }

@@ -1390,83 +1390,146 @@ Veritas.TeacherApi.sendPollLinkToClass = function(className, pollId) {
         // TERMINOLOGY: "secure assessment" for secure, "live poll" for live
         if (isSecure) {
           // Secure Assessment email - includes proctoring instructions
-          bodyHtml = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">' +
-            '<div style="background:#002e6d;padding:20px;text-align:center;border-radius:8px 8px 0 0;">' +
-            '<h1 style="color:#ffffff;margin:0;font-size:24px;">VERITAS</h1>' +
-            '<p style="color:#ffffff;margin:5px 0 0 0;font-size:14px;">Secure Assessment</p>' +
+          bodyHtml = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+            '<meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="x-apple-disable-message-reformatting">' +
+            '<style>body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}table,td{mso-table-lspace:0pt;mso-table-rspace:0pt;}img{-ms-interpolation-mode:bicubic;border:0;outline:none;text-decoration:none;}body{margin:0;padding:0;width:100%!important;height:100%!important;font-family:\"Inter\",-apple-system,BlinkMacSystemFont,\"Segoe UI\",Helvetica,Arial,sans-serif;background-color:#f7f8fa;}@media only screen and (max-width:600px){.email-container{width:100%!important;}.mobile-padding{padding:20px!important;}.mobile-text{font-size:15px!important;}.mobile-button{padding:16px 28px!important;font-size:15px!important;}}</style></head>' +
+            '<body style="margin:0;padding:0;background-color:#f7f8fa;">' +
+            '<center style="width:100%;background-color:#f7f8fa;">' +
+            '<div style="max-width:600px;margin:0 auto;">' +
+            '<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;font-family:sans-serif;">' +
+            'Your secure VERITAS assessment link is ready. Click to begin.' +
             '</div>' +
-            '<div style="background:#f8f9fa;padding:25px;border:1px solid #e9ecef;border-top:none;">' +
-            '<p style="font-size:16px;color:#333;">Hello ' + name + ',</p>' +
-            '<p style="font-size:16px;color:#333;">You have been invited to complete a <strong>secure assessment</strong>:</p>' +
-            '<p style="font-size:18px;color:#002e6d;font-weight:bold;text-align:center;margin:20px 0;">' + pollName + '</p>' +
-            '<div style="text-align:center;margin:25px 0;">' +
-            '<a href="' + link + '" style="background-color:#002e6d;color:#ffffff;padding:14px 28px;text-decoration:none;border-radius:6px;font-size:16px;font-weight:bold;display:inline-block;">Begin Secure Assessment</a>' +
-            '</div>' +
-            '<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:15px;margin:20px 0;">' +
-            '<p style="margin:0 0 10px 0;font-weight:bold;color:#856404;">⚠️ Important Instructions:</p>' +
-            '<ul style="margin:0;padding-left:20px;color:#856404;">' +
-            '<li>Stay in <strong>fullscreen mode</strong> during the entire assessment</li>' +
-            '<li>Do <strong>not</strong> switch tabs, windows, or applications</li>' +
-            '<li>Do <strong>not</strong> refresh or close the browser</li>' +
-            '<li>Violations will be recorded and reported to your teacher</li>' +
+            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0;padding:0;">' +
+            '<tr><td style="padding:40px 10px;">' +
+            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="email-container" style="max-width:600px;margin:0 auto;background-color:#ffffff;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">' +
+            '<tr><td style="padding:0;background:linear-gradient(to right,#c5a05a,#d4b16e);height:4px;border-radius:12px 12px 0 0;"></td></tr>' +
+            '<tr><td style="padding:32px 40px 24px;text-align:center;background:linear-gradient(135deg,rgba(18,56,93,0.03),rgba(197,160,90,0.05));border-bottom:1px solid rgba(18,56,93,0.08);" class="mobile-padding">' +
+            '<h1 style="margin:0;font-size:28px;font-weight:700;color:#12385d;letter-spacing:-0.02em;">VERITAS</h1>' +
+            '<p style="margin:8px 0 0;font-size:13px;font-weight:600;color:#c5a05a;letter-spacing:0.1em;text-transform:uppercase;">Secure Assessment Session</p>' +
+            '</td></tr>' +
+            '<tr><td style="padding:40px 40px 36px;" class="mobile-padding">' +
+            '<p style="margin:0 0 24px;font-size:17px;line-height:1.6;color:#111111;" class="mobile-text">Hello ' + name + ',</p>' +
+            '<p style="margin:0 0 24px;font-size:17px;line-height:1.6;color:#111111;" class="mobile-text">Your personalized <strong style="color:#12385d;font-weight:600;">secure assessment</strong> link for <strong>' + pollName + '</strong> is ready. Click below to begin.</p>' +
+            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:32px 0;"><tr><td align="center">' +
+            '<a href="' + link + '" target="_blank" rel="noopener" style="display:inline-block;padding:16px 40px;font-size:16px;font-weight:600;color:#ffffff;background-color:#12385d;text-decoration:none;border-radius:10px;border:2px solid #0f2f4d;letter-spacing:0.02em;box-shadow:0 4px 12px rgba(18,56,93,0.25);" class="mobile-button">Begin Secure Assessment</a>' +
+            '</td></tr></table>' +
+            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:32px 0 0;background-color:rgba(18,56,93,0.04);border-left:3px solid #c5a05a;border-radius:6px;"><tr><td style="padding:20px 24px;">' +
+            '<p style="margin:0 0 12px;font-size:14px;font-weight:600;color:#12385d;">⚠️ Important Instructions</p>' +
+            '<ul style="margin:0;padding-left:20px;font-size:14px;line-height:1.7;color:#4b5563;">' +
+            '<li style="margin-bottom:8px;">Stay in <strong>fullscreen mode</strong> the entire time</li>' +
+            '<li style="margin-bottom:8px;">Do not switch tabs, windows, or applications</li>' +
+            '<li style="margin-bottom:8px;">Do not refresh or close the browser window</li>' +
+            '<li style="margin-bottom:0;">Violations will be recorded and shared with your teacher</li>' +
             '</ul>' +
+            '</td></tr></table>' +
+            '</td></tr>' +
+            '<tr><td style="padding:0 40px 36px;" class="mobile-padding">' +
+            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#f8fafc;border-radius:8px;border:1px solid rgba(18,56,93,0.1);"><tr><td style="padding:20px 24px;">' +
+            '<p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#6b7280;">Button not working?</p>' +
+            '<p style="margin:0;font-size:12px;line-height:1.6;color:#6b7280;">Copy and paste this link into your browser:</p>' +
+            '<p style="margin:8px 0 0;font-size:12px;word-break:break-all;font-family:\"Courier New\",Courier,monospace;"><a href="' + link + '" target="_blank" rel="noopener" style="color:#12385d;text-decoration:underline;">' + link + '</a></p>' +
+            '<p style="margin:12px 0 0;font-size:12px;line-height:1.6;color:#6b7280;">If an access code is required, your teacher will provide it separately.</p>' +
+            '</td></tr></table>' +
+            '</td></tr>' +
+            '<tr><td style="padding:32px 40px;background-color:rgba(18,56,93,0.02);border-top:1px solid rgba(18,56,93,0.08);border-radius:0 0 12px 12px;text-align:center;" class="mobile-padding">' +
+            '<p style="margin:0 0 12px;font-size:13px;line-height:1.6;color:#6b7280;">🔒 <strong style="color:#12385d;font-weight:600;">This link is unique to you</strong></p>' +
+            '<p style="margin:0;font-size:12px;line-height:1.6;color:#6b7280;">Do not share this link. It connects directly to your secure assessment.</p>' +
+            '</td></tr>' +
+            '</table>' +
+            '</td></tr>' +
+            '<tr><td style="padding:0 10px 40px;">' +
+            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="email-container" style="max-width:600px;margin:0 auto;"><tr><td style="padding:20px 0;text-align:center;">' +
+            '<p style="margin:0;font-size:11px;line-height:1.6;color:#9ca3af;">Powered by <strong style="color:#12385d;">VERITAS</strong> Secure Assessments</p>' +
+            '</td></tr></table>' +
+            '</td></tr>' +
+            '</table>' +
             '</div>' +
-            '<p style="font-size:13px;color:#666;margin-top:20px;">If the button above doesn\'t work, copy and paste this link into your browser:</p>' +
-            '<p style="font-size:12px;color:#002e6d;word-break:break-all;">' + link + '</p>' +
-            '<p style="font-size:13px;color:#666;margin-top:15px;"><em>Note: If an access code is required, your teacher will provide it separately.</em></p>' +
-            '</div>' +
-            '<div style="background:#002e6d;padding:15px;text-align:center;border-radius:0 0 8px 8px;">' +
-            '<p style="color:#ffffff;margin:0;font-size:12px;">Powered by Veritas Live Poll</p>' +
-            '</div>' +
+            '</center>' +
             '</body></html>';
 
           bodyPlain = 'VERITAS SECURE ASSESSMENT\n' +
             '========================\n\n' +
             'Hello ' + name + ',\n\n' +
-            'You have been invited to complete a secure assessment:\n' +
-            pollName + '\n\n' +
-            'Your unique link: ' + link + '\n\n' +
+            'Your secure assessment link for "' + pollName + '" is ready. Begin here: ' + link + '\n\n' +
             'IMPORTANT INSTRUCTIONS:\n' +
             '- Stay in fullscreen mode during the entire assessment\n' +
             '- Do NOT switch tabs, windows, or applications\n' +
             '- Do NOT refresh or close the browser\n' +
-            '- Violations will be recorded and reported to your teacher\n\n' +
-            'Note: If an access code is required, your teacher will provide it separately.\n\n' +
+            '- Violations will be recorded and reported to your teacher\n' +
+            '- If an access code is required, your teacher will provide it separately\n\n' +
+            'Do not share this link. It is unique to you.\n\n' +
             '---\n' +
-            'Powered by Veritas Live Poll';
+            'Powered by VERITAS Secure Assessments';
 
         } else {
           // Live Poll email - simpler, more friendly
-          bodyHtml = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">' +
-            '<div style="background:#002e6d;padding:20px;text-align:center;border-radius:8px 8px 0 0;">' +
-            '<h1 style="color:#ffffff;margin:0;font-size:24px;">VERITAS</h1>' +
-            '<p style="color:#ffffff;margin:5px 0 0 0;font-size:14px;">Live Poll</p>' +
+          bodyHtml = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+            '<meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="x-apple-disable-message-reformatting">' +
+            '<style>body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}table,td{mso-table-lspace:0pt;mso-table-rspace:0pt;}img{-ms-interpolation-mode:bicubic;border:0;outline:none;text-decoration:none;}body{margin:0;padding:0;width:100%!important;height:100%!important;font-family:\"Inter\",-apple-system,BlinkMacSystemFont,\"Segoe UI\",Helvetica,Arial,sans-serif;background-color:#f7f8fa;}@media only screen and (max-width:600px){.email-container{width:100%!important;}.mobile-padding{padding:20px!important;}.mobile-text{font-size:15px!important;}.mobile-button{padding:16px 28px!important;font-size:15px!important;}}</style></head>' +
+            '<body style="margin:0;padding:0;background-color:#f7f8fa;">' +
+            '<center style="width:100%;background-color:#f7f8fa;">' +
+            '<div style="max-width:600px;margin:0 auto;">' +
+            '<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;font-family:sans-serif;">' +
+            'Your personalized VERITAS live poll session is ready. Click to join.' +
             '</div>' +
-            '<div style="background:#f8f9fa;padding:25px;border:1px solid #e9ecef;border-top:none;">' +
-            '<p style="font-size:16px;color:#333;">Hello ' + name + ',</p>' +
-            '<p style="font-size:16px;color:#333;">You\'re invited to join a <strong>live poll</strong>:</p>' +
-            '<p style="font-size:18px;color:#002e6d;font-weight:bold;text-align:center;margin:20px 0;">' + pollName + '</p>' +
-            '<div style="text-align:center;margin:25px 0;">' +
-            '<a href="' + link + '" style="background-color:#002e6d;color:#ffffff;padding:14px 28px;text-decoration:none;border-radius:6px;font-size:16px;font-weight:bold;display:inline-block;">Join Live Poll</a>' +
+            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0;padding:0;">' +
+            '<tr><td style="padding:40px 10px;">' +
+            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="email-container" style="max-width:600px;margin:0 auto;background-color:#ffffff;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">' +
+            '<tr><td style="padding:0;background:linear-gradient(to right,#c5a05a,#d4b16e);height:4px;border-radius:12px 12px 0 0;"></td></tr>' +
+            '<tr><td style="padding:32px 40px 24px;text-align:center;background:linear-gradient(135deg,rgba(18,56,93,0.03),rgba(197,160,90,0.05));border-bottom:1px solid rgba(18,56,93,0.08);" class="mobile-padding">' +
+            '<h1 style="margin:0;font-size:28px;font-weight:700;color:#12385d;letter-spacing:-0.02em;">VERITAS</h1>' +
+            '<p style="margin:8px 0 0;font-size:13px;font-weight:600;color:#c5a05a;letter-spacing:0.1em;text-transform:uppercase;">Live Poll Session</p>' +
+            '</td></tr>' +
+            '<tr><td style="padding:40px 40px 36px;" class="mobile-padding">' +
+            '<p style="margin:0 0 24px;font-size:17px;line-height:1.6;color:#111111;" class="mobile-text">Hello ' + name + ',</p>' +
+            '<p style="margin:0 0 24px;font-size:17px;line-height:1.6;color:#111111;" class="mobile-text">Your personalized <strong style="color:#12385d;font-weight:600;">VERITAS</strong> link for today\'s <strong>live poll</strong> is ready. Click the button below to join and participate.</p>' +
+            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:32px 0;"><tr><td align="center">' +
+            '<a href="' + link + '" target="_blank" rel="noopener" style="display:inline-block;padding:16px 40px;font-size:16px;font-weight:600;color:#ffffff;background-color:#12385d;text-decoration:none;border-radius:10px;border:2px solid #0f2f4d;letter-spacing:0.02em;box-shadow:0 4px 12px rgba(18,56,93,0.25);" class="mobile-button">Begin Your Session</a>' +
+            '</td></tr></table>' +
+            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:32px 0 0;background-color:rgba(18,56,93,0.04);border-left:3px solid #c5a05a;border-radius:6px;"><tr><td style="padding:20px 24px;">' +
+            '<p style="margin:0 0 12px;font-size:14px;font-weight:600;color:#12385d;">⚠️ Important Instructions</p>' +
+            '<ul style="margin:0;padding-left:20px;font-size:14px;line-height:1.7;color:#4b5563;">' +
+            '<li style="margin-bottom:8px;">Once you begin, stay in fullscreen mode</li>' +
+            '<li style="margin-bottom:8px;">Do not navigate to other browser tabs or applications</li>' +
+            '<li style="margin-bottom:0;">Do not refresh or close the browser window</li>' +
+            '</ul>' +
+            '</td></tr></table>' +
+            '</td></tr>' +
+            '<tr><td style="padding:0 40px 36px;" class="mobile-padding">' +
+            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#f8fafc;border-radius:8px;border:1px solid rgba(18,56,93,0.1);"><tr><td style="padding:20px 24px;">' +
+            '<p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#6b7280;">Button not working?</p>' +
+            '<p style="margin:0;font-size:12px;line-height:1.6;color:#6b7280;">Copy and paste this link into your browser:</p>' +
+            '<p style="margin:8px 0 0;font-size:12px;word-break:break-all;font-family:\"Courier New\",Courier,monospace;"><a href="' + link + '" target="_blank" rel="noopener" style="color:#12385d;text-decoration:underline;">' + link + '</a></p>' +
+            '</td></tr></table>' +
+            '</td></tr>' +
+            '<tr><td style="padding:32px 40px;background-color:rgba(18,56,93,0.02);border-top:1px solid rgba(18,56,93,0.08);border-radius:0 0 12px 12px;text-align:center;" class="mobile-padding">' +
+            '<p style="margin:0 0 12px;font-size:13px;line-height:1.6;color:#6b7280;">🔒 <strong style="color:#12385d;font-weight:600;">This link is unique to you</strong></p>' +
+            '<p style="margin:0;font-size:12px;line-height:1.6;color:#6b7280;">Do not share this link. It connects directly to your personal VERITAS live poll session.</p>' +
+            '</td></tr>' +
+            '</table>' +
+            '</td></tr>' +
+            '<tr><td style="padding:0 10px 40px;">' +
+            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="email-container" style="max-width:600px;margin:0 auto;"><tr><td style="padding:20px 0;text-align:center;">' +
+            '<p style="margin:0;font-size:11px;line-height:1.6;color:#9ca3af;">Powered by <strong style="color:#12385d;">VERITAS</strong> Live Poll System</p>' +
+            '</td></tr></table>' +
+            '</td></tr>' +
+            '</table>' +
             '</div>' +
-            '<p style="font-size:13px;color:#666;margin-top:20px;">If the button above doesn\'t work, copy and paste this link into your browser:</p>' +
-            '<p style="font-size:12px;color:#002e6d;word-break:break-all;">' + link + '</p>' +
-            '<p style="font-size:16px;color:#333;margin-top:20px;">See you in class! 🎓</p>' +
-            '</div>' +
-            '<div style="background:#002e6d;padding:15px;text-align:center;border-radius:0 0 8px 8px;">' +
-            '<p style="color:#ffffff;margin:0;font-size:12px;">Powered by Veritas Live Poll</p>' +
-            '</div>' +
+            '</center>' +
             '</body></html>';
 
-          bodyPlain = 'VERITAS LIVE POLL\n' +
-            '================\n\n' +
+          bodyPlain = 'VERITAS LIVE POLL SESSION\n' +
+            '==========================\n\n' +
             'Hello ' + name + ',\n\n' +
-            'You\'re invited to join a live poll:\n' +
-            pollName + '\n\n' +
-            'Your unique link: ' + link + '\n\n' +
+            'Your personalized live poll link for "' + pollName + '" is ready. Join here: ' + link + '\n\n' +
+            'Important instructions:\n' +
+            '- Once you begin, stay in fullscreen mode\n' +
+            '- Do not navigate to other browser tabs or applications\n' +
+            '- Do not refresh or close the browser window\n\n' +
+            'Do not share this link. It connects directly to your personal VERITAS live poll session.\n\n' +
             'See you in class!\n\n' +
             '---\n' +
-            'Powered by Veritas Live Poll';
+            'Powered by VERITAS Live Poll System';
         }
 
         GmailApp.sendEmail(email, subject, bodyPlain, {

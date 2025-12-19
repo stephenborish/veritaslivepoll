@@ -254,7 +254,7 @@
     <button id="header-start-btn" class="hidden"></button>
   </header>
 
-  <div class="flex flex-grow overflow-hidden">
+  <div class="flex flex-grow overflow-hidden min-h-0">
     <!-- Left Navigation Sidebar -->
     <aside id="dashboard-sidebar"
       class="flex h-full w-64 flex-shrink-0 flex-col border-r border-veritas-navy/25 bg-veritas-navy p-4 text-brand-white shadow-lg">
@@ -297,7 +297,7 @@
     </aside>
 
     <!-- Main Content Area -->
-    <main class="flex-1 overflow-y-auto">
+    <main class="flex-1 min-h-0 overflow-y-auto pb-6">
       <!-- Dashboard View (Default) - Redesigned -->
       <div id="dashboard" class="p-8 max-w-7xl mx-auto">
         <!-- Poll Library & Session Management (Combined) -->
@@ -506,7 +506,7 @@
       </div>
 
       <!-- Live Poll View (REDESIGNED FOR OPTIMAL TEACHER WORKFLOW) -->
-      <div id="live-view" class="flex flex-col h-full overflow-hidden p-0" style="display: none;">
+      <div id="live-view" class="flex flex-col h-full min-h-0 overflow-hidden p-0" style="display: none;">
 
         <!-- 🚨 Proctoring notifications now use lightweight toasts. Legacy banners removed for a calmer experience. -->
 
@@ -563,9 +563,9 @@
         </div>
 
         <!-- Main Content Wrapper (Scrollable) -->
-        <div class="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-800 px-4 pb-4 live-view-shell">
+        <div class="flex-1 min-h-0 overflow-y-auto bg-gray-50 dark:bg-gray-800 px-4 pb-8 md:pb-10 live-view-shell">
 
-          <div class="flex flex-col lg:flex-row gap-4 h-full live-view-grid">
+          <div class="flex flex-col lg:flex-row gap-4 h-full min-h-0 live-view-grid">
             <!-- LEFT COLUMN: Question + Answer Choices (Adaptive Width) -->
             <div class="flex-1 min-w-0 flex flex-col gap-4">
 
@@ -584,7 +584,9 @@
                     <h2 id="live-question-text" class="question-stem-text whitespace-pre-wrap">Question text will appear here...</h2>
                   </div>
                   <div id="question-image-container" class="question-image-area" style="display: none;">
-                    <img id="live-question-image" alt="Question" src="" class="question-image-clickable">
+                    <div class="question-image-frame">
+                      <img id="live-question-image" alt="Question" src="" class="question-image-clickable">
+                    </div>
                   </div>
                 </div>
               </div>
@@ -629,7 +631,7 @@
             </div>
 
             <!-- RIGHT COLUMN: STUDENTS + CONFIDENCE PULSE (Fixed Width) -->
-            <div class="w-full lg:w-96 flex-none flex flex-col gap-4 h-full overflow-hidden">
+            <div class="w-full lg:w-96 flex-none flex flex-col gap-4 h-full overflow-hidden min-h-0">
 
               <!-- STUDENTS PANEL -->
               <div

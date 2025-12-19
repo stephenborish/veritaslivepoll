@@ -100,7 +100,7 @@
                 var lastAnswer = null;
                 var focusState = document.hasFocus();
                 var flushInterval = null;
-                var FLUSH_INTERVAL_MS = 5000; // Send batch every 5 seconds
+                var FLUSH_INTERVAL_MS = 3000; // Send batch every 3 seconds
                 var MAX_BUFFER_SIZE = 50; // Flush if buffer exceeds 50 events
 
                 function init(pollId, sessionId, questionIndex) {

@@ -63,7 +63,7 @@ December 19, 2025
 **Singleton Pattern**: `ActivityTracker`
 
 **Features**:
-- Automatic event batching (flush every 5 seconds or 50 events)
+- Automatic event batching (flush every 3 seconds or 50 events)
 - Focus/blur event listeners
 - Time-on-question tracking
 - Answer change detection
@@ -375,7 +375,7 @@ Student Request                 Apps Script Backend            Response to Stude
 ## Performance Considerations
 
 ### Activity Tracking
-- **Batched uploads**: Max 50 events or 5-second intervals
+- **Batched uploads**: Max 50 events or 3-second intervals
 - **Client-side buffering**: Prevents data loss on network issues
 - **Minimal overhead**: ~50KB for 50 events
 - **Sheet capacity**: Google Sheets supports 5M cells (500K+ events)

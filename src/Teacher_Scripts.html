@@ -6556,6 +6556,58 @@
     }
 
     /**
+     * Update the persistent locked students alert panel
+     * Shows prominent unlock buttons for all locked students
+     */
+    function updateLockedStudentsAlert(lockedStudents) {
+      var alertPanel = document.getElementById('locked-students-alert');
+      var buttonsContainer = document.getElementById('locked-students-buttons');
+      var titleEl = document.getElementById('locked-alert-title');
+
+      if (!alertPanel || !buttonsContainer) return;
+
+      if (!lockedStudents || lockedStudents.length === 0) {
+        alertPanel.classList.add('hidden');
+        return;
+      }
+
+      alertPanel.classList.remove('hidden');
+
+      if (titleEl) {
+        titleEl.textContent = lockedStudents.length + ' Student' + (lockedStudents.length > 1 ? 's' : '') + ' Locked Out';
+      }
+
+      var html = '';
+      lockedStudents.forEach(function (student) {
+        var name = formatStudentName(student);
+        var lockVersion = student.lockVersion || 0;
+        html += '<button class="locked-student-unlock-btn flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-colors" ';
+        html += 'data-email="' + escapeHtml(student.email) + '" ';
+        html += 'data-lock-version="' + lockVersion + '">';
+        html += '<span class="material-symbols-outlined text-base">lock_open</span>';
+        html += '<span>Unlock ' + escapeHtml(name) + '</span>';
+        html += '</button>';
+      });
+
+      buttonsContainer.innerHTML = html;
+
+      // Attach click handlers
+      buttonsContainer.querySelectorAll('.locked-student-unlock-btn').forEach(function (btn) {
+        btn.onclick = async function () {
+          var email = this.dataset.email;
+          var lockVersion = parseInt(this.dataset.lockVersion, 10);
+          if (!CURRENT_POLL_DATA || !CURRENT_POLL_DATA.pollId) {
+            await veritasAlert('No active poll found.', { title: 'Error', destructive: true });
+            return;
+          }
+          this.disabled = true;
+          this.innerHTML = '<span class="material-symbols-outlined text-base animate-spin">progress_activity</span><span>Unlocking...</span>';
+          await approveStudentUnlock(email, CURRENT_POLL_DATA.pollId, lockVersion, this, { skipConfirm: true });
+        };
+      });
+    }
+
+    /**
      * ENHANCED: Update exited students panel (2025)
      * More visible and functional than the violations alert
      */
@@ -6742,13 +6794,28 @@
               title: 'Unlock approved'
             });
           } else {
-            await veritasAlert(response.message || 'Failed to unlock student. Please try again.', {
+            // Provide specific error messages based on failure reason
+            var errorMsg = 'Failed to unlock student. Please try again.';
+            if (response.reason === 'not_locked') {
+              errorMsg = 'Student is not currently locked on the server. The violation may not have been reported properly. Try refreshing the page.';
+            } else if (response.reason === 'version_mismatch') {
+              errorMsg = 'Lock version mismatch (student may have violated again). Refreshing status and retrying...';
+              // Auto-retry with correct version
+              if (response.lockVersion !== undefined) {
+                setTimeout(function() {
+                  approveStudentUnlock(email, pollId, response.lockVersion, buttonElement, { skipConfirm: true });
+                }, 500);
+                return;
+              }
+            }
+            await veritasAlert(response.message || errorMsg, {
               title: 'Unlock failed',
               destructive: true
             });
             if (buttonElement) {
               buttonElement.disabled = false;
-              buttonElement.querySelector('span:last-child').textContent = formatStudentName(email);
+              var lastSpan = buttonElement.querySelector('span:last-child');
+              if (lastSpan) lastSpan.textContent = formatStudentName(email);
             }
           }
         })
@@ -7141,10 +7208,16 @@
         });
       }
 
+      // CRITICAL: Always include LOCKED/BLOCKED students regardless of filter for visibility
+      var isLockedOrBlocked = function(s) {
+        var st = (s.status || '').toUpperCase();
+        return st === 'LOCKED' || st === 'AWAITING_FULLSCREEN' || st === 'BLOCKED';
+      };
+
       if (studentStatusFilter === 'waiting') {
-        students = students.filter(function (s) { return (s.status || '').toLowerCase() === 'waiting...'; });
+        students = students.filter(function (s) { return (s.status || '').toLowerCase() === 'waiting...' || isLockedOrBlocked(s); });
       } else if (studentStatusFilter === 'submitted') {
-        students = students.filter(function (s) { return s.status === 'Submitted'; });
+        students = students.filter(function (s) { return s.status === 'Submitted' || isLockedOrBlocked(s); });
       } else if (studentStatusFilter === 'locked') {
         students = students.filter(function (s) { return s.status === 'LOCKED' || s.status === 'AWAITING_FULLSCREEN'; });
       } else if (studentStatusFilter === 'blocked') {
@@ -7269,6 +7342,7 @@
       updateLiveOverviewCounts(lockedCount, blockedCount, waitingCount);
       updateViolationsAlert(flaggedStudents);
       notifyLockoutToasts(flaggedStudents);
+      updateLockedStudentsAlert(lockedStudents);
 
       if (tbody) tbody.innerHTML = '';
       if (grid) grid.innerHTML = '';

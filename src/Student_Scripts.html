@@ -1935,7 +1935,11 @@
 
             // 4. THE REPORT
             // Send telemetry to the server (if ID exists)
-            reportViolation(reason);
+            if (typeof reportViolation === 'function') {
+                reportViolation(reason);
+            } else if (typeof reportViolationDebounced === 'function') {
+                reportViolationDebounced(reason);
+            }
 
             // 5. THE RESTORATION
             // We must show the Lock UI, but currently the body is invisible (opacity 0).

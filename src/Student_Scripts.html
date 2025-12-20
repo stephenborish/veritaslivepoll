@@ -1980,8 +1980,18 @@
                 console.warn('[Proctor] Firebase reporting failed:', e);
             }
 
-            google.script.run.withSuccessHandler(function () { console.log('Violation Logged'); })
-                .logStudentViolation(pid, reason);
+            // FIX: Use the correct API with token - logStudentViolation was broken (ignored params)
+            google.script.run
+                .withSuccessHandler(function (response) {
+                    console.log('[Proctor] Violation logged, server response:', response);
+                    if (response && response.lockVersion !== undefined) {
+                        currentLockVersion = response.lockVersion;
+                    }
+                })
+                .withFailureHandler(function (error) {
+                    console.error('[Proctor] Violation report failed:', error);
+                })
+                .reportStudentViolation(pid, SESSION_TOKEN, reason);
         }
 
         function reportViolationDebounced(reason) {

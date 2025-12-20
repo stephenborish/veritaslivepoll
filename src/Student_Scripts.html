@@ -1970,6 +1970,16 @@
             }
 
             console.warn('[Proctor] Reporting violation:', reason, 'for Poll:', pid);
+
+            // FIREBASE: Instant Lock (Fail-safe)
+            try {
+                if (typeof reportFirebaseViolation === 'function') {
+                    reportFirebaseViolation(reason, pid);
+                }
+            } catch (e) {
+                console.warn('[Proctor] Firebase reporting failed:', e);
+            }
+
             google.script.run.withSuccessHandler(function () { console.log('Violation Logged'); })
                 .logStudentViolation(pid, reason);
         }

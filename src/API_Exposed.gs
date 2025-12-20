@@ -141,6 +141,16 @@ function getLivePollData(pollId, questionIndex) {
   return Veritas.TeacherApi.getLivePollData(pollId, questionIndex);
 }
 
+/**
+ * Get real-time activity metrics for live poll monitoring
+ * @param {string} pollId - Poll ID
+ * @param {number} questionIndex - Question index
+ * @returns {Object} Real-time metrics {activeStudents, studentsViewing, averageTimeOnQuestion, answerChanges, focusLossEvents}
+ */
+function getRealTimeActivityMetrics(pollId, questionIndex) {
+  return Veritas.TeacherApi.getRealTimeActivityMetrics(pollId, questionIndex);
+}
+
 // =============================================================================
 // TEACHER API - POLL MANAGEMENT
 // =============================================================================

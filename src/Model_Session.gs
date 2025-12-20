@@ -3242,8 +3242,31 @@ function logAssessmentEvent_(pollId, sessionId, studentEmail, eventType, payload
 }
 
 // Legacy deprecated functions
-function logStudentViolation() {
-  return reportStudentViolation('legacy-violation');
+// WARNING: This function is deprecated. Use reportStudentViolation(pollId, token, violationType) instead.
+// This function previously ignored all parameters, causing violations to fail silently.
+// Now it attempts to forward parameters if provided, but callers should migrate to the proper API.
+function logStudentViolation(pollId, reason) {
+  Logger.log('[DEPRECATED] logStudentViolation called - use reportStudentViolation instead', {
+    pollId: pollId,
+    reason: reason
+  });
+
+  // If called with params (legacy client code), attempt to use current user auth
+  if (pollId && pollId !== 'legacy-violation') {
+    var studentEmail = null;
+    try {
+      studentEmail = Session.getActiveUser().getEmail();
+    } catch (e) {
+      // Session may not be available
+    }
+
+    if (studentEmail) {
+      return Veritas.Models.Session.reportStudentViolation(pollId, studentEmail, reason || 'legacy-violation');
+    }
+  }
+
+  // Fallback: return error to help debug
+  return { success: false, error: 'logStudentViolation is deprecated - use reportStudentViolation with proper auth' };
 }
 
 function unlockStudent(studentEmail, pollId) {

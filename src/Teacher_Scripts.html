@@ -6203,6 +6203,12 @@
       // Update student status
       currentStudentStatusData = data.studentStatusList;
 
+      // FIX TASK A: Re-apply Firebase realtime overrides immediately after server update
+      // This ensures that "LOCKED" status from Firebase (which is faster) isn't overwritten by "ACTIVE" from stale server poll
+      if (typeof updateRealtimeUI === 'function') {
+        updateRealtimeUI();
+      }
+
       // Update Live View Combobox Data
       if (liveStudentCombobox && Array.isArray(currentStudentStatusData)) {
         var studentData = currentStudentStatusData.map(function (s) {

@@ -1911,6 +1911,69 @@
             handleViolation(reason);
         }
 
+        /**
+         * UNIFIED PROCTORING & SNIPPING TRAP
+         * Handles blur, fullscreen exit, and tab switching.
+         */
+        function handlePotentialViolation(reason) {
+            // 1. SAFE HARBOR CHECK (Critical)
+            // If the student is clicking inside the TI-84 Calculator iframe, 
+            // the window 'blurs', but this is NOT a violation. Return immediately.
+            if (document.activeElement && document.activeElement.id === 'calc-iframe') {
+                return;
+            }
+
+            // 2. THE FLASH (The Snipping Tool Trap)
+            // IMMEDIATELY hide the content. This happens before the Screenshot tool 
+            // can capture the screen buffer. The user gets a picture of nothing.
+            document.body.style.opacity = '0';
+            document.body.style.transition = 'none'; // Prevent fade-out animation delay
+
+            // 3. THE LOCK (Poison Pill)
+            // Persist the lock state so a refresh won't fix it.
+            sessionStorage.setItem('veritas_lock_active', 'true');
+
+            // 4. THE REPORT
+            // Send telemetry to the server (if ID exists)
+            if (typeof reportViolation === 'function') {
+                reportViolation(reason);
+            } else if (typeof reportViolationDebounced === 'function') {
+                reportViolationDebounced(reason);
+            }
+
+            // 5. THE RESTORATION
+            // We must show the Lock UI, but currently the body is invisible (opacity 0).
+            // We render the lock UI, then wait 100ms (enough time for the screenshot 
+            // tool to fail) before making the screen visible again so the student 
+            // can read the error message.
+            showLockEnforcementUI(reason);
+
+            setTimeout(function() {
+                // Bring the visual back so they can see the "LOCKED" message
+                document.body.style.transition = 'opacity 0.5s ease-in';
+                document.body.style.opacity = '1';
+            }, 100);
+        }
+
+        // ROBUST VIOLATION REPORTING WITH FAILSAFE POLL ID LOOKUP
+        function reportViolation(reason) {
+            // ROBUST ID CHECK: Check Global -> Data Object -> Storage
+            var pid = window.currentPollId ||
+                (window.pollData && window.pollData.pollId) ||
+                sessionStorage.getItem('veritas_active_poll_id');
+
+            if (!pid) {
+                console.error('[Proctor] CRITICAL: Attempted to report violation but Poll ID is missing. Retrying in 1s...');
+                // Retry once if ID is missing (race condition fix)
+                setTimeout(function () { reportViolation(reason); }, 1000);
+                return;
+            }
+
+            console.warn('[Proctor] Reporting violation:', reason, 'for Poll:', pid);
+            google.script.run.withSuccessHandler(function () { console.log('Violation Logged'); })
+                .logStudentViolation(pid, reason);
+        }
+
         function reportViolationDebounced(reason) {
             // FIX: Immediately block interaction to prevent submissions during debounce
             if (!isInteractionBlocked && !violationLogged && secureSessionActive) {
@@ -1984,28 +2047,16 @@
                 // 1. GLOBAL SAFEGUARDS
                 if (!secureSessionActive || isEnteringFullscreen || isInteractionBlocked || isTeacherBlocked) return;
 
-                // 2. IFRAME SAFE HARBOR (Calculator / Tools)
-                var calculatorFrame = document.getElementById('calc-iframe');
-                if (document.activeElement && calculatorFrame && document.activeElement === calculatorFrame) {
-                    console.log('[Proctor] Ignored blur - interaction with calculator iframe');
-                    return;
-                }
-
-                // 3. LOCK IF VIOLATION CONFIRMED
-                console.warn('[Proctor] Blur detected - LOCKING');
-                try { sessionStorage.setItem('veritas_lock_active', 'true'); } catch (e) { }
                 violationLogged = true;
-                triggerSecurityViolation('tab_switch');
+                handlePotentialViolation('tab_switch');
             });
 
             // ZERO TOLERANCE: Immediate lock on tab visibility change
             document.addEventListener('visibilitychange', function () {
                 if (document.hidden) {
                     if (!secureSessionActive || isEnteringFullscreen || isInteractionBlocked || isTeacherBlocked) return;
-                    console.warn('[Proctor] Visibility hidden - LOCKING');
                     violationLogged = true;
-                    // Safe harbor check not needed for visibility hidden (user definitely left)
-                    triggerSecurityViolation('tab_hidden');
+                    handlePotentialViolation('tab_hidden');
                 }
             });
         }
@@ -3118,6 +3169,14 @@
         // =============================================================================
 
         function updateStudentView(data) {
+            data = data || {};
+
+            // CRITICAL FIX: Persist pollId globally and to sessionStorage for violation reporting
+            if (data.pollId) {
+                window.currentPollId = data.pollId;
+                sessionStorage.setItem('veritas_active_poll_id', data.pollId);
+            }
+
             var poisonPillActive = false;
             try {
                 poisonPillActive = sessionStorage.getItem('veritas_lock_active') === 'true';
@@ -3139,16 +3198,7 @@
             }
 
             hideAllViews();
-            data = data || {};
             console.log('[ViewManager] Update View State:', data);
-
-            // CRITICAL FIX: Persist pollId globally and to sessionStorage for violation reporting
-            if (data.pollId) {
-                window.currentPollId = data.pollId;
-                try {
-                    sessionStorage.setItem('veritas_active_poll_id', data.pollId);
-                } catch (e) { /* Storage may be unavailable */ }
-            }
 
             var currentIndex = typeof data.questionIndex === 'number' ? data.questionIndex : null;
 
@@ -3954,12 +4004,40 @@
             isTeacherBlocked = false;
         }
 
-        function showLockEnforcementUI(message, subtext) {
-            if (secureSessionActive) {
-                showSecureLockout(message, subtext);
-            } else {
-                showLockedMessage(message, subtext);
+        /**
+         * VERITAS UI CONFIGURATION
+         * Theme: "Smart Wit" (Scientific, Sharp, Concise)
+         */
+        const UX_COPY = {
+            LOCKED: {
+                title: "Experimental Error",
+                icon: "warning",
+                body: "You introduced an uncontrolled variable: Exiting Fullscreen.",
+                footer: "Anomaly flagged on Teacher Dashboard. Awaiting manual override."
             }
+        };
+
+        function showLockEnforcementUI(reason) {
+            var container = document.getElementById('lock-overlay');
+            if (!container) return;
+
+            // Ensure content is visible again after the "Snipping Trap" flash
+            document.body.style.opacity = '1';
+
+            container.style.display = 'flex';
+            container.innerHTML = `
+                <div class="flex flex-col items-center justify-center h-full w-full max-w-2xl mx-auto p-8 animate-fade-in text-center">
+                    <div class="h-24 w-24 bg-amber-50 rounded-full flex items-center justify-center mb-6 shadow-sm border border-amber-200">
+                        <span class="material-symbols-outlined text-5xl text-amber-600">${UX_COPY.LOCKED.icon}</span>
+                    </div>
+                    <h1 class="text-4xl font-extrabold text-gray-900 dark:text-white mb-2 tracking-tight">${UX_COPY.LOCKED.title}</h1>
+                    <div class="w-full bg-white dark:bg-gray-800 border-l-4 border-amber-500 p-6 my-8 text-left shadow-sm rounded-r-lg">
+                        <p class="text-xs font-bold text-amber-600 uppercase tracking-wide mb-1">OBSERVATION</p>
+                        <p class="text-xl font-medium text-gray-800 dark:text-gray-200">${reason || UX_COPY.LOCKED.body}</p>
+                    </div>
+                    <p class="text-lg font-medium text-gray-500 dark:text-gray-400 animate-pulse">${UX_COPY.LOCKED.footer}</p>
+                </div>
+            `;
         }
 
         function showTeacherBlockedMessage() {

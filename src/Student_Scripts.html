@@ -538,14 +538,71 @@
 
                 this.renderLockScreen(reason);
 
-                // Report violation
+                // FIX: Report violation with proper error handling and retry logic
+                // Use robust pollId resolution with sessionStorage fallback
                 var activePollId = (typeof currentPollState !== 'undefined' && currentPollState && currentPollState.pollId) ||
                     (typeof secureLobbyContext !== 'undefined' && secureLobbyContext && secureLobbyContext.pollId) ||
-                    (typeof secureQuestionState !== 'undefined' && secureQuestionState && secureQuestionState.pollId);
+                    (typeof secureQuestionState !== 'undefined' && secureQuestionState && secureQuestionState.pollId) ||
+                    window.currentPollId;
 
-                if (activePollId && window.google && google.script) {
-                    google.script.run.reportStudentViolation(activePollId, SESSION_TOKEN || '', reason || 'lock');
+                // CRITICAL FALLBACK: Check sessionStorage for pollId
+                if (!activePollId) {
+                    try {
+                        activePollId = sessionStorage.getItem('veritas_active_poll_id');
+                    } catch (e) { /* Storage may be unavailable */ }
                 }
+
+                if (!activePollId) {
+                    console.error('[LockManager] CRITICAL: No pollId available for violation report!');
+                    return;
+                }
+
+                // Update Firebase immediately for instant teacher feedback
+                if (typeof reportFirebaseViolation === 'function') {
+                    reportFirebaseViolation(reason, activePollId);
+                }
+
+                // Report to server with proper handlers and retry logic
+                var self = this;
+                var retryCount = 0;
+                var maxRetries = 3;
+
+                function reportToServer() {
+                    if (!window.google || !google.script) {
+                        console.error('[LockManager] google.script not available');
+                        return;
+                    }
+
+                    console.log('[LockManager] Reporting violation to server (attempt ' + (retryCount + 1) + '):', activePollId, reason);
+
+                    google.script.run
+                        .withSuccessHandler(function(response) {
+                            if (response && response.success) {
+                                console.log('[LockManager] Violation reported successfully:', response);
+                                if (response.lockVersion !== undefined) {
+                                    currentLockVersion = response.lockVersion;
+                                }
+                            } else {
+                                console.error('[LockManager] Server rejected violation report:', response);
+                                // Retry on failure
+                                if (retryCount < maxRetries) {
+                                    retryCount++;
+                                    setTimeout(reportToServer, 1000 * retryCount);
+                                }
+                            }
+                        })
+                        .withFailureHandler(function(error) {
+                            console.error('[LockManager] Violation report failed:', error);
+                            // Retry on network failure
+                            if (retryCount < maxRetries) {
+                                retryCount++;
+                                setTimeout(reportToServer, 1000 * retryCount);
+                            }
+                        })
+                        .reportStudentViolation(activePollId, SESSION_TOKEN || '', reason || 'lock');
+                }
+
+                reportToServer();
             },
             unlock: function () {
                 console.log('[LockManager] UNLOCKING');

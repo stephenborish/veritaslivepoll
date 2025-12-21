@@ -2901,8 +2901,17 @@
         }
 
         function showWaitingForNextPhase(message) {
+            // Ensure parent container is visible
+            if (studentContainer) {
+                studentContainer.style.display = 'block';
+                studentContainer.classList.remove('hidden');
+            }
+            // Hide question, show status
             if (questionContainer) questionContainer.style.display = 'none';
-            if (statusContainer) statusContainer.style.display = 'block';
+            if (statusContainer) {
+                statusContainer.style.display = 'block';
+                statusContainer.classList.remove('hidden');
+            }
             if (statusMessage) {
                 statusMessage.textContent = message || 'Response Locked In';
                 statusMessage.className = 'text-green-700 text-2xl font-semibold';
@@ -2911,6 +2920,20 @@
                 statusSubMessage.textContent = 'Data transmitted. Awaiting next phase...';
                 statusSubMessage.style.display = 'block';
                 statusSubMessage.className = 'text-gray-700 text-lg mt-4';
+            }
+            // Update status card icon to checkmark
+            var statusCard = statusContainer ? statusContainer.querySelector('.status-card') : null;
+            if (statusCard) {
+                var iconEl = statusCard.querySelector('.material-symbols-outlined');
+                if (iconEl) {
+                    iconEl.textContent = 'check_circle';
+                    iconEl.className = 'material-symbols-outlined text-6xl text-green-600 mb-4 inline-block';
+                }
+            }
+            // Hide any resume controls
+            var resumeControls = document.getElementById('resume-controls');
+            if (resumeControls) {
+                resumeControls.style.display = 'none';
             }
         }
 
@@ -3197,6 +3220,16 @@
                 sessionStorage.setItem('veritas_active_poll_id', data.pollId);
             }
 
+            console.log('[ViewManager] Update View State:', data);
+
+            // --- EARLY CHECKS BEFORE HIDING VIEWS (prevents white screen) ---
+
+            var currentIndex = typeof data.questionIndex === 'number' ? data.questionIndex : null;
+
+            // Normalize results visibility early for deterministic guards
+            var resultsVisibility = data.resultsVisibility || (data.status === 'RESULTS_REVEALED' ? 'REVEALED' : null);
+
+            // 1. POISON PILL CHECK - Do NOT hide views if student is locked
             var poisonPillActive = false;
             try {
                 poisonPillActive = sessionStorage.getItem('veritas_lock_active') === 'true';
@@ -3208,6 +3241,7 @@
                     poisonPillActive = false;
                     if (typeof hideLockEnforcementUI === 'function') { hideLockEnforcementUI(); }
                 } else {
+                    // Show lock screen WITHOUT hiding other views first
                     if (typeof showLockEnforcementUI === 'function') {
                         showLockEnforcementUI('Assessment Paused', 'Proctoring protocol active. Your teacher will grant re-entry.');
                     }
@@ -3217,34 +3251,7 @@
                 }
             }
 
-            hideAllViews();
-            console.log('[ViewManager] Update View State:', data);
-
-            var currentIndex = typeof data.questionIndex === 'number' ? data.questionIndex : null;
-
-            // STRICT VIEW MUTEX: prevent ghost/double screens
-            ['entry-screen', 'secure-lobby', 'student-container'].forEach(function (viewId) {
-                var viewEl = document.getElementById(viewId);
-                if (viewEl) {
-                    viewEl.style.display = 'none';
-                    viewEl.classList.add('hidden');
-                }
-            });
-
-            // Maintain submission guardrails so polling cannot rewind UI
-            if (data.hasSubmitted === true && currentIndex !== null) {
-                lastSubmittedQuestionIndex = currentIndex;
-                metacogSubmittedFor = metacogSubmittedFor === null ? null : metacogSubmittedFor;
-            }
-
-            // FIREBASE INIT CHECK (Lazy)
-            if (!firebaseRef && data.pollId && data.studentEmail) {
-                // Now async, but that's fine, it will init in background
-                initFirebaseSidecar(data.pollId, data.studentEmail);
-            }
-
-            // 1. SOVEREIGN LOCK CHECK
-            // If local machine is locked, it STAYS locked unless Server Explicitly Approves Unlock
+            // 2. SOVEREIGN LOCK CHECK - Before hiding views
             if (LockManager.isLocked()) {
                 if (data.unlockApproved === true) {
                     console.log('[LockManager] Server approved unlock - Clearing Poison Pill');
@@ -3261,17 +3268,37 @@
                 return;
             }
 
-            // 2. View Mutex - Hide all views first
-            // Note: ViewManager.show() handles hiding others, but calling this explicitly ensures clean slate
-            // if we have logic branching below.
+            // 3. SUBMISSION GUARD - If already submitted, show waiting screen immediately (no flash)
+            // Maintain submission guardrails so polling cannot rewind UI
+            if (data.hasSubmitted === true && currentIndex !== null) {
+                lastSubmittedQuestionIndex = currentIndex;
+            }
 
-            // Normalize results visibility early for deterministic guards
-            var resultsVisibility = data.resultsVisibility || (data.status === 'RESULTS_REVEALED' ? 'REVEALED' : null);
-
-            // 2b. If we've already submitted for this question, never re-render the prompt unless in reveal phase
+            // If we've already submitted for this question, never re-render the prompt unless in reveal phase
             if (currentIndex !== null && lastSubmittedQuestionIndex === currentIndex && data.status === 'LIVE' && resultsVisibility !== 'REVEALED') {
+                // Don't hide views - just ensure status container is visible
+                if (questionContainer) questionContainer.style.display = 'none';
                 showWaitingForNextPhase('Response Captured');
                 return;
+            }
+
+            // --- NOW SAFE TO HIDE VIEWS AND TRANSITION ---
+
+            hideAllViews();
+
+            // STRICT VIEW MUTEX: prevent ghost/double screens
+            ['entry-screen', 'secure-lobby', 'student-container'].forEach(function (viewId) {
+                var viewEl = document.getElementById(viewId);
+                if (viewEl) {
+                    viewEl.style.display = 'none';
+                    viewEl.classList.add('hidden');
+                }
+            });
+
+            // FIREBASE INIT CHECK (Lazy)
+            if (!firebaseRef && data.pollId && data.studentEmail) {
+                // Now async, but that's fine, it will init in background
+                initFirebaseSidecar(data.pollId, data.studentEmail);
             }
 
             // RESULTS / REVEAL HANDLING
@@ -3889,7 +3916,15 @@
             var resetTimestamp = (data.metadata && data.metadata.resetAt) ? data.metadata.resetAt : '';
             currentQuestionKey = data.pollId + ':' + data.questionIndex + ':' + resetTimestamp;
             hasAnsweredCurrent = !!data.hasSubmitted;
+
+            // Ensure parent container is visible for results display
+            if (studentContainer) {
+                studentContainer.style.display = 'block';
+                studentContainer.classList.remove('hidden');
+            }
+
             questionContainer.style.display = 'block';
+            questionContainer.classList.remove('hidden');
             statusContainer.style.display = 'none';
 
             var qNum = (data.questionIndex || 0) + 1;
@@ -4037,9 +4072,23 @@
             }
         };
 
-        function showLockEnforcementUI(reason) {
+        function showLockEnforcementUI(title, reason) {
             var container = document.getElementById('lock-overlay');
-            if (!container) return;
+            if (!container) {
+                console.error('[Lock] lock-overlay element not found!');
+                // Fallback: show status container with lock message
+                showStatusPanel({
+                    icon: 'lock',
+                    iconClass: 'text-amber-600',
+                    message: title || UX_COPY.LOCKED.title,
+                    messageClass: 'text-gray-900 text-xl font-semibold',
+                    subtext: reason || UX_COPY.LOCKED.body,
+                    subClass: 'text-gray-700 text-base mt-4',
+                    showResume: false,
+                    lockScroll: true
+                });
+                return;
+            }
 
             // Ensure content is visible again after the "Snipping Trap" flash
             document.body.style.opacity = '1';
@@ -4050,14 +4099,105 @@
                     <div class="h-24 w-24 bg-amber-50 rounded-full flex items-center justify-center mb-6 shadow-sm border border-amber-200">
                         <span class="material-symbols-outlined text-5xl text-amber-600">${UX_COPY.LOCKED.icon}</span>
                     </div>
-                    <h1 class="text-4xl font-extrabold text-gray-900 dark:text-white mb-2 tracking-tight">${UX_COPY.LOCKED.title}</h1>
-                    <div class="w-full bg-white dark:bg-gray-800 border-l-4 border-amber-500 p-6 my-8 text-left shadow-sm rounded-r-lg">
-                        <p class="text-xs font-bold text-amber-600 uppercase tracking-wide mb-1">OBSERVATION</p>
-                        <p class="text-xl font-medium text-gray-800 dark:text-gray-200">${reason || UX_COPY.LOCKED.body}</p>
+                    <h1 class="text-4xl font-extrabold text-white mb-2 tracking-tight">${title || UX_COPY.LOCKED.title}</h1>
+                    <div class="w-full bg-white/10 backdrop-blur border-l-4 border-amber-500 p-6 my-8 text-left shadow-sm rounded-r-lg">
+                        <p class="text-xs font-bold text-amber-400 uppercase tracking-wide mb-1">OBSERVATION</p>
+                        <p class="text-lg font-medium text-white/90 whitespace-pre-line">${reason || UX_COPY.LOCKED.body}</p>
                     </div>
-                    <p class="text-lg font-medium text-gray-500 dark:text-gray-400 animate-pulse">${UX_COPY.LOCKED.footer}</p>
+                    <p class="text-lg font-medium text-white/60 animate-pulse">${UX_COPY.LOCKED.footer}</p>
                 </div>
             `;
+        }
+
+        /**
+         * Hide the lock enforcement overlay
+         */
+        function hideLockEnforcementUI() {
+            var container = document.getElementById('lock-overlay');
+            if (container) {
+                container.style.display = 'none';
+                container.innerHTML = '';
+            }
+            // Reset body opacity in case it was hidden by snipping trap
+            document.body.style.opacity = '1';
+        }
+
+        /**
+         * Render a status message in the status container
+         * Used for session ended, waiting states, etc.
+         */
+        function renderStatusMessage(title, message, options) {
+            options = options || {};
+            var icon = options.icon || 'check_circle';
+            var iconClass = options.iconClass || 'text-veritas-navy';
+
+            if (statusContainer) {
+                statusContainer.style.display = 'block';
+            }
+            if (questionContainer) {
+                questionContainer.style.display = 'none';
+            }
+            if (statusMessage) {
+                statusMessage.textContent = title || 'Status';
+                statusMessage.className = 'text-gray-900 text-2xl font-semibold';
+            }
+            if (statusSubMessage) {
+                statusSubMessage.textContent = message || '';
+                statusSubMessage.style.display = message ? 'block' : 'none';
+                statusSubMessage.className = 'text-gray-700 text-lg mt-4';
+            }
+
+            // Update the icon
+            var statusCard = statusContainer ? statusContainer.querySelector('.status-card') : null;
+            if (statusCard) {
+                var iconEl = statusCard.querySelector('.material-symbols-outlined');
+                if (iconEl) {
+                    iconEl.textContent = icon;
+                    iconEl.className = 'material-symbols-outlined text-6xl mb-4 inline-block ' + iconClass;
+                }
+            }
+
+            // Hide resume controls
+            var resumeControls = document.getElementById('resume-controls');
+            if (resumeControls) {
+                resumeControls.style.display = 'none';
+            }
+
+            // Show secure exit if session ended
+            var secureExitControls = document.getElementById('secure-exit-controls');
+            if (secureExitControls && options.showExit) {
+                secureExitControls.classList.remove('hidden');
+            }
+        }
+
+        /**
+         * Show transition loading overlay with optional message
+         */
+        function showTransitionOverlay(message) {
+            var overlay = document.getElementById('transition-overlay');
+            var msgEl = document.getElementById('transition-message');
+            if (overlay) {
+                overlay.style.display = 'flex';
+                requestAnimationFrame(function() {
+                    overlay.style.opacity = '1';
+                });
+            }
+            if (msgEl && message) {
+                msgEl.textContent = message;
+            }
+        }
+
+        /**
+         * Hide transition loading overlay
+         */
+        function hideTransitionOverlay() {
+            var overlay = document.getElementById('transition-overlay');
+            if (overlay) {
+                overlay.style.opacity = '0';
+                setTimeout(function() {
+                    overlay.style.display = 'none';
+                }, 200);
+            }
         }
 
         function showTeacherBlockedMessage() {

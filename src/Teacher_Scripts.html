@@ -6957,7 +6957,8 @@
         google.script.run
           .withSuccessHandler(resolve)
           .withFailureHandler(reject)
-          .teacherBlockStudent(email, pollId, reason || '');
+          // FIX: Correct parameter order - API expects (pollId, studentEmail, reason)
+          .teacherBlockStudent(pollId, email, reason || '');
       });
     }
 
@@ -6966,7 +6967,8 @@
         google.script.run
           .withSuccessHandler(resolve)
           .withFailureHandler(reject)
-          .teacherUnblockStudent(email, pollId);
+          // FIX: Correct parameter order - API expects (pollId, studentEmail)
+          .teacherUnblockStudent(pollId, email);
       });
     }
 

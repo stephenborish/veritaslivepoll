@@ -581,8 +581,47 @@ Veritas.StudentApi.submitIndividualTimedAnswer = function(pollId, sessionId, que
  */
 Veritas.StudentApi.reportStudentViolation = function(pollId, token, violationType) {
   return withErrorHandling(function() {
-    var tokenData = Veritas.StudentApi.validateToken(token);
-    var studentEmail = tokenData.email;
+    var studentEmail = null;
+
+    // CRITICAL FIX: Robust student identification with multiple fallbacks
+    // This ensures violations are ALWAYS reported even if token is empty/invalid
+
+    // 1. Try token-based identification first
+    if (token && token.length > 0) {
+      try {
+        var tokenData = Veritas.StudentApi.validateToken(token);
+        studentEmail = tokenData.email;
+      } catch (tokenError) {
+        Logger.log('[reportStudentViolation] Token validation failed, trying fallback:', tokenError.message);
+      }
+    }
+
+    // 2. Fallback to active user session (Google Apps Script session)
+    if (!studentEmail) {
+      try {
+        studentEmail = Session.getActiveUser().getEmail();
+        Logger.log('[reportStudentViolation] Using Session fallback, email:', studentEmail);
+      } catch (sessionError) {
+        Logger.log('[reportStudentViolation] Session fallback failed:', sessionError.message);
+      }
+    }
+
+    // 3. Fallback to effective user (for web app deployments)
+    if (!studentEmail) {
+      try {
+        studentEmail = Session.getEffectiveUser().getEmail();
+        Logger.log('[reportStudentViolation] Using EffectiveUser fallback, email:', studentEmail);
+      } catch (effectiveError) {
+        Logger.log('[reportStudentViolation] EffectiveUser fallback failed:', effectiveError.message);
+      }
+    }
+
+    if (!studentEmail) {
+      Logger.log('[reportStudentViolation] CRITICAL: All identification methods failed');
+      return { success: false, error: 'Could not identify student - all authentication methods failed' };
+    }
+
+    Logger.log('[reportStudentViolation] Student identified:', studentEmail, 'pollId:', pollId, 'violation:', violationType);
 
     // Delegate to Models layer
     return Veritas.Models.Session.reportStudentViolation(pollId, studentEmail, violationType);

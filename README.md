@@ -20,6 +20,7 @@
 - [Browser Compatibility](#browser-compatibility)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
+- [Development with Claude Code](#development-with-claude-code)
 - [License](#license)
 
 ---
@@ -963,6 +964,98 @@ See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for exhaustive issue guide with adv
 
 ---
 
+## Development with Claude Code
+
+This project includes configuration for [Claude Code](https://docs.anthropic.com/claude/docs), an AI-powered development assistant that can help you understand, modify, and extend the codebase.
+
+### Quick Start with Claude Code
+
+1. **Explore the Architecture**:
+   ```
+   /explain-architecture
+   ```
+   Get a comprehensive overview of how the system works
+
+2. **Review Code for Issues**:
+   ```
+   /review-code src/Teacher_API.gs
+   ```
+   Security, performance, and quality analysis
+
+3. **Add Tests**:
+   ```
+   /add-tests Model_Session.gs
+   ```
+   Generate comprehensive test coverage
+
+4. **Optimize Performance**:
+   ```
+   /optimize-performance Data_Access.gs
+   ```
+   Find bottlenecks and suggest improvements
+
+5. **Security Audit**:
+   ```
+   /check-security Veritas_Exam_Proctoring.gs
+   ```
+   Comprehensive security analysis
+
+6. **Debug Live Session**:
+   ```
+   /debug-session
+   ```
+   Analyze current session state and troubleshoot issues
+
+### Documentation Files
+
+- **[AGENTS.md](AGENTS.md)** - System components and agent architecture
+  - Detailed documentation of all 17 system agents
+  - Agent communication patterns and dependencies
+  - Guidelines for adding new agents
+
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Technical deep-dive
+  - System overview and technology stack
+  - Data model and state management
+  - Authentication, security, and performance
+
+- **[.claude/README.md](.claude/README.md)** - Claude Code configuration
+  - Custom slash commands
+  - Project-specific guidelines
+  - Best practices for AI-assisted development
+
+### Available Slash Commands
+
+All custom commands are in `.claude/commands/`:
+
+| Command | Description |
+|---------|-------------|
+| `/review-code` | Security, quality, and performance review |
+| `/explain-architecture` | Explain system design and data flows |
+| `/add-tests` | Generate comprehensive test coverage |
+| `/optimize-performance` | Identify and fix performance bottlenecks |
+| `/check-security` | Comprehensive security audit |
+| `/deploy` | Step-by-step deployment guide |
+| `/debug-session` | Analyze current live session state |
+
+### Project-Specific AI Assistance
+
+When working with Claude on this project, it has full context of:
+
+- Google Apps Script runtime environment
+- Authentication patterns (email-based for teachers, token-based for students)
+- Proctoring system (violation detection, lock states, version-based approvals)
+- State management (polling-based sync, state versioning)
+- Performance constraints (Google Sheets latency, polling overhead)
+
+This makes it ideal for:
+- Understanding unfamiliar code sections
+- Implementing new features following existing patterns
+- Debugging proctoring or state sync issues
+- Security reviews before deployment
+- Performance optimization recommendations
+
+---
+
 ## License
 
 MIT License
@@ -1001,10 +1094,12 @@ SOFTWARE.
 ## Support
 
 ### Documentation
+- [System Agents Guide](AGENTS.md) - Component architecture and agent interactions
 - [Architecture Guide](ARCHITECTURE.md) - Technical deep-dive
 - [Deployment Guide](DEPLOYMENT.md) - Step-by-step setup with screenshots
 - [Troubleshooting Guide](TROUBLESHOOTING.md) - Common issues and solutions
 - [QA Checklist](PROCTOR_QA_CHECKLIST.md) - Pre-class proctoring tests
+- [Claude Code Configuration](.claude/README.md) - AI-assisted development setup
 
 ### Contact
 - **Issues**: [GitHub Issues](https://github.com/yourorg/veritaslivepoll/issues)

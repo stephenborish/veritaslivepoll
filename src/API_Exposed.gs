@@ -595,10 +595,11 @@ function submitIndividualTimedAnswer(pollId, sessionId, questionIndex, answerTex
  * @param {string} pollId - Poll ID
  * @param {string} token - Session token
  * @param {string} violationType - Violation type
+ * @param {string} fallbackEmail - Explicit student email fallback (for when token is unavailable)
  * @returns {Object} Result
  */
-function reportStudentViolation(pollId, token, violationType) {
-  return Veritas.StudentApi.reportStudentViolation(pollId, token, violationType);
+function reportStudentViolation(pollId, token, violationType, fallbackEmail) {
+  return Veritas.StudentApi.reportStudentViolation(pollId, token, violationType, fallbackEmail);
 }
 
 /**

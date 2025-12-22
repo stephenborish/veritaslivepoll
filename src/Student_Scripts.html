@@ -562,6 +562,15 @@
                     reportFirebaseViolation(reason, activePollId);
                 }
 
+                // CRITICAL FIX: Get fallback email for robust student identification
+                // This ensures violations are attributed correctly even if SESSION_TOKEN is lost
+                var fallbackEmail = window.STUDENT_EMAIL || '';
+                if (!fallbackEmail) {
+                    try {
+                        fallbackEmail = sessionStorage.getItem('veritas_student_email') || '';
+                    } catch (e) { /* Storage may be unavailable */ }
+                }
+
                 // Report to server with proper handlers and retry logic
                 var self = this;
                 var retryCount = 0;
@@ -573,7 +582,7 @@
                         return;
                     }
 
-                    console.log('[LockManager] Reporting violation to server (attempt ' + (retryCount + 1) + '):', activePollId, reason);
+                    console.log('[LockManager] Reporting violation to server (attempt ' + (retryCount + 1) + '):', activePollId, reason, 'fallbackEmail:', fallbackEmail ? '[provided]' : '[none]');
 
                     google.script.run
                         .withSuccessHandler(function(response) {
@@ -599,7 +608,7 @@
                                 setTimeout(reportToServer, 1000 * retryCount);
                             }
                         })
-                        .reportStudentViolation(activePollId, SESSION_TOKEN || '', reason || 'lock');
+                        .reportStudentViolation(activePollId, SESSION_TOKEN || '', reason || 'lock', fallbackEmail);
                 }
 
                 reportToServer();
@@ -712,6 +721,12 @@
                 (secureLobbyContext && secureLobbyContext.pollId) ||
                 (secureQuestionState && secureQuestionState.pollId);
 
+            // CRITICAL FIX: Get fallback email for robust student identification
+            var fallbackEmail = window.STUDENT_EMAIL || '';
+            if (!fallbackEmail) {
+                try { fallbackEmail = sessionStorage.getItem('veritas_student_email') || ''; } catch (e) {}
+            }
+
             if (activePollId) {
                 google.script.run
                     .withSuccessHandler(function (response) {
@@ -725,7 +740,7 @@
                         console.error('[Proctor] Failed to report lock violation:', error);
                         startProctorPolling();
                     })
-                    .reportStudentViolation(activePollId, SESSION_TOKEN, reason || 'session-locked');
+                    .reportStudentViolation(activePollId, SESSION_TOKEN, reason || 'session-locked', fallbackEmail);
             }
         }
 
@@ -2037,6 +2052,12 @@
                 console.warn('[Proctor] Firebase reporting failed:', e);
             }
 
+            // CRITICAL FIX: Get fallback email for robust student identification
+            var fallbackEmail = window.STUDENT_EMAIL || '';
+            if (!fallbackEmail) {
+                try { fallbackEmail = sessionStorage.getItem('veritas_student_email') || ''; } catch (e) {}
+            }
+
             // FIX: Use the correct API with token - logStudentViolation was broken (ignored params)
             google.script.run
                 .withSuccessHandler(function (response) {
@@ -2048,7 +2069,7 @@
                 .withFailureHandler(function (error) {
                     console.error('[Proctor] Violation report failed:', error);
                 })
-                .reportStudentViolation(pid, SESSION_TOKEN, reason);
+                .reportStudentViolation(pid, SESSION_TOKEN, reason, fallbackEmail);
         }
 
         function reportViolationDebounced(reason) {
@@ -2097,6 +2118,12 @@
                 // FIREBASE: Ensure locked state is set with pollId for teacher visibility
                 reportFirebaseViolation(reason, activePollId);
 
+                // CRITICAL FIX: Get fallback email for robust student identification
+                var fallbackEmail = window.STUDENT_EMAIL || '';
+                if (!fallbackEmail) {
+                    try { fallbackEmail = sessionStorage.getItem('veritas_student_email') || ''; } catch (e) {}
+                }
+
                 showLockEnforcementUI('Assessment Paused', 'Notifying your teacher...');
                 google.script.run
                     .withSuccessHandler(function (response) {
@@ -2111,7 +2138,7 @@
                         console.error('[Proctor] Violation report failed:', error);
                         showLockEnforcementUI('Assessment Paused', 'Connection issue detected. Stay on this screen—your teacher will re-admit you.');
                     })
-                    .reportStudentViolation(activePollId, SESSION_TOKEN, reason);
+                    .reportStudentViolation(activePollId, SESSION_TOKEN, reason, fallbackEmail);
             }, 100);
         }
 

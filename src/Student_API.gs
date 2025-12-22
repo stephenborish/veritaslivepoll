@@ -577,48 +577,73 @@ Veritas.StudentApi.submitIndividualTimedAnswer = function(pollId, sessionId, que
  * @param {string} pollId - Poll ID
  * @param {string} token - Session token
  * @param {string} violationType - Violation type
+ * @param {string} fallbackEmail - Explicit student email fallback (for when token is unavailable)
  * @returns {Object} Result
  */
-Veritas.StudentApi.reportStudentViolation = function(pollId, token, violationType) {
+Veritas.StudentApi.reportStudentViolation = function(pollId, token, violationType, fallbackEmail) {
   return withErrorHandling(function() {
     var studentEmail = null;
 
-    // CRITICAL FIX: Robust student identification with multiple fallbacks
-    // This ensures violations are ALWAYS reported even if token is empty/invalid
+    // CRITICAL FIX: Robust student identification with proper fallback chain
+    // Priority order:
+    // 1. Token-based identification (most secure)
+    // 2. Explicit email fallback from client (stored when page loaded)
+    // 3. Active Google session (may work in some deployment modes)
+    // NOTE: We do NOT use getEffectiveUser() as it returns the script owner
+    // in "Execute as: Me" deployments, which would attribute violations
+    // to the teacher instead of the student.
 
-    // 1. Try token-based identification first
+    // 1. Try token-based identification first (most secure)
     if (token && token.length > 0) {
       try {
         var tokenData = Veritas.StudentApi.validateToken(token);
         studentEmail = tokenData.email;
+        Logger.log('[reportStudentViolation] Student identified via token:', studentEmail);
       } catch (tokenError) {
-        Logger.log('[reportStudentViolation] Token validation failed, trying fallback:', tokenError.message);
+        Logger.log('[reportStudentViolation] Token validation failed:', tokenError.message);
       }
     }
 
-    // 2. Fallback to active user session (Google Apps Script session)
+    // 2. Use explicit email fallback from client (stored when page loaded)
+    // This is the critical fix - the client stores the email when the page
+    // first loads with a valid token, so it's available even if the token
+    // becomes unavailable later.
+    if (!studentEmail && fallbackEmail && fallbackEmail.length > 0) {
+      // Basic email validation to prevent injection
+      if (fallbackEmail.indexOf('@') > 0 && fallbackEmail.indexOf('.') > 0) {
+        studentEmail = fallbackEmail;
+        Logger.log('[reportStudentViolation] Using client-provided email fallback:', studentEmail);
+      } else {
+        Logger.log('[reportStudentViolation] Invalid fallback email format:', fallbackEmail);
+      }
+    }
+
+    // 3. Fallback to active user session (Google Apps Script session)
+    // This may work if the user is signed into Google
     if (!studentEmail) {
       try {
-        studentEmail = Session.getActiveUser().getEmail();
-        Logger.log('[reportStudentViolation] Using Session fallback, email:', studentEmail);
+        var activeEmail = Session.getActiveUser().getEmail();
+        if (activeEmail && activeEmail.length > 0) {
+          studentEmail = activeEmail;
+          Logger.log('[reportStudentViolation] Using Session.getActiveUser() fallback:', studentEmail);
+        }
       } catch (sessionError) {
-        Logger.log('[reportStudentViolation] Session fallback failed:', sessionError.message);
+        Logger.log('[reportStudentViolation] Session.getActiveUser() fallback failed:', sessionError.message);
       }
     }
 
-    // 3. Fallback to effective user (for web app deployments)
-    if (!studentEmail) {
-      try {
-        studentEmail = Session.getEffectiveUser().getEmail();
-        Logger.log('[reportStudentViolation] Using EffectiveUser fallback, email:', studentEmail);
-      } catch (effectiveError) {
-        Logger.log('[reportStudentViolation] EffectiveUser fallback failed:', effectiveError.message);
-      }
-    }
+    // NOTE: We intentionally do NOT use Session.getEffectiveUser() as a fallback.
+    // In "Execute as: Me" deployments (per README.md lines 154-159),
+    // getEffectiveUser() returns the script owner (teacher), not the student.
+    // This would incorrectly attribute violations to the teacher.
 
     if (!studentEmail) {
-      Logger.log('[reportStudentViolation] CRITICAL: All identification methods failed');
-      return { success: false, error: 'Could not identify student - all authentication methods failed' };
+      Logger.log('[reportStudentViolation] CRITICAL: All identification methods failed. pollId:', pollId, 'violation:', violationType);
+      return {
+        success: false,
+        error: 'Could not identify student - authentication required',
+        requiresReauth: true
+      };
     }
 
     Logger.log('[reportStudentViolation] Student identified:', studentEmail, 'pollId:', pollId, 'violation:', violationType);

@@ -13,10 +13,20 @@
 
   <script>
     window.SESSION_TOKEN = '<?= sessionToken ?>';
+    // CRITICAL: Store student email for violation reporting fallback
+    // This ensures violations can be attributed even if SESSION_TOKEN is lost/invalid
+    window.STUDENT_EMAIL = '<?= studentEmail ?>';
     var FIREBASE_CONFIG = <?!= JSON.stringify(firebaseConfig) ?>;
     var Veritas = Veritas || {};
     Veritas.Config = Veritas.Config || {};
     Veritas.Config.DEBUG_FIREBASE = <?!= Veritas.Config.DEBUG_FIREBASE ? 'true' : 'false' ?>;
+
+    // Store student email in sessionStorage for persistence across page refreshes
+    if (window.STUDENT_EMAIL) {
+      try {
+        sessionStorage.setItem('veritas_student_email', window.STUDENT_EMAIL);
+      } catch (e) { /* Storage may be unavailable */ }
+    }
   </script>
 
   <?!= include('Common_Styles'); ?>

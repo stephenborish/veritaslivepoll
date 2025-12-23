@@ -7573,6 +7573,8 @@
         })
         .withFailureHandler(function(error) {
           console.error('Failed to fetch activity metrics:', error);
+          // HIGH PRIORITY FIX: Show user-visible error notification
+          showToast('error', 'Activity Metrics Error', 'Unable to load real-time activity metrics. Data will refresh on next update.', 4000);
         })
         .getRealTimeActivityMetrics(pollId, questionIndex);
     }

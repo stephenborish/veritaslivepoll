@@ -475,8 +475,56 @@
           `;
           document.exitFullscreen().catch(()=>{});
        }).withFailureHandler(err => {
-          alert('Submission failed: ' + err);
-          location.reload(); // Retry?
+          // CRITICAL FIX: Proper error handling to prevent data loss
+          console.error('Exam submission failed:', err);
+
+          // Backup answers to localStorage in case of failure
+          try {
+            const backupKey = 'exam_backup_' + EXAM_CONFIG.examId + '_' + STUDENT_INFO.id;
+            localStorage.setItem(backupKey, JSON.stringify({
+              examId: EXAM_CONFIG.examId,
+              studentId: STUDENT_INFO.id,
+              answers: payload,
+              timestamp: new Date().toISOString(),
+              error: err && err.message ? err.message : String(err)
+            }));
+          } catch (storageErr) {
+            console.error('Could not backup answers:', storageErr);
+          }
+
+          // Sanitize error message to prevent XSS
+          const errorMsg = err && err.message ? err.message : 'Network error - please try again';
+          const safeErrorMsg = String(errorMsg).replace(/[<>&"']/g, function(c) {
+            return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c];
+          });
+
+          // Show error UI with retry option
+          document.getElementById('examInterface').innerHTML = `
+            <div class="flex flex-col items-center justify-center h-full p-8">
+              <span class="material-symbols-outlined text-8xl text-red-600 mb-6">error</span>
+              <h2 class="text-3xl font-bold text-gray-900 mb-4">Submission Failed</h2>
+              <p class="text-lg text-gray-700 mb-2 max-w-md text-center">
+                Your answers could not be submitted due to a network error.
+              </p>
+              <p class="text-sm text-gray-600 mb-6 max-w-md text-center bg-red-50 p-3 rounded border border-red-200">
+                ${safeErrorMsg}
+              </p>
+              <p class="text-sm text-green-700 mb-8 max-w-md text-center bg-green-50 p-3 rounded border border-green-200">
+                ✓ Your answers have been saved locally as a backup.
+              </p>
+              <div class="flex gap-4">
+                <button onclick="submitExam(true)" class="px-6 py-3 bg-veritas-navy text-white rounded-lg hover:bg-blue-900 font-semibold transition-colors">
+                  Retry Submission
+                </button>
+                <button onclick="location.reload()" class="px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-semibold transition-colors">
+                  Reload Page
+                </button>
+              </div>
+              <p class="text-xs text-gray-500 mt-6 max-w-md text-center">
+                If the problem persists, contact your teacher. Your answers are saved in your browser.
+              </p>
+            </div>
+          `;
        }).submitExamAnswers(EXAM_CONFIG.examId, STUDENT_INFO.id, payload);
     }
   </script>

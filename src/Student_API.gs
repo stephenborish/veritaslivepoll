@@ -410,8 +410,20 @@ Veritas.StudentApi.submitLivePollAnswer = function(pollId, questionIndex, answer
       return { success: false, error: e.message };
     }
 
-    if (typeof answerText !== 'string' || answerText.length > 500) {
-      return { success: false, error: 'Invalid answer format' };
+    // MEDIUM PRIORITY FIX: Comprehensive answer validation
+    if (typeof answerText !== 'string') {
+      return { success: false, error: 'Answer must be text' };
+    }
+
+    // Check for empty or whitespace-only answers
+    var trimmedAnswer = answerText.trim();
+    if (!trimmedAnswer || trimmedAnswer.length === 0) {
+      return { success: false, error: 'Answer cannot be empty' };
+    }
+
+    // Validate maximum length
+    if (answerText.length > 500) {
+      return { success: false, error: 'Answer too long - maximum 500 characters' };
     }
 
     // Enforce proctor lock before accepting submission

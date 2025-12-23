@@ -864,3 +864,123 @@ function runAllDevTests() {
 
   return results;
 }
+
+// =============================================================================
+// SECURITY HELPERS - Firebase Configuration Management
+// =============================================================================
+
+/**
+ * SECURITY HELPER: Set Firebase configuration in Script Properties (recommended for production)
+ * This stores sensitive Firebase credentials securely instead of hardcoding them in source code
+ *
+ * @param {Object} config - Firebase configuration object with keys:
+ *   - apiKey: Firebase API key
+ *   - authDomain: Firebase auth domain
+ *   - databaseURL: Firebase Realtime Database URL
+ *   - projectId: Firebase project ID
+ *   - storageBucket: Firebase storage bucket
+ *   - messagingSenderId: Firebase messaging sender ID
+ *   - appId: Firebase app ID
+ * @returns {Object} Success status and message
+ *
+ * @example
+ * // Call this once to set up Firebase config securely:
+ * Veritas.DevTools.setFirebaseConfig({
+ *   apiKey: "your-api-key-here",
+ *   authDomain: "your-project.firebaseapp.com",
+ *   databaseURL: "https://your-project.firebaseio.com",
+ *   projectId: "your-project",
+ *   storageBucket: "your-project.appspot.com",
+ *   messagingSenderId: "123456789",
+ *   appId: "1:123456789:web:abcdef"
+ * });
+ */
+Veritas.DevTools.setFirebaseConfig = function(config) {
+  if (!config || typeof config !== 'object') {
+    return { success: false, error: 'Config must be an object' };
+  }
+
+  // Validate required fields
+  var requiredFields = ['apiKey', 'authDomain', 'databaseURL', 'projectId'];
+  for (var i = 0; i < requiredFields.length; i++) {
+    var field = requiredFields[i];
+    if (!config[field]) {
+      return { success: false, error: 'Missing required field: ' + field };
+    }
+  }
+
+  try {
+    var props = PropertiesService.getScriptProperties();
+    props.setProperty('FIREBASE_CONFIG', JSON.stringify(config));
+
+    // Clear cached config to force reload
+    if (Veritas.Config._firebaseConfigCache) {
+      delete Veritas.Config._firebaseConfigCache;
+    }
+
+    return {
+      success: true,
+      message: 'Firebase config stored securely in Script Properties',
+      note: 'Hardcoded fallback config still exists for backwards compatibility but will not be used'
+    };
+  } catch (e) {
+    return { success: false, error: 'Failed to store config: ' + e.message };
+  }
+};
+
+/**
+ * SECURITY HELPER: Remove Firebase configuration from Script Properties
+ * This will cause the system to fall back to the default config
+ *
+ * @returns {Object} Success status and message
+ */
+Veritas.DevTools.clearFirebaseConfig = function() {
+  try {
+    var props = PropertiesService.getScriptProperties();
+    props.deleteProperty('FIREBASE_CONFIG');
+
+    // Clear cached config
+    if (Veritas.Config._firebaseConfigCache) {
+      delete Veritas.Config._firebaseConfigCache;
+    }
+
+    return {
+      success: true,
+      message: 'Firebase config removed from Script Properties (will use fallback config)'
+    };
+  } catch (e) {
+    return { success: false, error: 'Failed to clear config: ' + e.message };
+  }
+};
+
+/**
+ * SECURITY HELPER: Check which Firebase config is currently in use
+ *
+ * @returns {Object} Information about current Firebase configuration source
+ */
+Veritas.DevTools.checkFirebaseConfig = function() {
+  var props = PropertiesService.getScriptProperties();
+  var configJson = props.getProperty('FIREBASE_CONFIG');
+
+  if (configJson) {
+    try {
+      var config = JSON.parse(configJson);
+      return {
+        source: 'Script Properties (SECURE)',
+        projectId: config.projectId || 'unknown',
+        hasApiKey: !!config.apiKey,
+        apiKeyPrefix: config.apiKey ? config.apiKey.substring(0, 10) + '...' : 'none'
+      };
+    } catch (e) {
+      return {
+        source: 'Script Properties (ERROR - invalid JSON)',
+        error: e.message
+      };
+    }
+  } else {
+    return {
+      source: 'Hardcoded fallback (INSECURE - should migrate)',
+      recommendation: 'Call Veritas.DevTools.setFirebaseConfig() to store credentials securely'
+    };
+  }
+};

@@ -1052,6 +1052,20 @@ Veritas.TeacherApi.setupSheet = function() {
       reason: 'SETUP'
     });
 
+    // CRITICAL FIX: Install write-behind flush trigger
+    try {
+      Veritas.TeacherApi.installWriteBehindTrigger();
+      Logger.log('Write-behind flush trigger installed successfully');
+    } catch (triggerError) {
+      Logger.error('Failed to install write-behind trigger', triggerError);
+      if (!Veritas.TeacherApi.safeUiAlert(
+        'Warning: Write-behind flush trigger installation failed. Secure assessments may lose data. Please contact administrator.',
+        'Veritas Setup Warning'
+      )) {
+        Logger.log('Trigger installation warning shown');
+      }
+    }
+
     if (!Veritas.TeacherApi.safeUiAlert(
       'Sheet setup complete! All tabs configured with headers.',
       'Veritas Live Poll'
@@ -1108,6 +1122,77 @@ Veritas.TeacherApi.ensureHeaders = function(sheet, desiredHeaders) {
       filteredExisting.push.apply(filteredExisting, missingHeaders);
     }
   }
+};
+
+/**
+ * Install or update write-behind flush trigger
+ * CRITICAL: This trigger is required for secure assessments to persist answers
+ * Without it, cached answers will be lost when cache expires (10 min TTL)
+ * @returns {Object} Installation result
+ */
+Veritas.TeacherApi.installWriteBehindTrigger = function() {
+  return withErrorHandling(function() {
+    Veritas.TeacherApi.assertTeacher();
+
+    // Delete existing write-behind triggers to avoid duplicates
+    var triggers = ScriptApp.getProjectTriggers();
+    for (var i = 0; i < triggers.length; i++) {
+      var trigger = triggers[i];
+      if (trigger.getHandlerFunction() === 'flushAnswersWorkerTrigger') {
+        ScriptApp.deleteTrigger(trigger);
+        Logger.log('Deleted existing write-behind flush trigger');
+      }
+    }
+
+    // Create new time-based trigger to run every minute
+    ScriptApp.newTrigger('flushAnswersWorkerTrigger')
+      .timeBased()
+      .everyMinutes(1)
+      .create();
+
+    Logger.log('Write-behind flush trigger installed successfully (runs every minute)');
+
+    return {
+      success: true,
+      message: 'Write-behind flush trigger installed (runs every minute)'
+    };
+  })();
+};
+
+/**
+ * Verify write-behind trigger is installed
+ * @returns {Object} {installed: boolean, lastRun: string|null}
+ */
+Veritas.TeacherApi.verifyWriteBehindTrigger = function() {
+  return withErrorHandling(function() {
+    Veritas.TeacherApi.assertTeacher();
+
+    var triggers = ScriptApp.getProjectTriggers();
+    var found = false;
+    var triggerInfo = null;
+
+    for (var i = 0; i < triggers.length; i++) {
+      var trigger = triggers[i];
+      if (trigger.getHandlerFunction() === 'flushAnswersWorkerTrigger') {
+        found = true;
+        triggerInfo = {
+          handlerFunction: trigger.getHandlerFunction(),
+          triggerSource: trigger.getTriggerSource().toString(),
+          eventType: trigger.getEventType().toString()
+        };
+        break;
+      }
+    }
+
+    return {
+      success: true,
+      installed: found,
+      triggerInfo: triggerInfo,
+      message: found
+        ? 'Write-behind flush trigger is installed'
+        : 'WARNING: Write-behind flush trigger is NOT installed. Secure assessment answers may be lost!'
+    };
+  })();
 };
 
 // =============================================================================

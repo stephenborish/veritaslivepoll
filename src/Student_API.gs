@@ -586,26 +586,23 @@ Veritas.StudentApi.submitIndividualTimedAnswer = function(pollId, sessionId, que
 
 /**
  * Report student violation (fullscreen exit, etc.)
+ * SECURITY FIX: No longer accepts client-provided fallbackEmail to prevent spoofing
  * @param {string} pollId - Poll ID
- * @param {string} token - Session token
+ * @param {string} token - Session token (REQUIRED for security)
  * @param {string} violationType - Violation type
- * @param {string} fallbackEmail - Explicit student email fallback (for when token is unavailable)
  * @returns {Object} Result
  */
-Veritas.StudentApi.reportStudentViolation = function(pollId, token, violationType, fallbackEmail) {
+Veritas.StudentApi.reportStudentViolation = function(pollId, token, violationType) {
   return withErrorHandling(function() {
     var studentEmail = null;
 
-    // CRITICAL FIX: Robust student identification with proper fallback chain
+    // SECURITY FIX: Only accept cryptographically verified identity sources
+    // We do NOT accept client-provided email to prevent violation spoofing
     // Priority order:
-    // 1. Token-based identification (most secure)
-    // 2. Explicit email fallback from client (stored when page loaded)
-    // 3. Active Google session (may work in some deployment modes)
-    // NOTE: We do NOT use getEffectiveUser() as it returns the script owner
-    // in "Execute as: Me" deployments, which would attribute violations
-    // to the teacher instead of the student.
+    // 1. Token-based identification (REQUIRED - cryptographically secure)
+    // 2. Active Google session (fallback for authenticated users)
 
-    // 1. Try token-based identification first (most secure)
+    // 1. Token-based identification (REQUIRED)
     if (token && token.length > 0) {
       try {
         var tokenData = Veritas.StudentApi.validateToken(token);
@@ -616,22 +613,8 @@ Veritas.StudentApi.reportStudentViolation = function(pollId, token, violationTyp
       }
     }
 
-    // 2. Use explicit email fallback from client (stored when page loaded)
-    // This is the critical fix - the client stores the email when the page
-    // first loads with a valid token, so it's available even if the token
-    // becomes unavailable later.
-    if (!studentEmail && fallbackEmail && fallbackEmail.length > 0) {
-      // Basic email validation to prevent injection
-      if (fallbackEmail.indexOf('@') > 0 && fallbackEmail.indexOf('.') > 0) {
-        studentEmail = fallbackEmail;
-        Logger.log('[reportStudentViolation] Using client-provided email fallback:', studentEmail);
-      } else {
-        Logger.log('[reportStudentViolation] Invalid fallback email format:', fallbackEmail);
-      }
-    }
-
-    // 3. Fallback to active user session (Google Apps Script session)
-    // This may work if the user is signed into Google
+    // 2. Fallback to active Google session ONLY if token unavailable
+    // This may work in "Execute as: User accessing the web app" mode
     if (!studentEmail) {
       try {
         var activeEmail = Session.getActiveUser().getEmail();
@@ -644,16 +627,18 @@ Veritas.StudentApi.reportStudentViolation = function(pollId, token, violationTyp
       }
     }
 
-    // NOTE: We intentionally do NOT use Session.getEffectiveUser() as a fallback.
-    // In "Execute as: Me" deployments (per README.md lines 154-159),
-    // getEffectiveUser() returns the script owner (teacher), not the student.
-    // This would incorrectly attribute violations to the teacher.
+    // NOTE: We intentionally do NOT use Session.getEffectiveUser() as it returns
+    // the script owner (teacher) in "Execute as: Me" deployments, which would
+    // incorrectly attribute violations to the teacher.
+    //
+    // SECURITY NOTE: We also do NOT accept client-provided email (fallbackEmail)
+    // as this would allow students to spoof violations for other students.
 
     if (!studentEmail) {
-      Logger.log('[reportStudentViolation] CRITICAL: All identification methods failed. pollId:', pollId, 'violation:', violationType);
+      Logger.log('[reportStudentViolation] CRITICAL: All secure identification methods failed. pollId:', pollId, 'violation:', violationType);
       return {
         success: false,
-        error: 'Could not identify student - authentication required',
+        error: 'Could not identify student securely - valid token required',
         requiresReauth: true
       };
     }

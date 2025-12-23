@@ -31,6 +31,11 @@ Veritas.Routing.doGet = function(e) {
     // Resolve user identity (token or Google auth)
     var identity = Veritas.Routing.resolveIdentity(e);
 
+    // FIX P3-9: Check for teacher account redirect
+    if (identity.redirect) {
+      return identity.redirect;
+    }
+
     // Handle Explicit Mode Routing (Exam, QuestionBank, Manager)
     var mode = (e && e.parameter && e.parameter.mode) ? e.parameter.mode : '';
 
@@ -61,8 +66,10 @@ Veritas.Routing.doGet = function(e) {
 
   } catch (error) {
     Logger.error('doGet error', error);
+    // SECURITY FIX: Escape error message to prevent XSS
+    var safeErrorMessage = Veritas.Routing.escapeHtml(error.message || 'Unknown error occurred');
     return HtmlService.createHtmlOutput(
-      '<h1>Error loading application</h1><p>' + error.message + '</p>'
+      '<h1>Error loading application</h1><p>' + safeErrorMessage + '</p>'
     ).setTitle("Veritas Live Poll - Error");
   }
 };
@@ -89,8 +96,12 @@ Veritas.Routing.resolveIdentity = function(e) {
       throw new Error('Invalid or expired token');
     }
 
+    // SECURITY FIX: Never log raw tokens - log hash prefix instead
+    var tokenHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, token);
+    var tokenPrefix = Utilities.base64Encode(tokenHash).substring(0, 8);
+
     Logger.log('Student accessed via token', {
-      token: token,
+      tokenPrefix: tokenPrefix,  // Only log first 8 chars of hash, never full token
       studentEmail: tokenData.email,
       className: tokenData.className
     });
@@ -328,13 +339,13 @@ Veritas.Routing.maybeRedirectForTeacherAccount = function(e, currentUserEmail) {
 
 /**
  * Serve Exam Student view
+ * SECURITY FIX: Now enforces token class matching and roster enrollment
  */
 Veritas.Routing.serveExamStudentView = function(e, identity) {
   var examId = e.parameter.examId;
   if (!examId) throw new Error('Exam ID is required');
 
-  // Validate Token / Identity
-  // Reuse existing identity resolution (which checks token)
+  // SECURITY FIX: Require valid token for exam access
   if (!identity.studentEmail) {
     if (Veritas.Config.ALLOW_MANUAL_EXAM_CLAIM) {
        return Veritas.Routing.serveExamClaimView(examId);
@@ -343,7 +354,7 @@ Veritas.Routing.serveExamStudentView = function(e, identity) {
     }
   }
 
-  // Verify Roster Enrollment for Exam Class?
+  // Load exam configuration
   var examConfig = Veritas.ExamService.getExamConfig(examId);
   if (!examConfig) throw new Error('Exam not found');
 
@@ -351,12 +362,50 @@ Veritas.Routing.serveExamStudentView = function(e, identity) {
      return HtmlService.createHtmlOutput('<h1>Exam Closed</h1><p>This exam is currently closed.</p>');
   }
 
-  // Derive Student Key (Sanitized email)
-  var studentKey = identity.studentEmail.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  // SECURITY FIX: Enforce token class matches exam class
+  // Prevents students from using tokens for one class to access exams in another class
+  if (identity.token) {
+    var tokenData = TokenManager.validateToken(identity.token);
+    if (tokenData && tokenData.className && tokenData.className !== examConfig.classId) {
+      Veritas.Logging.warn('Exam access denied: token class mismatch', {
+        studentEmail: identity.studentEmail,
+        examId: examId,
+        examClass: examConfig.classId,
+        tokenClass: tokenData.className
+      });
+      return HtmlService.createHtmlOutput(
+        '<h1>Access Denied</h1>' +
+        '<p>Your access token is for class <strong>' + Veritas.Routing.escapeHtml(tokenData.className) + '</strong>, ' +
+        'but this exam is for class <strong>' + Veritas.Routing.escapeHtml(examConfig.classId) + '</strong>.</p>' +
+        '<p>Please use the correct link for your class.</p>'
+      );
+    }
+  }
 
-  // Student Info
+  // SECURITY FIX: Enforce roster enrollment
+  // Students must be enrolled in the exam's class to access it
   var roster = DataAccess.roster.getByClass(examConfig.classId);
   var student = roster.find(function(s) { return s.email === identity.studentEmail; });
+
+  if (!student) {
+    Veritas.Logging.warn('Exam access denied: student not in roster', {
+      studentEmail: identity.studentEmail,
+      examId: examId,
+      examClass: examConfig.classId
+    });
+    return HtmlService.createHtmlOutput(
+      '<h1>Access Denied</h1>' +
+      '<p>You are not enrolled in the class for this exam.</p>' +
+      '<p>If you believe this is an error, please contact your instructor.</p>'
+    );
+  }
+
+  // FIX P3-10: Use SHA-256 hash for student key to prevent collisions
+  // Old method (email.replace) could collide for similar emails (dots, plus aliases, etc.)
+  var emailHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, identity.studentEmail.toLowerCase());
+  var studentKey = Utilities.base64EncodeWebSafe(emailHash).substring(0, 32);
+
+  // Student Info
   var displayName = student ? student.name : identity.studentEmail;
 
   var template = HtmlService.createTemplateFromFile('ExamStudentView');
@@ -519,14 +568,33 @@ Veritas.Routing.serveImage = function(e) {
         .setMimeType(ContentService.MimeType.TEXT);
     }
 
-    // Validate that file is in the allowed folder
-    var parents = file.getParents();
+    // FIX P3-11: Validate that file is in the allowed folder OR any of its subfolders
+    // Walk up the folder tree to check all ancestors
     var isAllowed = false;
+    var maxDepth = 10; // Prevent infinite loops
+    var depth = 0;
+    var currentFolder = null;
 
-    while (parents.hasNext()) {
-      var parent = parents.next();
-      if (parent.getId() === Veritas.Config.ALLOWED_FOLDER_ID) {
+    // Get the file's immediate parent folder(s)
+    var parents = file.getParents();
+    if (parents.hasNext()) {
+      currentFolder = parents.next();
+    }
+
+    // Walk up the folder tree checking each ancestor
+    while (currentFolder && depth < maxDepth && !isAllowed) {
+      if (currentFolder.getId() === Veritas.Config.ALLOWED_FOLDER_ID) {
         isAllowed = true;
+        break;
+      }
+
+      // Move to parent folder
+      var parentFolders = currentFolder.getParents();
+      if (parentFolders.hasNext()) {
+        currentFolder = parentFolders.next();
+        depth++;
+      } else {
+        // No more parents - reached root
         break;
       }
     }

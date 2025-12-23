@@ -719,10 +719,34 @@ function clearAllCaches() {
 }
 
 // =============================================================================
+// TRIGGER HANDLERS
+// =============================================================================
+
+/**
+ * Write-Behind Flush Worker - Time-based trigger handler
+ * CRITICAL: This function is called by the time-based trigger every minute
+ * to flush cached answers from secure assessments to the Responses sheet.
+ * Without this trigger running, cached answers WILL BE LOST after 10 minutes.
+ *
+ * Trigger is installed by setupSheet() or can be manually installed via
+ * Veritas.TeacherApi.installWriteBehindTrigger()
+ */
+function flushAnswersWorkerTrigger() {
+  try {
+    Logger.log('[Trigger] flushAnswersWorkerTrigger starting...');
+    var result = Veritas.Models.Session.flushAnswersWorker();
+    Logger.log('[Trigger] flushAnswersWorkerTrigger completed', result);
+  } catch (error) {
+    Logger.error('[Trigger] flushAnswersWorkerTrigger FAILED', error);
+    // Don't throw - let trigger retry on next cycle
+  }
+}
+
+// =============================================================================
 // SUMMARY
 // =============================================================================
 //
-// Total Exposed Functions: 80
+// Total Exposed Functions: 81
 //
 // Routing: 2 functions
 // - doGet, include

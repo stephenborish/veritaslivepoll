@@ -909,6 +909,18 @@ var DataAccess = {
   },
 
   responses: {
+    /**
+     * Get the Responses sheet (for write-behind flush worker)
+     * @returns {Sheet} Responses sheet
+     * @throws {Error} If sheet doesn't exist
+     */
+    getSheet_: function() {
+      var ss = Veritas.Data.getSpreadsheet();
+      var sheet = Veritas.Data.ensureSheet(ss, Veritas.Config.SHEET_NAMES.RESPONSES);
+      Veritas.Data.ensureHeaders(sheet, Veritas.Config.SHEET_HEADERS.RESPONSES);
+      return sheet;
+    },
+
     getByPoll: function(pollId) {
       var ss = Veritas.Data.getSpreadsheet();
       var sheet = ss.getSheetByName(Veritas.Config.SHEET_NAMES.RESPONSES);
@@ -936,9 +948,43 @@ var DataAccess = {
         .some(function(r) { return Veritas.Config.PROCTOR_VIOLATION_VALUES.indexOf(r[5]) !== -1; });
     },
 
+    /**
+     * Check if student has answered a question
+     * CRITICAL FIX: Now checks BOTH sheet AND pending write-behind cache
+     * to prevent duplicate submissions when using write-behind pattern
+     * @param {string} pollId - Poll ID
+     * @param {number} questionIndex - Question index
+     * @param {string} studentEmail - Student email
+     * @returns {boolean} True if answered (in sheet OR pending cache)
+     */
     hasAnswered: function(pollId, questionIndex, studentEmail) {
-      return this.getByPollAndQuestion(pollId, questionIndex)
+      // Check 1: Sheet (already flushed answers)
+      var inSheet = this.getByPollAndQuestion(pollId, questionIndex)
         .some(function(r) { return r[4] === studentEmail; });
+
+      if (inSheet) {
+        return true;
+      }
+
+      // Check 2: Pending write-behind cache (not yet flushed)
+      // Must check cache to prevent race condition where student submits
+      // multiple times before flush worker runs
+      try {
+        var cache = CacheService.getScriptCache();
+        var key = Veritas.Models.Session.getWriteBehindKey(pollId, studentEmail, questionIndex);
+        var cachedAnswer = cache.get(key);
+
+        if (cachedAnswer) {
+          // Answer is pending flush - treat as already answered
+          return true;
+        }
+      } catch (cacheError) {
+        // If cache check fails, log but don't block
+        // (fail open to avoid blocking legitimate submissions)
+        Veritas.Logging.error('hasAnswered cache check failed', cacheError);
+      }
+
+      return false;
     },
 
     /**

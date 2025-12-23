@@ -6547,10 +6547,12 @@
         return;
       }
 
+      // FIX: Only show toasts for LOCKED students (new violations), not AWAITING_FULLSCREEN
+      // AWAITING_FULLSCREEN means the teacher already approved re-entry - no need for more toasts
       var actionable = flaggedStudents.filter(function (student) {
         if (!student) { return false; }
         var normalized = deriveProctorStatus(student);
-        return normalized === 'LOCKED' || normalized === 'AWAITING_FULLSCREEN';
+        return normalized === 'LOCKED';
       });
 
       var activeEmails = new Set();
@@ -6573,12 +6575,8 @@
         lockToastState[email] = lockVersion;
 
         var studentName = formatStudentName(student);
-        var normalized = deriveProctorStatus(student);
-        var context = normalized === 'AWAITING_FULLSCREEN'
-          ? 'needs to re-confirm fullscreen before continuing.'
-          : 'exited fullscreen or switched tabs.';
 
-        showToast('warning', 'Approve re-entry', studentName + ' ' + context, 6000, {
+        showToast('warning', 'Approve re-entry', studentName + ' exited fullscreen or switched tabs.', 6000, {
           label: 'Approve',
           onClick: function () {
             if (!CURRENT_POLL_DATA || !CURRENT_POLL_DATA.pollId) return;

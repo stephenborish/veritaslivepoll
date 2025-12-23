@@ -2718,8 +2718,15 @@
                 currentConfig = Object.assign({}, options, { mode: mode });
                 allowEscape = options.allowEscape !== false;
                 titleEl.textContent = options.title || (mode === 'confirm' ? 'Please Confirm' : (mode === 'prompt' ? 'Enter Response' : 'Notice'));
+
+                // SECURITY DOCUMENTATION: Trust Boundary for options.html
+                // The options.html parameter accepts raw HTML and uses innerHTML (XSS risk).
+                // This is INTERNAL-ONLY and must NEVER receive user-controlled data.
+                // All callers of openModal() in this codebase use app-controlled strings only.
+                // If adding new calls with dynamic content, use options.message (textContent) instead,
+                // or sanitize user data with escapeHtml() before passing to options.html.
                 if (options.html) {
-                    messageEl.innerHTML = options.html;
+                    messageEl.innerHTML = options.html;  // INTERNAL ONLY - never pass user data
                 } else {
                     messageEl.textContent = options.message || '';
                 }
@@ -4155,6 +4162,10 @@
             document.body.style.opacity = '1';
             container.style.display = 'flex';
 
+            // SECURITY FIX: Escape reason to prevent XSS (even though currently app-controlled)
+            // This protects against future refactoring where user-controlled data might flow here
+            var safeReason = reason ? escapeHtml(reason) : UX_COPY.LOCKED.body;
+
             container.innerHTML = `
                 <div class="flex flex-col items-center justify-center h-full w-full max-w-2xl mx-auto p-8 animate-fade-in text-center">
 
@@ -4173,7 +4184,7 @@
                             ${UX_COPY.LOCKED.badge}
                         </p>
                         <p class="text-lg text-gray-800 dark:text-gray-100">
-                            ${reason || UX_COPY.LOCKED.body}
+                            ${safeReason}
                         </p>
                     </div>
 

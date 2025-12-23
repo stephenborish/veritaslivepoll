@@ -21,16 +21,46 @@ Veritas.Config.STUDENT_TOKEN_INDEX_KEY = 'STUDENT_TOKEN_INDEX';
 // --- EXAM CONFIGURATION ---
 Veritas.Config.DEBUG_FIREBASE = false; // Toggle for on-screen debug HUD (set true to show Firebase connection status)
 Veritas.Config.ALLOW_MANUAL_EXAM_CLAIM = false; // Set to true to allow manual student ID entry if token is missing
-// Firebase Config
-Veritas.Config.FIREBASE_CONFIG = {
-  apiKey: "AIzaSyAv0bCe5KIuQx_sou8toBy5DG2PYaB_pBM",
-  authDomain: "classroomproctor.firebaseapp.com",
-  databaseURL: "https://classroomproctor-default-rtdb.firebaseio.com",
-  projectId: "classroomproctor",
-  storageBucket: "classroomproctor.firebasestorage.app",
-  messagingSenderId: "600627073908",
-  appId: "1:600627073908:web:935970f5849b28f6ad5221"
+
+// Firebase Config - SECURITY: Load from Script Properties instead of hardcoding
+Veritas.Config.getFirebaseConfig = function() {
+  var props = PropertiesService.getScriptProperties();
+  var firebaseConfigJson = props.getProperty('FIREBASE_CONFIG');
+
+  // If configured in Script Properties, use that (RECOMMENDED for production)
+  if (firebaseConfigJson) {
+    try {
+      return JSON.parse(firebaseConfigJson);
+    } catch (e) {
+      Veritas.Logging.error('Failed to parse FIREBASE_CONFIG from Script Properties', e);
+    }
+  }
+
+  // Fallback to default config (DEPRECATED - should migrate to Script Properties)
+  // To migrate: Run DevTools.setFirebaseConfig() with your Firebase credentials
+  console.warn('WARNING: Using default Firebase config. For production, store credentials in Script Properties using DevTools.setFirebaseConfig()');
+  return {
+    apiKey: "AIzaSyAv0bCe5KIuQx_sou8toBy5DG2PYaB_pBM",
+    authDomain: "classroomproctor.firebaseapp.com",
+    databaseURL: "https://classroomproctor-default-rtdb.firebaseio.com",
+    projectId: "classroomproctor",
+    storageBucket: "classroomproctor.firebasestorage.app",
+    messagingSenderId: "600627073908",
+    appId: "1:600627073908:web:935970f5849b28f6ad5221"
+  };
 };
+
+// Legacy support: Keep FIREBASE_CONFIG as property for backwards compatibility
+// NOTE: This will call getFirebaseConfig() on first access, then cache the result
+Object.defineProperty(Veritas.Config, 'FIREBASE_CONFIG', {
+  get: function() {
+    if (!this._firebaseConfigCache) {
+      this._firebaseConfigCache = this.getFirebaseConfig();
+    }
+    return this._firebaseConfigCache;
+  },
+  configurable: true
+});
 
 // --- CACHING ---
 Veritas.Config.CLASS_LINKS_CACHE_PREFIX = 'CLASS_LINKS_';

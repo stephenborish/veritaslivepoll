@@ -437,7 +437,9 @@ Veritas.Routing.serveExamTeacherView = function(e) {
   var roster = DataAccess.roster.getByClass(examConfig.classId);
   var rosterMap = {};
   roster.forEach(function(s) {
-     var key = s.email.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+     // FIX: Use same SHA-256 hash as student view to ensure keys match
+     var emailHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, s.email.toLowerCase());
+     var key = Utilities.base64EncodeWebSafe(emailHash).substring(0, 32);
      rosterMap[key] = { name: s.name, email: s.email };
   });
 

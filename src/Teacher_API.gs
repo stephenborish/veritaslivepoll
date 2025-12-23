@@ -898,6 +898,22 @@ Veritas.TeacherApi.teacherApproveUnlock = function(studentEmail, pollId, expecte
 };
 
 /**
+ * Force unlock student when server has no lock record but student is locked client-side.
+ * This handles the edge case where Firebase reported a violation but the server call failed.
+ * @param {string} studentEmail - Student email
+ * @param {string} pollId - Poll ID
+ * @returns {Object} Result
+ */
+Veritas.TeacherApi.teacherForceUnlock = function(studentEmail, pollId) {
+  return withErrorHandling(function() {
+    Veritas.TeacherApi.assertTeacher();
+
+    // Delegate to Models layer
+    return Veritas.Models.Session.teacherForceUnlock(studentEmail, pollId);
+  })();
+};
+
+/**
  * Block student from assessment
  * @param {string} pollId - Poll ID
  * @param {string} studentEmail - Student email

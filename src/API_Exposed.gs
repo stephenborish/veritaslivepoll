@@ -480,6 +480,16 @@ function teacherApproveUnlock(studentEmail, pollId, expectedLockVersion) {
 }
 
 /**
+ * Force unlock student when server has no lock record but student is locked client-side
+ * @param {string} studentEmail - Student email
+ * @param {string} pollId - Poll ID
+ * @returns {Object} Result
+ */
+function teacherForceUnlock(studentEmail, pollId) {
+  return Veritas.TeacherApi.teacherForceUnlock(studentEmail, pollId);
+}
+
+/**
  * Block student
  * @param {string} pollId - Poll ID
  * @param {string} studentEmail - Student email

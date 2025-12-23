@@ -2393,6 +2393,66 @@ Veritas.Models.Session.teacherApproveUnlock = function(studentEmail, pollId, exp
 };
 
 /**
+ * Force unlock a student when server has no lock record but student is locked client-side.
+ * This handles the edge case where Firebase reported a violation but the server call failed.
+ * Creates an AWAITING_FULLSCREEN record so the student can resume via fullscreen confirmation.
+ */
+Veritas.Models.Session.teacherForceUnlock = function(studentEmail, pollId) {
+  return withErrorHandling(function() {
+    var teacherEmail = Veritas.Dev.getCurrentUser();
+
+    if (teacherEmail !== Veritas.Config.TEACHER_EMAIL) {
+      throw new Error('Unauthorized');
+    }
+
+    if (!studentEmail || !pollId) {
+      throw new Error('Invalid parameters');
+    }
+
+    return Veritas.Utils.withLock(function() {
+      var statusValues = DataAccess.liveStatus.get();
+      var metadata = (statusValues && statusValues.metadata) ? statusValues.metadata : {};
+      var currentSessionId = metadata && metadata.sessionId ? metadata.sessionId : null;
+
+      var currentState = Veritas.Models.Session.ProctorAccess.getState(pollId, studentEmail, currentSessionId);
+
+      // If already AWAITING_FULLSCREEN, just return success
+      if (currentState.status === 'AWAITING_FULLSCREEN') {
+        return { ok: true, status: 'AWAITING_FULLSCREEN', lockVersion: currentState.lockVersion || 0 };
+      }
+
+      // Create or update state to AWAITING_FULLSCREEN
+      var newLockVersion = (currentState.lockVersion || 0) + 1;
+      var newState = {
+        pollId: pollId,
+        studentEmail: studentEmail,
+        status: 'AWAITING_FULLSCREEN',
+        lockVersion: newLockVersion,
+        lockReason: currentState.lockReason || 'force-unlock::client-desync',
+        lockedAt: currentState.lockedAt || new Date().toISOString(),
+        unlockApproved: true,
+        unlockApprovedBy: teacherEmail,
+        unlockApprovedAt: new Date().toISOString(),
+        sessionId: currentSessionId,
+        rowIndex: currentState.rowIndex || null
+      };
+
+      Veritas.Models.Session.ProctorAccess._setStateNoLock(newState);
+
+      Veritas.Models.Session.ProctorTelemetry.log('force_unlock', studentEmail, pollId, {
+        lockVersion: newLockVersion,
+        approvedBy: teacherEmail,
+        status: 'AWAITING_FULLSCREEN',
+        reason: 'client-server-desync'
+      });
+
+      Logger.log('Force unlock completed for ' + studentEmail + ' in poll ' + pollId);
+      return { ok: true, status: 'AWAITING_FULLSCREEN', lockVersion: newLockVersion };
+    });
+  })();
+};
+
+/**
  * Teacher blocks student
  */
 Veritas.Models.Session.teacherBlockStudent = function(studentEmail, pollId, reason) {
@@ -3002,6 +3062,10 @@ function getStudentProctorState(token) {
 
 function teacherApproveUnlock(studentEmail, pollId, expectedLockVersion) {
   return Veritas.Models.Session.teacherApproveUnlock(studentEmail, pollId, expectedLockVersion);
+}
+
+function teacherForceUnlock(studentEmail, pollId) {
+  return Veritas.Models.Session.teacherForceUnlock(studentEmail, pollId);
 }
 
 function teacherBlockStudent(studentEmail, pollId, reason) {

@@ -494,7 +494,11 @@ Veritas.Utils.TokenManager = {
     };
 
     this._saveStructures(struct);
-    Veritas.Logging.info('Token generated', { email: studentEmail, token: token });
+
+    // SECURITY FIX: Never log raw tokens - log hash prefix instead
+    var tokenHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, token);
+    var tokenPrefix = Utilities.base64Encode(tokenHash).substring(0, 8);
+    Veritas.Logging.info('Token generated', { email: studentEmail, tokenPrefix: tokenPrefix });
 
     return token;
   },

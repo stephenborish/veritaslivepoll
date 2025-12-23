@@ -3060,12 +3060,17 @@ function buildInitialAnswerOrderMap_(poll) {
 
 /**
  * Write-Behind Cache Key Generator
+ * CRITICAL FIX: Now includes questionIndex to prevent answer collision/overwrite
  * @param {string} pollId - Poll ID
  * @param {string} email - Student email
+ * @param {number} questionIndex - Question index (required to prevent collisions)
  * @returns {string} Cache key
  */
-Veritas.Models.Session.getWriteBehindKey = function(pollId, email) {
-  return 'pending_ans_' + pollId + '_' + email.replace(/[^a-zA-Z0-9]/g, '_');
+Veritas.Models.Session.getWriteBehindKey = function(pollId, email, questionIndex) {
+  if (typeof questionIndex !== 'number') {
+    throw new Error('questionIndex is required for write-behind cache key');
+  }
+  return 'pending_ans_' + pollId + '_' + questionIndex + '_' + email.replace(/[^a-zA-Z0-9]/g, '_');
 };
 
 /**
@@ -3074,7 +3079,7 @@ Veritas.Models.Session.getWriteBehindKey = function(pollId, email) {
  */
 Veritas.Models.Session.cacheAnswerForWriteBehind = function(answerData) {
   var cache = CacheService.getScriptCache();
-  var key = Veritas.Models.Session.getWriteBehindKey(answerData.pollId, answerData.studentEmail);
+  var key = Veritas.Models.Session.getWriteBehindKey(answerData.pollId, answerData.studentEmail, answerData.actualQuestionIndex);
 
   // Store with 10 minute TTL (plenty of time for flush worker)
   var payload = JSON.stringify({

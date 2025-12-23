@@ -22,8 +22,11 @@ This document summarizes the critical fixes applied to address security vulnerab
 - ✅ Created `verifyWriteBehindTrigger()` in `src/Teacher_API.gs:1166-1196`
 - ✅ Added trigger handler `flushAnswersWorkerTrigger()` in `src/API_Exposed.gs:734-743`
 - ✅ Updated `setupSheet()` to auto-install trigger on setup
+- ✅ Added required OAuth scope `script.scriptapp` to `src/appsscript.json`
 
 **Impact:** CRITICAL - Without these fixes, student answers could be lost permanently. Now answers are properly isolated by question and cached answers are checked before allowing resubmission.
+
+**⚠️ SETUP REQUIRED:** After deployment, users must re-authorize to grant the new `script.scriptapp` permission. See `TRIGGER_SETUP_GUIDE.md` for complete setup instructions and troubleshooting.
 
 ---
 

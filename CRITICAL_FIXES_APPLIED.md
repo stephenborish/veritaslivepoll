@@ -151,10 +151,13 @@ These issues require more substantial refactoring and are documented for future 
 - Used sanitized email (`email.replace(/[^a-z0-9]/gi, '_')`)
 - Could collide for similar emails (dots, plus aliases, etc.)
 
-**Fix Applied:**
-- ✅ Now uses SHA-256 hash in `src/Main_Routing.gs:403-406`
+**Fixes Applied:**
+- ✅ Student view uses SHA-256 hash in `src/Main_Routing.gs:394-395`
+- ✅ Teacher view uses SHA-256 hash in `src/Main_Routing.gs:440-443` (critical consistency fix)
 
 **Impact:** MEDIUM - Prevents student data mixing in Firebase exam storage
+
+**Critical Note:** Initial fix only updated student side, causing teacher/student key mismatch that broke exam monitoring. Second commit (a2bdfc8) fixed teacher side to ensure keys match on both sides.
 
 ### 10. Image Proxy Subfolder Access
 

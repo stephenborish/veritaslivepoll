@@ -6812,14 +6812,15 @@
         return;
       }
 
-      // 1. FIREBASE WRITE (Instant)
-      setFirebaseStatus(email, 'ACTIVE');
       recordTeacherAction('Unlock ' + email);
 
-      // 2. SERVER WRITE (Canonical)
+      // Server call FIRST, then Firebase write on success
+      // This prevents desync where Firebase shows ACTIVE but server has no lock record
       google.script.run
         .withSuccessHandler(async function (response) {
           if (response.ok) {
+            // SUCCESS: Now write to Firebase for instant student feedback
+            setFirebaseStatus(email, 'ACTIVE');
             currentStudentStatusData = currentStudentStatusData.map(function (s) {
               if (s.email === email) {
                 return {
@@ -6844,7 +6845,11 @@
             // Provide specific error messages based on failure reason
             var errorMsg = 'Failed to unlock student. Please try again.';
             if (response.reason === 'not_locked') {
-              errorMsg = 'Student is not currently locked on the server. The violation may not have been reported properly. Try refreshing the page.';
+              // CRITICAL FIX: Student is locked client-side (Firebase shows locked, student has poison pill)
+              // but server has no record. Use force unlock to create the record and let student resume.
+              console.warn('[Proctor] Server has no lock record - using force unlock for:', email);
+              teacherForceUnlock(email, pollId, buttonElement);
+              return;
             } else if (response.reason === 'version_mismatch') {
               errorMsg = 'Lock version mismatch (student may have violated again). Refreshing status and retrying...';
               // Auto-retry with correct version
@@ -6877,6 +6882,61 @@
           }
         })
         .teacherApproveUnlock(email, pollId, lockVersion);
+    }
+
+    /**
+     * Force unlock a student when server has no lock record but student is locked client-side.
+     * This handles the edge case where Firebase reported a violation but the server call failed.
+     */
+    async function teacherForceUnlock(email, pollId, buttonElement) {
+      google.script.run
+        .withSuccessHandler(async function (response) {
+          if (response.ok) {
+            // SUCCESS: Now write to Firebase for instant student feedback
+            setFirebaseStatus(email, 'ACTIVE');
+            currentStudentStatusData = currentStudentStatusData.map(function (s) {
+              if (s.email === email) {
+                return {
+                  name: s.name,
+                  email: s.email,
+                  status: 'AWAITING_FULLSCREEN',
+                  lockVersion: response.lockVersion || 0,
+                  lockReason: s.lockReason,
+                  lockedAt: s.lockedAt,
+                  answer: s.answer,
+                  isCorrect: s.isCorrect,
+                  timestamp: s.timestamp
+                };
+              }
+              return s;
+            });
+            renderStudentStatus();
+            await veritasAlert('Student approved for re-entry. They must re-enter fullscreen to continue.', {
+              title: 'Unlock approved'
+            });
+          } else {
+            await veritasAlert(response.message || 'Failed to force unlock student.', {
+              title: 'Unlock failed',
+              destructive: true
+            });
+            if (buttonElement) {
+              buttonElement.disabled = false;
+              var lastSpan = buttonElement.querySelector('span:last-child');
+              if (lastSpan) lastSpan.textContent = formatStudentName(email);
+            }
+          }
+        })
+        .withFailureHandler(async function (error) {
+          await veritasAlert('Error: ' + (error.message || error), {
+            title: 'Force unlock failed',
+            destructive: true
+          });
+          if (buttonElement) {
+            buttonElement.disabled = false;
+            buttonElement.querySelector('span:last-child').textContent = formatStudentName(email);
+          }
+        })
+        .teacherForceUnlock(email, pollId);
     }
 
     function createResetButton(student) {

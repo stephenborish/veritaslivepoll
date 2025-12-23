@@ -1053,16 +1053,37 @@ Veritas.TeacherApi.setupSheet = function() {
     });
 
     // CRITICAL FIX: Install write-behind flush trigger
+    // Note: This may fail if the user hasn't authorized trigger permissions yet
     try {
       Veritas.TeacherApi.installWriteBehindTrigger();
       Logger.log('Write-behind flush trigger installed successfully');
     } catch (triggerError) {
+      var isPermissionError = String(triggerError).indexOf('permission') !== -1 ||
+                               String(triggerError).indexOf('AUTHORIZATION') !== -1;
+
       Logger.error('Failed to install write-behind trigger', triggerError);
-      if (!Veritas.TeacherApi.safeUiAlert(
-        'Warning: Write-behind flush trigger installation failed. Secure assessments may lose data. Please contact administrator.',
-        'Veritas Setup Warning'
-      )) {
-        Logger.log('Trigger installation warning shown');
+
+      if (isPermissionError) {
+        var permissionMsg = 'TRIGGER SETUP REQUIRED:\n\n' +
+          'The script needs additional permissions to manage triggers.\n\n' +
+          'To fix this:\n' +
+          '1. Open Apps Script Editor (Extensions > Apps Script)\n' +
+          '2. Run setupSheet from the editor (not from the menu)\n' +
+          '3. Click "Review Permissions" and accept\n' +
+          '4. Or manually create the trigger (see TRIGGER_SETUP_GUIDE.md)\n\n' +
+          'Without the trigger, secure assessment answers may be lost!';
+        Logger.log(permissionMsg);
+
+        if (!Veritas.TeacherApi.safeUiAlert(permissionMsg, 'Veritas - Authorization Required')) {
+          Logger.log('Trigger permission warning logged (UI not available)');
+        }
+      } else {
+        if (!Veritas.TeacherApi.safeUiAlert(
+          'Warning: Write-behind flush trigger installation failed. Secure assessments may lose data. Please contact administrator.',
+          'Veritas Setup Warning'
+        )) {
+          Logger.log('Trigger installation warning shown');
+        }
       }
     }
 
@@ -1125,6 +1146,20 @@ Veritas.TeacherApi.ensureHeaders = function(sheet, desiredHeaders) {
 };
 
 /**
+ * Check if ScriptApp trigger permissions are available
+ * @returns {boolean} True if trigger permissions are available
+ */
+Veritas.TeacherApi.hasTriggerPermissions = function() {
+  try {
+    // Attempt to get triggers - this will fail without script.scriptapp scope
+    ScriptApp.getProjectTriggers();
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
+/**
  * Install or update write-behind flush trigger
  * CRITICAL: This trigger is required for secure assessments to persist answers
  * Without it, cached answers will be lost when cache expires (10 min TTL)
@@ -1133,6 +1168,24 @@ Veritas.TeacherApi.ensureHeaders = function(sheet, desiredHeaders) {
 Veritas.TeacherApi.installWriteBehindTrigger = function() {
   return withErrorHandling(function() {
     Veritas.TeacherApi.assertTeacher();
+
+    // Check for trigger permissions before attempting operations
+    if (!Veritas.TeacherApi.hasTriggerPermissions()) {
+      var errorMsg = 'AUTHORIZATION REQUIRED: The script needs re-authorization to manage triggers.\n\n' +
+        'To fix this:\n' +
+        '1. Open Apps Script Editor (Extensions > Apps Script)\n' +
+        '2. Run the setupSheet function manually from the editor\n' +
+        '3. Click "Review Permissions" when prompted\n' +
+        '4. Grant the "See, edit, create, and delete all Apps Script projects" permission\n\n' +
+        'Alternatively, create the trigger manually:\n' +
+        '1. In Apps Script, click the clock icon (Triggers)\n' +
+        '2. Click "+ Add Trigger"\n' +
+        '3. Function: flushAnswersWorkerTrigger, Time-driven, Minutes, Every minute\n\n' +
+        'See TRIGGER_SETUP_GUIDE.md for detailed instructions.';
+
+      Logger.error('Trigger permissions not available - re-authorization required');
+      throw new Error(errorMsg);
+    }
 
     // Delete existing write-behind triggers to avoid duplicates
     var triggers = ScriptApp.getProjectTriggers();
@@ -1166,6 +1219,16 @@ Veritas.TeacherApi.installWriteBehindTrigger = function() {
 Veritas.TeacherApi.verifyWriteBehindTrigger = function() {
   return withErrorHandling(function() {
     Veritas.TeacherApi.assertTeacher();
+
+    // Check for trigger permissions first
+    if (!Veritas.TeacherApi.hasTriggerPermissions()) {
+      return {
+        success: false,
+        installed: false,
+        permissionError: true,
+        message: 'Cannot verify trigger - script needs re-authorization. Run setupSheet from Apps Script Editor and accept new permissions.'
+      };
+    }
 
     var triggers = ScriptApp.getProjectTriggers();
     var found = false;

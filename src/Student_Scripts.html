@@ -622,31 +622,8 @@
                 hideLockEnforcementUI();
             },
             renderLockScreen: function (reason) {
-                // FIX TASK C: Show specific violation reason with fun-but-serious copy
-                var reasonText = reason || 'violation';
-                var title = 'Locked: proctoring violation';
-                var body = '';
-                var emoji = '🔒';
-
-                // Parse specific violation types
-                if (reasonText.toLowerCase().indexOf('fullscreen') >= 0 || reasonText.toLowerCase().indexOf('exit') >= 0) {
-                    title = 'Locked: fullscreen exited';
-                    body = 'You exited fullscreen. That\'s a proctoring violation.';
-                    emoji = '🚫';
-                } else if (reasonText.toLowerCase().indexOf('blur') >= 0 || reasonText.toLowerCase().indexOf('tab') >= 0 || reasonText.toLowerCase().indexOf('switch') >= 0) {
-                    title = 'Locked: tab switched';
-                    body = 'You switched tabs or lost focus. That\'s a proctoring violation.';
-                    emoji = '👀';
-                } else if (reasonText.toLowerCase().indexOf('visibility') >= 0) {
-                    title = 'Locked: screen focus lost';
-                    body = 'You left the exam window. That\'s a proctoring violation.';
-                    emoji = '⚠️';
-                } else {
-                    body = 'Security violation detected (' + reasonText + ').';
-                }
-
-                var fullMessage = title + '\n\n' + body + '\n\nYour teacher must approve re-entry.\n\nRaise your hand. Don\'t refresh or you\'ll stay locked.\n\n' + emoji + ' No sneaky tabs — I see you (teacher does too).';
-                showLockEnforcementUI(title, fullMessage);
+                // Use the new Hybrid UI - pass reason to showLockEnforcementUI
+                showLockEnforcementUI(reason);
             }
         };
 
@@ -714,7 +691,7 @@
             }
 
             // Show lock overlay with professional messaging
-            showLockEnforcementUI('Assessment Paused', 'Proctoring protocol activated. Your teacher will grant re-entry.');
+            showLockEnforcementUI();
 
             // Send priority violation report to server
             var activePollId = (currentPollState && currentPollState.pollId) ||
@@ -760,7 +737,7 @@
                     console.log('[Proctor] POISON PILL ACTIVE - Restoring lock state from sessionStorage:', lockReason);
                     isInteractionBlocked = true;
                     violationLogged = true;
-                    showLockEnforcementUI('Assessment Paused', 'Proctoring protocol active. Your teacher will grant re-entry.');
+                    showLockEnforcementUI();
                     // Start proctor polling to wait for server unlock
                     startProctorPolling();
                     return true;
@@ -1737,7 +1714,7 @@
             if (isPoisonPillActive()) {
                 console.log('[Proctor] POISON PILL ACTIVE in pollForIndividualSessionState - blocking');
                 isInteractionBlocked = true;
-                showLockEnforcementUI('Assessment Paused', 'Proctoring protocol active. Your teacher will grant re-entry.');
+                showLockEnforcementUI();
                 return;
             }
 
@@ -1984,28 +1961,23 @@
         }
 
         /**
-         * UNIFIED PROCTORING & SNIPPING TRAP
+         * UNIFIED PROCTORING HANDLER
          * Handles blur, fullscreen exit, and tab switching.
+         * Flow: 1. Check Calculator (Safe Harbor) -> 2. Set Lock Flag -> 3. Report Violation -> 4. Show Lock UI
          */
         function handlePotentialViolation(reason) {
             // 1. SAFE HARBOR CHECK (Critical)
-            // If the student is clicking inside the TI-84 Calculator iframe, 
+            // If the student is clicking inside the TI-84 Calculator iframe,
             // the window 'blurs', but this is NOT a violation. Return immediately.
             if (document.activeElement && document.activeElement.id === 'calc-iframe') {
                 return;
             }
 
-            // 2. THE FLASH (The Snipping Tool Trap)
-            // IMMEDIATELY hide the content. This happens before the Screenshot tool 
-            // can capture the screen buffer. The user gets a picture of nothing.
-            document.body.style.opacity = '0';
-            document.body.style.transition = 'none'; // Prevent fade-out animation delay
-
-            // 3. THE LOCK (Poison Pill)
+            // 2. THE LOCK (Poison Pill)
             // Persist the lock state so a refresh won't fix it.
             sessionStorage.setItem('veritas_lock_active', 'true');
 
-            // 4. THE REPORT
+            // 3. THE REPORT
             // Send telemetry to the server (if ID exists)
             if (typeof reportViolation === 'function') {
                 reportViolation(reason);
@@ -2013,18 +1985,8 @@
                 reportViolationDebounced(reason);
             }
 
-            // 5. THE RESTORATION
-            // We must show the Lock UI, but currently the body is invisible (opacity 0).
-            // We render the lock UI, then wait 100ms (enough time for the screenshot 
-            // tool to fail) before making the screen visible again so the student 
-            // can read the error message.
+            // 4. SHOW LOCK UI
             showLockEnforcementUI(reason);
-
-            setTimeout(function() {
-                // Bring the visual back so they can see the "LOCKED" message
-                document.body.style.transition = 'opacity 0.5s ease-in';
-                document.body.style.opacity = '1';
-            }, 100);
         }
 
         // ROBUST VIOLATION REPORTING WITH FAILSAFE POLL ID LOOKUP
@@ -2077,7 +2039,7 @@
             if (!isInteractionBlocked && !violationLogged && secureSessionActive) {
                 console.log('[Proctor] Violation detected:', reason, '- blocking interaction immediately');
                 isInteractionBlocked = true;
-                showLockEnforcementUI('Assessment Paused', 'Proctoring event detected...');
+                showLockEnforcementUI();
 
                 // FIREBASE: Instant Lock
                 reportFirebaseViolation(reason);
@@ -2107,7 +2069,7 @@
                 if (!activePollId) {
                     console.error('[Proctor] CRITICAL: Cannot report violation - no poll ID found in any source');
                     // Still show lock UI even without server report
-                    showLockEnforcementUI('Assessment Paused', 'A policy violation was detected. Your teacher has been notified.');
+                    showLockEnforcementUI();
                     return;
                 }
 
@@ -2124,19 +2086,19 @@
                     try { fallbackEmail = sessionStorage.getItem('veritas_student_email') || ''; } catch (e) {}
                 }
 
-                showLockEnforcementUI('Assessment Paused', 'Notifying your teacher...');
+                showLockEnforcementUI();
                 google.script.run
                     .withSuccessHandler(function (response) {
                         console.log('[Proctor] Violation reported, server response:', response);
                         if (response.success) {
                             currentLockVersion = response.lockVersion;
-                            showLockEnforcementUI('Assessment Paused', 'Your teacher has been notified and will grant re-entry.');
+                            showLockEnforcementUI();
                             startProctorPolling();
                         }
                     })
                     .withFailureHandler(function (error) {
                         console.error('[Proctor] Violation report failed:', error);
-                        showLockEnforcementUI('Assessment Paused', 'Connection issue detected. Stay on this screen—your teacher will re-admit you.');
+                        showLockEnforcementUI();
                     })
                     .reportStudentViolation(activePollId, SESSION_TOKEN, reason, fallbackEmail);
             }, 100);
@@ -2906,7 +2868,7 @@
             // Guard: Check for persisted lock
             if (sessionStorage.getItem('veritas_lock_active') === 'true') {
                 if (typeof showLockEnforcementUI === 'function') {
-                    showLockEnforcementUI('Assessment Paused', 'Proctoring protocol active. Your teacher will grant re-entry.');
+                    showLockEnforcementUI();
                 }
                 return;
             }
@@ -2915,7 +2877,7 @@
             if (isPoisonPillActive()) {
                 console.log('[Proctor] POISON PILL ACTIVE in startPolling - blocking resume');
                 isInteractionBlocked = true;
-                showLockEnforcementUI('Assessment Paused', 'Proctoring protocol active. Your teacher will grant re-entry.');
+                showLockEnforcementUI();
                 startProctorPolling();
                 return;
             }
@@ -3327,7 +3289,7 @@
                 } else {
                     // Show lock screen WITHOUT hiding other views first
                     if (typeof showLockEnforcementUI === 'function') {
-                        showLockEnforcementUI('Assessment Paused', 'Proctoring protocol active. Your teacher will grant re-entry.');
+                        showLockEnforcementUI();
                     }
                     isInteractionBlocked = true;
                     startProctorPolling();
@@ -4145,50 +4107,84 @@
 
         /**
          * VERITAS UI CONFIGURATION
-         * Theme: "Smart Wit" (Scientific, Sharp, Concise)
+         * Theme: "Clear Protocol + Calm Guide" (Hybrid)
+         * Tone: Warm but Precise. Human but Authoritative.
          */
         const UX_COPY = {
+            // VIOLATION
             LOCKED: {
-                title: "Experimental Error",
-                icon: "warning",
-                body: "You introduced an uncontrolled variable: Exiting Fullscreen.",
-                footer: "Anomaly flagged on Teacher Dashboard. Awaiting manual override."
+                title: "You Stepped Out",
+                icon: "door_open",
+                body: "The session detected activity outside this window.",
+                footer: "This was flagged automatically. Your instructor can bring you back in.",
+                badge: "OUTSIDE THE ROOM",
+                statusLight: "LINK ACTIVE"
+            },
+            // LOBBY
+            PRE_LIVE: {
+                title: "Checked In",
+                icon: "how_to_reg",
+                body: "You're in the room. Waiting for the green light."
+            },
+            // SUBMITTED
+            RESPONSE_SUBMITTED: {
+                title: "Answer Sent",
+                icon: "outgoing_mail",
+                body: "Recorded. Sit back while the class catches up."
+            },
+            // REVEAL
+            WAITING_FOR_REVEAL: {
+                title: "Time's Up",
+                icon: "timer_off",
+                body: "Answers are sealed. Reveal is in your instructor's hands."
+            },
+            // TRANSITION
+            BETWEEN_QUESTIONS: {
+                title: "Switching Gears",
+                icon: "swap_horiz",
+                body: "Next question on deck."
             }
         };
 
-        function showLockEnforcementUI(title, reason) {
+        // --- AMBER LOCK SCREEN RENDERER ---
+        function showLockEnforcementUI(reason) {
             var container = document.getElementById('lock-overlay');
-            if (!container) {
-                console.error('[Lock] lock-overlay element not found!');
-                // Fallback: show status container with lock message
-                showStatusPanel({
-                    icon: 'lock',
-                    iconClass: 'text-amber-600',
-                    message: title || UX_COPY.LOCKED.title,
-                    messageClass: 'text-gray-900 text-xl font-semibold',
-                    subtext: reason || UX_COPY.LOCKED.body,
-                    subClass: 'text-gray-700 text-base mt-4',
-                    showResume: false,
-                    lockScroll: true
-                });
-                return;
-            }
+            if (!container) return;
 
-            // Ensure content is visible again after the "Snipping Trap" flash
+            // Reset opacity to ensure visibility (cleanup from old trap code)
             document.body.style.opacity = '1';
-
             container.style.display = 'flex';
+
             container.innerHTML = `
                 <div class="flex flex-col items-center justify-center h-full w-full max-w-2xl mx-auto p-8 animate-fade-in text-center">
-                    <div class="h-24 w-24 bg-amber-50 rounded-full flex items-center justify-center mb-6 shadow-sm border border-amber-200">
-                        <span class="material-symbols-outlined text-5xl text-amber-600">${UX_COPY.LOCKED.icon}</span>
+
+                    <div class="h-20 w-20 bg-amber-50 dark:bg-amber-900/20 rounded-full flex items-center justify-center mb-6 border-2 border-amber-200 dark:border-amber-700">
+                        <span class="material-symbols-outlined text-4xl text-amber-600 dark:text-amber-400">
+                            ${UX_COPY.LOCKED.icon}
+                        </span>
                     </div>
-                    <h1 class="text-4xl font-extrabold text-white mb-2 tracking-tight">${title || UX_COPY.LOCKED.title}</h1>
-                    <div class="w-full bg-white/10 backdrop-blur border-l-4 border-amber-500 p-6 my-8 text-left shadow-sm rounded-r-lg">
-                        <p class="text-xs font-bold text-amber-400 uppercase tracking-wide mb-1">OBSERVATION</p>
-                        <p class="text-lg font-medium text-white/90 whitespace-pre-line">${reason || UX_COPY.LOCKED.body}</p>
+
+                    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">
+                        ${UX_COPY.LOCKED.title}
+                    </h1>
+
+                    <div class="w-full bg-amber-50 dark:bg-amber-900/10 border-l-4 border-amber-500 p-5 my-6 text-left rounded-r-md">
+                        <p class="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide mb-1">
+                            ${UX_COPY.LOCKED.badge}
+                        </p>
+                        <p class="text-lg text-gray-800 dark:text-gray-100">
+                            ${reason || UX_COPY.LOCKED.body}
+                        </p>
                     </div>
-                    <p class="text-lg font-medium text-white/60 animate-pulse">${UX_COPY.LOCKED.footer}</p>
+
+                    <p class="text-base text-gray-600 dark:text-gray-400">
+                        ${UX_COPY.LOCKED.footer}
+                    </p>
+
+                    <div class="mt-8 flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500 font-medium">
+                        <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span>${UX_COPY.LOCKED.statusLight}</span>
+                    </div>
                 </div>
             `;
         }

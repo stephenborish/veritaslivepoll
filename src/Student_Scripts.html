@@ -3151,10 +3151,14 @@
                         return;
                     }
 
-                    // Check if status is AWAITING_FULLSCREEN and lockVersion matches
+                    // Check if status is AWAITING_FULLSCREEN - teacher has approved unlock
                     // NOTE: We do NOT clear the Poison Pill here - only show resume prompt
                     // The Poison Pill will be cleared ONLY after successful fullscreen confirmation
-                    if (response.status === 'AWAITING_FULLSCREEN' && response.lockVersion === currentLockVersion) {
+                    // FIX: Accept any AWAITING_FULLSCREEN status regardless of lockVersion match
+                    // This handles the force-unlock case where server creates a new lockVersion
+                    if (response.status === 'AWAITING_FULLSCREEN') {
+                        // Update local lockVersion to match server
+                        currentLockVersion = response.lockVersion;
                         if (proctorPollInterval) {
                             clearInterval(proctorPollInterval);
                             proctorPollInterval = null;

@@ -1825,7 +1825,15 @@
     function setDashboardSidebarVisibility(visible) {
       if (!dashboardSidebar) return;
       dashboardSidebarVisible = visible;
-      dashboardSidebar.style.display = visible ? 'flex' : 'none';
+      if (visible) {
+        dashboardSidebar.classList.remove('hidden');
+        dashboardSidebar.classList.add('flex');
+        dashboardSidebar.style.display = ''; // Clear inline style if any
+      } else {
+        dashboardSidebar.classList.add('hidden');
+        dashboardSidebar.classList.remove('flex');
+        dashboardSidebar.style.display = ''; // Clear inline style if any
+      }
       updateDashboardSidebarToggleState();
     }
 
@@ -1915,7 +1923,7 @@
     var viewLinksBtn = document.getElementById('view-links-btn');
     var headerSessionControls = document.getElementById('header-session-controls');
     var dashboardSidebar = document.getElementById('dashboard-sidebar');
-    var dashboardSidebarVisible = true;
+    var dashboardSidebarVisible = (window.innerWidth >= 1024);
     var dashboardSidebarToggleButtons = [];
     var dashboard = document.getElementById('dashboard');
     var liveView = document.getElementById('live-view');
@@ -2189,14 +2197,6 @@
     registerDashboardSidebarToggle('dashboard-sidebar-toggle');
     registerDashboardSidebarToggle('dashboard-sidebar-toggle-live');
     updateDashboardSidebarToggleState();
-    if (dashboardSidebar) {
-      // Auto-collapse sidebar on mobile devices
-      if (window.innerWidth < 1024) {
-        setDashboardSidebarVisibility(false);
-      } else {
-        setDashboardSidebarVisibility(true);
-      }
-    }
     function focusLockoutsSection() {
       var panel = document.getElementById('exited-students-panel');
       if (panel) {

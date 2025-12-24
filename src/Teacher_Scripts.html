@@ -11108,8 +11108,15 @@
 
         signalRef.set(payload).then(function() {
             console.log('[Firebase] Broadcasted session state signal:', payload);
+            // DEBUG PROOF: Show toast to confirm write
+            if (typeof showToast === 'function') {
+                showToast('info', 'Firebase Synced', 'Session state broadcasted to students.');
+            }
         }).catch(function(e) {
             console.warn('[Firebase] Broadcast failed:', e);
+            if (typeof showToast === 'function') {
+                showToast('error', 'Sync Failed', 'Could not broadcast state to Firebase: ' + e.message);
+            }
         });
     }
 

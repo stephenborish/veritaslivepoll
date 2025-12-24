@@ -6046,6 +6046,11 @@
 
       if (!data) { return; }
 
+      // Initialize Firebase for Realtime Updates (Fast Path)
+      if (data.pollId) {
+        initFirebaseMissionControl(data.pollId);
+      }
+
       var status = data.status || 'PRE_LIVE';
       var metadata = data.metadata || {};
       var isCollecting = typeof metadata.isCollecting === 'boolean' ? metadata.isCollecting : (status === 'LIVE');
@@ -11011,6 +11016,24 @@
             connectedRef.on('value', function(snap) {
                 realtimeConnected = snap.val() === true;
                 console.log('[Firebase] Connection status changed:', realtimeConnected ? 'CONNECTED' : 'DISCONNECTED', 'pollId:', pollId);
+
+                // ADAPTIVE POLLING: Reduce server load when Firebase is active
+                var newInterval = realtimeConnected ? 15000 : 2500;
+
+                if (missionControlHeartbeat && missionControlHeartbeat.isRunning()) {
+                    console.log('[Adaptive Polling] Updating Mission Control heartbeat to ' + newInterval + 'ms');
+                    missionControlHeartbeat.updateInterval(newInterval);
+                }
+
+                if (pollInterval) {
+                     console.log('[Adaptive Polling] Updating Live Poll interval to ' + newInterval + 'ms');
+                     clearInterval(pollInterval);
+                     currentPollInterval = newInterval;
+                     pollInterval = setInterval(pollForResults, currentPollInterval);
+                } else {
+                     currentPollInterval = newInterval; // Set for next start
+                }
+
                 // P0-2 FIX: Record event
                 lastRTDBEvent = { timestamp: Date.now(), type: 'connection' };
                 updateRealtimeIndicator();

@@ -82,10 +82,32 @@
                     updateDebugHud(status, null, currentFirebasePollId);
                 });
 
-                // Connection State for HUD
+                // Connection State for HUD & Adaptive Polling
                 firebaseDb.ref('.info/connected').on('value', function(snap) {
                     var connected = snap.val() === true;
                     updateDebugHud(null, connected, currentFirebasePollId);
+
+                    // ADAPTIVE POLLING: Reduce server load when Firebase is active
+                    // If connected, we receive "signals" for state changes, so we can poll slowly.
+                    // If disconnected, we fallback to fast polling to ensure responsiveness.
+                    if (connected) {
+                        console.log('[Adaptive Polling] Firebase connected - switching to slow poll (15s)');
+                        defaultPollInterval = 15000;
+                    } else {
+                        console.log('[Adaptive Polling] Firebase disconnected - switching to fast poll (2.5s)');
+                        defaultPollInterval = 2500;
+                    }
+                });
+
+                // 4. Signal-to-Poll: Listen for public state changes
+                // When teacher advances slide, a signal is written here.
+                var publicStateRef = firebaseDb.ref('sessions/' + pollId + '/publicState');
+                publicStateRef.on('value', function(snapshot) {
+                    var state = snapshot.val();
+                    if (state) {
+                        console.log('[Firebase] Public state signal received - triggering immediate poll', state);
+                        startPolling(true); // Immediate poll
+                    }
                 });
 
                 console.log('[Firebase] Sidecar initialized for', path);

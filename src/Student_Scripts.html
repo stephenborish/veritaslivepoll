@@ -35,6 +35,17 @@
         // --- FIREBASE INIT ---
         var currentFirebasePollId = null; // Store pollId for debug HUD
 
+        // UUID Generator (Polyfill)
+        function generateUUID() {
+            if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+                return crypto.randomUUID();
+            }
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
         async function initFirebaseSidecar(pollId, studentEmail) {
             if (!FIREBASE_CONFIG || !pollId || !studentEmail) return;
 
@@ -78,6 +89,51 @@
                 });
 
                 console.log('[Firebase] Sidecar initialized for', path);
+            }
+        }
+
+        /**
+         * Submit answer directly to Firebase (Fast Path)
+         */
+        async function submitAnswerToFirebase(pollId, questionIndex, answer, confidence, email) {
+            if (!firebaseDb) {
+                console.warn('[Firebase] DB not initialized, skipping fast write');
+                return null;
+            }
+
+            try {
+                // Determine email if not provided
+                var studentEmail = email || window.STUDENT_EMAIL || sessionStorage.getItem('veritas_student_email');
+                if (!studentEmail) {
+                    console.error('[Firebase] Cannot submit answer - no email found');
+                    return null;
+                }
+
+                var responseId = generateUUID();
+                var timestamp = new Date().toISOString();
+
+                var payload = {
+                    responseId: responseId,
+                    pollId: pollId,
+                    questionIndex: questionIndex,
+                    answer: answer,
+                    studentEmail: studentEmail,
+                    confidenceLevel: confidence || null,
+                    timestamp: timestamp,
+                    clientTimestamp: Date.now()
+                };
+
+                // Push to answers collection
+                // Path: answers/{pollId}/{pushKey}
+                var answersRef = firebaseDb.ref('answers/' + pollId);
+                var newRef = answersRef.push();
+                await newRef.set(payload);
+
+                console.log('[Firebase] Fast Answer Submitted:', payload);
+                return { success: true, responseId: responseId, timestamp: timestamp };
+            } catch (e) {
+                console.error('[Firebase] Fast Answer Failed:', e);
+                return null;
             }
         }
 
@@ -1344,7 +1400,66 @@
             };
 
             var telemetry = ActivityMonitor.getInstance().getTelemetry();
-            google.script.run
+
+            // FAST PATH: Write to Firebase first (Optimistic UI)
+            submitAnswerToFirebase(
+                answerDetails.pollId,
+                answerDetails.actualQuestionIndex,
+                answerDetails.answer,
+                answerDetails.confidenceLevel,
+                null // let function derive email
+            ).then(function(fbResult) {
+                if (fbResult && fbResult.success) {
+                    console.log('Firebase write success, proceeding with optimistic UI update');
+
+                    // Optimistic Success: Clear local state and show loading next
+                    try { localStorage.removeItem('secure_pending_answer'); } catch (e) {}
+
+                    setSecureSubmitLoading(false);
+                    disableSecureOptions(false);
+                    hideSecureConfidencePrompt();
+
+                    secureSelectedOptionIndex = null;
+                    secureQuestionState = null;
+                    secureCurrentQuestionKey = null;
+
+                    if (secureQuestionText) {
+                        secureQuestionText.innerHTML = '<div style="display: flex; align-items: center; gap: 12px; padding: 20px 0;"><div style="width: 24px; height: 24px; border: 3px solid rgba(18, 56, 93, 0.2); border-top-color: #12385d; border-radius: 50%; animation: veritas-spin 0.7s linear infinite;"></div><span style="color: #4b5563; font-size: 1.1rem;">Answer Saved. Loading next...</span></div>';
+                    }
+                    if (secureQuestionImage) secureQuestionImage.style.display = 'none';
+                    if (secureOptionsList) secureOptionsList.innerHTML = '';
+
+                    // Trigger server sync in background (fire and forget for UI, but important for persistence)
+                    // FIX: Pass the client-generated responseId to ensure deduplication works server-side
+                    google.script.run
+                        .withSuccessHandler(function() {
+                            console.log('Server sync confirmed');
+                            // We can poll here to get the next question officially
+                            setTimeout(function () { pollForIndividualSessionState(); }, 50);
+                        })
+                        .withFailureHandler(function(e) {
+                            console.warn('Server sync failed (data safe in Firebase):', e);
+                            // Still poll to try and get next question if network recovers
+                            setTimeout(function () { pollForIndividualSessionState(); }, 2000);
+                        })
+                        .submitIndividualTimedAnswer(
+                            answerDetails.pollId,
+                            answerDetails.sessionId,
+                            answerDetails.actualQuestionIndex,
+                            answerDetails.answer,
+                            SESSION_TOKEN,
+                            answerDetails.confidenceLevel,
+                            fbResult.responseId // PASS UUID HERE
+                        );
+                } else {
+                    console.warn('Firebase write failed/skipped, falling back to legacy server path');
+                    fallbackSubmitToServer(answerDetails, retryCount, maxRetries);
+                }
+            });
+        }
+
+        function fallbackSubmitToServer(answerDetails, retryCount, maxRetries) {
+             google.script.run
                 .withSuccessHandler(function (response) {
                     setSecureSubmitLoading(false);
                     disableSecureOptions(false);
@@ -1398,7 +1513,7 @@
                         setTimeout(function () {
                             setSecureSubmitLoading(false); // Reset to allow retry
                             secureSubmitting = false; // Important: reset locking flag
-                            submitIndividualAnswerWithConfidence(state, answerText, confidenceLevel, retryCount + 1);
+                            fallbackSubmitToServer(answerDetails, retryCount + 1, maxRetries);
                         }, delay);
 
                         return; // Don't show error yet

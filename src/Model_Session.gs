@@ -962,6 +962,7 @@ Veritas.Models.Session.submitAnswerIndividualTimed = function(token, answerDetai
     const actualQuestionIndex = answerDetails.actualQuestionIndex;
     const answer = answerDetails.answer;
     const confidenceLevel = answerDetails.confidenceLevel;
+    const clientResponseId = answerDetails.clientResponseId;
 
     if (!pollId || !sessionId || typeof actualQuestionIndex !== 'number' || typeof answer !== 'string') {
       throw new Error('Invalid submission data');
@@ -973,7 +974,8 @@ Veritas.Models.Session.submitAnswerIndividualTimed = function(token, answerDetai
       studentEmail,
       actualQuestionIndex,
       answer,
-      confidenceLevel
+      confidenceLevel,
+      clientResponseId
     );
   })();
 };
@@ -983,7 +985,7 @@ Veritas.Models.Session.submitAnswerIndividualTimed = function(token, answerDetai
  * CRITICAL CONCURRENCY FIX: Wrap entire operation in single lock to prevent race conditions
  * when 20+ students submit simultaneously (the "Submission Spike" scenario)
  */
-Veritas.Models.Session.submitIndividualTimedAnswer = function(pollId, sessionId, studentEmail, actualQuestionIndex, answer, confidenceLevel) {
+Veritas.Models.Session.submitIndividualTimedAnswer = function(pollId, sessionId, studentEmail, actualQuestionIndex, answer, confidenceLevel, clientResponseId) {
   const poll = DataAccess.polls.getById(pollId);
   if (!poll) throw new Error('Poll not found');
 
@@ -1059,7 +1061,8 @@ Veritas.Models.Session.submitIndividualTimedAnswer = function(pollId, sessionId,
 
     // WRITE-BEHIND PATTERN: Cache response instead of direct spreadsheet write
     // This decouples validation from I/O for better performance under load
-    const responseId = Utilities.getUuid();
+    // FIX: Use client-provided UUID if available to match Firebase ID for deduplication
+    const responseId = clientResponseId || Utilities.getUuid();
     const timestamp = new Date().toISOString();
 
     // Cache the answer for async flush to spreadsheet
@@ -3004,8 +3007,8 @@ function submitAnswerIndividualTimed(token, answerDetails) {
   return Veritas.Models.Session.submitAnswerIndividualTimed(token, answerDetails);
 }
 
-function submitIndividualTimedAnswer(pollId, sessionId, studentEmail, actualQuestionIndex, answer, confidenceLevel) {
-  return Veritas.Models.Session.submitIndividualTimedAnswer(pollId, sessionId, studentEmail, actualQuestionIndex, answer, confidenceLevel);
+function submitIndividualTimedAnswer(pollId, sessionId, studentEmail, actualQuestionIndex, answer, confidenceLevel, clientResponseId) {
+  return Veritas.Models.Session.submitIndividualTimedAnswer(pollId, sessionId, studentEmail, actualQuestionIndex, answer, confidenceLevel, clientResponseId);
 }
 
 function getIndividualTimedSessionTeacherView(pollId, sessionId) {
@@ -3123,12 +3126,7 @@ function buildInitialAnswerOrderMap_(poll) {
 // =============================================================================
 
 /**
- * Write-Behind Cache Key Generator
- * CRITICAL FIX: Now includes questionIndex to prevent answer collision/overwrite
- * @param {string} pollId - Poll ID
- * @param {string} email - Student email
- * @param {number} questionIndex - Question index (required to prevent collisions)
- * @returns {string} Cache key
+ * Write-Behind Cache Key Generator (Legacy - Kept for compatibility)
  */
 Veritas.Models.Session.getWriteBehindKey = function(pollId, email, questionIndex) {
   if (typeof questionIndex !== 'number') {
@@ -3139,13 +3137,13 @@ Veritas.Models.Session.getWriteBehindKey = function(pollId, email, questionIndex
 
 /**
  * Write answer to cache instead of spreadsheet (Write-Behind pattern)
- * @param {Object} answerData - Answer data to cache
+ * Legacy function: Kept for compatibility, but primary path is now Firebase -> Worker
  */
 Veritas.Models.Session.cacheAnswerForWriteBehind = function(answerData) {
   var cache = CacheService.getScriptCache();
   var key = Veritas.Models.Session.getWriteBehindKey(answerData.pollId, answerData.studentEmail, answerData.actualQuestionIndex);
 
-  // Store with 10 minute TTL (plenty of time for flush worker)
+  // Store with 10 minute TTL
   var payload = JSON.stringify({
     responseId: answerData.responseId,
     timestamp: answerData.timestamp,
@@ -3158,9 +3156,9 @@ Veritas.Models.Session.cacheAnswerForWriteBehind = function(answerData) {
     cachedAt: new Date().toISOString()
   });
 
-  cache.put(key, payload, 600); // 10 minute TTL
+  cache.put(key, payload, 600);
 
-  // Also track all pending keys for flush worker
+  // Track pending keys
   var pendingKeysKey = 'pending_keys_' + answerData.pollId;
   var existingKeys = cache.get(pendingKeysKey);
   var keysList = existingKeys ? JSON.parse(existingKeys) : [];
@@ -3168,83 +3166,155 @@ Veritas.Models.Session.cacheAnswerForWriteBehind = function(answerData) {
     keysList.push(key);
   }
   cache.put(pendingKeysKey, JSON.stringify(keysList), 600);
-
-  Logger.log('Write-Behind: Answer cached', {
-    key: key,
-    pollId: answerData.pollId,
-    studentEmail: answerData.studentEmail,
-    questionIndex: answerData.actualQuestionIndex
-  });
 };
 
 /**
- * Flush Worker - Reads all pending cache keys and batch writes to Responses sheet
- * Should be triggered every minute by time-based trigger
- * @param {string} pollId - Optional: flush for specific poll. If omitted, flushes all.
- * @returns {Object} Flush result summary
+ * Helper to fetch answers from Firebase REST API
+ */
+Veritas.Models.Session.fetchFirebaseAnswers = function(pollId) {
+  try {
+    var config = Veritas.Config.getFirebaseConfig();
+    var secret = Veritas.Config.getFirebaseSecret();
+
+    if (!config || !secret) {
+      Logger.log('Firebase config/secret missing for worker');
+      return [];
+    }
+
+    var baseUrl = config.databaseURL;
+    // REST API Endpoint: https://<db>.firebaseio.com/answers/<pollId>.json?auth=<SECRET>
+    // Note: ordering by key ($key) gives chronological order
+    // FIX: Removed limitToLast=100 to prevent data loss during high volume submission spikes.
+    // The worker handles deduplication against the sheet, so fetching the full set for the active poll is safer.
+    var url = baseUrl + '/answers/' + pollId + '.json?auth=' + secret + '&orderBy="$key"';
+
+    var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    if (response.getResponseCode() !== 200) {
+      Logger.log('Firebase fetch failed', response.getContentText());
+      return [];
+    }
+
+    var data = JSON.parse(response.getContentText());
+    if (!data) return [];
+
+    // Convert object { key: val } to array [val]
+    return Object.keys(data).map(function(k) { return data[k]; });
+  } catch (e) {
+    Logger.log('Error fetching from Firebase', e);
+    return [];
+  }
+};
+
+/**
+ * FLUSH WORKER (Updated for Fast Path)
+ * Reads new answers from Firebase AND legacy cache, then writes to Sheet.
+ * Should be triggered every minute.
  */
 Veritas.Models.Session.flushAnswersWorker = function(pollId) {
   return withErrorHandling(function() {
     return Veritas.Utils.withLock(function() {
-      var cache = CacheService.getScriptCache();
       var flushed = 0;
       var errors = 0;
-      var processedKeys = [];
+      var answersToWrite = [];
 
-      // Get list of all pending keys for this poll (or all polls)
+      // 1. Fetch from Firebase (Fast Path)
+      var activePolls = pollId ? [{pollId: pollId}] : DataAccess.polls.getAll();
+
+      activePolls.forEach(function(poll) {
+        var fbAnswers = Veritas.Models.Session.fetchFirebaseAnswers(poll.pollId);
+        fbAnswers.forEach(function(ans) {
+          // Grade the answer on server-side
+          var p = DataAccess.polls.getById(ans.pollId);
+          if (p && p.questions && p.questions[ans.questionIndex]) {
+             var q = p.questions[ans.questionIndex];
+             // Simple exact match grading
+             ans.isCorrect = (ans.answer === q.correctAnswer);
+             answersToWrite.push(ans);
+          }
+        });
+      });
+
+      // 2. Fetch from Legacy Cache (Write-Behind)
+      // FIX: Restore cache fetching to support fallback mechanism (for students blocked from Firebase)
+      var cache = CacheService.getScriptCache();
+      var processedKeys = [];
       var keysToProcess = [];
 
       if (pollId) {
-        // Flush specific poll
         var pendingKeysKey = 'pending_keys_' + pollId;
         var existingKeys = cache.get(pendingKeysKey);
         if (existingKeys) {
           keysToProcess = JSON.parse(existingKeys);
         }
       } else {
-        // Flush all polls - scan for pending_keys_* (limited approach)
-        // In production, you'd want to maintain a master list
-        var allPolls = DataAccess.polls.getAll();
-        allPolls.forEach(function(poll) {
+        // Scan all active polls
+        DataAccess.polls.getAll().forEach(function(poll) {
           var pendingKeysKey = 'pending_keys_' + poll.pollId;
           var existingKeys = cache.get(pendingKeysKey);
           if (existingKeys) {
-            var keys = JSON.parse(existingKeys);
-            keysToProcess = keysToProcess.concat(keys);
+            keysToProcess = keysToProcess.concat(JSON.parse(existingKeys));
           }
         });
       }
 
-      if (keysToProcess.length === 0) {
-        return { success: true, flushed: 0, errors: 0, message: 'No pending answers to flush' };
+      if (keysToProcess.length > 0) {
+        var cachedValues = cache.getAll(keysToProcess);
+        Object.keys(cachedValues).forEach(function(key) {
+          try {
+            var answerData = JSON.parse(cachedValues[key]);
+            if (answerData && answerData.responseId) {
+              answersToWrite.push(answerData);
+              processedKeys.push(key);
+            }
+          } catch (e) {
+            Logger.log('Write-Behind: Failed to parse cached answer', { key: key, error: e.message });
+            errors++;
+          }
+        });
       }
 
-      // Batch read all cached answers
-      var cachedValues = cache.getAll(keysToProcess);
-      var answersToWrite = [];
-
-      Object.keys(cachedValues).forEach(function(key) {
-        try {
-          var answerData = JSON.parse(cachedValues[key]);
-          if (answerData && answerData.responseId) {
-            answersToWrite.push(answerData);
-            processedKeys.push(key);
-          }
-        } catch (e) {
-          Logger.log('Write-Behind: Failed to parse cached answer', { key: key, error: e.message });
-          errors++;
-        }
-      });
-
-      // Batch write to Responses sheet
+      // 3. Deduplication (Crucial)
+      // Check if responseId already exists in sheet to avoid duplicates
+      // HARDENING: Also check (PollId + Email + QuestionIndex) to prevent duplicate submissions with different IDs
       if (answersToWrite.length > 0) {
         var responsesSheet = DataAccess.responses.getSheet_();
-        var rowsToAppend = answersToWrite.map(function(ans) {
+        var existingIds = {};
+        var existingCompositeKeys = {}; // pollId_email_qIndex
+
+        if (responsesSheet.getLastRow() > 1) {
+           // Read Columns A (ID), C (PollId), D (QuestionIndex), E (Email)
+           // Index: 0=ID, 2=PollId, 3=QuestionIndex, 4=Email
+           var sheetData = responsesSheet.getRange(2, 1, responsesSheet.getLastRow() - 1, 5).getValues();
+           sheetData.forEach(function(row) {
+              existingIds[row[0]] = true;
+              // Create composite key: pollId|email|qIndex
+              if (row[2] && row[4]) {
+                 existingCompositeKeys[row[2] + '|' + row[4] + '|' + row[3]] = true;
+              }
+           });
+        }
+
+        var uniqueRows = answersToWrite.filter(function(ans) {
+           // Filter 1: Check ID
+           if (existingIds[ans.responseId]) return false;
+
+           // Filter 2: Check Content (Poll|Email|Index)
+           var compositeKey = ans.pollId + '|' + ans.studentEmail + '|' + ans.questionIndex;
+           if (existingCompositeKeys[compositeKey]) {
+              Logger.log('Duplicate content detected (ID mismatch but same question)', compositeKey);
+              return false;
+           }
+
+           // Mark as seen for this batch
+           existingCompositeKeys[compositeKey] = true;
+           existingIds[ans.responseId] = true;
+           return true;
+        }).map(function(ans) {
           return [
             ans.responseId,
             ans.timestamp,
             ans.pollId,
-            ans.actualQuestionIndex,
+            ans.questionIndex, // Firebase payload uses questionIndex directly
             ans.studentEmail,
             ans.answer,
             ans.isCorrect,
@@ -3252,43 +3322,59 @@ Veritas.Models.Session.flushAnswersWorker = function(pollId) {
           ];
         });
 
-        // Batch append all rows at once (much faster than individual writes)
-        if (rowsToAppend.length > 0) {
+        if (uniqueRows.length > 0) {
           var lastRow = responsesSheet.getLastRow();
-          responsesSheet.getRange(lastRow + 1, 1, rowsToAppend.length, 8).setValues(rowsToAppend);
-          flushed = rowsToAppend.length;
-        }
-      }
+          responsesSheet.getRange(lastRow + 1, 1, uniqueRows.length, 8).setValues(uniqueRows);
+          flushed = uniqueRows.length;
 
-      // Remove flushed keys from cache
-      if (processedKeys.length > 0) {
-        cache.removeAll(processedKeys);
-
-        // Update pending keys list
-        if (pollId) {
-          var pendingKeysKey = 'pending_keys_' + pollId;
-          var remainingKeys = keysToProcess.filter(function(k) {
-            return processedKeys.indexOf(k) === -1;
+          // Update Individual Session Progress State
+          // (Necessary so student state doesn't revert on reload)
+          uniqueRows.forEach(function(row) {
+             var pid = row[2];
+             var email = row[4];
+             var qIdx = row[3];
+             // We assume session ID is active/latest for student
+             // This is an optimization; accurate session ID lookup would be better but slower
+             var status = DataAccess.liveStatus.get();
+             var meta = status.metadata || {};
+             if (meta.sessionId) {
+                var state = DataAccess.individualSessionState.getByStudent(pid, meta.sessionId, email);
+                if (state) {
+                   // Only advance if this answer is for current or future question
+                   if (qIdx >= state.currentQuestionIndex) {
+                      DataAccess.individualSessionState.updateProgress(pid, meta.sessionId, email, qIdx + 1);
+                   }
+                }
+             }
           });
-          if (remainingKeys.length > 0) {
-            cache.put(pendingKeysKey, JSON.stringify(remainingKeys), 600);
-          } else {
-            cache.remove(pendingKeysKey);
-          }
         }
       }
 
-      Logger.log('Write-Behind: Flush completed', {
-        pollId: pollId || 'all',
-        flushed: flushed,
-        errors: errors
-      });
+      Logger.log('Worker Sync Completed', { flushed: flushed, duplicatesSkipped: answersToWrite.length - flushed });
+
+      // Clean up cache keys that were processed
+      if (processedKeys.length > 0) {
+        try {
+          cache.removeAll(processedKeys);
+          if (pollId) {
+             // For single poll flush, we can optimize pending key list update
+             var pendingKeysKey = 'pending_keys_' + pollId;
+             var remainingKeys = keysToProcess.filter(function(k) { return processedKeys.indexOf(k) === -1; });
+             if (remainingKeys.length > 0) {
+                cache.put(pendingKeysKey, JSON.stringify(remainingKeys), 600);
+             } else {
+                cache.remove(pendingKeysKey);
+             }
+          }
+        } catch (e) {
+          Logger.log('Error clearing cache keys', e);
+        }
+      }
 
       return {
         success: true,
         flushed: flushed,
-        errors: errors,
-        message: 'Flushed ' + flushed + ' answers to spreadsheet'
+        message: 'Synced ' + flushed + ' answers (Firebase + Fallback)'
       };
     });
   })();

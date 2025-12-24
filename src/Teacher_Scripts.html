@@ -10976,8 +10976,64 @@
                 }
             });
 
+            // FAST PATH: Listen for answers (Live Results)
+            var answersRef = firebaseDb.ref('answers/' + pollId);
+            answersRef.on('child_added', function(snapshot) {
+                var answer = snapshot.val();
+                if (answer && answer.questionIndex !== undefined) {
+                    // Update live results UI instantly
+                    handleRealtimeAnswer(answer);
+                }
+            });
+
             console.log('[Firebase] Mission Control initialized for', path, 'Connected:', realtimeConnected);
             console.log('[Firebase] Actual subscription:', actualSubscribedPath);
+        }
+    }
+
+    /**
+     * Handle incoming realtime answer from Firebase
+     */
+    function handleRealtimeAnswer(payload) {
+        // Ensure we are in a live session state where results matter
+        if (!CURRENT_POLL_DATA || CURRENT_POLL_DATA.pollId !== payload.pollId) return;
+
+        // Find student in current list
+        var student = currentStudentStatusData.find(function(s) { return s.email === payload.studentEmail; });
+        if (student) {
+            // Update progress locally
+            var newProgress = Math.max(student.progress || 0, (payload.questionIndex || 0) + 1);
+            student.progress = newProgress;
+            student.status = 'In Progress'; // Ensure status is active
+
+            // UI UPDATE: Find the card and update the progress bar/text immediately
+            var card = document.querySelector('.student-status-card[data-email="' + CSS.escape(student.email) + '"]');
+            if (card) {
+                var progressBar = card.querySelector('.progress-bar-fill');
+                var progressText = card.querySelector('.progress-text');
+                var statusBadge = card.querySelector('.status-badge');
+
+                if (progressBar && student.totalQuestions > 0) {
+                    var pct = Math.min(100, Math.round((newProgress / student.totalQuestions) * 100));
+                    progressBar.style.width = pct + '%';
+
+                    // Add pulse animation
+                    progressBar.classList.remove('pulse-once');
+                    void progressBar.offsetWidth; // force reflow
+                    progressBar.classList.add('pulse-once');
+                }
+
+                if (progressText) {
+                    progressText.textContent = newProgress + '/' + student.totalQuestions;
+                }
+
+                if (statusBadge) {
+                    statusBadge.textContent = 'In Progress';
+                    statusBadge.className = 'status-badge bg-emerald-100 text-emerald-800';
+                }
+            }
+
+            console.log('[Firebase] Realtime Answer processed for:', payload.studentEmail);
         }
     }
 

@@ -5407,6 +5407,14 @@
           }
           setButtonLoading(startPollBtn, false);
           updateLiveView(data);
+          if (data && data.pollId) {
+             broadcastSessionState(data.pollId, {
+                 questionIndex: data.questionIndex,
+                 status: 'OPEN',
+                 sessionPhase: data.sessionPhase || 'LIVE',
+                 resultsVisibility: data.resultsVisibility
+             });
+          }
         })
         .withFailureHandler(function (error) {
           setButtonLoading(startPollBtn, false);
@@ -5439,6 +5447,14 @@
             return;
           }
           updateLiveView(data);
+          if (data && data.pollId) {
+             broadcastSessionState(data.pollId, {
+                 questionIndex: data.questionIndex,
+                 status: 'OPEN',
+                 sessionPhase: data.sessionPhase || 'LIVE',
+                 resultsVisibility: data.resultsVisibility
+             });
+          }
         })
         .withFailureHandler(handleError)
         .resumePoll();
@@ -5459,6 +5475,14 @@
         .withSuccessHandler(function (data) {
           isPaused = true;
           updateLiveView(data);
+          if (data && data.pollId) {
+             broadcastSessionState(data.pollId, {
+                 questionIndex: data.questionIndex,
+                 status: 'PAUSED',
+                 sessionPhase: data.sessionPhase || 'RESULTS_HOLD',
+                 resultsVisibility: data.resultsVisibility
+             });
+          }
         })
         .withFailureHandler(handleError)
         .stopPoll();
@@ -5483,6 +5507,14 @@
           if (endShowBtn) { endShowBtn.disabled = false; }
           isPaused = true;
           updateLiveView(data);
+          if (data && data.pollId) {
+             broadcastSessionState(data.pollId, {
+                 questionIndex: data.questionIndex,
+                 status: 'PAUSED',
+                 sessionPhase: 'RESULTS_REVEALED',
+                 resultsVisibility: 'REVEALED'
+             });
+          }
         })
         .withFailureHandler(function (error) {
           if (endShowBtn) { endShowBtn.disabled = false; }
@@ -5510,6 +5542,14 @@
       google.script.run
         .withSuccessHandler(function (data) {
           updateLiveView(data);
+          if (data && data.pollId) {
+             broadcastSessionState(data.pollId, {
+                 questionIndex: data.questionIndex,
+                 status: 'OPEN',
+                 sessionPhase: data.sessionPhase || 'LIVE',
+                 resultsVisibility: data.resultsVisibility
+             });
+          }
           // Clear navigation flag after a short delay to ensure state is fully synced
           setTimeout(function () {
             isNavigating = false;
@@ -5548,6 +5588,14 @@
       google.script.run
         .withSuccessHandler(function (data) {
           updateLiveView(data);
+          if (data && data.pollId) {
+             broadcastSessionState(data.pollId, {
+                 questionIndex: data.questionIndex,
+                 status: 'OPEN',
+                 sessionPhase: data.sessionPhase || 'LIVE',
+                 resultsVisibility: data.resultsVisibility
+             });
+          }
           // Clear navigation flag after a short delay to ensure state is fully synced
           setTimeout(function () {
             isNavigating = false;
@@ -5604,6 +5652,14 @@
         .withSuccessHandler(function (data) {
           isPaused = false;
           updateLiveView(data);
+          if (data && data.pollId) {
+             broadcastSessionState(data.pollId, {
+                 questionIndex: data.questionIndex,
+                 status: 'OPEN',
+                 sessionPhase: data.sessionPhase || 'LIVE',
+                 resultsVisibility: data.resultsVisibility
+             });
+          }
         })
         .withFailureHandler(handleError)
         .resetLiveQuestion(pollId, questionIndex, clearResponses);
@@ -5722,6 +5778,23 @@
         .withSuccessHandler(function (data) {
           if (data && data.status !== 'ENDED') {
             showDashboard();
+          }
+          // Broadcast session end (CLOSED)
+          if (data && data.pollId) {
+             broadcastSessionState(data.pollId, {
+                 questionIndex: -1,
+                 status: 'CLOSED',
+                 sessionPhase: 'ENDED',
+                 resultsVisibility: 'HIDDEN'
+             });
+          } else if (CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId) {
+             // Fallback if data doesn't contain pollId (e.g. status only)
+             broadcastSessionState(CURRENT_POLL_DATA.pollId, {
+                 questionIndex: -1,
+                 status: 'CLOSED',
+                 sessionPhase: 'ENDED',
+                 resultsVisibility: 'HIDDEN'
+             });
           }
         })
         .withFailureHandler(handleError)
@@ -10977,6 +11050,28 @@
                     ', initCalled=' + debugInfo.initCalled +
                     ', success=' + debugInfo.success);
     })();
+
+    function broadcastSessionState(pollId, state) {
+        if (!firebaseDb || !pollId || !state) return;
+        // P0-1: Signal-to-Poll Optimization
+        // Write lightweight state signal to Firebase so clients can react instantly without polling loop
+        var signalPath = 'sessions/' + pollId + '/publicState';
+        var signalRef = firebaseDb.ref(signalPath);
+
+        var payload = {
+            questionIndex: state.questionIndex,
+            status: state.status, // OPEN, PAUSED, CLOSED
+            timestamp: firebase.database.ServerValue.TIMESTAMP,
+            phase: state.sessionPhase || 'LIVE', // LIVE, RESULTS_HOLD, RESULTS_REVEALED
+            resultsVisibility: state.resultsVisibility || 'HIDDEN'
+        };
+
+        signalRef.set(payload).then(function() {
+            console.log('[Firebase] Broadcasted session state signal:', payload);
+        }).catch(function(e) {
+            console.warn('[Firebase] Broadcast failed:', e);
+        });
+    }
 
     function initFirebaseMissionControl(pollId) {
         if (!FIREBASE_CONFIG || !pollId) return;

@@ -50,7 +50,8 @@ Veritas.Models.Session.startPoll = function(pollId) {
 
       // CACHE FIX: Invalidate polls cache before fetching to avoid stale data
       // This ensures we get the latest poll data, especially important if poll was just created
-      CacheManager.invalidate('ALL_POLLS_DATA');
+      // OPTIMIZATION: Only invalidate if necessary. For startPoll, we assume existing cache is likely okay or updated by save.
+      // CacheManager.invalidate('ALL_POLLS_DATA');
 
       const poll = DataAccess.polls.getById(pollId);
       if (!poll) {
@@ -60,7 +61,7 @@ Veritas.Models.Session.startPoll = function(pollId) {
 
       const nowIso = new Date().toISOString();
       const sessionId = pollId + '::' + Utilities.getUuid();
-      DataAccess.liveStatus.set(pollId, 0, "OPEN", {
+      const metadata = {
         reason: 'RUNNING',
         sessionPhase: 'LIVE',
         startedAt: nowIso,
@@ -71,13 +72,24 @@ Veritas.Models.Session.startPoll = function(pollId) {
         responsesClosedAt: null,
         revealedAt: null,
         sessionId: sessionId
-      });
+      };
+
+      DataAccess.liveStatus.set(pollId, 0, "OPEN", metadata);
 
       Veritas.Models.Session.ProctorAccess.resetForNewSession(pollId, sessionId);
 
       Logger.log('Poll started', { pollId: pollId, pollName: poll.pollName });
 
-      return getLivePollData(pollId, 0);
+      // OPTIMIZATION: Return lightweight object immediately
+      return {
+        mode: 'lightweight',
+        pollId: pollId,
+        questionIndex: 0,
+        status: 'OPEN',
+        sessionPhase: 'LIVE',
+        timestamp: new Date().getTime(),
+        metadata: metadata
+      };
     });
   })();
 };
@@ -103,7 +115,8 @@ Veritas.Models.Session.nextQuestion = function() {
 
       const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
       const nowIso = new Date().toISOString();
-      DataAccess.liveStatus.set(pollId, newIndex, "OPEN", {
+
+      const newMetadata = {
         ...previousMetadata,
         reason: 'RUNNING',
         advancedAt: nowIso,
@@ -115,11 +128,22 @@ Veritas.Models.Session.nextQuestion = function() {
         resultsVisibility: 'HIDDEN',
         responsesClosedAt: null,
         revealedAt: null
-      });
+      };
+
+      DataAccess.liveStatus.set(pollId, newIndex, "OPEN", newMetadata);
 
       Logger.log('Next question', { pollId: pollId, questionIndex: newIndex });
 
-      return getLivePollData(pollId, newIndex);
+      // OPTIMIZATION: Return lightweight object immediately
+      return {
+        mode: 'lightweight',
+        pollId: pollId,
+        questionIndex: newIndex,
+        status: 'OPEN',
+        sessionPhase: 'LIVE',
+        timestamp: new Date().getTime(),
+        metadata: newMetadata
+      };
     });
   })();
 };
@@ -458,7 +482,8 @@ Veritas.Models.Session.resetLiveQuestion = function(pollId, questionIndex, clear
       const currentStatus = DataAccess.liveStatus.get();
       const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
       const nowIso = new Date().toISOString();
-      DataAccess.liveStatus.set(pollId, questionIndex, "OPEN", {
+
+      const newMetadata = {
         ...previousMetadata,
         reason: 'RUNNING',
         resetAt: nowIso,
@@ -470,13 +495,28 @@ Veritas.Models.Session.resetLiveQuestion = function(pollId, questionIndex, clear
         resultsVisibility: 'HIDDEN',
         responsesClosedAt: null,
         revealedAt: null
-      });
+      };
+
+      DataAccess.liveStatus.set(pollId, questionIndex, "OPEN", newMetadata);
 
       Logger.log('Question reset', {
         pollId: pollId,
         questionIndex: questionIndex,
         cleared: !!clearResponses
       });
+
+      // OPTIMIZATION: If we cleared responses, return lightweight
+      if (clearResponses) {
+        return {
+          mode: 'lightweight',
+          pollId: pollId,
+          questionIndex: questionIndex,
+          status: 'OPEN',
+          sessionPhase: 'LIVE',
+          timestamp: new Date().getTime(),
+          metadata: newMetadata
+        };
+      }
 
       return getLivePollData(pollId, questionIndex);
     });

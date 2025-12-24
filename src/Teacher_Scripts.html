@@ -5411,6 +5411,13 @@
             return;
           }
           setButtonLoading(startPollBtn, false);
+
+          // OPTIMIZATION: Check for lightweight mode
+          if (data.mode === 'lightweight') {
+              handleLightweightSessionUpdate(data);
+              return;
+          }
+
           updateLiveView(data);
           if (data && data.pollId) {
              broadcastSessionState(data.pollId, {
@@ -5546,6 +5553,16 @@
       }
       google.script.run
         .withSuccessHandler(function (data) {
+          // OPTIMIZATION: Check for lightweight mode
+          if (data.mode === 'lightweight') {
+              handleLightweightSessionUpdate(data);
+              // Clear navigation flags here since handleLightweightSessionUpdate triggers bg fetch
+              // but we want to unblock navigation immediately
+              isNavigating = false;
+              navigationRequestInFlight = false;
+              return;
+          }
+
           updateLiveView(data);
           if (data && data.pollId) {
              broadcastSessionState(data.pollId, {
@@ -5592,6 +5609,16 @@
       }
       google.script.run
         .withSuccessHandler(function (data) {
+          // OPTIMIZATION: Check for lightweight mode
+          if (data.mode === 'lightweight') {
+              handleLightweightSessionUpdate(data);
+              // Clear navigation flags here since handleLightweightSessionUpdate triggers bg fetch
+              // but we want to unblock navigation immediately
+              isNavigating = false;
+              navigationRequestInFlight = false;
+              return;
+          }
+
           updateLiveView(data);
           if (data && data.pollId) {
              broadcastSessionState(data.pollId, {
@@ -5655,6 +5682,14 @@
 
       google.script.run
         .withSuccessHandler(function (data) {
+          // OPTIMIZATION: Check for lightweight mode
+          if (data.mode === 'lightweight') {
+              isPaused = false;
+              handleLightweightSessionUpdate(data);
+              showToast('success', 'Question Reset', 'All responses have been cleared.');
+              return;
+          }
+
           isPaused = false;
           updateLiveView(data);
           if (data && data.pollId) {
@@ -13730,6 +13765,76 @@
     window.clearStudentFilter = clearStudentFilter;
     window.sortStudentsBy = sortStudentsBy;
     window.updateLiveView = updateLiveView;
+
+    // OPTIMIZATION: Handle lightweight updates from server (2025)
+    // Synthesizes a "full" view update from cached poll definitions
+    // to provide instant UI feedback while waiting for real data.
+    function handleLightweightSessionUpdate(data) {
+        console.log('[Optimization] Handling lightweight update:', data);
+
+        // 1. Broadcast immediately to Firebase (unblock students)
+        broadcastSessionState(data.pollId, {
+            questionIndex: data.questionIndex,
+            status: data.status,
+            sessionPhase: data.metadata ? data.metadata.sessionPhase : 'LIVE',
+            resultsVisibility: data.metadata ? data.metadata.resultsVisibility : 'HIDDEN'
+        });
+
+        // 2. Synthesize a full view object from CURRENT_POLL_DATA
+        if (!CURRENT_POLL_DATA || !CURRENT_POLL_DATA.questions) {
+            console.warn('[Optimization] CURRENT_POLL_DATA missing, falling back to full refresh');
+            // If we don't have poll definition, we must fetch full data
+            pollForResults(); // Triggers getLivePollData via existing poll mechanism if active
+            return;
+        }
+
+        var qIndex = data.questionIndex;
+        var questionDef = CURRENT_POLL_DATA.questions[qIndex];
+
+        if (!questionDef) {
+             console.error('[Optimization] Question definition not found for index:', qIndex);
+             return;
+        }
+
+        var syntheticData = {
+            pollId: data.pollId,
+            status: data.status, // OPEN
+            questionIndex: qIndex,
+            pollName: CURRENT_POLL_DATA.pollName,
+            questionText: questionDef.questionText,
+            questionImageURL: questionDef.questionImageURL,
+            options: questionDef.options || [],
+            totalQuestions: CURRENT_POLL_DATA.questions.length,
+            correctAnswer: questionDef.correctAnswer,
+            timerSeconds: questionDef.timerSeconds,
+            metadata: data.metadata,
+            authoritativeStatus: 'LIVE', // Assumed for start/next
+            // Reset results
+            results: {}, // Empty counts
+            totalResponses: 0,
+            totalStudents: currentStudentStatusData.length, // Keep previous count
+            studentStatusList: currentStudentStatusData.map(function(s) {
+                // Reset student statuses to waiting
+                return Object.assign({}, s, {
+                    status: 'Waiting...',
+                    statusNote: 'waiting',
+                    answer: '---',
+                    isCorrect: null,
+                    confidence: null,
+                    timestamp: 9999999999999
+                });
+            })
+        };
+
+        // 3. Update UI instantly
+        updateLiveView(syntheticData);
+
+        // 4. Trigger background fetch to ensure consistency
+        setTimeout(function() {
+            console.log('[Optimization] Triggering background fetch for consistency');
+            pollForResults();
+        }, 500);
+    }
 
 
   })();

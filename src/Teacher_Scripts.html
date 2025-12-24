@@ -11108,15 +11108,8 @@
 
         signalRef.set(payload).then(function() {
             console.log('[Firebase] Broadcasted session state signal:', payload);
-            // DEBUG PROOF: Show toast to confirm write
-            if (typeof showToast === 'function') {
-                showToast('info', 'Firebase Synced', 'Session state broadcasted to students.');
-            }
         }).catch(function(e) {
             console.warn('[Firebase] Broadcast failed:', e);
-            if (typeof showToast === 'function') {
-                showToast('error', 'Sync Failed', 'Could not broadcast state to Firebase: ' + e.message);
-            }
         });
     }
 
@@ -13839,6 +13832,8 @@
         // 4. Trigger background fetch to ensure consistency
         setTimeout(function() {
             console.log('[Optimization] Triggering background fetch for consistency');
+            // Force reset navigation flag to ensure pollForResults runs
+            isNavigating = false;
             pollForResults();
         }, 500);
     }

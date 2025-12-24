@@ -2190,7 +2190,12 @@
     registerDashboardSidebarToggle('dashboard-sidebar-toggle-live');
     updateDashboardSidebarToggleState();
     if (dashboardSidebar) {
-      dashboardSidebar.style.display = 'flex';
+      // Auto-collapse sidebar on mobile devices
+      if (window.innerWidth < 1024) {
+        setDashboardSidebarVisibility(false);
+      } else {
+        setDashboardSidebarVisibility(true);
+      }
     }
     function focusLockoutsSection() {
       var panel = document.getElementById('exited-students-panel');
@@ -6557,7 +6562,7 @@
       html += '<span class="px-2 py-1 rounded-md bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-200">⊘ Unanswered: ' + (metacognition.unansweredCount || 0) + '</span>';
       html += '</div>';
 
-      html += '<div class="grid grid-cols-2 gap-2">';
+      html += '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">';
       matrixDefs.forEach(function (def) {
         var pct = metacognition.matrixPercentages && typeof metacognition.matrixPercentages[def.key] === 'number' ? metacognition.matrixPercentages[def.key] : 0;
         var count = metacognition.matrixCounts && typeof metacognition.matrixCounts[def.key] === 'number' ? metacognition.matrixCounts[def.key] : 0;

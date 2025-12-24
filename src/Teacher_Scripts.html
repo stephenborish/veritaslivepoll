@@ -4338,7 +4338,7 @@
       document.getElementById('analytics-poll-meta').textContent = data.className + ' • ' + data.questionCount + ' Questions';
 
       // Render Class Overview
-      renderClassOverview(data.classOverview, data.distribution);
+      renderAnalyticsClassOverview(data.classOverview, data.distribution);
 
       // Render Metacognition (if enabled)
       if (data.metacognition && data.metacognition.enabled) {
@@ -4355,7 +4355,7 @@
       reportEl.classList.remove('hidden');
     }
 
-    function renderClassOverview(overview, distribution) {
+    function renderAnalyticsClassOverview(overview, distribution) {
       var container = document.getElementById('class-overview-content');
 
       var html = '<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">';

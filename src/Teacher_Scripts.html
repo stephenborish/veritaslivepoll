@@ -4326,7 +4326,7 @@
         .withFailureHandler(function (error) {
           loadingEl.innerHTML = '<div class="text-center py-12"><p class="text-red-600">Error: ' + escapeHtml(error.message || 'Unknown error') + '</p></div>';
         })
-        .getPostPollAnalytics(pollId);
+        .getEnhancedPostPollAnalytics(pollId);
     }
 
     function renderPostPollAnalytics(data) {
@@ -4336,6 +4336,11 @@
       // Update header
       document.getElementById('analytics-poll-name').textContent = data.pollName || 'Poll Analysis';
       document.getElementById('analytics-poll-meta').textContent = data.className + ' • ' + data.questionCount + ' Questions';
+
+      // Render Action Items
+      if (data.teacherActionItems) {
+        renderTeacherActionItems(data.teacherActionItems);
+      }
 
       // Render Class Overview
       renderAnalyticsClassOverview(data.classOverview, data.distribution);
@@ -4355,28 +4360,79 @@
       reportEl.classList.remove('hidden');
     }
 
+    function renderTeacherActionItems(items) {
+      var container = document.getElementById('analytics-actions-container');
+      if (!container) return;
+
+      if (!items || items.length === 0) {
+        container.innerHTML = '';
+        return;
+      }
+
+      var html = '<h4 class="text-lg font-bold text-brand-dark-gray dark:text-white mb-3 flex items-center gap-2">' +
+        '<span class="material-symbols-outlined text-amber-500">lightbulb</span> Insights & Recommendations</h4>' +
+        '<div class="grid grid-cols-1 gap-3">';
+
+      items.forEach(function(item) {
+        var borderClass = item.priority === 'urgent' ? 'border-red-200 bg-red-50 text-red-900' : 'border-amber-200 bg-amber-50 text-amber-900';
+        var icon = item.priority === 'urgent' ? 'warning' : 'info';
+
+        html += '<div class="flex items-start gap-3 p-4 rounded-lg border ' + borderClass + '">' +
+          '<span class="material-symbols-outlined mt-0.5">' + icon + '</span>' +
+          '<div><p class="font-semibold">' + escapeHtml(item.message) + '</p>';
+
+        if (item.items && item.items.length > 0) {
+          html += '<ul class="mt-2 text-sm list-disc list-inside opacity-90">';
+          item.items.forEach(function(detail) {
+            html += '<li>Q' + (detail.index + 1) + ': ' + escapeHtml(detail.text) + '</li>';
+          });
+          html += '</ul>';
+        }
+
+        html += '</div></div>';
+      });
+
+      html += '</div>';
+      container.innerHTML = html;
+    }
+
     function renderAnalyticsClassOverview(overview, distribution) {
       var container = document.getElementById('class-overview-content');
+      var interp = overview.interpretation || {};
 
       var html = '<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">';
+
+      // Mean
       html += '<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/30 rounded-lg p-4">';
       html += '<div class="text-sm text-blue-700 dark:text-blue-300 font-semibold mb-1">Mean Score</div>';
       html += '<div class="text-3xl font-bold text-blue-900 dark:text-blue-100">' + overview.mean + '</div>';
+      if (interp.meanScore) {
+        html += '<div class="mt-2 text-xs font-medium text-blue-800 dark:text-blue-200">' + escapeHtml(interp.meanScore.message) + '</div>';
+      }
       html += '</div>';
 
+      // Median
       html += '<div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/30 rounded-lg p-4">';
       html += '<div class="text-sm text-green-700 dark:text-green-300 font-semibold mb-1">Median Score</div>';
       html += '<div class="text-3xl font-bold text-green-900 dark:text-green-100">' + overview.median + '</div>';
       html += '</div>';
 
+      // Std Dev
       html += '<div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700/30 rounded-lg p-4">';
       html += '<div class="text-sm text-purple-700 dark:text-purple-300 font-semibold mb-1">Std. Deviation</div>';
       html += '<div class="text-3xl font-bold text-purple-900 dark:text-purple-100">' + overview.stdDev + '</div>';
+      if (interp.stdDev) {
+        html += '<div class="mt-2 text-xs font-medium text-purple-800 dark:text-purple-200">' + escapeHtml(interp.stdDev.message) + '</div>';
+      }
       html += '</div>';
 
+      // Participation
       html += '<div class="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700/30 rounded-lg p-4">';
       html += '<div class="text-sm text-gray-700 dark:text-gray-300 font-semibold mb-1">Participants</div>';
       html += '<div class="text-3xl font-bold text-gray-900 dark:text-gray-100">' + overview.participantCount + '</div>';
+      if (interp.participation) {
+        html += '<div class="mt-2 text-xs font-medium text-gray-800 dark:text-gray-200">' + escapeHtml(interp.participation.message) + '</div>';
+      }
       html += '</div>';
       html += '</div>';
 
@@ -4467,11 +4523,24 @@
       items.forEach(function (item, index) {
         var difficultyColor = item.difficultyPct > 90 ? 'green' : item.difficultyPct < 30 ? 'red' : 'blue';
         var discColor = item.discrimination > 0.3 ? 'green' : item.discrimination < 0 ? 'red' : 'yellow';
+        var interp = item.interpretation || {};
 
         html += '<div class="bg-white dark:bg-brand-dark-gray/40 border border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg p-5 mb-4">';
         html += '<div class="flex items-start justify-between gap-4 mb-4">';
         html += '<div class="flex-1">';
+        html += '<div class="flex items-center gap-2">';
         html += '<h4 class="font-semibold text-brand-dark-gray dark:text-brand-white">Question ' + (index + 1) + '</h4>';
+
+        // Quality Badge
+        if (interp.overall) {
+          var qBadgeColor = interp.overall.quality === 'excellent' ? 'bg-green-100 text-green-800' :
+                            interp.overall.quality === 'flawed' ? 'bg-red-100 text-red-800' :
+                            interp.overall.quality === 'needs-adjustment' ? 'bg-orange-100 text-orange-800' :
+                            'bg-gray-100 text-gray-800';
+          html += '<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ' + qBadgeColor + '">' + escapeHtml(interp.overall.quality) + '</span>';
+        }
+        html += '</div>';
+
         html += '<p class="text-sm text-brand-dark-gray/70 dark:text-brand-white/70 mt-1">' + escapeHtml(item.questionText) + '</p>';
         html += '</div>';
 
@@ -4480,10 +4549,16 @@
         html += '<div class="text-center">';
         html += '<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mb-1">Difficulty</div>';
         html += '<div class="text-2xl font-bold text-' + difficultyColor + '-600 dark:text-' + difficultyColor + '-400">' + item.difficultyPct + '%</div>';
+        if (interp.difficulty) {
+           html += '<div class="text-[10px] text-gray-500">' + escapeHtml(interp.difficulty.level) + '</div>';
+        }
         html += '</div>';
         html += '<div class="text-center">';
         html += '<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mb-1">Discrimination</div>';
         html += '<div class="text-2xl font-bold text-' + discColor + '-600 dark:text-' + discColor + '-400">' + item.discrimination + '</div>';
+        if (interp.discrimination) {
+           html += '<div class="text-[10px] text-gray-500">' + escapeHtml(interp.discrimination.level) + '</div>';
+        }
         html += '</div>';
         html += '</div>';
         html += '</div>';
@@ -4498,6 +4573,17 @@
             html += '<span class="px-2 py-1 rounded-full text-xs font-semibold ' + flagClass + '">' + flag.replace(/-/g, ' ') + '</span>';
           });
           html += '</div>';
+        }
+
+        // Actionable Insights
+        if (interp.actionable && interp.actionable.length > 0) {
+          html += '<div class="mt-3 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30 rounded text-sm text-amber-800 dark:text-amber-200">';
+          html += '<p class="font-semibold text-xs uppercase tracking-wide mb-1">Recommendation:</p>';
+          html += '<ul class="list-disc list-inside space-y-1">';
+          interp.actionable.forEach(function(insight) {
+            html += '<li>' + escapeHtml(insight) + '</li>';
+          });
+          html += '</ul></div>';
         }
 
         // Distractor Analysis

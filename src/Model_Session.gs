@@ -3299,7 +3299,10 @@ Veritas.Models.Session.flushAnswersWorker = function(pollId) {
            if (existingIds[ans.responseId]) return false;
 
            // Filter 2: Check Content (Poll|Email|Index)
-           var compositeKey = ans.pollId + '|' + ans.studentEmail + '|' + ans.questionIndex;
+           // Normalize question index: Firebase uses 'questionIndex', Cache uses 'actualQuestionIndex'
+           var qIdx = (ans.questionIndex !== undefined) ? ans.questionIndex : ans.actualQuestionIndex;
+
+           var compositeKey = ans.pollId + '|' + ans.studentEmail + '|' + qIdx;
            if (existingCompositeKeys[compositeKey]) {
               Logger.log('Duplicate content detected (ID mismatch but same question)', compositeKey);
               return false;
@@ -3308,13 +3311,15 @@ Veritas.Models.Session.flushAnswersWorker = function(pollId) {
            // Mark as seen for this batch
            existingCompositeKeys[compositeKey] = true;
            existingIds[ans.responseId] = true;
+           // Ensure the normalized index is available for the map function
+           ans._normalizedQIdx = qIdx;
            return true;
         }).map(function(ans) {
           return [
             ans.responseId,
             ans.timestamp,
             ans.pollId,
-            ans.questionIndex, // Firebase payload uses questionIndex directly
+            ans._normalizedQIdx, // Use normalized index (handles both Firebase and Cache schemas)
             ans.studentEmail,
             ans.answer,
             ans.isCorrect,

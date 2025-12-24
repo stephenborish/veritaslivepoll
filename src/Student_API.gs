@@ -567,9 +567,10 @@ Veritas.StudentApi.getIndividualTimedQuestion = function(pollId, sessionId, toke
  * @param {string} answerText - Answer text
  * @param {string} token - Session token
  * @param {string} confidenceLevel - Confidence level (optional)
+ * @param {string} clientResponseId - Client-generated UUID (optional, for deduplication)
  * @returns {Object} Result
  */
-Veritas.StudentApi.submitIndividualTimedAnswer = function(pollId, sessionId, questionIndex, answerText, token, confidenceLevel) {
+Veritas.StudentApi.submitIndividualTimedAnswer = function(pollId, sessionId, questionIndex, answerText, token, confidenceLevel, clientResponseId) {
   return withErrorHandling(function() {
     Veritas.StudentApi.validateToken(token);
 
@@ -579,7 +580,8 @@ Veritas.StudentApi.submitIndividualTimedAnswer = function(pollId, sessionId, que
       sessionId: sessionId,
       actualQuestionIndex: questionIndex,
       answer: answerText,
-      confidenceLevel: confidenceLevel
+      confidenceLevel: confidenceLevel,
+      clientResponseId: clientResponseId
     });
   })();
 };

@@ -22,6 +22,12 @@ Veritas.Config.STUDENT_TOKEN_INDEX_KEY = 'STUDENT_TOKEN_INDEX';
 Veritas.Config.DEBUG_FIREBASE = false; // Toggle for on-screen debug HUD (set true to show Firebase connection status)
 Veritas.Config.ALLOW_MANUAL_EXAM_CLAIM = false; // Set to true to allow manual student ID entry if token is missing
 
+// --- FIREBASE SECRETS ---
+Veritas.Config.getFirebaseSecret = function() {
+  var props = PropertiesService.getScriptProperties();
+  return props.getProperty('FIREBASE_DATABASE_SECRET');
+};
+
 // Firebase Config - SECURITY: Load from Script Properties instead of hardcoding
 Veritas.Config.getFirebaseConfig = function() {
   var props = PropertiesService.getScriptProperties();

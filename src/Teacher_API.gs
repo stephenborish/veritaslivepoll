@@ -1559,13 +1559,13 @@ Veritas.TeacherApi.sendPollLinkToClass = function(className, pollId) {
             '<style>body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}table,td{mso-table-lspace:0pt;mso-table-rspace:0pt;}img{-ms-interpolation-mode:bicubic;border:0;outline:none;text-decoration:none;}body{margin:0;padding:0;width:100%!important;height:100%!important;font-family:\"Inter\",-apple-system,BlinkMacSystemFont,\"Segoe UI\",Helvetica,Arial,sans-serif;background-color:#f7f8fa;}@media only screen and (max-width:600px){.email-container{width:100%!important;}.mobile-padding{padding:20px!important;}.mobile-text{font-size:15px!important;}.mobile-button{padding:16px 28px!important;font-size:15px!important;}}</style></head>' +
             '<body style="margin:0;padding:0;background-color:#f7f8fa;">' +
             '<center style="width:100%;background-color:#f7f8fa;">' +
-            '<div style="max-width:600px;margin:0 auto;">' +
+            '<div style="max-width:800px;margin:0 auto;">' +
             '<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;font-family:sans-serif;">' +
             'Your secure VERITAS assessment link is ready. Click to begin.' +
             '</div>' +
             '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0;padding:0;">' +
             '<tr><td style="padding:40px 10px;">' +
-            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="email-container" style="max-width:600px;margin:0 auto;background-color:#ffffff;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">' +
+            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="email-container" style="max-width:800px;margin:0 auto;background-color:#ffffff;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">' +
             '<tr><td style="padding:0;background:linear-gradient(to right,#c5a05a,#d4b16e);height:4px;border-radius:12px 12px 0 0;"></td></tr>' +
             '<tr><td style="padding:32px 40px 24px;text-align:center;background:linear-gradient(135deg,rgba(18,56,93,0.03),rgba(197,160,90,0.05));border-bottom:1px solid rgba(18,56,93,0.08);" class="mobile-padding">' +
             '<h1 style="margin:0;font-size:28px;font-weight:700;color:#12385d;letter-spacing:-0.02em;">VERITAS</h1>' +
@@ -1596,13 +1596,13 @@ Veritas.TeacherApi.sendPollLinkToClass = function(className, pollId) {
             '</td></tr></table>' +
             '</td></tr>' +
             '<tr><td style="padding:32px 40px;background-color:rgba(18,56,93,0.02);border-top:1px solid rgba(18,56,93,0.08);border-radius:0 0 12px 12px;text-align:center;" class="mobile-padding">' +
-            '<p style="margin:0 0 12px;font-size:13px;line-height:1.6;color:#6b7280;">🔒 <strong style="color:#12385d;font-weight:600;">This link is unique to you</strong></p>' +
+            '<p style="margin:0 0 12px;font-size:13px;line-height:1.6;color:#6b7280;">&#128274; <strong style="color:#12385d;font-weight:600;">This link is unique to you</strong></p>' +
             '<p style="margin:0;font-size:12px;line-height:1.6;color:#6b7280;">Do not share this link. It connects directly to your secure assessment.</p>' +
             '</td></tr>' +
             '</table>' +
             '</td></tr>' +
             '<tr><td style="padding:0 10px 40px;">' +
-            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="email-container" style="max-width:600px;margin:0 auto;"><tr><td style="padding:20px 0;text-align:center;">' +
+            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="email-container" style="max-width:800px;margin:0 auto;"><tr><td style="padding:20px 0;text-align:center;">' +
             '<p style="margin:0;font-size:11px;line-height:1.6;color:#9ca3af;">Powered by <strong style="color:#12385d;">VERITAS</strong> Secure Assessments</p>' +
             '</td></tr></table>' +
             '</td></tr>' +
@@ -1632,13 +1632,13 @@ Veritas.TeacherApi.sendPollLinkToClass = function(className, pollId) {
             '<style>body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}table,td{mso-table-lspace:0pt;mso-table-rspace:0pt;}img{-ms-interpolation-mode:bicubic;border:0;outline:none;text-decoration:none;}body{margin:0;padding:0;width:100%!important;height:100%!important;font-family:\"Inter\",-apple-system,BlinkMacSystemFont,\"Segoe UI\",Helvetica,Arial,sans-serif;background-color:#f7f8fa;}@media only screen and (max-width:600px){.email-container{width:100%!important;}.mobile-padding{padding:20px!important;}.mobile-text{font-size:15px!important;}.mobile-button{padding:16px 28px!important;font-size:15px!important;}}</style></head>' +
             '<body style="margin:0;padding:0;background-color:#f7f8fa;">' +
             '<center style="width:100%;background-color:#f7f8fa;">' +
-            '<div style="max-width:600px;margin:0 auto;">' +
+            '<div style="max-width:800px;margin:0 auto;">' +
             '<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;font-family:sans-serif;">' +
             'Your personalized VERITAS live poll session is ready. Click to join.' +
             '</div>' +
             '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0;padding:0;">' +
             '<tr><td style="padding:40px 10px;">' +
-            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="email-container" style="max-width:600px;margin:0 auto;background-color:#ffffff;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">' +
+            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="email-container" style="max-width:800px;margin:0 auto;background-color:#ffffff;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">' +
             '<tr><td style="padding:0;background:linear-gradient(to right,#c5a05a,#d4b16e);height:4px;border-radius:12px 12px 0 0;"></td></tr>' +
             '<tr><td style="padding:32px 40px 24px;text-align:center;background:linear-gradient(135deg,rgba(18,56,93,0.03),rgba(197,160,90,0.05));border-bottom:1px solid rgba(18,56,93,0.08);" class="mobile-padding">' +
             '<h1 style="margin:0;font-size:28px;font-weight:700;color:#12385d;letter-spacing:-0.02em;">VERITAS</h1>' +
@@ -1667,13 +1667,13 @@ Veritas.TeacherApi.sendPollLinkToClass = function(className, pollId) {
             '</td></tr></table>' +
             '</td></tr>' +
             '<tr><td style="padding:32px 40px;background-color:rgba(18,56,93,0.02);border-top:1px solid rgba(18,56,93,0.08);border-radius:0 0 12px 12px;text-align:center;" class="mobile-padding">' +
-            '<p style="margin:0 0 12px;font-size:13px;line-height:1.6;color:#6b7280;">🔒 <strong style="color:#12385d;font-weight:600;">This link is unique to you</strong></p>' +
+            '<p style="margin:0 0 12px;font-size:13px;line-height:1.6;color:#6b7280;">&#128274; <strong style="color:#12385d;font-weight:600;">This link is unique to you</strong></p>' +
             '<p style="margin:0;font-size:12px;line-height:1.6;color:#6b7280;">Do not share this link. It connects directly to your personal VERITAS live poll session.</p>' +
             '</td></tr>' +
             '</table>' +
             '</td></tr>' +
             '<tr><td style="padding:0 10px 40px;">' +
-            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="email-container" style="max-width:600px;margin:0 auto;"><tr><td style="padding:20px 0;text-align:center;">' +
+            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="email-container" style="max-width:800px;margin:0 auto;"><tr><td style="padding:20px 0;text-align:center;">' +
             '<p style="margin:0;font-size:11px;line-height:1.6;color:#9ca3af;">Powered by <strong style="color:#12385d;">VERITAS</strong> Live Poll System</p>' +
             '</td></tr></table>' +
             '</td></tr>' +

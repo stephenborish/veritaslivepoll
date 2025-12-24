@@ -1587,14 +1587,6 @@ Veritas.TeacherApi.sendPollLinkToClass = function(className, pollId) {
             '</ul>' +
             '</td></tr></table>' +
             '</td></tr>' +
-            '<tr><td style="padding:0 40px 36px;" class="mobile-padding">' +
-            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#f8fafc;border-radius:8px;border:1px solid rgba(18,56,93,0.1);"><tr><td style="padding:20px 24px;">' +
-            '<p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#6b7280;">Button not working?</p>' +
-            '<p style="margin:0;font-size:12px;line-height:1.6;color:#6b7280;">Copy and paste this link into your browser:</p>' +
-            '<p style="margin:8px 0 0;font-size:12px;word-break:break-all;font-family:\"Courier New\",Courier,monospace;"><a href="' + link + '" target="_blank" rel="noopener" style="color:#12385d;text-decoration:underline;">' + link + '</a></p>' +
-            '<p style="margin:12px 0 0;font-size:12px;line-height:1.6;color:#6b7280;">If an access code is required, your teacher will provide it separately.</p>' +
-            '</td></tr></table>' +
-            '</td></tr>' +
             '<tr><td style="padding:32px 40px;background-color:rgba(18,56,93,0.02);border-top:1px solid rgba(18,56,93,0.08);border-radius:0 0 12px 12px;text-align:center;" class="mobile-padding">' +
             '<p style="margin:0 0 12px;font-size:13px;line-height:1.6;color:#6b7280;">&#128274; <strong style="color:#12385d;font-weight:600;">This link is unique to you</strong></p>' +
             '<p style="margin:0;font-size:12px;line-height:1.6;color:#6b7280;">Do not share this link. It connects directly to your secure assessment.</p>' +
@@ -1657,13 +1649,6 @@ Veritas.TeacherApi.sendPollLinkToClass = function(className, pollId) {
             '<li style="margin-bottom:8px;">Do not navigate to other browser tabs or applications</li>' +
             '<li style="margin-bottom:0;">Do not refresh or close the browser window</li>' +
             '</ul>' +
-            '</td></tr></table>' +
-            '</td></tr>' +
-            '<tr><td style="padding:0 40px 36px;" class="mobile-padding">' +
-            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#f8fafc;border-radius:8px;border:1px solid rgba(18,56,93,0.1);"><tr><td style="padding:20px 24px;">' +
-            '<p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#6b7280;">Button not working?</p>' +
-            '<p style="margin:0;font-size:12px;line-height:1.6;color:#6b7280;">Copy and paste this link into your browser:</p>' +
-            '<p style="margin:8px 0 0;font-size:12px;word-break:break-all;font-family:\"Courier New\",Courier,monospace;"><a href="' + link + '" target="_blank" rel="noopener" style="color:#12385d;text-decoration:underline;">' + link + '</a></p>' +
             '</td></tr></table>' +
             '</td></tr>' +
             '<tr><td style="padding:32px 40px;background-color:rgba(18,56,93,0.02);border-top:1px solid rgba(18,56,93,0.08);border-radius:0 0 12px 12px;text-align:center;" class="mobile-padding">' +

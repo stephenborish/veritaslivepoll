@@ -251,6 +251,77 @@ Veritas.Utils.generateUuid = function() {
   return Utilities.getUuid();
 };
 
+// =============================================================================
+// FIREBASE REST CLIENT (SERVER-SIDE)
+// =============================================================================
+
+Veritas.Utils.Firebase = {
+  /**
+   * Get the base URL with auth param
+   */
+  _getUrl: function(path) {
+    var config = Veritas.Config.getFirebaseConfig();
+    var secret = Veritas.Config.getFirebaseSecret();
+    var baseUrl = config.databaseURL;
+
+    // Clean leading/trailing slashes
+    if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
+    if (path.startsWith('/')) path = path.slice(1);
+
+    // Auth param (handle query params if path already has them)
+    var separator = path.indexOf('?') !== -1 ? '&' : '?';
+    var authParam = secret ? separator + 'auth=' + secret : '';
+
+    return baseUrl + '/' + path + '.json' + authParam;
+  },
+
+  /**
+   * Write data (PUT - Overwrites path)
+   */
+  set: function(path, data) {
+    var url = this._getUrl(path);
+    var options = {
+      method: 'put',
+      contentType: 'application/json',
+      payload: JSON.stringify(data),
+      muteHttpExceptions: true
+    };
+    return UrlFetchApp.fetch(url, options);
+  },
+
+  /**
+   * Update data (PATCH - Merges keys)
+   */
+  update: function(path, data) {
+    var url = this._getUrl(path);
+    var options = {
+      method: 'patch',
+      contentType: 'application/json',
+      payload: JSON.stringify(data),
+      muteHttpExceptions: true
+    };
+    return UrlFetchApp.fetch(url, options);
+  },
+
+  /**
+   * Read data (GET)
+   */
+  get: function(path) {
+    var url = this._getUrl(path);
+    var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    if (response.getResponseCode() !== 200) return null;
+    return JSON.parse(response.getContentText());
+  },
+
+  /**
+   * Delete data (DELETE)
+   */
+  remove: function(path) {
+    var url = this._getUrl(path);
+    return UrlFetchApp.fetch(url, { method: 'delete', muteHttpExceptions: true });
+  }
+};
+
 // --- LEGACY COMPATIBILITY ---
 // Maintain backward compatibility with existing functions
 

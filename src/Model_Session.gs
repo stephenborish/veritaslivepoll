@@ -74,6 +74,15 @@ Veritas.Models.Session.startPoll = function(pollId) {
         sessionId: sessionId
       };
 
+      // FIREBASE: Fast Write
+      Veritas.Utils.Firebase.set('sessions/' + pollId + '/live_session', {
+        status: 'OPEN',
+        questionIndex: 0,
+        updatedAt: nowIso,
+        sessionPhase: 'LIVE',
+        metadata: metadata
+      });
+
       DataAccess.liveStatus.set(pollId, 0, "OPEN", metadata);
 
       Veritas.Models.Session.ProctorAccess.resetForNewSession(pollId, sessionId);
@@ -130,6 +139,15 @@ Veritas.Models.Session.nextQuestion = function() {
         revealedAt: null
       };
 
+      // FIREBASE: Fast Write
+      Veritas.Utils.Firebase.update('sessions/' + pollId + '/live_session', {
+        status: 'OPEN',
+        questionIndex: newIndex,
+        updatedAt: nowIso,
+        sessionPhase: 'LIVE',
+        metadata: newMetadata
+      });
+
       DataAccess.liveStatus.set(pollId, newIndex, "OPEN", newMetadata);
 
       Logger.log('Next question', { pollId: pollId, questionIndex: newIndex });
@@ -170,7 +188,8 @@ Veritas.Models.Session.previousQuestion = function() {
 
       const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
       const nowIso = new Date().toISOString();
-      DataAccess.liveStatus.set(pollId, newIndex, "OPEN", {
+
+      const newMetadata = {
         ...previousMetadata,
         reason: 'RUNNING',
         movedBackAt: nowIso,
@@ -182,7 +201,18 @@ Veritas.Models.Session.previousQuestion = function() {
         resultsVisibility: 'HIDDEN',
         responsesClosedAt: null,
         revealedAt: null
+      };
+
+      // FIREBASE: Fast Write
+      Veritas.Utils.Firebase.update('sessions/' + pollId + '/live_session', {
+        status: 'OPEN',
+        questionIndex: newIndex,
+        updatedAt: nowIso,
+        sessionPhase: 'LIVE',
+        metadata: newMetadata
       });
+
+      DataAccess.liveStatus.set(pollId, newIndex, "OPEN", newMetadata);
 
       Logger.log('Previous question', { pollId: pollId, questionIndex: newIndex });
 
@@ -203,7 +233,8 @@ Veritas.Models.Session.stopPoll = function() {
 
       const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
       const nowIso = new Date().toISOString();
-      DataAccess.liveStatus.set(pollId, questionIndex, "PAUSED", {
+
+      const newMetadata = {
         ...previousMetadata,
         reason: 'RESPONSES_CLOSED',
         pausedAt: nowIso,
@@ -214,7 +245,17 @@ Veritas.Models.Session.stopPoll = function() {
         resultsVisibility: 'HIDDEN',
         responsesClosedAt: nowIso,
         revealedAt: null
+      };
+
+      // FIREBASE: Fast Write
+      Veritas.Utils.Firebase.update('sessions/' + pollId + '/live_session', {
+        status: 'PAUSED',
+        updatedAt: nowIso,
+        sessionPhase: 'RESULTS_HOLD',
+        metadata: newMetadata
       });
+
+      DataAccess.liveStatus.set(pollId, questionIndex, "PAUSED", newMetadata);
 
       Logger.log('Responses closed for question', { pollId: pollId, questionIndex: questionIndex });
 
@@ -239,7 +280,8 @@ Veritas.Models.Session.resumePoll = function() {
 
       const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
       const nowIso = new Date().toISOString();
-      DataAccess.liveStatus.set(pollId, questionIndex, "OPEN", {
+
+      const newMetadata = {
         ...previousMetadata,
         reason: 'RUNNING',
         resumedAt: nowIso,
@@ -250,7 +292,17 @@ Veritas.Models.Session.resumePoll = function() {
         resultsVisibility: 'HIDDEN',
         responsesClosedAt: null,
         revealedAt: null
+      };
+
+      // FIREBASE: Fast Write
+      Veritas.Utils.Firebase.update('sessions/' + pollId + '/live_session', {
+        status: 'OPEN',
+        updatedAt: nowIso,
+        sessionPhase: 'LIVE',
+        metadata: newMetadata
       });
+
+      DataAccess.liveStatus.set(pollId, questionIndex, "OPEN", newMetadata);
 
       Logger.log('Poll resumed', { pollId: pollId, questionIndex: questionIndex });
 
@@ -270,7 +322,8 @@ Veritas.Models.Session.closePoll = function() {
 
       const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
       const nowIso = new Date().toISOString();
-      DataAccess.liveStatus.set("", -1, "CLOSED", {
+
+      const newMetadata = {
         ...previousMetadata,
         reason: 'COMPLETED',
         sessionPhase: 'ENDED',
@@ -280,7 +333,18 @@ Veritas.Models.Session.closePoll = function() {
         resultsVisibility: 'HIDDEN',
         responsesClosedAt: previousMetadata.responsesClosedAt || nowIso,
         revealedAt: null
+      };
+
+      // FIREBASE: Fast Write
+      // Write to the poll that was active
+      Veritas.Utils.Firebase.update('sessions/' + pollId + '/live_session', {
+        status: 'CLOSED',
+        updatedAt: nowIso,
+        sessionPhase: 'ENDED',
+        metadata: newMetadata
       });
+
+      DataAccess.liveStatus.set("", -1, "CLOSED", newMetadata);
 
       Logger.log('Poll closed completely', { pollId: pollId });
 
@@ -344,7 +408,7 @@ Veritas.Models.Session.revealResultsToStudents = function() {
     }
     const nowIso = new Date().toISOString();
 
-    DataAccess.liveStatus.set(pollId, questionIndex, "PAUSED", {
+    const newMetadata = {
       ...previousMetadata,
       reason: 'RESULTS_REVEALED',
       pausedAt: previousMetadata.pausedAt || nowIso,
@@ -355,7 +419,18 @@ Veritas.Models.Session.revealResultsToStudents = function() {
       resultsVisibility: 'REVEALED',
       responsesClosedAt: previousMetadata.responsesClosedAt || nowIso,
       revealedAt: nowIso
+    };
+
+    // FIREBASE: Fast Write
+    Veritas.Utils.Firebase.update('sessions/' + pollId + '/live_session', {
+      status: 'PAUSED',
+      updatedAt: nowIso,
+      sessionPhase: 'RESULTS_REVEALED',
+      resultsVisibility: 'REVEALED',
+      metadata: newMetadata
     });
+
+    DataAccess.liveStatus.set(pollId, questionIndex, "PAUSED", newMetadata);
 
     Logger.log('Results revealed to students', { pollId: pollId, questionIndex: questionIndex });
 
@@ -382,7 +457,7 @@ Veritas.Models.Session.hideResultsFromStudents = function() {
     }
     const nowIso = new Date().toISOString();
 
-    DataAccess.liveStatus.set(pollId, questionIndex, "PAUSED", {
+    const newMetadata = {
       ...previousMetadata,
       reason: 'RESULTS_HIDDEN',
       pausedAt: previousMetadata.pausedAt || nowIso,
@@ -393,7 +468,18 @@ Veritas.Models.Session.hideResultsFromStudents = function() {
       resultsVisibility: 'HIDDEN',
       responsesClosedAt: previousMetadata.responsesClosedAt || nowIso,
       revealedAt: null
+    };
+
+    // FIREBASE: Fast Write
+    Veritas.Utils.Firebase.update('sessions/' + pollId + '/live_session', {
+      status: 'PAUSED',
+      updatedAt: nowIso,
+      sessionPhase: 'RESULTS_HOLD',
+      resultsVisibility: 'HIDDEN',
+      metadata: newMetadata
     });
+
+    DataAccess.liveStatus.set(pollId, questionIndex, "PAUSED", newMetadata);
 
     Logger.log('Results hidden from students', { pollId: pollId, questionIndex: questionIndex });
 
@@ -417,7 +503,7 @@ Veritas.Models.Session.endQuestionAndRevealResults = function() {
     const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
     const nowIso = new Date().toISOString();
 
-    DataAccess.liveStatus.set(pollId, questionIndex, "PAUSED", {
+    const newMetadata = {
       ...previousMetadata,
       reason: 'RESULTS_REVEALED',
       pausedAt: nowIso,
@@ -428,7 +514,18 @@ Veritas.Models.Session.endQuestionAndRevealResults = function() {
       resultsVisibility: 'REVEALED',
       responsesClosedAt: nowIso,
       revealedAt: nowIso
+    };
+
+    // FIREBASE: Fast Write
+    Veritas.Utils.Firebase.update('sessions/' + pollId + '/live_session', {
+      status: 'PAUSED',
+      updatedAt: nowIso,
+      sessionPhase: 'RESULTS_REVEALED',
+      resultsVisibility: 'REVEALED',
+      metadata: newMetadata
     });
+
+    DataAccess.liveStatus.set(pollId, questionIndex, "PAUSED", newMetadata);
 
     Logger.log('Question ended and results revealed', { pollId: pollId, questionIndex: questionIndex });
 
@@ -496,6 +593,14 @@ Veritas.Models.Session.resetLiveQuestion = function(pollId, questionIndex, clear
         responsesClosedAt: null,
         revealedAt: null
       };
+
+      // FIREBASE: Fast Write
+      Veritas.Utils.Firebase.update('sessions/' + pollId + '/live_session', {
+        status: 'OPEN',
+        updatedAt: nowIso,
+        sessionPhase: 'LIVE',
+        metadata: newMetadata
+      });
 
       DataAccess.liveStatus.set(pollId, questionIndex, "OPEN", newMetadata);
 
@@ -3222,11 +3327,10 @@ Veritas.Models.Session.fetchFirebaseAnswers = function(pollId) {
     }
 
     var baseUrl = config.databaseURL;
-    // REST API Endpoint: https://<db>.firebaseio.com/answers/<pollId>.json?auth=<SECRET>
+    // REST API Endpoint: https://<db>.firebaseio.com/sessions/<pollId>/responses.json?auth=<SECRET>
     // Note: ordering by key ($key) gives chronological order
-    // FIX: Removed limitToLast=100 to prevent data loss during high volume submission spikes.
-    // The worker handles deduplication against the sheet, so fetching the full set for the active poll is safer.
-    var url = baseUrl + '/answers/' + pollId + '.json?auth=' + secret + '&orderBy="$key"';
+    // Path changed to: sessions/{pollId}/responses (containing questionIndex -> safeEmail -> answer)
+    var url = baseUrl + '/sessions/' + pollId + '/responses.json?auth=' + secret;
 
     var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
     if (response.getResponseCode() !== 200) {
@@ -3237,8 +3341,18 @@ Veritas.Models.Session.fetchFirebaseAnswers = function(pollId) {
     var data = JSON.parse(response.getContentText());
     if (!data) return [];
 
-    // Convert object { key: val } to array [val]
-    return Object.keys(data).map(function(k) { return data[k]; });
+    // Flatten data: responses -> questionIndex -> safeEmail -> entry
+    var flattened = [];
+    Object.keys(data).forEach(function(qIndex) {
+      var qData = data[qIndex];
+      if (qData) {
+        Object.keys(qData).forEach(function(emailKey) {
+          flattened.push(qData[emailKey]);
+        });
+      }
+    });
+
+    return flattened;
   } catch (e) {
     Logger.log('Error fetching from Firebase', e);
     return [];

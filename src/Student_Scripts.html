@@ -101,12 +101,26 @@
 
                 // 4. Signal-to-Poll: Listen for public state changes
                 // When teacher advances slide, a signal is written here.
-                var publicStateRef = firebaseDb.ref('sessions/' + pollId + '/publicState');
-                publicStateRef.on('value', function(snapshot) {
-                    var state = snapshot.val();
-                    if (state) {
-                        console.log('[Firebase] Public state signal received - triggering immediate poll', state);
-                        startPolling(true); // Immediate poll
+                // NEW: Listen to 'live_session' for instant updates (Hybrid Architecture)
+                var liveSessionRef = firebaseDb.ref('sessions/' + pollId + '/live_session');
+                liveSessionRef.on('value', function(snapshot) {
+                    var data = snapshot.val();
+                    if (data) {
+                        console.log('[Firebase] Live Session update received:', data);
+                        // Directly update view instead of polling if data is sufficient
+                        // 'handleLightweightSessionUpdate' equivalent for student
+                        if (typeof updateStudentView === 'function') {
+                             // Construct view payload from firebase data
+                             // We need to map Firebase state to what updateStudentView expects
+                             // If full payload isn't here, fall back to startPolling(true)
+
+                             // For now, trigger immediate poll to fetch full state safely
+                             // The backend has updated Sheets by now (or is about to)
+                             // Optimization: We can pass the lightweight state to a handler
+                             startPolling(true);
+                        } else {
+                             startPolling(true);
+                        }
                     }
                 });
 
@@ -145,11 +159,12 @@
                     clientTimestamp: Date.now()
                 };
 
-                // Push to answers collection
-                // Path: answers/{pollId}/{pushKey}
-                var answersRef = firebaseDb.ref('answers/' + pollId);
-                var newRef = answersRef.push();
-                await newRef.set(payload);
+                // WRITE DIRECTLY TO FIREBASE (Scoped Path)
+                // Path: sessions/{pollId}/responses/{questionIndex}/{safeEmail}
+                var safeEmail = studentEmail.replace(/\./g, ','); // Firebase keys can't have '.'
+                var path = 'sessions/' + pollId + '/responses/' + questionIndex + '/' + safeEmail;
+
+                await firebaseDb.ref(path).set(payload);
 
                 console.log('[Firebase] Fast Answer Submitted:', payload);
                 return { success: true, responseId: responseId, timestamp: timestamp };

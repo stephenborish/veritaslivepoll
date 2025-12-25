@@ -1,8 +1,8 @@
 # Veritas Live Poll - Project Roadmap & TODO
 
-**Last Updated**: 2025-11-10
+**Last Updated**: 2025-12-25
 **Status**: ✅ Production-Ready
-**Current Version**: v2.0 (Modernization Complete)
+**Current Version**: v2.1 (Documentation & Architecture Audit Complete)
 
 ---
 
@@ -36,7 +36,7 @@
 - [x] Teacher approval workflow with visual indicators
 - [x] Student unlock flow with fullscreen resume
 - [x] Proctoring telemetry and logging
-- [x] Comprehensive QA test suite (PROCTOR_QA_CHECKLIST.md)
+- [x] Comprehensive QA test suite
 
 ### ✅ Phase 3: Modernization (2025 Q1 - Q2)
 - [x] UI overhaul with Tailwind CSS and Veritas Navy & Gold branding
@@ -51,34 +51,46 @@
 - [x] Post-submission confirmation state (no flicker)
 - [x] Improved teacher multi-account authentication
 
-### ✅ Phase 4: Documentation & Quality (2025 Q3)
-- [x] Comprehensive README with quick start guide
-- [x] Architecture documentation
-- [x] Deployment guide
-- [x] Troubleshooting guide with debug tools
-- [x] Proctoring QA checklist
-- [x] Code comments and JSDoc annotations
-- [x] Browser compatibility testing
-- [x] Production deployment validation
+### ✅ Phase 4: Exam System & Question Bank (2025 Q2-Q3)
+- [x] Question bank with tagging system
+- [x] Exam manager interface
+- [x] Exam student proctored interface
+- [x] Write-behind cache for exam responses
+- [x] Time-based trigger for answer flush (CRITICAL)
+- [x] Exam analytics and scoring
+
+### ✅ Phase 5: Documentation & Architecture Audit (2025 Q4)
+- [x] Complete README rewrite with hybrid architecture documentation
+- [x] Firebase + Sheets "Write-Behind" pattern explained
+- [x] Comprehensive code audit (traced all 43 files from entry points)
+- [x] Confirmed zero orphaned/dead files
+- [x] Documentation reorganization (docs/ and docs/archive/ structure)
+- [x] Updated installation guide with Firebase Script Properties setup
+- [x] Security documentation (auth, proctoring, lock versioning)
+- [x] Complete usage guides for teachers and students
+- [x] Troubleshooting section with debug tools
 
 ---
 
 ## Current Status
 
-### Production Readiness: ✅ READY
+### Production Readiness: ✅ STABLE
 
 **System Health**:
 - ✅ Core polling functionality stable
 - ✅ Proctoring system reliable with version tracking
+- ✅ Exam system operational with write-behind cache
+- ✅ Firebase RTDB integrated for real-time lock status
 - ✅ UI responsive and accessible
 - ✅ Network resilience tested (connection drops handled gracefully)
 - ✅ Multi-browser compatibility verified (Chrome, Firefox, Safari)
-- ✅ Documentation complete and up-to-date
+- ✅ Documentation comprehensive and current (as of Dec 25, 2025)
 
 **Known Limitations**:
 - ⚠️ Mobile support limited (fullscreen API constraints)
 - ⚠️ Safari iOS requires user gesture for fullscreen
-- ⚠️ Email quota limits (100/day for free Google accounts)
+- ⚠️ Email quota limits (100/day for free Google accounts, 1500/day for Workspace)
+- ⚠️ Firebase config must be manually set in Script Properties (intentional security practice)
 
 ---
 
@@ -86,7 +98,7 @@
 
 ### High Priority (Next 3-6 Months)
 
-#### 1. Analytics Dashboard
+#### 1. Enhanced Analytics Dashboard
 **Status**: 📋 Planned
 **Effort**: Medium (2-3 weeks)
 **Description**: Post-session analytics with:
@@ -95,29 +107,31 @@
 - Misconception identification (wrong answer clustering)
 - Point-biserial correlation for item discrimination
 - CSV export for external analysis
+- Historical trend tracking
 
 **Technical Approach**:
-- New Analytics sheet in database
-- New AnalyticsView.html UI
-- Aggregation functions in Code.gs
-- Chart.js integration for advanced visualizations
+- Extend Model_Analytics.gs with new metrics
+- Add analytics tab to Teacher_View.html
+- Integrate Chart.js for advanced visualizations
+- Use existing Responses sheet data
 
-#### 2. Poll Templates & Question Bank
+#### 2. Poll Templates & Enhanced Question Bank
 **Status**: 📋 Planned
 **Effort**: Medium (2-3 weeks)
 **Description**:
 - Save polls as reusable templates
-- Question bank with tagging system (topic, difficulty, standard alignment)
+- Advanced question bank filtering (topic, difficulty, standard alignment)
 - Quick poll assembly from question bank
 - Import/export polls as JSON
+- Question versioning and history
 
 **Technical Approach**:
-- New Templates sheet in database
-- New QuestionBank sheet with tags column
-- Template management UI in TeacherView
-- JSON serialization for portability
+- Add Templates sheet to database
+- Enhanced QuestionBankView.html UI
+- JSON serialization/deserialization
+- Template management API
 
-#### 3. Multiple Choice Types
+#### 3. Multiple Choice Type Extensions
 **Status**: 📋 Planned
 **Effort**: Small-Medium (1-2 weeks)
 **Description**:
@@ -127,8 +141,8 @@
 - Partial credit for multi-select
 
 **Technical Approach**:
-- Add `questionType` field to poll data
-- Conditional rendering in StudentView
+- Extend questionType field in poll data
+- Conditional rendering in Student_View.html
 - Updated grading logic for partial credit
 - New validation rules
 
@@ -140,22 +154,41 @@
 - Show class-wide statistics during session
 - Anonymous participation mode (no student names)
 - Pace indicator (% of class submitted)
+- Answer distribution pie chart
 
 **Technical Approach**:
-- New metadata fields in LiveStatus
+- New metadata fields in LiveStatus sheet
 - Conditional rendering based on teacher settings
-- Aggregation in getLivePollData
-- UI toggle in TeacherView
+- Aggregation in getLivePollData()
+- UI toggle in Teacher_View.html
 
 ---
 
 ### Medium Priority (6-12 Months)
 
-#### 5. Advanced Proctoring Features
+#### 5. LMS Integration (Canvas/Blackboard/Moodle)
 **Status**: 💡 Idea Stage
+**Effort**: Large (6-8 weeks)
+**Description**:
+- LTI 1.3 integration
+- Grade passback to LMS gradebook
+- SSO via LMS authentication
+- Roster import from LMS
+- Assignment syncing
+
+**Technical Approach**:
+- Implement LTI 1.3 standard
+- OAuth 2.0 for grade passback
+- New middleware layer in routing
+- Roster sync with DataAccess layer
+
+**Blocker**: Requires institutional buy-in, LMS admin access
+
+#### 6. Advanced Proctoring Features
+**Status**: 💡 Idea Stage (Privacy Concerns)
 **Effort**: Large (4-6 weeks)
 **Description**:
-- Webcam snapshot on violation (privacy concerns, needs careful design)
+- Webcam snapshot on violation (requires consent)
 - Audio monitoring (detect speaking/external assistance)
 - Screen recording option (for dispute resolution)
 - Lockdown browser integration
@@ -166,39 +199,54 @@
 - Storage costs for media
 - Ethical implications
 
-**Decision**: Defer until explicit user demand
+**Decision**: Defer until explicit user demand and legal review
 
-#### 6. Integration with LMS
-**Status**: 💡 Idea Stage
-**Effort**: Large (6-8 weeks)
-**Description**:
-- LTI integration for Canvas, Blackboard, Moodle
-- Grade passback to LMS gradebook
-- SSO via LMS authentication
-- Assignment syncing
-
-**Technical Approach**:
-- Implement LTI 1.3 standard
-- OAuth 2.0 for grade passback
-- Roster import from LMS
-- New middleware layer in Code.gs
-
-#### 7. Collaborative Polls
+#### 7. Collaborative/Discussion Polls
 **Status**: 💡 Idea Stage
 **Effort**: Medium (3-4 weeks)
 **Description**:
 - Team-based polls (groups of students)
 - Peer voting on responses
-- Discussion mode (students see others' answers)
+- Discussion mode (students see others' answers after submission)
 - Breakout rooms
 
 **Technical Approach**:
 - New Groups sheet for team assignments
-- Peer response tracking
-- WebSockets or long-polling for discussion mode
+- Peer response tracking in Responses sheet
+- Real-time discussion sync via Firebase
 - UI for group formation
 
-#### 8. Mobile App (Native)
+---
+
+### Low Priority (12+ Months / Nice-to-Have)
+
+#### 8. AI-Powered Features
+- Auto-generate questions from lecture notes (GPT integration)
+- Misconception detection with AI explanations
+- Adaptive difficulty (adjust based on student performance)
+- Automatic feedback generation
+
+#### 9. Accessibility Enhancements (WCAG 2.1 AA)
+- Screen reader optimization
+- High contrast mode
+- Keyboard-only navigation
+- Text-to-speech for questions
+- Dyslexia-friendly fonts (OpenDyslexic)
+
+#### 10. Internationalization (i18n)
+- Multi-language UI support
+- RTL language support (Arabic, Hebrew)
+- Localized date/time formats
+- Translation management system
+
+#### 11. Advanced Media Support
+- Audio questions (listening comprehension)
+- Video questions (embedded YouTube/Vimeo)
+- Interactive diagrams (clickable images)
+- LaTeX/MathJax for mathematical notation
+- Chemistry notation (ChemDraw integration)
+
+#### 12. Native Mobile Apps
 **Status**: 💡 Idea Stage
 **Effort**: Very Large (12+ weeks)
 **Description**:
@@ -207,43 +255,7 @@
 - Push notifications for poll start
 - Offline mode (sync when reconnected)
 
-**Technical Approach**:
-- React Native or Flutter
-- Apps Script REST API
-- Local SQLite database for offline
-- Platform-specific proctoring APIs
-
-**Blocker**: Requires significant resources, low ROI given current user base
-
----
-
-### Low Priority (12+ Months / Nice-to-Have)
-
-#### 9. AI-Powered Features
-- Auto-generate questions from lecture notes (GPT integration)
-- Misconception detection with explanations
-- Adaptive difficulty (adjust question difficulty based on performance)
-- Automatic feedback generation
-
-#### 10. Accessibility Enhancements
-- Screen reader optimization (WCAG 2.1 AA compliance)
-- High contrast mode
-- Keyboard-only navigation
-- Text-to-speech for questions
-- Dyslexia-friendly fonts
-
-#### 11. Internationalization (i18n)
-- Multi-language UI support
-- RTL language support (Arabic, Hebrew)
-- Localized date/time formats
-- Translation management system
-
-#### 12. Advanced Media Support
-- Audio questions (listening comprehension)
-- Video questions
-- Interactive diagrams (clickable images)
-- LaTeX/MathJax for mathematical notation
-- Chemistry notation (ChemDraw integration)
+**Blocker**: Requires significant resources, low ROI given current web app works well
 
 ---
 
@@ -253,17 +265,19 @@
 
 #### Issue 1: Safari Fullscreen Detection Delay
 **Severity**: Low
-**Impact**: 1-2 second delay before violation detected
+**Impact**: 1-2 second delay before violation detected on Safari (macOS)
 **Workaround**: Works as designed, Safari API limitation
 **Fix Effort**: Small (1-2 days)
 **Proposed Fix**: Combine fullscreenchange + focus/blur events for faster detection
+**Priority**: Low
 
 #### Issue 2: Email Links Line-Wrap in Some Clients
 **Severity**: Low
-**Impact**: Tokens break across lines in Outlook
+**Impact**: Tokens break across lines in Outlook, requiring manual copy/paste
 **Workaround**: Manually copy/paste full URL
 **Fix Effort**: Small (1 day)
-**Proposed Fix**: Use URL shortener or QR codes
+**Proposed Fix**: Use URL shortener (bit.ly API) or QR codes
+**Priority**: Low
 
 #### Issue 3: Chart Flash on Question Change
 **Severity**: Very Low
@@ -271,45 +285,26 @@
 **Workaround**: None needed (cosmetic only)
 **Fix Effort**: Small (1 day)
 **Proposed Fix**: CSS transition for chart redraw
+**Priority**: Very Low
 
 ---
 
 ### Technical Debt
 
 #### Debt 1: No Automated Testing
-**Current State**: Manual testing via PROCTOR_QA_CHECKLIST.md
+**Current State**: Manual testing via checklists and smoke tests
 **Risk**: Regressions undetected until production
 **Proposed Solution**:
-- Implement Apps Script unit tests
+- Implement Apps Script unit tests (GasTap framework)
 - Selenium/Playwright for UI testing
 - CI/CD pipeline with GitHub Actions
+- Automated regression testing before deploy
 
 **Effort**: Medium (2-3 weeks)
 **Priority**: Medium
+**Impact**: High (prevents production bugs)
 
-#### Debt 2: Monolithic Code.gs File
-**Current State**: Single 4,537-line file
-**Risk**: Difficult to maintain, merge conflicts
-**Proposed Solution**:
-- Split into modules: Auth.gs, DataAccess.gs, Proctoring.gs, etc.
-- Use clasp with local development
-- Maintain single-file version for legacy compatibility
-
-**Effort**: Small-Medium (1 week)
-**Priority**: Low (works well currently)
-
-#### Debt 3: Hard-Coded Configuration
-**Current State**: Constants in Code.gs, must redeploy to change
-**Risk**: Requires technical knowledge to configure
-**Proposed Solution**:
-- Admin settings UI in TeacherView
-- Store config in Script Properties
-- Hot-reload without redeployment
-
-**Effort**: Small (1 week)
-**Priority**: Low
-
-#### Debt 4: Limited Error Handling in Frontend
+#### Debt 2: Limited Error Handling in Frontend
 **Current State**: Generic "An error occurred" messages
 **Risk**: Users can't self-diagnose issues
 **Proposed Solution**:
@@ -320,6 +315,20 @@
 
 **Effort**: Medium (2 weeks)
 **Priority**: Medium
+**Impact**: Medium (improves user experience)
+
+#### Debt 3: Hard-Coded Configuration in Core_Config.gs
+**Current State**: Configuration constants in code, requires code change + redeploy
+**Risk**: Requires technical knowledge to configure
+**Proposed Solution**:
+- Admin settings UI in Teacher_View.html
+- Store all config in Script Properties (not code)
+- Hot-reload without redeployment
+- Validation for config changes
+
+**Effort**: Small (1 week)
+**Priority**: Low
+**Impact**: Low (current system works, but less flexible)
 
 ---
 
@@ -331,23 +340,26 @@
   - Check for Tailwind CSS updates
   - Verify Google Charts API compatibility
   - Test new browser versions (Chrome, Firefox, Safari)
+  - Update Firebase SDK if new version available
 
 - [ ] **Performance Audit**
   - Review Apps Script execution logs for slow functions
   - Analyze cache hit rates
-  - Check database sheet sizes (archive old polls if needed)
+  - Check database sheet sizes (archive old polls if >10,000 rows)
+  - Verify write-behind trigger is running (check execution logs)
 
 - [ ] **Security Review**
   - Audit OAuth scopes (remove unused)
-  - Review token expiry settings
+  - Review token expiry settings (30 days appropriate?)
   - Check for new Apps Script security best practices
   - Update rate limiting thresholds if needed
+  - Rotate Firebase database secret if compromised
 
 - [ ] **Documentation Updates**
   - Verify all screenshots and examples current
   - Update browser compatibility matrix
-  - Check for broken links
-  - Revise troubleshooting guide with new issues
+  - Check for broken links in README and docs/
+  - Revise docs/TROUBLESHOOTING.md with new issues
 
 ### Annual Tasks (Once Per Year)
 
@@ -356,72 +368,75 @@
   - Load testing with 50+ concurrent students
   - Multi-browser compatibility verification
   - Proctoring flow validation on all browsers
+  - Firebase connection stress test
 
 - [ ] **User Feedback Review**
   - Survey teachers for feature requests
-  - Prioritize future enhancements
-  - Identify pain points
-  - Measure satisfaction metrics
+  - Prioritize future enhancements based on demand
+  - Identify pain points and usability issues
+  - Measure satisfaction metrics (NPS score)
 
 - [ ] **Code Cleanup**
-  - Remove deprecated functions
-  - Refactor complex functions
-  - Update code comments
-  - Archive unused features
+  - Remove deprecated functions (check for legacy wrappers)
+  - Refactor complex functions (>100 lines)
+  - Update code comments and JSDoc
+  - Archive unused features to docs/archive/
 
 - [ ] **Backup & Disaster Recovery**
-  - Verify backup procedures work
+  - Verify backup procedures work (test Google Takeout export)
   - Test restoration from backup
-  - Document recovery steps
+  - Document recovery steps (add to docs/TROUBLESHOOTING.md)
   - Update contingency plans
 
 ---
 
-## Long-Term Vision
+## Long-Term Vision (3-Year Goals)
 
-### 3-Year Goals
+### Mission
+Become the de facto live polling solution for secondary education with comprehensive academic integrity features and seamless LMS integration.
 
-**Mission**: Become the de facto live polling solution for secondary education with comprehensive academic integrity features.
+### Key Results
 
-**Key Results**:
-1. **Adoption**: 100+ schools using the system
+1. **Adoption**: 100+ schools using the system actively
 2. **Reliability**: 99.9% uptime for live sessions
-3. **Features**: Full analytics suite, LMS integration, question bank
+3. **Features**: Full analytics suite, LMS integration, question bank with 1000+ questions
 4. **Compliance**: FERPA, COPPA, WCAG 2.1 AA certified
-5. **Community**: Open-source contributors, plugin ecosystem
+5. **Community**: Open-source contributors, plugin ecosystem, 10+ community-built extensions
 
 ### Technical Architecture Evolution
 
-**Current**: Monolithic Google Apps Script app
-**Future**: Microservices with Apps Script core
+**Current (v2.1)**: Monolithic Google Apps Script + Firebase RTDB
+
+**Future (v3.0)**: Microservices with Apps Script core
 
 ```
-┌─────────────────────────────────────────────────┐
-│         Frontend (Progressive Web App)         │
-│  React/Vue.js with offline support & caching   │
-└────────────┬────────────────────────────────────┘
-             │
-┌────────────┴────────────────────────────────────┐
-│          API Gateway (Apps Script)              │
-│  Authentication, Rate Limiting, Routing         │
-└────────────┬────────────────────────────────────┘
-             │
-      ┌──────┴──────┬──────────┬──────────┐
-      │             │          │          │
-┌─────▼────┐  ┌────▼────┐ ┌───▼────┐ ┌──▼───────┐
-│ Polling  │  │Analytics│ │Proctor │ │ Question │
-│ Service  │  │ Service │ │Service │ │  Bank    │
-└──────────┘  └─────────┘ └────────┘ └──────────┘
-      │             │          │          │
-      └──────┬──────┴──────────┴──────────┘
-             │
-┌────────────┴────────────────────────────────────┐
-│       Data Layer (Sheets + Firestore)           │
-│  Hot data: Firestore, Archive: Sheets/BigQuery │
-└─────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────┐
+│      Frontend (Progressive Web App - PWA)        │
+│   React/Vue.js with offline support & caching   │
+└───────────────────┬──────────────────────────────┘
+                    │
+┌───────────────────┴──────────────────────────────┐
+│          API Gateway (Apps Script)               │
+│  Authentication, Rate Limiting, Routing          │
+└───────────────────┬──────────────────────────────┘
+                    │
+      ┌─────────────┼─────────────┬─────────────┐
+      │             │             │             │
+┌─────▼────┐  ┌────▼────┐  ┌─────▼────┐  ┌────▼─────┐
+│ Polling  │  │Analytics│  │ Proctor  │  │ Question │
+│ Service  │  │ Service │  │ Service  │  │  Bank    │
+└──────────┘  └─────────┘  └──────────┘  └──────────┘
+      │             │             │             │
+      └─────────────┼─────────────┴─────────────┘
+                    │
+┌───────────────────┴──────────────────────────────┐
+│    Data Layer (Firestore + BigQuery)             │
+│  Hot data: Firestore, Analytics: BigQuery       │
+│  Archive: Google Sheets (long-term storage)     │
+└──────────────────────────────────────────────────┘
 ```
 
-**Migration Path**: Gradual (service-by-service extraction)
+**Migration Path**: Gradual extraction (service-by-service), maintain backward compatibility
 
 ---
 
@@ -449,26 +464,35 @@
 3. **Discussion**:
    - Community feedback via GitHub comments
    - Maintainer triage (accepted/declined/needs-more-info)
-   - Priority assignment
+   - Priority assignment based on user demand
 
 ### Decision Criteria
 
 Features are evaluated on:
-- **User Value**: Does this solve a real problem?
-- **Effort**: How much time to implement?
-- **Maintenance**: Ongoing support burden?
-- **Alignment**: Fits project mission?
+- **User Value**: Does this solve a real, common problem?
+- **Effort**: How much time to implement and test?
+- **Maintenance**: Ongoing support burden and complexity?
+- **Alignment**: Fits project mission (classroom assessment)?
 - **Feasibility**: Technically possible with current stack?
+- **Security**: Does it introduce new security risks?
 
 ---
 
 ## Changelog
 
+### v2.1 - Documentation & Architecture Audit (2025-12-25)
+- ✅ Complete README rewrite with hybrid architecture documentation
+- ✅ Firebase + Sheets "Write-Behind" pattern explained
+- ✅ Comprehensive code audit confirming zero orphaned files
+- ✅ Documentation reorganization (docs/ and docs/archive/)
+- ✅ Updated installation guide with Firebase Script Properties
+- ✅ Security and troubleshooting documentation
+- ✅ Complete usage guides for both user types
+
 ### v2.0 - Modernization Release (2025-11-10)
 - ✅ Complete UI overhaul with Tailwind CSS
 - ✅ State version management for sync
 - ✅ Connection health monitoring
-- ✅ Comprehensive documentation suite
 - ✅ Enhanced proctoring with version tracking
 - ✅ Timer controls (pause/resume/reset)
 - ✅ Question reset functionality
@@ -489,4 +513,12 @@ Features are evaluated on:
 
 ---
 
-**Questions?** Open an issue or email sborish@malvernprep.org
+## Questions or Feedback?
+
+- **GitHub Issues**: [Report bugs or request features](https://github.com/stephenborish/veritaslivepoll/issues)
+- **Email**: sborish@malvernprep.org
+- **Documentation**: See [docs/](docs/) folder for technical guides
+
+---
+
+**Last Updated**: 2025-12-25 | **Maintainer**: Stephen Borish | **License**: MIT

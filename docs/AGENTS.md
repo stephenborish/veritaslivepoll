@@ -1,8 +1,10 @@
 # Veritas Live Poll - System Agents
 
-**Document Version**: 1.0
-**Last Updated**: 2025-12-22
+**Document Version**: 2.0
+**Last Updated**: 2025-12-25
 **Purpose**: Documentation of system components (agents) and their interactions
+
+**Note**: This document describes the 25 backend (.gs) and 18 frontend (.html) files. For architecture overview, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ---
 

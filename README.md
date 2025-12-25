@@ -838,9 +838,21 @@ SOFTWARE.
 
 ### Documentation
 
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Technical deep-dive (if exists)
-- **[AGENTS.md](AGENTS.md)** - System components guide (if exists)
-- **Apps Script Execution Logs** - Debug failed RPC calls
+**Technical References:**
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Deep-dive into hybrid architecture (Firebase + Sheets)
+- **[docs/AGENTS.md](docs/AGENTS.md)** - System components and dependencies
+- **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Detailed deployment guide with troubleshooting
+- **[docs/SECURE_EXAMS.md](docs/SECURE_EXAMS.md)** - Exam module technical reference
+
+**Operational Guides:**
+- **[docs/TRIGGER_SETUP_GUIDE.md](docs/TRIGGER_SETUP_GUIDE.md)** - **CRITICAL:** Write-behind flush trigger setup
+- **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Common issues and debug tools
+
+**Planning:**
+- **[TODO.md](TODO.md)** - Project roadmap and future enhancements
+
+**Debugging:**
+- **Apps Script Execution Logs** - Debug failed RPC calls (Extensions → Apps Script → Executions)
 
 ### Contact
 

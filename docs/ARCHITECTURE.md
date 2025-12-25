@@ -1,8 +1,10 @@
 # Veritas Live Poll - Technical Architecture
 
-**Document Version**: 1.0
-**Last Updated**: 2025-11-10
+**Document Version**: 2.0
+**Last Updated**: 2025-12-25
 **Target Audience**: Developers, Technical Staff, System Administrators
+
+**Note**: This document provides a technical deep-dive. For a quick overview, see [README.md](../README.md).
 
 ---
 
@@ -104,12 +106,20 @@
 │                                                               │
 │  ┌────────────────────────────────────────────────────────┐ │
 │  │    Script Properties (Key-Value Store)                 │ │
-│  │  • SESSION_METADATA: Active poll session state (JSON)  │ │
-│  │  • STATE_VERSION_HISTORY: Version tracking (JSON)      │ │
-│  │  • CONNECTION_HEARTBEATS: Client health (JSON)         │ │
+│  │  • FIREBASE_CONFIG: Firebase credentials (JSON)        │ │
 │  │  • ADDITIONAL_TEACHERS: Multi-teacher config (CSV)     │ │
 │  └────────────────────────────────────────────────────────┘ │
 └───────────────────────────────────────────────────────────────┘
+
+                           ┌──────────────────────────────────┐
+                           │  Firebase Realtime Database      │
+                           │  (Real-time Signaling - Fast Path)│
+                           │  • Lock status (ephemeral)       │
+                           │  • Student heartbeats            │
+                           │  • Exam proctoring state         │
+                           │  • TTL: 5-10 minutes             │
+                           │  • Client-side only (no .gs)     │
+                           └──────────────────────────────────┘
 ```
 
 ---
@@ -122,10 +132,16 @@
   - No npm packages (built-in Google services only)
   - Serverless execution model
   - 6-minute execution timeout per function
-- **Database**: Google Sheets API
+- **Database (Slow Path - Durable)**: Google Sheets API
   - Relational data model (normalized)
+  - Source of truth for all persistent data
   - ~5 million cells per spreadsheet limit
   - Batch operations for performance
+- **Real-time (Fast Path - Ephemeral)**: Firebase Realtime Database
+  - Lock status and proctoring state
+  - Student heartbeats and presence detection
+  - Client-side only (JS SDK, not accessed from .gs backend)
+  - TTL: 5-10 minutes (ephemeral signaling)
 - **Storage**: Google Drive API
   - Image hosting with public URLs
   - Folder-based organization
@@ -151,6 +167,91 @@
 - **Version Control**: Git (external, not native to Apps Script)
 - **Deployment**: Web app deployment via Apps Script console
 - **Logging**: Stackdriver Logging (via Apps Script console)
+
+---
+
+## Hybrid Architecture: "Write-Behind" Pattern
+
+### Overview
+
+Veritas uses a **dual-database architecture** to optimize for both **speed** (real-time updates) and **durability** (permanent storage):
+
+- **Fast Path (Firebase RTDB)**: Real-time signaling for lock status, heartbeats, exam proctoring
+- **Slow Path (Google Sheets)**: Source of truth for polls, responses, rosters, exams
+
+### Why This Design?
+
+| Requirement | Solution | Database |
+|-------------|----------|----------|
+| Proctoring violations need <1s detection | Real-time sync | Firebase RTDB |
+| Lock status must propagate instantly | Client-side listeners | Firebase RTDB |
+| Heartbeats detect disconnected students | Presence detection | Firebase RTDB |
+| Answer submissions must be durable | Write-through persistence | Google Sheets |
+| Poll data/rosters rarely change | Batch reads | Google Sheets |
+| Exam responses need audit trail | Append-only log | Google Sheets |
+
+### Data Flow
+
+**Proctoring Flow (Fast Path):**
+```
+Student violates → Firebase RTDB updated (client-side) →
+All connected clients notified (<500ms) →
+Sheets updated for audit trail (background, ~2-5s)
+```
+
+**Answer Submission Flow (Slow Path):**
+```
+Student submits answer → Optimistic UI update →
+google.script.run → Sheets write (2-5s) →
+Response logged permanently
+```
+
+**Exam Write-Behind Cache:**
+```
+Student submits exam answer → Write to in-memory cache →
+Timer trigger flushes cache to Sheets every 60s →
+On exam submit, all cached answers written immediately
+```
+
+### Firebase vs Sheets Decision Matrix
+
+| Data Type | Firebase | Sheets | Reason |
+|-----------|----------|--------|--------|
+| Lock status | ✅ Primary | Audit only | Speed critical |
+| Student heartbeats | ✅ Only | No | Ephemeral, no persistence needed |
+| Exam violations | ✅ Signal | ✅ Log | Real-time + audit trail |
+| Poll responses | No | ✅ Only | Durable, no real-time needed |
+| Rosters | No | ✅ Only | Static, batch reads |
+| Exam configs | No | ✅ Only | Infrequent access |
+
+### Trade-offs
+
+**Benefits:**
+- Sub-second proctoring response time (vs 2-5s with Sheets polling)
+- No Apps Script quota consumed for lock monitoring
+- Scalable to 100+ concurrent students without backend load
+- Firebase free tier sufficient (10GB/month transfer)
+
+**Costs:**
+- Additional dependency (Firebase SDK)
+- More complex configuration (Script Properties for Firebase config)
+- Requires network firewall allowlist (firebaseio.com)
+- No server-side Firebase access (client-only, by design)
+
+### Configuration
+
+Firebase credentials stored in Script Properties (not hardcoded):
+
+```javascript
+// Core_Config.gs
+Veritas.Config.getFirebaseConfig = function() {
+  var props = PropertiesService.getScriptProperties();
+  var firebaseConfigJson = props.getProperty('FIREBASE_CONFIG');
+  return JSON.parse(firebaseConfigJson);
+};
+```
+
+**Security:** FIREBASE_CONFIG should contain restricted API key (Firebase Console → Project Settings → Web App).
 
 ---
 

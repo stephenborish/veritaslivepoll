@@ -261,18 +261,32 @@ Veritas.Utils.Firebase = {
    */
   _getUrl: function(path) {
     var config = Veritas.Config.getFirebaseConfig();
-    var secret = Veritas.Config.getFirebaseSecret();
     var baseUrl = config.databaseURL;
 
-    // Clean leading/trailing slashes
-    if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
-    if (path.startsWith('/')) path = path.slice(1);
+    // Ensure path doesn't start with slash
+    if (path.indexOf('/') === 0) path = path.substring(1);
 
-    // Auth param (handle query params if path already has them)
-    var separator = path.indexOf('?') !== -1 ? '&' : '?';
-    var authParam = secret ? separator + 'auth=' + secret : '';
+    var fullUrl = baseUrl + '/' + path + '.json';
 
-    return baseUrl + '/' + path + '.json' + authParam;
+    // 1. Try to get a Service Account OAuth Token
+    var accessToken = Veritas.Security.getFirebaseAccessToken();
+    var paramName, paramValue;
+
+    if (accessToken) {
+      // Modern Auth: Use access_token
+      paramName = 'access_token';
+      paramValue = accessToken;
+    } else {
+      // Legacy Auth: Fallback to the raw string secret
+      var secret = Veritas.Config.getFirebaseSecret();
+      if (!secret) throw new Error('Firebase Config Error: No secret or service account found.');
+      paramName = 'auth';
+      paramValue = secret;
+    }
+
+    // Append auth param (handle existing query params)
+    var separator = fullUrl.indexOf('?') !== -1 ? '&' : '?';
+    return fullUrl + separator + paramName + '=' + encodeURIComponent(paramValue);
   },
 
   /**

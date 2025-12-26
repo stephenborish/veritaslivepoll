@@ -1,5 +1,3 @@
-<script>
-  (function () {
     // --- Main App State ---
     var mainLoader = document.getElementById('loader');
     var ALL_POLLS = [];
@@ -13843,7 +13841,3 @@
             pollForResults();
         }, 500);
     }
-
-
-  })();
-</script>

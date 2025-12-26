@@ -6,15 +6,24 @@
         body { font-family: sans-serif; padding: 20px; }
         #loader { display: none; background: #eee; padding: 10px; }
         #live-poll-view { margin-top: 20px; padding: 20px; border: 2px solid green; background: #e0ffe0; }
-        .error { color: red; }
+        .hidden { display: none; }
+        .flex { display: flex; }
+        /* Mock tailwind lg:flex behavior */
+        @media (min-width: 1024px) {
+            .lg\:flex { display: flex !important; }
+        }
     </style>
 </head>
 <body>
-    <h1>Frontend Verification: Robust Fallback</h1>
+    <h1>Frontend Verification</h1>
     <div id="loader">Loading...</div>
 
-    <!-- UI Elements expected by script -->
-    <div id="dashboard-sidebar"></div>
+    <!-- UI Elements -->
+    <!-- Sidebar with lg:flex class -->
+    <aside id="dashboard-sidebar" class="hidden lg:flex w-64 bg-gray-800 text-white p-4">
+        Sidebar Content
+    </aside>
+
     <div id="dashboard"></div>
     <div id="live-view"></div>
     <div id="roster-manager"></div>
@@ -26,8 +35,12 @@
     <div id="student-table-body"></div>
     <div id="poll-details-card"></div>
     <button id="start-poll-btn">Start Session</button>
-    <button id="end-poll-btn" style="display:none">End Session</button>
-    <div id="live-poll-view" style="display:none;"></div>
+
+    <button id="dashboard-sidebar-toggle-live">Toggle Sidebar</button>
+    <button id="header-start-btn" class="hidden"></button>
+
+    <div id="header-default"></div>
+    <div id="header-live"></div>
 
     <!-- Mocks -->
     <script>
@@ -35,7 +48,6 @@
             createHeartbeat: function() { return { start: function(){}, stop: function(){} }; }
         };
 
-        // Mock global firebase if needed
         var firebase = {
             apps: [],
             initializeApp: function() {},
@@ -44,17 +56,10 @@
             },
             ServerValue: { TIMESTAMP: 12345 }
         };
-        // Also ensure database property exists for the initial access
         firebase.database.ServerValue = { TIMESTAMP: 12345 };
 
-        var broadcastSessionState = function(pid, payload) {
-            console.log('Mock Broadcast:', pid, payload);
-        };
-
-        // Mock Config
         var FIREBASE_CONFIG = {};
 
-        // Mock Google Script Run
         var google = {
             script: {
                 run: {
@@ -63,8 +68,7 @@
                             withFailureHandler: function(failure) {
                                 return {
                                     getLivePollData: function(pollId, qIndex) {
-                                        console.log('Mock: getLivePollData called with', pollId, qIndex);
-                                        // Simulate server response after delay
+                                        console.log('Mock: getLivePollData called');
                                         setTimeout(function() {
                                             console.log('Mock: Server returning full data');
                                             try {
@@ -74,16 +78,9 @@
                                                     status: 'LIVE',
                                                     metadata: { sessionPhase: 'LIVE', resultsVisibility: 'HIDDEN' },
                                                     calculatorEnabled: false,
-                                                    // Minimal data for updateLiveView
                                                     questions: [{text: 'Q1'}],
                                                     correctAnswer: 'A'
                                                 });
-
-                                                // UI verification hook
-                                                document.body.setAttribute('data-verification', 'success');
-                                                document.getElementById('live-poll-view').style.display = 'block';
-                                                document.getElementById('live-poll-view').innerText = 'Live View Updated Successfully via Fallback!';
-                                                console.log('Mock: Success handler completed');
                                             } catch (e) {
                                                 console.error('Mock: Success handler CRASHED:', e);
                                             }
@@ -99,7 +96,6 @@
             }
         };
 
-        // Mock other helpers
         function veritasAlert(msg) { console.log('Alert:', msg); }
         function previewOnlyNotice() {}
         function showDashboard() {}
@@ -115,20 +111,13 @@
     <script src="Teacher_Scripts_Content.js"></script>
 
     <script>
-        // Test Trigger
         window.onload = function() {
             setTimeout(function() {
-                console.log('--- TEST STARTING ---');
-                // Check globals
-                console.log('pollSelect exists:', !!pollSelect);
-                console.log('updateLiveView exists:', typeof updateLiveView);
+                console.log('--- TEST 1: Fallback Logic ---');
 
-                console.log('Simulating lightweight update with missing CURRENT_POLL_DATA...');
-
-                // Ensure CURRENT_POLL_DATA is in "bad" state (no questions)
+                // Ensure CURRENT_POLL_DATA is in "bad" state
                 if (typeof CURRENT_POLL_DATA !== 'undefined') {
                     CURRENT_POLL_DATA = {};
-                    console.log('Forced CURRENT_POLL_DATA to {}');
                 }
 
                 var data = {
@@ -143,8 +132,21 @@
                     handleLightweightSessionUpdate(data);
                 } catch (e) {
                     console.error('Error running handleLightweightSessionUpdate:', e);
-                    document.body.innerText = 'Error: ' + e.message;
                 }
+
+                // Check sidebar after updateLiveView (triggered by fallback)
+                setTimeout(function() {
+                    console.log('--- TEST 2: Sidebar Visibility ---');
+                    var sidebar = document.getElementById('dashboard-sidebar');
+                    console.log('Sidebar classes:', sidebar.className);
+
+                    // We expect lg:flex to be REMOVED
+                    if (!sidebar.classList.contains('lg:flex') && sidebar.classList.contains('hidden')) {
+                        console.log('SUCCESS: Sidebar is correctly hidden (lg:flex removed)');
+                    } else {
+                        console.error('FAILURE: Sidebar still has lg:flex or is not hidden');
+                    }
+                }, 1000);
 
             }, 500);
         };

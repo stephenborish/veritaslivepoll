@@ -151,3 +151,66 @@ function getCanonicalTeacherEmail_() {
 function getTeacherEmailSet_() {
   return Veritas.Security.getTeacherEmailSet_();
 }
+
+/**
+ * Generates an OAuth2 access token using the Service Account JSON
+ * stored in the FIREBASE_DATABASE_SECRET script property.
+ */
+Veritas.Security.getFirebaseAccessToken = function() {
+  // 1. Get the Service Account JSON
+  var jsonString = PropertiesService.getScriptProperties().getProperty('FIREBASE_DATABASE_SECRET');
+  if (!jsonString) {
+    // If property is missing entirely, we can't do anything.
+    // However, existing logic might handle missing secret elsewhere.
+    // For now, return null to let fallback logic try or fail.
+    return null;
+  }
+
+  // 2. Parse JSON (Handle case where user might have pasted a string secret by mistake)
+  var serviceAccount;
+  try {
+    serviceAccount = JSON.parse(jsonString);
+  } catch (e) {
+    // If it's not JSON, assume it's a Legacy Secret and return null (handled in Utils)
+    return null;
+  }
+
+  // 3. Create the JWT Claim Set
+  var now = Math.floor(Date.now() / 1000);
+  var claimSet = {
+    "iss": serviceAccount.client_email,
+    "scope": "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/firebase.database",
+    "aud": "https://oauth2.googleapis.com/token",
+    "exp": now + 3600,
+    "iat": now
+  };
+
+  // 4. Encode Header & Claim Set
+  var header = Utilities.base64EncodeWebSafe(JSON.stringify({"alg":"RS256","typ":"JWT"}));
+  var claim = Utilities.base64EncodeWebSafe(JSON.stringify(claimSet));
+  var toSign = header + "." + claim;
+
+  // 5. Sign with Private Key
+  var signatureBytes = Utilities.computeRsaSha256Signature(toSign, serviceAccount.private_key);
+  var signature = Utilities.base64EncodeWebSafe(signatureBytes);
+  var jwt = toSign + "." + signature;
+
+  // 6. Exchange JWT for Access Token
+  var options = {
+    method: 'post',
+    payload: {
+      assertion: jwt,
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer'
+    },
+    muteHttpExceptions: true
+  };
+
+  var response = UrlFetchApp.fetch('https://oauth2.googleapis.com/token', options);
+  var result = JSON.parse(response.getContentText());
+
+  if (result.error) {
+    throw new Error('Firebase Auth Failed: ' + result.error_description);
+  }
+
+  return result.access_token;
+};

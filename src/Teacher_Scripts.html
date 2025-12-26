@@ -1828,11 +1828,15 @@
       if (visible) {
         dashboardSidebar.classList.remove('hidden');
         dashboardSidebar.classList.add('flex');
-        dashboardSidebar.style.display = ''; // Clear inline style if any
+        // Restore lg:flex if it was removed
+        dashboardSidebar.classList.add('lg:flex');
+        dashboardSidebar.style.display = '';
       } else {
         dashboardSidebar.classList.add('hidden');
         dashboardSidebar.classList.remove('flex');
-        dashboardSidebar.style.display = ''; // Clear inline style if any
+        // CRITICAL FIX: Also remove lg:flex, otherwise it overrides hidden on large screens
+        dashboardSidebar.classList.remove('lg:flex');
+        dashboardSidebar.style.display = '';
       }
       updateDashboardSidebarToggleState();
     }

@@ -263,12 +263,13 @@ Veritas.Utils.Firebase = {
     var config = Veritas.Config.getFirebaseConfig();
     var baseUrl = config.databaseURL;
 
-    // Ensure path doesn't start with slash
-    if (path.indexOf('/') === 0) path = path.substring(1);
+    // Clean leading/trailing slashes
+    if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
+    if (path.startsWith('/')) path = path.slice(1);
 
     var fullUrl = baseUrl + '/' + path + '.json';
 
-    // 1. Try to get a Service Account OAuth Token
+    // 1. Try to get a Service Account OAuth Token (now cached)
     var accessToken = Veritas.Security.getFirebaseAccessToken();
     var paramName, paramValue;
 

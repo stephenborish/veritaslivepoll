@@ -6985,18 +6985,15 @@
         approveAllBtn.querySelector('span:last-child').textContent = 'Approve All';
       }
 
-      // Show result
+      // Show result - simple toast notification
       if (successCount > 0) {
-        await veritasAlert(
-          'Approved ' + successCount + ' student(s) for re-entry.' +
-          (failCount > 0 ? ' ' + failCount + ' failed.' : ' They must now re-enter fullscreen to continue.'),
-          { title: 'Batch Approval Complete' }
-        );
+        var toastMsg = 'Approved ' + successCount + ' student(s)';
+        if (failCount > 0) {
+          toastMsg += ', ' + failCount + ' failed';
+        }
+        showToast('success', 'Batch Approval Complete', toastMsg, 4000);
       } else {
-        await veritasAlert('Failed to approve students. Please try again.', {
-          title: 'Approval Failed',
-          destructive: true
-        });
+        showToast('error', 'Approval Failed', 'Failed to approve students. Please try again.', 4000);
       }
     }
 
@@ -7074,9 +7071,8 @@
               return s;
             });
             renderStudentStatus();
-            await veritasAlert('Student approved for re-entry. They must re-enter fullscreen to continue.', {
-              title: 'Unlock approved'
-            });
+            // Simple toast notification instead of blocking alert dialog
+            showToast('success', 'Approval Successful', 'Student can now re-enter fullscreen.', 3000);
           } else {
             // Provide specific error messages based on failure reason
             var errorMsg = 'Failed to unlock student. Please try again.';
@@ -7147,9 +7143,8 @@
               return s;
             });
             renderStudentStatus();
-            await veritasAlert('Student approved for re-entry. They must re-enter fullscreen to continue.', {
-              title: 'Unlock approved'
-            });
+            // Simple toast notification instead of blocking alert dialog
+            showToast('success', 'Approval Successful', 'Student can now re-enter fullscreen.', 3000);
           } else {
             await veritasAlert(response.message || 'Failed to force unlock student.', {
               title: 'Unlock failed',
@@ -11210,13 +11205,48 @@
             });
 
             // Listen for student status changes
-            firebaseRef.on('child_changed', function(snapshot) {
+            firebaseRef.on('child_changed', async function(snapshot) {
                 // P0-2 FIX: Record status change
                 var studentKey = snapshot.key;
                 var newStatus = snapshot.val();
+                var previousStatus = realtimeStatuses[studentKey];
+
                 lastStatusChange = { studentKey: studentKey, status: newStatus, timestamp: Date.now() };
                 lastRTDBEvent = { timestamp: Date.now(), type: 'child_changed' };
-                console.log('[Firebase] Student status changed:', studentKey.substring(0, 8) + '...', '→', newStatus);
+                console.log('[Firebase] Student status changed:', studentKey.substring(0, 8) + '...', previousStatus, '→', newStatus);
+
+                // Show toast when student resumes (LOCKED or not-ACTIVE -> ACTIVE)
+                if (newStatus === 'ACTIVE' && previousStatus && previousStatus !== 'ACTIVE') {
+                    // Find student name from current data
+                    var studentName = null;
+
+                    // Check mission control students first
+                    if (missionControlStudents && currentMissionControlPollId) {
+                        for (var i = 0; i < missionControlStudents.length; i++) {
+                            var s = missionControlStudents[i];
+                            var key = await window.VeritasShared.generateStudentKey(s.email, currentMissionControlPollId);
+                            if (key === studentKey) {
+                                studentName = s.name || s.email;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Check live poll students if not found
+                    if (!studentName && currentStudentStatusData && CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId) {
+                        for (var j = 0; j < currentStudentStatusData.length; j++) {
+                            var student = currentStudentStatusData[j];
+                            var sKey = await window.VeritasShared.generateStudentKey(student.email, CURRENT_POLL_DATA.pollId);
+                            if (sKey === studentKey) {
+                                studentName = student.name || student.email;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Show toast notification
+                    showToast('info', 'Student Resumed', (studentName || 'A student') + ' has re-entered the session.', 3000);
+                }
             });
 
             firebaseRef.on('child_added', function(snapshot) {

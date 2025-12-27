@@ -408,9 +408,13 @@
             } else if (status === 'ACTIVE') {
                 // Teacher signalled unlock; defer to authoritative server confirmation
                 // This prevents accidental unlocks from stale or spoofed RTDB writes.
-                if (LockManager.isLocked()) {
-                    console.log('[Firebase] Unlock requested - awaiting server confirmation');
-                    startPolling(true);
+                // FIX: Check both LockManager and Poison Pill state
+                var isLocked = LockManager.isLocked() || isPoisonPillActive();
+                if (isLocked) {
+                    console.log('[Firebase] Unlock signal received - immediately checking server for AWAITING_FULLSCREEN');
+                    // FIX: Immediately call checkProctorState instead of startPolling
+                    // startPolling fails when poison pill is active, but we need to check for AWAITING_FULLSCREEN
+                    checkProctorState();
                 }
             }
         }

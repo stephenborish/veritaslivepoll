@@ -5611,13 +5611,42 @@
         previewOnlyNotice('advance to the next question');
         return;
       }
+
+      // OPTIMISTIC UPDATE: Update UI immediately using local data
+      // This eliminates the visual lag for the teacher while the server processes the request
+      if (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions) {
+          var nextIndex = (CURRENT_POLL_DATA.questionIndex || 0) + 1;
+          if (nextIndex < CURRENT_POLL_DATA.questions.length) {
+              console.log('[Optimistic] Advancing UI to question index:', nextIndex);
+
+              var optimisticData = {
+                  mode: 'lightweight',
+                  pollId: CURRENT_POLL_DATA.pollId,
+                  questionIndex: nextIndex,
+                  status: 'OPEN',
+                  metadata: {
+                      sessionPhase: 'LIVE',
+                      resultsVisibility: 'HIDDEN',
+                      startedAt: new Date().toISOString()
+                  }
+              };
+
+              // 1. Update UI instantly
+              handleLightweightSessionUpdate(optimisticData);
+
+              // 2. Broadcast to Firebase instantly (Fast Path for students)
+              // handleLightweightSessionUpdate already calls broadcastSessionState,
+              // but we want to ensure the optimistic payload is what's sent.
+          }
+      }
+
       google.script.run
         .withSuccessHandler(function (data) {
           // OPTIMIZATION: Check for lightweight mode
           if (data.mode === 'lightweight') {
+              // Re-apply update to confirm server state and ensure consistency
               handleLightweightSessionUpdate(data);
-              // Clear navigation flags here since handleLightweightSessionUpdate triggers bg fetch
-              // but we want to unblock navigation immediately
+
               isNavigating = false;
               navigationRequestInFlight = false;
               return;
@@ -6782,15 +6811,16 @@
 
         lockToastState[email] = lockVersion;
 
-        var studentName = formatStudentName(student);
+        // var studentName = formatStudentName(student);
 
-        showToast('warning', 'Approve re-entry', studentName + ' exited fullscreen or switched tabs.', 6000, {
-          label: 'Approve',
-          onClick: function () {
-            if (!CURRENT_POLL_DATA || !CURRENT_POLL_DATA.pollId) return;
-            approveStudentUnlock(email, CURRENT_POLL_DATA.pollId, lockVersion, null, { skipConfirm: true });
-          }
-        });
+        // Disabled redundant toast per user request - status is visible on tile
+        // showToast('warning', 'Approve re-entry', studentName + ' exited fullscreen or switched tabs.', 6000, {
+        //   label: 'Approve',
+        //   onClick: function () {
+        //     if (!CURRENT_POLL_DATA || !CURRENT_POLL_DATA.pollId) return;
+        //     approveStudentUnlock(email, CURRENT_POLL_DATA.pollId, lockVersion, null, { skipConfirm: true });
+        //   }
+        // });
       });
 
       Object.keys(lockToastState).forEach(function (email) {

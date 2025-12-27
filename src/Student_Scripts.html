@@ -4467,6 +4467,10 @@
         function showResumePrompt() {
             console.log('Showing resume prompt');
             stopPolling();
+
+            // CRITICAL FIX: Explicitly hide the lock overlay so the Resume prompt is visible
+            hideLockEnforcementUI();
+
             var modeName = getFullModeName();
             var resumeLabel = document.getElementById('resume-session-label');
             if (resumeLabel) {

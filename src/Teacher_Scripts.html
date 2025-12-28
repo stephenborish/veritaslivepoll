@@ -11053,24 +11053,43 @@
 
     function broadcastSessionState(pollId, state) {
       if (!firebaseDb || !pollId || !state) return;
-      // P0-1: Signal-to-Poll Optimization
-      // Write lightweight state signal to Firebase so clients can react instantly without polling loop
-      var signalPath = 'sessions/' + pollId + '/publicState';
+
+      // P0-1: Signal-to-Poll Optimization + Path Sync
+      // We use 'live_session' path to match the student's primary fast-path listener.
+      var signalPath = 'sessions/' + pollId + '/live_session';
       var signalRef = firebaseDb.ref(signalPath);
 
       var payload = {
+        pollId: pollId,
         questionIndex: state.questionIndex,
-        status: state.status, // OPEN, PAUSED, CLOSED
+        status: state.status || 'OPEN',
         timestamp: firebase.database.ServerValue.TIMESTAMP,
-        phase: state.sessionPhase || 'LIVE', // LIVE, RESULTS_HOLD, RESULTS_REVEALED
-        resultsVisibility: state.resultsVisibility || 'HIDDEN'
+        sessionPhase: state.sessionPhase || 'LIVE',
+        resultsVisibility: state.resultsVisibility || 'HIDDEN',
+        // ENRICHED DATA: If not provided, try to look up from local cache
+        questionText: state.questionText || (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[state.questionIndex] ? CURRENT_POLL_DATA.questions[state.questionIndex].questionText : ''),
+        questionImageURL: state.questionImageURL || (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[state.questionIndex] ? CURRENT_POLL_DATA.questions[state.questionIndex].questionImageURL : ''),
+        options: state.options || (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[state.questionIndex] ? CURRENT_POLL_DATA.questions[state.questionIndex].options : []),
+        metadata: {
+          sessionPhase: state.sessionPhase || 'LIVE',
+          resultsVisibility: state.resultsVisibility || 'HIDDEN',
+          isCollecting: (state.status === 'OPEN')
+        }
       };
 
       signalRef.set(payload).then(function () {
-        console.log('[Firebase] Broadcasted session state signal:', payload);
+        console.log('[Firebase] Dedicated Live Session Broadcast (Fast Path):', payload);
       }).catch(function (e) {
-        console.warn('[Firebase] Broadcast failed:', e);
+        console.warn('[Firebase] Broadcast to live_session failed:', e);
       });
+
+      // Legacy path for compatibility (optional, but good for stability during rollout)
+      var legacyPath = 'sessions/' + pollId + '/publicState';
+      firebaseDb.ref(legacyPath).set({
+        questionIndex: state.questionIndex,
+        status: state.status,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      }).catch(function () { });
     }
 
     function initFirebaseMissionControl(pollId) {
@@ -13770,11 +13789,19 @@
       console.log('[Optimization] Handling lightweight update:', data);
 
       // 1. Broadcast immediately to Firebase (unblock students)
+      // ENRICHED: Include the question data from CURRENT_POLL_DATA to allow Fast Path rendering
+      var qIndex = data.questionIndex;
+      var questionDef = (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions) ? CURRENT_POLL_DATA.questions[qIndex] : null;
+
       broadcastSessionState(data.pollId, {
-        questionIndex: data.questionIndex,
+        questionIndex: qIndex,
         status: data.status,
         sessionPhase: data.metadata ? data.metadata.sessionPhase : 'LIVE',
-        resultsVisibility: data.metadata ? data.metadata.resultsVisibility : 'HIDDEN'
+        resultsVisibility: data.metadata ? data.metadata.resultsVisibility : 'HIDDEN',
+        // Pass content from local cache for instant student rendering
+        questionText: questionDef ? questionDef.questionText : '',
+        questionImageURL: questionDef ? questionDef.questionImageURL : '',
+        options: questionDef ? questionDef.options : []
       });
 
       // 2. Synthesize a full view object from CURRENT_POLL_DATA

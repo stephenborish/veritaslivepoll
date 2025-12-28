@@ -110,14 +110,32 @@
                         console.log('[Firebase] Live Session update received:', data);
 
                         // If we have full metadata and a current pollId, update UI directly
-                        if (data.metadata && data.pollId && data.questionText && typeof updateStudentView === 'function') {
+                        // We strictly check for question content to ensure it's a 'Fast Path' signal
+                        if (data.questionText && data.pollId && typeof updateStudentView === 'function') {
                             console.log('[Firebase] Fast Path: Updating view from pushed state');
-                            // Pass through ALL data fields from Firebase - don't drop question content!
+
+                            // Synthesize the state payload for updateStudentView
                             var statePayload = {
-                                ...data,  // Include all fields (questionText, options, etc.)
-                                ...data.metadata,  // Flatten metadata into payload
-                                sessionPhase: data.sessionPhase || (data.metadata && data.metadata.sessionPhase) || 'LIVE'
+                                pollId: data.pollId,
+                                questionIndex: data.questionIndex,
+                                status: data.status || 'OPEN',
+                                questionText: data.questionText,
+                                questionImageURL: data.questionImageURL,
+                                options: data.options || [],
+                                totalQuestions: data.totalQuestions, // Optional, caller handles if null
+                                sessionPhase: data.sessionPhase || (data.metadata && data.metadata.sessionPhase) || 'LIVE',
+                                resultsVisibility: data.resultsVisibility || (data.metadata && data.metadata.resultsVisibility) || 'HIDDEN'
                             };
+
+                            // Add any extra metadata from the payload
+                            if (data.metadata) {
+                                for (var key in data.metadata) {
+                                    if (!statePayload.hasOwnProperty(key)) {
+                                        statePayload[key] = data.metadata[key];
+                                    }
+                                }
+                            }
+
                             updateStudentView(statePayload);
                         } else {
                             // Fallback to polling for full state if data is incomplete

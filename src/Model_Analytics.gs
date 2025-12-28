@@ -1791,13 +1791,14 @@ Veritas.Models.Analytics.getDashboardSummary = function() {
  * Lightweight version of getLivePollData that skips slow operations
  * Used for instant UI feedback when starting/advancing session
  */
-Veritas.Models.Analytics.getLightweightPollData = function(pollId, questionIndex) {
+Veritas.Models.Analytics.getLightweightPollData = function(pollId, questionIndex, preloadedPoll, overriddenState) {
   return withErrorHandling(function() {
     if (!pollId) {
       throw new Error("Poll ID is required for getLightweightPollData");
     }
 
-    var poll = DataAccess.polls.getById(pollId);
+    // Optimization: Use preloaded poll if provided to avoid DB read
+    var poll = preloadedPoll || DataAccess.polls.getById(pollId);
     if (!poll) {
       throw new Error("Poll not found: " + pollId);
     }
@@ -1809,7 +1810,9 @@ Veritas.Models.Analytics.getLightweightPollData = function(pollId, questionIndex
 
     question = normalizeQuestionObject_(question, poll.updatedAt);
     
-    var liveStatus = DataAccess.liveStatus.get();
+    // Optimization: Use overridden state if provided (e.g. during startPoll)
+    // otherwise fetch current state from Sheet/Cache
+    var liveStatus = overriddenState || DataAccess.liveStatus.get();
     var pollStatus = Array.isArray(liveStatus) ? (liveStatus[2] || 'OPEN') : 'OPEN';
     var metadata = (liveStatus && liveStatus.metadata) ? liveStatus.metadata : {};
     var derivedStatus = metadata && metadata.sessionPhase ? metadata.sessionPhase : 'LIVE';

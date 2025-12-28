@@ -45,32 +45,37 @@ function getIndividualSessionState_() {
  */
 Veritas.Models.Session.startPoll = function(pollId) {
   return withErrorHandling(function() {
+    // OPTIMIZATION: Fetch poll data outside the lock to minimize contention
+    if (!pollId) throw new Error('Poll ID is required');
+
+    const poll = DataAccess.polls.getById(pollId);
+    if (!poll) {
+      Logger.log('Poll not found in startPoll', { pollId: pollId });
+      throw new Error('Poll not found: ' + pollId);
+    }
+
+    const nowIso = new Date().toISOString();
+    const sessionId = pollId + '::' + Utilities.getUuid();
+    const metadata = {
+      reason: 'RUNNING',
+      sessionPhase: 'LIVE',
+      startedAt: nowIso,
+      endedAt: null,
+      timer: null,
+      isCollecting: true,
+      resultsVisibility: 'HIDDEN',
+      responsesClosedAt: null,
+      revealedAt: null,
+      sessionId: sessionId
+    };
+
     return Veritas.Utils.withLock(function() {
-      if (!pollId) throw new Error('Poll ID is required');
+      // 0. PREPARE DATA: Use preloaded poll and injected state for instant feedback
+      // Construct state object that mimics DataAccess.liveStatus.get() return value
+      var newState = [pollId, 0, "OPEN"];
+      newState.metadata = metadata;
 
-      const poll = DataAccess.polls.getById(pollId);
-      if (!poll) {
-        Logger.log('Poll not found in startPoll', { pollId: pollId });
-        throw new Error('Poll not found: ' + pollId);
-      }
-
-      const nowIso = new Date().toISOString();
-      const sessionId = pollId + '::' + Utilities.getUuid();
-      const metadata = {
-        reason: 'RUNNING',
-        sessionPhase: 'LIVE',
-        startedAt: nowIso,
-        endedAt: null,
-        timer: null,
-        isCollecting: true,
-        resultsVisibility: 'HIDDEN',
-        responsesClosedAt: null,
-        revealedAt: null,
-        sessionId: sessionId
-      };
-
-      // 0. PREPARE DATA: Get lightweight state to ensure Firebase and Sheets returns are matched
-      const pollData = Veritas.Models.Analytics.getLightweightPollData(pollId, 0);
+      const pollData = Veritas.Models.Analytics.getLightweightPollData(pollId, 0, poll, newState);
 
       // 1. FAST WRITE: Update Firebase immediately
       Veritas.Utils.Firebase.set('sessions/' + pollId + '/live_session', pollData);

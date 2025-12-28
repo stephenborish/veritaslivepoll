@@ -1787,6 +1787,48 @@ Veritas.Models.Analytics.getDashboardSummary = function() {
  * @param {number} questionIndex - Question index
  * @returns {Object} Live poll data with student statuses and results
  */
+/**
+ * Lightweight version of getLivePollData that skips slow operations
+ * Used for instant UI feedback when starting/advancing session
+ */
+Veritas.Models.Analytics.getLightweightPollData = function(pollId, questionIndex) {
+  return withErrorHandling(function() {
+    if (!pollId) {
+      throw new Error("Poll ID is required for getLightweightPollData");
+    }
+
+    var poll = DataAccess.polls.getById(pollId);
+    if (!poll) {
+      throw new Error("Poll not found: " + pollId);
+    }
+
+    var question = poll.questions[questionIndex];
+    if (!question) {
+      throw new Error("Question " + questionIndex + " not found in poll " + pollId);
+    }
+
+    question = normalizeQuestionObject_(question, poll.updatedAt);
+    
+    var liveStatus = DataAccess.liveStatus.get();
+    var pollStatus = Array.isArray(liveStatus) ? (liveStatus[2] || 'OPEN') : 'OPEN';
+    var metadata = (liveStatus && liveStatus.metadata) ? liveStatus.metadata : {};
+    var derivedStatus = metadata && metadata.sessionPhase ? metadata.sessionPhase : 'LIVE';
+
+    return {
+      status: derivedStatus,
+      pollId: pollId,
+      pollName: poll.pollName,
+      className: poll.className,
+      questionIndex: questionIndex,
+      questionCount: poll.questions.length,
+      currentQuestion: question,
+      metadata: metadata,
+      studentStatusList: [], // Skip for lightweight
+      isLightweight: true
+    };
+  })();
+};
+
 Veritas.Models.Analytics.getLivePollData = function(pollId, questionIndex) {
   return withErrorHandling(function() {
     if (!pollId) {

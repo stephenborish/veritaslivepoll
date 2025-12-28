@@ -42,6 +42,79 @@
     --radius-md: 12px;
     --radius-lg: 14px;
     --radius-full: 9999px;
+
+    /* Animation Timing */
+    --transition-smooth: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .motion-safe-transition {
+    transition: all var(--transition-smooth);
+  }
+
+  .motion-pulse {
+    animation: motion-pulse 2s infinite ease-in-out;
+  }
+
+  .motion-slide-up {
+    animation: motion-slide-up var(--transition-smooth) forwards;
+  }
+
+  .motion-slide-in-right {
+    animation: motion-slide-in-right var(--transition-smooth) forwards;
+  }
+
+  .motion-fade-in {
+    animation: motion-fade-in var(--transition-fast) forwards;
+  }
+
+  @keyframes motion-pulse {
+
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 0.8;
+    }
+
+    50% {
+      transform: scale(1.15);
+      opacity: 1;
+    }
+  }
+
+  @keyframes motion-slide-up {
+    from {
+      transform: translateY(12px);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes motion-slide-in-right {
+    from {
+      transform: translateX(20px);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes motion-fade-in {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
   }
 
   body {
@@ -234,10 +307,22 @@
     width: 100%;
   }
 
-  .student-stem,
+  .student-stem {
+    font-family: "Noto Serif", serif;
+    font-size: 1.125rem;
+    /* Standardized to 18px */
+    line-height: 1.6;
+    font-weight: 400;
+    color: #12385d;
+    margin: 0 0 16px;
+    text-align: left;
+    word-wrap: break-word;
+  }
+
   #secure-question-text {
     font-family: "Inter", sans-serif;
-    font-size: 1.05rem;
+    font-size: 1.125rem;
+    /* Standardized to 18px */
     line-height: 1.6;
     font-weight: 400;
     color: #000000;
@@ -329,7 +414,8 @@
 
   .answer-option .option-text {
     color: #000000;
-    font-size: 1.05rem;
+    font-size: 1.125rem;
+    /* Standardized to 18px */
     line-height: 1.6;
     font-family: "Inter", sans-serif;
     margin: 0;
@@ -437,11 +523,13 @@
   }
 
   .student-question-image {
-    max-height: 300px;
     width: 100%;
+    max-width: 320px;
+    /* Standardize max width for wrap */
+    max-height: 380px;
     object-fit: contain;
     border-radius: 12px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid rgba(18, 56, 93, 0.1);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
     cursor: zoom-in;
     padding: 8px;
@@ -710,7 +798,7 @@
     height: 10px;
     border-radius: 999px;
     background: rgba(18, 56, 93, 0.35);
-    animation: pulse-dot 1.2s ease-in-out infinite;
+    animation: motion-pulse 1.2s ease-in-out infinite;
   }
 
   .student-pre-live-reconnect {

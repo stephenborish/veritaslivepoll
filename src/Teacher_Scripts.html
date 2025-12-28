@@ -46,6 +46,7 @@
     var firebaseRef = null;
     var realtimeStatuses = {}; // key -> status
     var realtimeConnected = false;
+    var lastQuestionIndex = -1;
 
     // OPTIMIZATION: Adaptive polling with backoff (like student view)
     var pollFailureCount = 0;
@@ -4382,7 +4383,7 @@
         '<span class="material-symbols-outlined text-amber-500">lightbulb</span> Insights & Recommendations</h4>' +
         '<div class="grid grid-cols-1 gap-3">';
 
-      items.forEach(function(item) {
+      items.forEach(function (item) {
         var borderClass = item.priority === 'urgent' ? 'border-red-200 bg-red-50 text-red-900' : 'border-amber-200 bg-amber-50 text-amber-900';
         var icon = item.priority === 'urgent' ? 'warning' : 'info';
 
@@ -4392,7 +4393,7 @@
 
         if (item.items && item.items.length > 0) {
           html += '<ul class="mt-2 text-sm list-disc list-inside opacity-90">';
-          item.items.forEach(function(detail) {
+          item.items.forEach(function (detail) {
             html += '<li>Q' + (detail.index + 1) + ': ' + escapeHtml(detail.text) + '</li>';
           });
           html += '</ul>';
@@ -4543,9 +4544,9 @@
         // Quality Badge
         if (interp.overall) {
           var qBadgeColor = interp.overall.quality === 'excellent' ? 'bg-green-100 text-green-800' :
-                            interp.overall.quality === 'flawed' ? 'bg-red-100 text-red-800' :
-                            interp.overall.quality === 'needs-adjustment' ? 'bg-orange-100 text-orange-800' :
-                            'bg-gray-100 text-gray-800';
+            interp.overall.quality === 'flawed' ? 'bg-red-100 text-red-800' :
+              interp.overall.quality === 'needs-adjustment' ? 'bg-orange-100 text-orange-800' :
+                'bg-gray-100 text-gray-800';
           html += '<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ' + qBadgeColor + '">' + escapeHtml(interp.overall.quality) + '</span>';
         }
         html += '</div>';
@@ -4559,14 +4560,14 @@
         html += '<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mb-1">Difficulty</div>';
         html += '<div class="text-2xl font-bold text-' + difficultyColor + '-600 dark:text-' + difficultyColor + '-400">' + item.difficultyPct + '%</div>';
         if (interp.difficulty) {
-           html += '<div class="text-[10px] text-gray-500">' + escapeHtml(interp.difficulty.level) + '</div>';
+          html += '<div class="text-[10px] text-gray-500">' + escapeHtml(interp.difficulty.level) + '</div>';
         }
         html += '</div>';
         html += '<div class="text-center">';
         html += '<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mb-1">Discrimination</div>';
         html += '<div class="text-2xl font-bold text-' + discColor + '-600 dark:text-' + discColor + '-400">' + item.discrimination + '</div>';
         if (interp.discrimination) {
-           html += '<div class="text-[10px] text-gray-500">' + escapeHtml(interp.discrimination.level) + '</div>';
+          html += '<div class="text-[10px] text-gray-500">' + escapeHtml(interp.discrimination.level) + '</div>';
         }
         html += '</div>';
         html += '</div>';
@@ -4589,7 +4590,7 @@
           html += '<div class="mt-3 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30 rounded text-sm text-amber-800 dark:text-amber-200">';
           html += '<p class="font-semibold text-xs uppercase tracking-wide mb-1">Recommendation:</p>';
           html += '<ul class="list-disc list-inside space-y-1">';
-          interp.actionable.forEach(function(insight) {
+          interp.actionable.forEach(function (insight) {
             html += '<li>' + escapeHtml(insight) + '</li>';
           });
           html += '</ul></div>';
@@ -5418,18 +5419,18 @@
 
           // OPTIMIZATION: Check for lightweight mode
           if (data.mode === 'lightweight') {
-              handleLightweightSessionUpdate(data);
-              return;
+            handleLightweightSessionUpdate(data);
+            return;
           }
 
           updateLiveView(data);
           if (data && data.pollId) {
-             broadcastSessionState(data.pollId, {
-                 questionIndex: data.questionIndex,
-                 status: 'OPEN',
-                 sessionPhase: data.sessionPhase || 'LIVE',
-                 resultsVisibility: data.resultsVisibility
-             });
+            broadcastSessionState(data.pollId, {
+              questionIndex: data.questionIndex,
+              status: 'OPEN',
+              sessionPhase: data.sessionPhase || 'LIVE',
+              resultsVisibility: data.resultsVisibility
+            });
           }
         })
         .withFailureHandler(function (error) {
@@ -5455,7 +5456,7 @@
         return;
       }
       google.script.run
-        .withSuccessHandler(function(data) {
+        .withSuccessHandler(function (data) {
           // Soft-fail check
           if (data && (data.success === false || data.error)) {
             var msg = data.message || data.error || 'Unknown error resuming poll';
@@ -5464,12 +5465,12 @@
           }
           updateLiveView(data);
           if (data && data.pollId) {
-             broadcastSessionState(data.pollId, {
-                 questionIndex: data.questionIndex,
-                 status: 'OPEN',
-                 sessionPhase: data.sessionPhase || 'LIVE',
-                 resultsVisibility: data.resultsVisibility
-             });
+            broadcastSessionState(data.pollId, {
+              questionIndex: data.questionIndex,
+              status: 'OPEN',
+              sessionPhase: data.sessionPhase || 'LIVE',
+              resultsVisibility: data.resultsVisibility
+            });
           }
         })
         .withFailureHandler(handleError)
@@ -5492,12 +5493,12 @@
           isPaused = true;
           updateLiveView(data);
           if (data && data.pollId) {
-             broadcastSessionState(data.pollId, {
-                 questionIndex: data.questionIndex,
-                 status: 'PAUSED',
-                 sessionPhase: data.sessionPhase || 'RESULTS_HOLD',
-                 resultsVisibility: data.resultsVisibility
-             });
+            broadcastSessionState(data.pollId, {
+              questionIndex: data.questionIndex,
+              status: 'PAUSED',
+              sessionPhase: data.sessionPhase || 'RESULTS_HOLD',
+              resultsVisibility: data.resultsVisibility
+            });
           }
         })
         .withFailureHandler(handleError)
@@ -5524,12 +5525,12 @@
           isPaused = true;
           updateLiveView(data);
           if (data && data.pollId) {
-             broadcastSessionState(data.pollId, {
-                 questionIndex: data.questionIndex,
-                 status: 'PAUSED',
-                 sessionPhase: 'RESULTS_REVEALED',
-                 resultsVisibility: 'REVEALED'
-             });
+            broadcastSessionState(data.pollId, {
+              questionIndex: data.questionIndex,
+              status: 'PAUSED',
+              sessionPhase: 'RESULTS_REVEALED',
+              resultsVisibility: 'REVEALED'
+            });
           }
         })
         .withFailureHandler(function (error) {
@@ -5559,22 +5560,22 @@
         .withSuccessHandler(function (data) {
           // OPTIMIZATION: Check for lightweight mode
           if (data.mode === 'lightweight') {
-              handleLightweightSessionUpdate(data);
-              // Clear navigation flags here since handleLightweightSessionUpdate triggers bg fetch
-              // but we want to unblock navigation immediately
-              isNavigating = false;
-              navigationRequestInFlight = false;
-              return;
+            handleLightweightSessionUpdate(data);
+            // Clear navigation flags here since handleLightweightSessionUpdate triggers bg fetch
+            // but we want to unblock navigation immediately
+            isNavigating = false;
+            navigationRequestInFlight = false;
+            return;
           }
 
           updateLiveView(data);
           if (data && data.pollId) {
-             broadcastSessionState(data.pollId, {
-                 questionIndex: data.questionIndex,
-                 status: 'OPEN',
-                 sessionPhase: data.sessionPhase || 'LIVE',
-                 resultsVisibility: data.resultsVisibility
-             });
+            broadcastSessionState(data.pollId, {
+              questionIndex: data.questionIndex,
+              status: 'OPEN',
+              sessionPhase: data.sessionPhase || 'LIVE',
+              resultsVisibility: data.resultsVisibility
+            });
           }
           // Clear navigation flag after a short delay to ensure state is fully synced
           setTimeout(function () {
@@ -5615,51 +5616,51 @@
       // OPTIMISTIC UPDATE: Update UI immediately using local data
       // This eliminates the visual lag for the teacher while the server processes the request
       if (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions) {
-          var nextIndex = (CURRENT_POLL_DATA.questionIndex || 0) + 1;
-          if (nextIndex < CURRENT_POLL_DATA.questions.length) {
-              console.log('[Optimistic] Advancing UI to question index:', nextIndex);
+        var nextIndex = (CURRENT_POLL_DATA.questionIndex || 0) + 1;
+        if (nextIndex < CURRENT_POLL_DATA.questions.length) {
+          console.log('[Optimistic] Advancing UI to question index:', nextIndex);
 
-              var optimisticData = {
-                  mode: 'lightweight',
-                  pollId: CURRENT_POLL_DATA.pollId,
-                  questionIndex: nextIndex,
-                  status: 'OPEN',
-                  metadata: {
-                      sessionPhase: 'LIVE',
-                      resultsVisibility: 'HIDDEN',
-                      startedAt: new Date().toISOString()
-                  }
-              };
+          var optimisticData = {
+            mode: 'lightweight',
+            pollId: CURRENT_POLL_DATA.pollId,
+            questionIndex: nextIndex,
+            status: 'OPEN',
+            metadata: {
+              sessionPhase: 'LIVE',
+              resultsVisibility: 'HIDDEN',
+              startedAt: new Date().toISOString()
+            }
+          };
 
-              // 1. Update UI instantly
-              handleLightweightSessionUpdate(optimisticData);
+          // 1. Update UI instantly
+          handleLightweightSessionUpdate(optimisticData);
 
-              // 2. Broadcast to Firebase instantly (Fast Path for students)
-              // handleLightweightSessionUpdate already calls broadcastSessionState,
-              // but we want to ensure the optimistic payload is what's sent.
-          }
+          // 2. Broadcast to Firebase instantly (Fast Path for students)
+          // handleLightweightSessionUpdate already calls broadcastSessionState,
+          // but we want to ensure the optimistic payload is what's sent.
+        }
       }
 
       google.script.run
         .withSuccessHandler(function (data) {
           // OPTIMIZATION: Check for lightweight mode
           if (data.mode === 'lightweight') {
-              // Re-apply update to confirm server state and ensure consistency
-              handleLightweightSessionUpdate(data);
+            // Re-apply update to confirm server state and ensure consistency
+            handleLightweightSessionUpdate(data);
 
-              isNavigating = false;
-              navigationRequestInFlight = false;
-              return;
+            isNavigating = false;
+            navigationRequestInFlight = false;
+            return;
           }
 
           updateLiveView(data);
           if (data && data.pollId) {
-             broadcastSessionState(data.pollId, {
-                 questionIndex: data.questionIndex,
-                 status: 'OPEN',
-                 sessionPhase: data.sessionPhase || 'LIVE',
-                 resultsVisibility: data.resultsVisibility
-             });
+            broadcastSessionState(data.pollId, {
+              questionIndex: data.questionIndex,
+              status: 'OPEN',
+              sessionPhase: data.sessionPhase || 'LIVE',
+              resultsVisibility: data.resultsVisibility
+            });
           }
           // Clear navigation flag after a short delay to ensure state is fully synced
           setTimeout(function () {
@@ -5717,21 +5718,21 @@
         .withSuccessHandler(function (data) {
           // OPTIMIZATION: Check for lightweight mode
           if (data.mode === 'lightweight') {
-              isPaused = false;
-              handleLightweightSessionUpdate(data);
-              showToast('success', 'Question Reset', 'All responses have been cleared.');
-              return;
+            isPaused = false;
+            handleLightweightSessionUpdate(data);
+            showToast('success', 'Question Reset', 'All responses have been cleared.');
+            return;
           }
 
           isPaused = false;
           updateLiveView(data);
           if (data && data.pollId) {
-             broadcastSessionState(data.pollId, {
-                 questionIndex: data.questionIndex,
-                 status: 'OPEN',
-                 sessionPhase: data.sessionPhase || 'LIVE',
-                 resultsVisibility: data.resultsVisibility
-             });
+            broadcastSessionState(data.pollId, {
+              questionIndex: data.questionIndex,
+              status: 'OPEN',
+              sessionPhase: data.sessionPhase || 'LIVE',
+              resultsVisibility: data.resultsVisibility
+            });
           }
         })
         .withFailureHandler(handleError)
@@ -5785,7 +5786,7 @@
           setLiveCalculatorToggleState(isEnabled, true);
           // Show toast feedback
           showToast('success', isEnabled ? 'Calculator enabled' : 'Calculator disabled',
-                    isEnabled ? 'Students can now access the calculator.' : 'Calculator has been disabled for students.');
+            isEnabled ? 'Students can now access the calculator.' : 'Calculator has been disabled for students.');
         })
         .withFailureHandler(function (error) {
           liveCalculatorToggle.removeAttribute('aria-busy');
@@ -5854,20 +5855,20 @@
           }
           // Broadcast session end (CLOSED)
           if (data && data.pollId) {
-             broadcastSessionState(data.pollId, {
-                 questionIndex: -1,
-                 status: 'CLOSED',
-                 sessionPhase: 'ENDED',
-                 resultsVisibility: 'HIDDEN'
-             });
+            broadcastSessionState(data.pollId, {
+              questionIndex: -1,
+              status: 'CLOSED',
+              sessionPhase: 'ENDED',
+              resultsVisibility: 'HIDDEN'
+            });
           } else if (CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId) {
-             // Fallback if data doesn't contain pollId (e.g. status only)
-             broadcastSessionState(CURRENT_POLL_DATA.pollId, {
-                 questionIndex: -1,
-                 status: 'CLOSED',
-                 sessionPhase: 'ENDED',
-                 resultsVisibility: 'HIDDEN'
-             });
+            // Fallback if data doesn't contain pollId (e.g. status only)
+            broadcastSessionState(CURRENT_POLL_DATA.pollId, {
+              questionIndex: -1,
+              status: 'CLOSED',
+              sessionPhase: 'ENDED',
+              resultsVisibility: 'HIDDEN'
+            });
           }
         })
         .withFailureHandler(handleError)
@@ -6364,6 +6365,17 @@
       }
 
       // Update question display
+      var isNewQuestion = lastQuestionIndex !== data.questionIndex;
+      if (isNewQuestion) {
+        lastQuestionIndex = data.questionIndex;
+        var qCard = document.querySelector('.live-question-card');
+        if (qCard) {
+          qCard.classList.remove('motion-slide-in-right');
+          void qCard.offsetWidth; // Force reflow
+          qCard.classList.add('motion-slide-in-right');
+        }
+      }
+
       document.getElementById('live-question-info').textContent = 'Q' + (data.questionIndex + 1) + '/' + data.totalQuestions;
       document.getElementById('live-question-text').textContent = data.questionText;
       document.getElementById('live-question-text-compact').textContent = data.questionText;
@@ -6541,7 +6553,7 @@
         cardHtml += '<div class="flex-1 min-w-0">';
 
         if (answerText) {
-          cardHtml += '<p class="text-sm font-medium text-brand-dark-gray dark:text-brand-white break-words leading-tight">' + escapeHtml(answerText) + '</p>';
+          cardHtml += '<p class="text-[1.125rem] font-medium text-brand-dark-gray dark:text-brand-white break-words leading-relaxed">' + escapeHtml(answerText) + '</p>';
         } else if (!imageURL) {
           cardHtml += '<p class="text-sm font-medium text-gray-400 dark:text-gray-500">(No content)</p>';
         }
@@ -6681,7 +6693,7 @@
         return 'AWAITING_FULLSCREEN';
       }
       if ((collapsed.indexOf('locked') === 0 || (collapsed.indexOf('locked') > 0 && collapsed.indexOf('unlocked') === -1)) ||
-          (collapsed.indexOf('approval') !== -1 && collapsed.indexOf('unlocked') === -1)) {
+        (collapsed.indexOf('approval') !== -1 && collapsed.indexOf('unlocked') === -1)) {
         return 'LOCKED';
       }
       return null;
@@ -7086,7 +7098,7 @@
               errorMsg = 'Lock version mismatch (student may have violated again). Refreshing status and retrying...';
               // Auto-retry with correct version
               if (response.lockVersion !== undefined) {
-                setTimeout(function() {
+                setTimeout(function () {
                   approveStudentUnlock(email, pollId, response.lockVersion, buttonElement, { skipConfirm: true });
                 }, 500);
                 return;
@@ -7543,7 +7555,7 @@
       }
 
       // CRITICAL: Always include LOCKED/BLOCKED students regardless of filter for visibility
-      var isLockedOrBlocked = function(s) {
+      var isLockedOrBlocked = function (s) {
         var normalized = deriveProctorStatus(s);
         return normalized === 'LOCKED' || normalized === 'AWAITING_FULLSCREEN' || normalized === 'BLOCKED';
       };
@@ -7837,7 +7849,7 @@
      */
     function updateActivityMetrics(pollId, questionIndex) {
       google.script.run
-        .withSuccessHandler(function(metrics) {
+        .withSuccessHandler(function (metrics) {
           var avgTimeEl = document.getElementById('activity-avg-time');
           var changesEl = document.getElementById('activity-answer-changes');
           var activeEl = document.getElementById('activity-active-students');
@@ -7862,7 +7874,7 @@
             lastUpdatedEl.textContent = timeStr;
           }
         })
-        .withFailureHandler(function(error) {
+        .withFailureHandler(function (error) {
           console.error('Failed to fetch activity metrics:', error);
           // HIGH PRIORITY FIX: Show user-visible error notification
           showToast('error', 'Activity Metrics Error', 'Unable to load real-time activity metrics. Data will refresh on next update.', 4000);
@@ -7918,13 +7930,13 @@
       sidebarVisible = !sidebarVisible;
 
       if (sidebarVisible) {
-        sidebar.classList.remove('w-0', 'hidden');
-        sidebar.classList.add('w-80');
+        sidebar.classList.remove('w-0', 'hidden', 'lg:w-0');
+        sidebar.classList.add('w-80', 'lg:w-96');
         icon.textContent = 'chevron_right';
         label.textContent = 'Hide Sidebar';
       } else {
-        sidebar.classList.remove('w-80');
-        sidebar.classList.add('w-0', 'hidden');
+        sidebar.classList.remove('w-80', 'lg:w-96');
+        sidebar.classList.add('w-0', 'hidden', 'lg:w-0');
         icon.textContent = 'chevron_left';
         label.textContent = 'Show Sidebar';
       }
@@ -8322,7 +8334,7 @@
             // Partial or full failure
             var msg = 'Sent: ' + response.sentCount + ', Failed: ' + response.failedCount + '.';
             if (response.failures && response.failures.length > 0) {
-              msg += '\n\nFailures:\n' + response.failures.map(function(f) { return f.name + ': ' + f.error; }).join('\n');
+              msg += '\n\nFailures:\n' + response.failures.map(function (f) { return f.name + ': ' + f.error; }).join('\n');
             }
             if (response.error) {
               msg = 'Error: ' + response.error;
@@ -8335,8 +8347,8 @@
 
             // Show fallback instructions
             if (viewLinksBtn) {
-                viewLinksBtn.click(); // Auto-open links view as fallback
-                showToast('info', 'Fallback', 'Opening link list for manual distribution.', 4000);
+              viewLinksBtn.click(); // Auto-open links view as fallback
+              showToast('info', 'Fallback', 'Opening link list for manual distribution.', 4000);
             }
           }
         })
@@ -8351,14 +8363,14 @@
 
           var errorStr = (error && error.toString()) || '';
           if (errorStr.indexOf('Authorization is required') !== -1 || errorStr.indexOf('ScriptApp.invalidateAuth') !== -1) {
-             veritasConfirm('Email sending requires authorization. Would you like to run the authorization check now?', { title: 'Authorization Required' })
-               .then(function(yes) {
-                  if(yes) {
-                    google.script.run.authorizeEmail(); // Trigger auth prompt
-                  }
-               });
+            veritasConfirm('Email sending requires authorization. Would you like to run the authorization check now?', { title: 'Authorization Required' })
+              .then(function (yes) {
+                if (yes) {
+                  google.script.run.authorizeEmail(); // Trigger auth prompt
+                }
+              });
           } else {
-             handleError(error);
+            handleError(error);
           }
         })
         .sendPollLinkToClass(className, CURRENT_POLL_DATA.pollId);
@@ -11076,388 +11088,388 @@
     // This ensures firebase.apps.length === 1 immediately, not just when a poll is active.
     // The user reported firebase.apps.length === 0 on teacher panel - this fixes it.
     (function initFirebaseEagerly() {
-        var debugInfo = {
-            firebasePresent: typeof firebase !== 'undefined',
-            configPresent: typeof FIREBASE_CONFIG !== 'undefined' && !!FIREBASE_CONFIG,
-            databaseURL: (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG) ? FIREBASE_CONFIG.databaseURL : null,
-            appsLengthBefore: (typeof firebase !== 'undefined' && firebase.apps) ? firebase.apps.length : 'n/a',
-            initCalled: false,
-            success: false
-        };
+      var debugInfo = {
+        firebasePresent: typeof firebase !== 'undefined',
+        configPresent: typeof FIREBASE_CONFIG !== 'undefined' && !!FIREBASE_CONFIG,
+        databaseURL: (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG) ? FIREBASE_CONFIG.databaseURL : null,
+        appsLengthBefore: (typeof firebase !== 'undefined' && firebase.apps) ? firebase.apps.length : 'n/a',
+        initCalled: false,
+        success: false
+      };
 
-        if (typeof firebase !== 'undefined' && FIREBASE_CONFIG) {
-            if (!firebase.apps.length) {
-                try {
-                    firebase.initializeApp(FIREBASE_CONFIG);
-                    debugInfo.initCalled = true;
-                    debugInfo.success = true;
-                } catch (e) {
-                    console.error('[Firebase] Failed to initialize app:', e);
-                    debugInfo.error = e.message;
-                }
-            } else {
-                debugInfo.success = true; // Already initialized
-            }
-            // Store firebaseDb reference for later use
-            if (!firebaseDb && firebase.apps.length > 0) {
-                firebaseDb = firebase.database();
-            }
-            debugInfo.appsLengthAfter = firebase.apps.length;
+      if (typeof firebase !== 'undefined' && FIREBASE_CONFIG) {
+        if (!firebase.apps.length) {
+          try {
+            firebase.initializeApp(FIREBASE_CONFIG);
+            debugInfo.initCalled = true;
+            debugInfo.success = true;
+          } catch (e) {
+            console.error('[Firebase] Failed to initialize app:', e);
+            debugInfo.error = e.message;
+          }
         } else {
-            if (typeof firebase === 'undefined') {
-                console.error('[Firebase] SDK not loaded! Check script tags in Teacher_View.html');
-            }
-            if (!FIREBASE_CONFIG) {
-                console.error('[Firebase] FIREBASE_CONFIG not available!');
-            }
+          debugInfo.success = true; // Already initialized
         }
+        // Store firebaseDb reference for later use
+        if (!firebaseDb && firebase.apps.length > 0) {
+          firebaseDb = firebase.database();
+        }
+        debugInfo.appsLengthAfter = firebase.apps.length;
+      } else {
+        if (typeof firebase === 'undefined') {
+          console.error('[Firebase] SDK not loaded! Check script tags in Teacher_View.html');
+        }
+        if (!FIREBASE_CONFIG) {
+          console.error('[Firebase] FIREBASE_CONFIG not available!');
+        }
+      }
 
-        // Single clean debug log line as requested
-        console.log('[Firebase Init] databaseURL=' + debugInfo.databaseURL +
-                    ', firebasePresent=' + debugInfo.firebasePresent +
-                    ', appsLength=' + debugInfo.appsLengthAfter +
-                    ', initCalled=' + debugInfo.initCalled +
-                    ', success=' + debugInfo.success);
+      // Single clean debug log line as requested
+      console.log('[Firebase Init] databaseURL=' + debugInfo.databaseURL +
+        ', firebasePresent=' + debugInfo.firebasePresent +
+        ', appsLength=' + debugInfo.appsLengthAfter +
+        ', initCalled=' + debugInfo.initCalled +
+        ', success=' + debugInfo.success);
     })();
 
     function broadcastSessionState(pollId, state) {
-        if (!firebaseDb || !pollId || !state) return;
-        // P0-1: Signal-to-Poll Optimization
-        // Write lightweight state signal to Firebase so clients can react instantly without polling loop
-        var signalPath = 'sessions/' + pollId + '/publicState';
-        var signalRef = firebaseDb.ref(signalPath);
+      if (!firebaseDb || !pollId || !state) return;
+      // P0-1: Signal-to-Poll Optimization
+      // Write lightweight state signal to Firebase so clients can react instantly without polling loop
+      var signalPath = 'sessions/' + pollId + '/publicState';
+      var signalRef = firebaseDb.ref(signalPath);
 
-        var payload = {
-            questionIndex: state.questionIndex,
-            status: state.status, // OPEN, PAUSED, CLOSED
-            timestamp: firebase.database.ServerValue.TIMESTAMP,
-            phase: state.sessionPhase || 'LIVE', // LIVE, RESULTS_HOLD, RESULTS_REVEALED
-            resultsVisibility: state.resultsVisibility || 'HIDDEN'
-        };
+      var payload = {
+        questionIndex: state.questionIndex,
+        status: state.status, // OPEN, PAUSED, CLOSED
+        timestamp: firebase.database.ServerValue.TIMESTAMP,
+        phase: state.sessionPhase || 'LIVE', // LIVE, RESULTS_HOLD, RESULTS_REVEALED
+        resultsVisibility: state.resultsVisibility || 'HIDDEN'
+      };
 
-        signalRef.set(payload).then(function() {
-            console.log('[Firebase] Broadcasted session state signal:', payload);
-        }).catch(function(e) {
-            console.warn('[Firebase] Broadcast failed:', e);
-        });
+      signalRef.set(payload).then(function () {
+        console.log('[Firebase] Broadcasted session state signal:', payload);
+      }).catch(function (e) {
+        console.warn('[Firebase] Broadcast failed:', e);
+      });
     }
 
     function initFirebaseMissionControl(pollId) {
-        if (!FIREBASE_CONFIG || !pollId) return;
+      if (!FIREBASE_CONFIG || !pollId) return;
 
-        // FIX TASK A: Cleanup previous listeners when pollId changes to prevent leaks
-        if (firebaseRef && currentMissionControlPollId !== pollId) {
-            console.log('[Firebase] Cleaning up listeners for previous pollId:', currentMissionControlPollId);
-            firebaseRef.off();
-            firebaseRef = null;
-        }
+      // FIX TASK A: Cleanup previous listeners when pollId changes to prevent leaks
+      if (firebaseRef && currentMissionControlPollId !== pollId) {
+        console.log('[Firebase] Cleaning up listeners for previous pollId:', currentMissionControlPollId);
+        firebaseRef.off();
+        firebaseRef = null;
+      }
 
-        // Prevent double init for same pollId
-        if (firebaseRef && currentMissionControlPollId === pollId) {
-            console.log('[Firebase] Already subscribed to pollId:', pollId);
-            return;
-        }
+      // Prevent double init for same pollId
+      if (firebaseRef && currentMissionControlPollId === pollId) {
+        console.log('[Firebase] Already subscribed to pollId:', pollId);
+        return;
+      }
 
-        // Firebase app should already be initialized by initFirebaseEagerly()
-        // But check again just in case
-        if (typeof firebase !== 'undefined' && !firebase.apps.length) {
-            firebase.initializeApp(FIREBASE_CONFIG);
-            console.log('[Firebase] Late init in initFirebaseMissionControl');
-        }
+      // Firebase app should already be initialized by initFirebaseEagerly()
+      // But check again just in case
+      if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+        firebase.initializeApp(FIREBASE_CONFIG);
+        console.log('[Firebase] Late init in initFirebaseMissionControl');
+      }
 
-        if (typeof firebase !== 'undefined') {
-            firebaseDb = firebase.database();
+      if (typeof firebase !== 'undefined') {
+        firebaseDb = firebase.database();
 
-            var path = 'sessions/' + pollId + '/students';
-            firebaseRef = firebaseDb.ref(path);
-            currentMissionControlPollId = pollId;
+        var path = 'sessions/' + pollId + '/students';
+        firebaseRef = firebaseDb.ref(path);
+        currentMissionControlPollId = pollId;
 
-            // P0-2 FIX: Store actual subscribed path
-            actualSubscribedPath = firebaseRef.toString();
+        // P0-2 FIX: Store actual subscribed path
+        actualSubscribedPath = firebaseRef.toString();
 
-            // Connection State
-            var connectedRef = firebaseDb.ref('.info/connected');
-            connectedRef.on('value', function(snap) {
-                realtimeConnected = snap.val() === true;
-                console.log('[Firebase] Connection status changed:', realtimeConnected ? 'CONNECTED' : 'DISCONNECTED', 'pollId:', pollId);
+        // Connection State
+        var connectedRef = firebaseDb.ref('.info/connected');
+        connectedRef.on('value', function (snap) {
+          realtimeConnected = snap.val() === true;
+          console.log('[Firebase] Connection status changed:', realtimeConnected ? 'CONNECTED' : 'DISCONNECTED', 'pollId:', pollId);
 
-                // ADAPTIVE POLLING: Reduce server load when Firebase is active
-                var newInterval = realtimeConnected ? 15000 : 2500;
+          // ADAPTIVE POLLING: Reduce server load when Firebase is active
+          var newInterval = realtimeConnected ? 15000 : 2500;
 
-                if (missionControlHeartbeat && missionControlHeartbeat.isRunning()) {
-                    console.log('[Adaptive Polling] Updating Mission Control heartbeat to ' + newInterval + 'ms');
-                    missionControlHeartbeat.updateInterval(newInterval);
+          if (missionControlHeartbeat && missionControlHeartbeat.isRunning()) {
+            console.log('[Adaptive Polling] Updating Mission Control heartbeat to ' + newInterval + 'ms');
+            missionControlHeartbeat.updateInterval(newInterval);
+          }
+
+          if (pollInterval) {
+            console.log('[Adaptive Polling] Updating Live Poll interval to ' + newInterval + 'ms');
+            clearInterval(pollInterval);
+            currentPollInterval = newInterval;
+            pollInterval = setInterval(pollForResults, currentPollInterval);
+          } else {
+            currentPollInterval = newInterval; // Set for next start
+          }
+
+          // P0-2 FIX: Record event
+          lastRTDBEvent = { timestamp: Date.now(), type: 'connection' };
+          updateRealtimeIndicator();
+          updateDebugHud();
+        });
+
+        // Listen for student status changes
+        firebaseRef.on('child_changed', async function (snapshot) {
+          // P0-2 FIX: Record status change
+          var studentKey = snapshot.key;
+          var newStatus = snapshot.val();
+          var previousStatus = realtimeStatuses[studentKey];
+
+          lastStatusChange = { studentKey: studentKey, status: newStatus, timestamp: Date.now() };
+          lastRTDBEvent = { timestamp: Date.now(), type: 'child_changed' };
+          console.log('[Firebase] Student status changed:', studentKey.substring(0, 8) + '...', previousStatus, '→', newStatus);
+
+          // Show toast when student resumes (LOCKED or not-ACTIVE -> ACTIVE)
+          if (newStatus === 'ACTIVE' && previousStatus && previousStatus !== 'ACTIVE') {
+            // Find student name from current data
+            var studentName = null;
+
+            // Check mission control students first
+            if (missionControlStudents && currentMissionControlPollId) {
+              for (var i = 0; i < missionControlStudents.length; i++) {
+                var s = missionControlStudents[i];
+                var key = await window.VeritasShared.generateStudentKey(s.email, currentMissionControlPollId);
+                if (key === studentKey) {
+                  studentName = s.name || s.email;
+                  break;
                 }
+              }
+            }
 
-                if (pollInterval) {
-                     console.log('[Adaptive Polling] Updating Live Poll interval to ' + newInterval + 'ms');
-                     clearInterval(pollInterval);
-                     currentPollInterval = newInterval;
-                     pollInterval = setInterval(pollForResults, currentPollInterval);
-                } else {
-                     currentPollInterval = newInterval; // Set for next start
+            // Check live poll students if not found
+            if (!studentName && currentStudentStatusData && CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId) {
+              for (var j = 0; j < currentStudentStatusData.length; j++) {
+                var student = currentStudentStatusData[j];
+                var sKey = await window.VeritasShared.generateStudentKey(student.email, CURRENT_POLL_DATA.pollId);
+                if (sKey === studentKey) {
+                  studentName = student.name || student.email;
+                  break;
                 }
+              }
+            }
 
-                // P0-2 FIX: Record event
-                lastRTDBEvent = { timestamp: Date.now(), type: 'connection' };
-                updateRealtimeIndicator();
-                updateDebugHud();
-            });
+            // Show toast notification
+            showToast('info', 'Student Resumed', (studentName || 'A student') + ' has re-entered the session.', 3000);
+          }
+        });
 
-            // Listen for student status changes
-            firebaseRef.on('child_changed', async function(snapshot) {
-                // P0-2 FIX: Record status change
-                var studentKey = snapshot.key;
-                var newStatus = snapshot.val();
-                var previousStatus = realtimeStatuses[studentKey];
+        firebaseRef.on('child_added', function (snapshot) {
+          lastRTDBEvent = { timestamp: Date.now(), type: 'child_added' };
+        });
 
-                lastStatusChange = { studentKey: studentKey, status: newStatus, timestamp: Date.now() };
-                lastRTDBEvent = { timestamp: Date.now(), type: 'child_changed' };
-                console.log('[Firebase] Student status changed:', studentKey.substring(0, 8) + '...', previousStatus, '→', newStatus);
+        // Listen for changes
+        firebaseRef.on('value', function (snapshot) {
+          realtimeStatuses = snapshot.val() || {};
+          console.log('[Firebase] Status update received for pollId:', pollId, 'Students:', Object.keys(realtimeStatuses).length);
+          lastRTDBEvent = { timestamp: Date.now(), type: 'value' };
+          updateRealtimeUI();
+          updateDebugHud();
+        });
 
-                // Show toast when student resumes (LOCKED or not-ACTIVE -> ACTIVE)
-                if (newStatus === 'ACTIVE' && previousStatus && previousStatus !== 'ACTIVE') {
-                    // Find student name from current data
-                    var studentName = null;
+        // P0-3 FIX: Listen to violations node
+        violationsRef = firebaseDb.ref('sessions/' + pollId + '/violations');
+        violationsRef.on('child_added', function (snapshot) {
+          var studentKey = snapshot.key;
+          var violation = snapshot.val();
+          if (violation && violation.reason) {
+            lastViolation = { studentKey: studentKey, reason: violation.reason, timestamp: Date.now() };
+            console.log('[Firebase] Violation detected:', studentKey.substring(0, 8) + '...', '-', violation.reason);
+            updateDebugHud();
+          }
+        });
 
-                    // Check mission control students first
-                    if (missionControlStudents && currentMissionControlPollId) {
-                        for (var i = 0; i < missionControlStudents.length; i++) {
-                            var s = missionControlStudents[i];
-                            var key = await window.VeritasShared.generateStudentKey(s.email, currentMissionControlPollId);
-                            if (key === studentKey) {
-                                studentName = s.name || s.email;
-                                break;
-                            }
-                        }
-                    }
+        violationsRef.on('child_changed', function (snapshot) {
+          var studentKey = snapshot.key;
+          var violation = snapshot.val();
+          if (violation && violation.reason) {
+            lastViolation = { studentKey: studentKey, reason: violation.reason, timestamp: Date.now() };
+            console.log('[Firebase] Violation updated:', studentKey.substring(0, 8) + '...', '-', violation.reason);
+            updateDebugHud();
+          }
+        });
 
-                    // Check live poll students if not found
-                    if (!studentName && currentStudentStatusData && CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId) {
-                        for (var j = 0; j < currentStudentStatusData.length; j++) {
-                            var student = currentStudentStatusData[j];
-                            var sKey = await window.VeritasShared.generateStudentKey(student.email, CURRENT_POLL_DATA.pollId);
-                            if (sKey === studentKey) {
-                                studentName = student.name || student.email;
-                                break;
-                            }
-                        }
-                    }
+        // FAST PATH: Listen for answers (Live Results)
+        var answersRef = firebaseDb.ref('answers/' + pollId);
+        answersRef.on('child_added', function (snapshot) {
+          var answer = snapshot.val();
+          if (answer && answer.questionIndex !== undefined) {
+            // Update live results UI instantly
+            handleRealtimeAnswer(answer);
+          }
+        });
 
-                    // Show toast notification
-                    showToast('info', 'Student Resumed', (studentName || 'A student') + ' has re-entered the session.', 3000);
-                }
-            });
-
-            firebaseRef.on('child_added', function(snapshot) {
-                lastRTDBEvent = { timestamp: Date.now(), type: 'child_added' };
-            });
-
-            // Listen for changes
-            firebaseRef.on('value', function(snapshot) {
-                realtimeStatuses = snapshot.val() || {};
-                console.log('[Firebase] Status update received for pollId:', pollId, 'Students:', Object.keys(realtimeStatuses).length);
-                lastRTDBEvent = { timestamp: Date.now(), type: 'value' };
-                updateRealtimeUI();
-                updateDebugHud();
-            });
-
-            // P0-3 FIX: Listen to violations node
-            violationsRef = firebaseDb.ref('sessions/' + pollId + '/violations');
-            violationsRef.on('child_added', function(snapshot) {
-                var studentKey = snapshot.key;
-                var violation = snapshot.val();
-                if (violation && violation.reason) {
-                    lastViolation = { studentKey: studentKey, reason: violation.reason, timestamp: Date.now() };
-                    console.log('[Firebase] Violation detected:', studentKey.substring(0, 8) + '...', '-', violation.reason);
-                    updateDebugHud();
-                }
-            });
-
-            violationsRef.on('child_changed', function(snapshot) {
-                var studentKey = snapshot.key;
-                var violation = snapshot.val();
-                if (violation && violation.reason) {
-                    lastViolation = { studentKey: studentKey, reason: violation.reason, timestamp: Date.now() };
-                    console.log('[Firebase] Violation updated:', studentKey.substring(0, 8) + '...', '-', violation.reason);
-                    updateDebugHud();
-                }
-            });
-
-            // FAST PATH: Listen for answers (Live Results)
-            var answersRef = firebaseDb.ref('answers/' + pollId);
-            answersRef.on('child_added', function(snapshot) {
-                var answer = snapshot.val();
-                if (answer && answer.questionIndex !== undefined) {
-                    // Update live results UI instantly
-                    handleRealtimeAnswer(answer);
-                }
-            });
-
-            console.log('[Firebase] Mission Control initialized for', path, 'Connected:', realtimeConnected);
-            console.log('[Firebase] Actual subscription:', actualSubscribedPath);
-        }
+        console.log('[Firebase] Mission Control initialized for', path, 'Connected:', realtimeConnected);
+        console.log('[Firebase] Actual subscription:', actualSubscribedPath);
+      }
     }
 
     /**
      * Handle incoming realtime answer from Firebase
      */
     function handleRealtimeAnswer(payload) {
-        // Ensure we are in a live session state where results matter
-        if (!CURRENT_POLL_DATA || CURRENT_POLL_DATA.pollId !== payload.pollId) return;
+      // Ensure we are in a live session state where results matter
+      if (!CURRENT_POLL_DATA || CURRENT_POLL_DATA.pollId !== payload.pollId) return;
 
-        // Find student in current list
-        var student = currentStudentStatusData.find(function(s) { return s.email === payload.studentEmail; });
-        if (student) {
-            // Update progress locally
-            var newProgress = Math.max(student.progress || 0, (payload.questionIndex || 0) + 1);
-            student.progress = newProgress;
-            student.status = 'In Progress'; // Ensure status is active
+      // Find student in current list
+      var student = currentStudentStatusData.find(function (s) { return s.email === payload.studentEmail; });
+      if (student) {
+        // Update progress locally
+        var newProgress = Math.max(student.progress || 0, (payload.questionIndex || 0) + 1);
+        student.progress = newProgress;
+        student.status = 'In Progress'; // Ensure status is active
 
-            // UI UPDATE: Find the card and update the progress bar/text immediately
-            var card = document.querySelector('.student-status-card[data-email="' + CSS.escape(student.email) + '"]');
-            if (card) {
-                var progressBar = card.querySelector('.progress-bar-fill');
-                var progressText = card.querySelector('.progress-text');
-                var statusBadge = card.querySelector('.status-badge');
+        // UI UPDATE: Find the card and update the progress bar/text immediately
+        var card = document.querySelector('.student-status-card[data-email="' + CSS.escape(student.email) + '"]');
+        if (card) {
+          var progressBar = card.querySelector('.progress-bar-fill');
+          var progressText = card.querySelector('.progress-text');
+          var statusBadge = card.querySelector('.status-badge');
 
-                if (progressBar && student.totalQuestions > 0) {
-                    var pct = Math.min(100, Math.round((newProgress / student.totalQuestions) * 100));
-                    progressBar.style.width = pct + '%';
+          if (progressBar && student.totalQuestions > 0) {
+            var pct = Math.min(100, Math.round((newProgress / student.totalQuestions) * 100));
+            progressBar.style.width = pct + '%';
 
-                    // Add pulse animation
-                    progressBar.classList.remove('pulse-once');
-                    void progressBar.offsetWidth; // force reflow
-                    progressBar.classList.add('pulse-once');
-                }
+            // Add pulse animation
+            progressBar.classList.remove('pulse-once');
+            void progressBar.offsetWidth; // force reflow
+            progressBar.classList.add('pulse-once');
+          }
 
-                if (progressText) {
-                    progressText.textContent = newProgress + '/' + student.totalQuestions;
-                }
+          if (progressText) {
+            progressText.textContent = newProgress + '/' + student.totalQuestions;
+          }
 
-                if (statusBadge) {
-                    statusBadge.textContent = 'In Progress';
-                    statusBadge.className = 'status-badge bg-emerald-100 text-emerald-800';
-                }
-            }
-
-            console.log('[Firebase] Realtime Answer processed for:', payload.studentEmail);
+          if (statusBadge) {
+            statusBadge.textContent = 'In Progress';
+            statusBadge.className = 'status-badge bg-emerald-100 text-emerald-800';
+          }
         }
+
+        console.log('[Firebase] Realtime Answer processed for:', payload.studentEmail);
+      }
     }
 
     function updateRealtimeIndicator() {
-        var indicator = document.getElementById('realtime-indicator');
-        if (!indicator) {
-            var headerMeta = document.getElementById('individual-session-meta');
-            if (headerMeta) {
-                var badge = document.createElement('span');
-                badge.id = 'realtime-indicator';
-                badge.className = 'ml-4 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold';
-                headerMeta.appendChild(badge);
-            }
+      var indicator = document.getElementById('realtime-indicator');
+      if (!indicator) {
+        var headerMeta = document.getElementById('individual-session-meta');
+        if (headerMeta) {
+          var badge = document.createElement('span');
+          badge.id = 'realtime-indicator';
+          badge.className = 'ml-4 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold';
+          headerMeta.appendChild(badge);
         }
+      }
 
-        var badgeEl = document.getElementById('realtime-indicator');
-        if (badgeEl) {
-            if (realtimeConnected) {
-                badgeEl.className = 'ml-4 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-700 border border-green-200';
-                badgeEl.innerHTML = '<span class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span> Realtime Active';
-            } else {
-                badgeEl.className = 'ml-4 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 border border-red-200';
-                badgeEl.innerHTML = '<span class="h-2 w-2 rounded-full bg-red-500"></span> Realtime OFF (Polling mode)';
-            }
+      var badgeEl = document.getElementById('realtime-indicator');
+      if (badgeEl) {
+        if (realtimeConnected) {
+          badgeEl.className = 'ml-4 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-700 border border-green-200';
+          badgeEl.innerHTML = '<span class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span> Realtime Active';
+        } else {
+          badgeEl.className = 'ml-4 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 border border-red-200';
+          badgeEl.innerHTML = '<span class="h-2 w-2 rounded-full bg-red-500"></span> Realtime OFF (Polling mode)';
         }
+      }
     }
 
     async function updateRealtimeUI() {
-        var updatesFound = false;
+      var updatesFound = false;
 
-        // FIX TASK A: Update BOTH Mission Control (Individual Timed) AND Live Poll student lists
-        // This ensures realtime updates work for ALL proctored sessions, not just Individual Timed
+      // FIX TASK A: Update BOTH Mission Control (Individual Timed) AND Live Poll student lists
+      // This ensures realtime updates work for ALL proctored sessions, not just Individual Timed
 
-        // 1. Update Mission Control students (Individual Timed / Secure Assessment)
-        if (missionControlStudents && currentMissionControlPollId) {
-            await Promise.all(missionControlStudents.map(async function(student) {
-                var key = await window.VeritasShared.generateStudentKey(student.email, currentMissionControlPollId);
-                var rtStatus = realtimeStatuses[key];
+      // 1. Update Mission Control students (Individual Timed / Secure Assessment)
+      if (missionControlStudents && currentMissionControlPollId) {
+        await Promise.all(missionControlStudents.map(async function (student) {
+          var key = await window.VeritasShared.generateStudentKey(student.email, currentMissionControlPollId);
+          var rtStatus = realtimeStatuses[key];
 
-                if (rtStatus) {
-                    var newStatus = student.status;
-                    var newConnection = student.connection ? student.connection.status : 'GRAY';
+          if (rtStatus) {
+            var newStatus = student.status;
+            var newConnection = student.connection ? student.connection.status : 'GRAY';
 
-                    if (rtStatus === 'ACTIVE') {
-                        if (student.status !== 'Submitted') {
-                            newStatus = 'In Progress';
-                        }
-                        newConnection = 'GREEN';
-                    } else if (rtStatus === 'LOCKED') {
-                        newStatus = 'LOCKED';
-                        student.proctorStatus = 'LOCKED';
-                        newConnection = 'GREEN';
-                    } else if (rtStatus === 'DISCONNECTED') {
-                        newConnection = 'RED';
-                    } else if (rtStatus === 'FINISHED') {
-                        newStatus = 'Submitted';
-                        newConnection = 'GREEN';
-                    }
-
-                    if (student.status !== newStatus || (student.connection && student.connection.status !== newConnection)) {
-                        student.status = newStatus;
-                        if (!student.connection) student.connection = {};
-                        student.connection.status = newConnection;
-                        updatesFound = true;
-                    }
-                }
-            }));
-
-            if (updatesFound) {
-                renderIndividualStudentCards({ students: missionControlStudents });
+            if (rtStatus === 'ACTIVE') {
+              if (student.status !== 'Submitted') {
+                newStatus = 'In Progress';
+              }
+              newConnection = 'GREEN';
+            } else if (rtStatus === 'LOCKED') {
+              newStatus = 'LOCKED';
+              student.proctorStatus = 'LOCKED';
+              newConnection = 'GREEN';
+            } else if (rtStatus === 'DISCONNECTED') {
+              newConnection = 'RED';
+            } else if (rtStatus === 'FINISHED') {
+              newStatus = 'Submitted';
+              newConnection = 'GREEN';
             }
-        }
 
-        // 2. Update Live Poll students (currentStudentStatusData)
-        if (currentStudentStatusData && currentStudentStatusData.length > 0 && CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId) {
-            var livePollUpdatesFound = false;
-            await Promise.all(currentStudentStatusData.map(async function(student) {
-                var key = await window.VeritasShared.generateStudentKey(student.email, CURRENT_POLL_DATA.pollId);
-                var rtStatus = realtimeStatuses[key];
-
-                if (rtStatus) {
-                    var newStatus = student.status;
-
-                    // Map Firebase status to Live Poll status strings
-                    if (rtStatus === 'ACTIVE') {
-                        if (student.status !== 'Submitted') {
-                            newStatus = 'In Progress';
-                        }
-                    } else if (rtStatus === 'LOCKED') {
-                        newStatus = 'LOCKED';
-                        student.proctorStatus = 'LOCKED';
-                    } else if (rtStatus === 'DISCONNECTED') {
-                        // Keep current status but could add offline indicator
-                    } else if (rtStatus === 'FINISHED') {
-                        newStatus = 'Submitted';
-                    }
-
-                    if (student.status !== newStatus) {
-                        student.status = newStatus;
-                        livePollUpdatesFound = true;
-                    }
-                }
-            }));
-
-            if (livePollUpdatesFound) {
-                renderStudentStatus();
+            if (student.status !== newStatus || (student.connection && student.connection.status !== newConnection)) {
+              student.status = newStatus;
+              if (!student.connection) student.connection = {};
+              student.connection.status = newConnection;
+              updatesFound = true;
             }
+          }
+        }));
+
+        if (updatesFound) {
+          renderIndividualStudentCards({ students: missionControlStudents });
         }
+      }
+
+      // 2. Update Live Poll students (currentStudentStatusData)
+      if (currentStudentStatusData && currentStudentStatusData.length > 0 && CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId) {
+        var livePollUpdatesFound = false;
+        await Promise.all(currentStudentStatusData.map(async function (student) {
+          var key = await window.VeritasShared.generateStudentKey(student.email, CURRENT_POLL_DATA.pollId);
+          var rtStatus = realtimeStatuses[key];
+
+          if (rtStatus) {
+            var newStatus = student.status;
+
+            // Map Firebase status to Live Poll status strings
+            if (rtStatus === 'ACTIVE') {
+              if (student.status !== 'Submitted') {
+                newStatus = 'In Progress';
+              }
+            } else if (rtStatus === 'LOCKED') {
+              newStatus = 'LOCKED';
+              student.proctorStatus = 'LOCKED';
+            } else if (rtStatus === 'DISCONNECTED') {
+              // Keep current status but could add offline indicator
+            } else if (rtStatus === 'FINISHED') {
+              newStatus = 'Submitted';
+            }
+
+            if (student.status !== newStatus) {
+              student.status = newStatus;
+              livePollUpdatesFound = true;
+            }
+          }
+        }));
+
+        if (livePollUpdatesFound) {
+          renderStudentStatus();
+        }
+      }
     }
 
     async function setFirebaseStatus(email, status) {
-        // FIX TASK A: Support both Mission Control and Live Poll pollIds
-        var activePollId = currentMissionControlPollId || (CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId);
-        if (!firebaseRef || !email || !activePollId) return;
-        var key = await window.VeritasShared.generateStudentKey(email, activePollId);
-        firebaseRef.child(key).set(status);
+      // FIX TASK A: Support both Mission Control and Live Poll pollIds
+      var activePollId = currentMissionControlPollId || (CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId);
+      if (!firebaseRef || !email || !activePollId) return;
+      var key = await window.VeritasShared.generateStudentKey(email, activePollId);
+      firebaseRef.child(key).set(status);
     }
 
     // DEBUG HUD - Enhanced for verification
@@ -11469,66 +11481,66 @@
     var violationsRef = null;
 
     function updateDebugHud() {
-        if (!Veritas.Config.DEBUG_FIREBASE) return;
+      if (!Veritas.Config.DEBUG_FIREBASE) return;
 
-        var hud = document.getElementById('firebase-debug-hud');
-        if (!hud) {
-            hud = document.createElement('div');
-            hud.id = 'firebase-debug-hud';
-            hud.style.cssText = 'position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,0.95);color:#4ade80;font-family:monospace;font-size:11px;padding:12px;z-index:9999;pointer-events:none;max-width:380px;border:2px solid #4ade80;border-radius:8px;line-height:1.4;';
-            document.body.appendChild(hud);
-        }
+      var hud = document.getElementById('firebase-debug-hud');
+      if (!hud) {
+        hud = document.createElement('div');
+        hud.id = 'firebase-debug-hud';
+        hud.style.cssText = 'position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,0.95);color:#4ade80;font-family:monospace;font-size:11px;padding:12px;z-index:9999;pointer-events:none;max-width:380px;border:2px solid #4ade80;border-radius:8px;line-height:1.4;';
+        document.body.appendChild(hud);
+      }
 
-        var connDot = realtimeConnected ? '<span style="color:#4ade80">●</span>' : '<span style="color:#f87171">●</span>';
-        var html = '<strong style="color:#fff">🔥 FIREBASE DEBUG (TEACHER)</strong><br>';
-        html += connDot + ' <strong>.info/connected:</strong> ' + realtimeConnected + '<br>';
-        html += '<strong>PollId (sessionKey):</strong> ' + (currentMissionControlPollId || 'None') + '<br>';
+      var connDot = realtimeConnected ? '<span style="color:#4ade80">●</span>' : '<span style="color:#f87171">●</span>';
+      var html = '<strong style="color:#fff">🔥 FIREBASE DEBUG (TEACHER)</strong><br>';
+      html += connDot + ' <strong>.info/connected:</strong> ' + realtimeConnected + '<br>';
+      html += '<strong>PollId (sessionKey):</strong> ' + (currentMissionControlPollId || 'None') + '<br>';
 
-        // P0-2 FIX: Show ACTUAL subscribed path (not string-built)
-        html += '<strong>Actual RTDB Path:</strong> ' + (actualSubscribedPath || 'Not subscribed') + '<br>';
-        html += '<strong>Students observed:</strong> ' + Object.keys(realtimeStatuses).length + '<br>';
+      // P0-2 FIX: Show ACTUAL subscribed path (not string-built)
+      html += '<strong>Actual RTDB Path:</strong> ' + (actualSubscribedPath || 'Not subscribed') + '<br>';
+      html += '<strong>Students observed:</strong> ' + Object.keys(realtimeStatuses).length + '<br>';
 
-        // Show sample statuses with violation reasons
-        var keys = Object.keys(realtimeStatuses);
-        if (keys.length > 0) {
-            html += '<strong>Sample statuses:</strong><br>';
-            keys.slice(0, 2).forEach(function(key) {
-                var statusColor = realtimeStatuses[key] === 'LOCKED' ? '#f87171' :
-                                 realtimeStatuses[key] === 'ACTIVE' ? '#4ade80' : '#facc15';
-                html += '  • ' + key.substring(0, 8) + '...: <span style="color:' + statusColor + '">' + realtimeStatuses[key] + '</span><br>';
-            });
-        }
+      // Show sample statuses with violation reasons
+      var keys = Object.keys(realtimeStatuses);
+      if (keys.length > 0) {
+        html += '<strong>Sample statuses:</strong><br>';
+        keys.slice(0, 2).forEach(function (key) {
+          var statusColor = realtimeStatuses[key] === 'LOCKED' ? '#f87171' :
+            realtimeStatuses[key] === 'ACTIVE' ? '#4ade80' : '#facc15';
+          html += '  • ' + key.substring(0, 8) + '...: <span style="color:' + statusColor + '">' + realtimeStatuses[key] + '</span><br>';
+        });
+      }
 
-        // P0-2 FIX: Show last RTDB event timestamp
-        if (lastRTDBEvent.timestamp) {
-            var eventElapsed = Math.round((Date.now() - lastRTDBEvent.timestamp) / 1000);
-            html += '<strong>Last RTDB event:</strong> ' + lastRTDBEvent.type + ' (' + eventElapsed + 's ago)<br>';
-        }
+      // P0-2 FIX: Show last RTDB event timestamp
+      if (lastRTDBEvent.timestamp) {
+        var eventElapsed = Math.round((Date.now() - lastRTDBEvent.timestamp) / 1000);
+        html += '<strong>Last RTDB event:</strong> ' + lastRTDBEvent.type + ' (' + eventElapsed + 's ago)<br>';
+      }
 
-        // P0-2 FIX: Show last status change
-        if (lastStatusChange.timestamp && lastStatusChange.studentKey) {
-            var changeElapsed = Math.round((Date.now() - lastStatusChange.timestamp) / 1000);
-            html += '<strong>Last change:</strong> ' + lastStatusChange.studentKey.substring(0, 8) + '... → ' + lastStatusChange.status + ' (' + changeElapsed + 's ago)<br>';
-        }
+      // P0-2 FIX: Show last status change
+      if (lastStatusChange.timestamp && lastStatusChange.studentKey) {
+        var changeElapsed = Math.round((Date.now() - lastStatusChange.timestamp) / 1000);
+        html += '<strong>Last change:</strong> ' + lastStatusChange.studentKey.substring(0, 8) + '... → ' + lastStatusChange.status + ' (' + changeElapsed + 's ago)<br>';
+      }
 
-        // P0-3 FIX: Show last violation reason
-        if (lastViolation.timestamp && lastViolation.studentKey) {
-            var violationElapsed = Math.round((Date.now() - lastViolation.timestamp) / 1000);
-            html += '<strong style="color:#f87171">Last violation:</strong> ' + lastViolation.studentKey.substring(0, 8) + '... - ' + lastViolation.reason + ' (' + violationElapsed + 's ago)<br>';
-        }
+      // P0-3 FIX: Show last violation reason
+      if (lastViolation.timestamp && lastViolation.studentKey) {
+        var violationElapsed = Math.round((Date.now() - lastViolation.timestamp) / 1000);
+        html += '<strong style="color:#f87171">Last violation:</strong> ' + lastViolation.studentKey.substring(0, 8) + '... - ' + lastViolation.reason + ' (' + violationElapsed + 's ago)<br>';
+      }
 
-        // Last teacher action
-        if (lastTeacherAction.timestamp) {
-            var elapsed = Math.round((Date.now() - lastTeacherAction.timestamp) / 1000);
-            html += '<strong>Last action:</strong> ' + lastTeacherAction.action + ' (' + elapsed + 's ago)<br>';
-        }
+      // Last teacher action
+      if (lastTeacherAction.timestamp) {
+        var elapsed = Math.round((Date.now() - lastTeacherAction.timestamp) / 1000);
+        html += '<strong>Last action:</strong> ' + lastTeacherAction.action + ' (' + elapsed + 's ago)<br>';
+      }
 
-        hud.innerHTML = html;
+      hud.innerHTML = html;
     }
 
     function recordTeacherAction(action) {
-        lastTeacherAction = { action: action, timestamp: Date.now() };
-        updateDebugHud();
+      lastTeacherAction = { action: action, timestamp: Date.now() };
+      updateDebugHud();
     }
 
     // --- Individual Timed Session ---
@@ -11583,7 +11595,7 @@
       initFirebaseMissionControl(view.pollId);
       // Force UI update if already connected (because metaEl might have been wiped)
       if (realtimeConnected) {
-          updateRealtimeIndicator();
+        updateRealtimeIndicator();
       }
 
       renderIndividualStudentCards(view);
@@ -11602,7 +11614,7 @@
       grid.innerHTML = '';
 
       // Check for new violations
-      students.forEach(function(student) {
+      students.forEach(function (student) {
         var isLocked = student.proctorStatus === 'LOCKED' || student.status === 'Locked' || (student.status && student.status.indexOf('Locked') === 0);
         if (isLocked) {
           if (!previouslyLockedEmails.has(student.email)) {
@@ -13834,78 +13846,78 @@
     // Synthesizes a "full" view update from cached poll definitions
     // to provide instant UI feedback while waiting for real data.
     function handleLightweightSessionUpdate(data) {
-        console.log('[Optimization] Handling lightweight update:', data);
+      console.log('[Optimization] Handling lightweight update:', data);
 
-        // 1. Broadcast immediately to Firebase (unblock students)
-        broadcastSessionState(data.pollId, {
-            questionIndex: data.questionIndex,
-            status: data.status,
-            sessionPhase: data.metadata ? data.metadata.sessionPhase : 'LIVE',
-            resultsVisibility: data.metadata ? data.metadata.resultsVisibility : 'HIDDEN'
-        });
+      // 1. Broadcast immediately to Firebase (unblock students)
+      broadcastSessionState(data.pollId, {
+        questionIndex: data.questionIndex,
+        status: data.status,
+        sessionPhase: data.metadata ? data.metadata.sessionPhase : 'LIVE',
+        resultsVisibility: data.metadata ? data.metadata.resultsVisibility : 'HIDDEN'
+      });
 
-        // 2. Synthesize a full view object from CURRENT_POLL_DATA
-        if (!CURRENT_POLL_DATA || !CURRENT_POLL_DATA.questions) {
-            console.warn('[Optimization] CURRENT_POLL_DATA missing, falling back to full refresh');
-            // If we don't have poll definition, we must fetch full data explicitly
-            // pollForResults() fails here because it relies on CURRENT_POLL_DATA being populated
-            google.script.run
-                .withSuccessHandler(function(fullData) {
-                    updateLiveView(fullData);
-                })
-                .withFailureHandler(handleError)
-                .getLivePollData(data.pollId, data.questionIndex);
-            return;
-        }
+      // 2. Synthesize a full view object from CURRENT_POLL_DATA
+      if (!CURRENT_POLL_DATA || !CURRENT_POLL_DATA.questions) {
+        console.warn('[Optimization] CURRENT_POLL_DATA missing, falling back to full refresh');
+        // If we don't have poll definition, we must fetch full data explicitly
+        // pollForResults() fails here because it relies on CURRENT_POLL_DATA being populated
+        google.script.run
+          .withSuccessHandler(function (fullData) {
+            updateLiveView(fullData);
+          })
+          .withFailureHandler(handleError)
+          .getLivePollData(data.pollId, data.questionIndex);
+        return;
+      }
 
-        var qIndex = data.questionIndex;
-        var questionDef = CURRENT_POLL_DATA.questions[qIndex];
+      var qIndex = data.questionIndex;
+      var questionDef = CURRENT_POLL_DATA.questions[qIndex];
 
-        if (!questionDef) {
-             console.error('[Optimization] Question definition not found for index:', qIndex);
-             return;
-        }
+      if (!questionDef) {
+        console.error('[Optimization] Question definition not found for index:', qIndex);
+        return;
+      }
 
-        var syntheticData = {
-            pollId: data.pollId,
-            status: data.status, // OPEN
-            questionIndex: qIndex,
-            pollName: CURRENT_POLL_DATA.pollName,
-            questionText: questionDef.questionText,
-            questionImageURL: questionDef.questionImageURL,
-            options: questionDef.options || [],
-            totalQuestions: CURRENT_POLL_DATA.questions.length,
-            correctAnswer: questionDef.correctAnswer,
-            timerSeconds: questionDef.timerSeconds,
-            metadata: data.metadata,
-            authoritativeStatus: 'LIVE', // Assumed for start/next
-            // Reset results
-            results: {}, // Empty counts
-            totalResponses: 0,
-            totalStudents: currentStudentStatusData.length, // Keep previous count
-            studentStatusList: currentStudentStatusData.map(function(s) {
-                // Reset student statuses to waiting
-                return Object.assign({}, s, {
-                    status: 'Waiting...',
-                    statusNote: 'waiting',
-                    answer: '---',
-                    isCorrect: null,
-                    confidence: null,
-                    timestamp: 9999999999999
-                });
-            })
-        };
+      var syntheticData = {
+        pollId: data.pollId,
+        status: data.status, // OPEN
+        questionIndex: qIndex,
+        pollName: CURRENT_POLL_DATA.pollName,
+        questionText: questionDef.questionText,
+        questionImageURL: questionDef.questionImageURL,
+        options: questionDef.options || [],
+        totalQuestions: CURRENT_POLL_DATA.questions.length,
+        correctAnswer: questionDef.correctAnswer,
+        timerSeconds: questionDef.timerSeconds,
+        metadata: data.metadata,
+        authoritativeStatus: 'LIVE', // Assumed for start/next
+        // Reset results
+        results: {}, // Empty counts
+        totalResponses: 0,
+        totalStudents: currentStudentStatusData.length, // Keep previous count
+        studentStatusList: currentStudentStatusData.map(function (s) {
+          // Reset student statuses to waiting
+          return Object.assign({}, s, {
+            status: 'Waiting...',
+            statusNote: 'waiting',
+            answer: '---',
+            isCorrect: null,
+            confidence: null,
+            timestamp: 9999999999999
+          });
+        })
+      };
 
-        // 3. Update UI instantly
-        updateLiveView(syntheticData);
+      // 3. Update UI instantly
+      updateLiveView(syntheticData);
 
-        // 4. Trigger background fetch to ensure consistency
-        setTimeout(function() {
-            console.log('[Optimization] Triggering background fetch for consistency');
-            // Force reset navigation flag to ensure pollForResults runs
-            isNavigating = false;
-            pollForResults();
-        }, 500);
+      // 4. Trigger background fetch to ensure consistency
+      setTimeout(function () {
+        console.log('[Optimization] Triggering background fetch for consistency');
+        // Force reset navigation flag to ensure pollForResults runs
+        isNavigating = false;
+        pollForResults();
+      }, 500);
     }
 
 

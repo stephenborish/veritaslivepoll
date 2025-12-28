@@ -48,15 +48,10 @@ Veritas.Models.Session.startPoll = function(pollId) {
     return Veritas.Utils.withLock(function() {
       if (!pollId) throw new Error('Poll ID is required');
 
-      // CACHE FIX: Invalidate polls cache before fetching to avoid stale data
-      // This ensures we get the latest poll data, especially important if poll was just created
-      // OPTIMIZATION: Only invalidate if necessary. For startPoll, we assume existing cache is likely okay or updated by save.
-      // CacheManager.invalidate('ALL_POLLS_DATA');
-
       const poll = DataAccess.polls.getById(pollId);
       if (!poll) {
         Logger.log('Poll not found in startPoll', { pollId: pollId });
-        throw new Error('Poll not found: ' + pollId + '. Try refreshing the page or checking if the poll still exists.');
+        throw new Error('Poll not found: ' + pollId);
       }
 
       const nowIso = new Date().toISOString();
@@ -74,31 +69,25 @@ Veritas.Models.Session.startPoll = function(pollId) {
         sessionId: sessionId
       };
 
-      // FIREBASE: Fast Write
+      // 1. FAST WRITE: Update Firebase immediately
+      // Clients listening to 'sessions/{pollId}/live_session' will react instantly
       Veritas.Utils.Firebase.set('sessions/' + pollId + '/live_session', {
-        status: 'OPEN',
+        pollId: pollId,
         questionIndex: 0,
+        status: 'OPEN',
         updatedAt: nowIso,
         sessionPhase: 'LIVE',
         metadata: metadata
       });
 
+      // 2. SLOW WRITE: Backup to Sheets
       DataAccess.liveStatus.set(pollId, 0, "OPEN", metadata);
 
       Veritas.Models.Session.ProctorAccess.resetForNewSession(pollId, sessionId);
 
       Logger.log('Poll started', { pollId: pollId, pollName: poll.pollName });
 
-      // OPTIMIZATION: Return lightweight object immediately
-      return {
-        mode: 'lightweight',
-        pollId: pollId,
-        questionIndex: 0,
-        status: 'OPEN',
-        sessionPhase: 'LIVE',
-        timestamp: new Date().getTime(),
-        metadata: metadata
-      };
+      return Veritas.Models.Analytics.getLightweightPollData(pollId, 0);
     });
   })();
 };
@@ -139,8 +128,9 @@ Veritas.Models.Session.nextQuestion = function() {
         revealedAt: null
       };
 
-      // FIREBASE: Fast Write
+      // 1. INSTANT UPDATE: Firebase
       Veritas.Utils.Firebase.update('sessions/' + pollId + '/live_session', {
+        pollId: pollId,
         status: 'OPEN',
         questionIndex: newIndex,
         updatedAt: nowIso,
@@ -148,20 +138,12 @@ Veritas.Models.Session.nextQuestion = function() {
         metadata: newMetadata
       });
 
+      // 2. BACKUP UPDATE: Sheets
       DataAccess.liveStatus.set(pollId, newIndex, "OPEN", newMetadata);
 
       Logger.log('Next question', { pollId: pollId, questionIndex: newIndex });
 
-      // OPTIMIZATION: Return lightweight object immediately
-      return {
-        mode: 'lightweight',
-        pollId: pollId,
-        questionIndex: newIndex,
-        status: 'OPEN',
-        sessionPhase: 'LIVE',
-        timestamp: new Date().getTime(),
-        metadata: newMetadata
-      };
+      return Veritas.Models.Analytics.getLightweightPollData(pollId, newIndex);
     });
   })();
 };
@@ -216,7 +198,7 @@ Veritas.Models.Session.previousQuestion = function() {
 
       Logger.log('Previous question', { pollId: pollId, questionIndex: newIndex });
 
-      return getLivePollData(pollId, newIndex);
+      return Veritas.Models.Analytics.getLivePollData(pollId, newIndex);
     });
   })();
 };
@@ -247,19 +229,21 @@ Veritas.Models.Session.stopPoll = function() {
         revealedAt: null
       };
 
-      // FIREBASE: Fast Write
+      // 1. INSTANT UPDATE: Firebase
       Veritas.Utils.Firebase.update('sessions/' + pollId + '/live_session', {
+        pollId: pollId,
         status: 'PAUSED',
         updatedAt: nowIso,
         sessionPhase: 'RESULTS_HOLD',
         metadata: newMetadata
       });
 
+      // 2. BACKUP UPDATE: Sheets
       DataAccess.liveStatus.set(pollId, questionIndex, "PAUSED", newMetadata);
 
       Logger.log('Responses closed for question', { pollId: pollId, questionIndex: questionIndex });
 
-      return getLivePollData(pollId, questionIndex);
+      return Veritas.Models.Analytics.getLivePollData(pollId, questionIndex);
     });
   })();
 };
@@ -283,30 +267,29 @@ Veritas.Models.Session.resumePoll = function() {
 
       const newMetadata = {
         ...previousMetadata,
-        reason: 'RUNNING',
+        reason: 'RESUMED',
         resumedAt: nowIso,
-        startedAt: previousMetadata.startedAt || nowIso,
-        endedAt: null,
         sessionPhase: 'LIVE',
         isCollecting: true,
         resultsVisibility: 'HIDDEN',
-        responsesClosedAt: null,
-        revealedAt: null
+        responsesClosedAt: null
       };
 
-      // FIREBASE: Fast Write
+      // 1. INSTANT UPDATE: Firebase
       Veritas.Utils.Firebase.update('sessions/' + pollId + '/live_session', {
+        pollId: pollId,
         status: 'OPEN',
         updatedAt: nowIso,
         sessionPhase: 'LIVE',
         metadata: newMetadata
       });
 
+      // 2. BACKUP UPDATE: Sheets
       DataAccess.liveStatus.set(pollId, questionIndex, "OPEN", newMetadata);
 
       Logger.log('Poll resumed', { pollId: pollId, questionIndex: questionIndex });
 
-      return getLivePollData(pollId, questionIndex);
+      return Veritas.Models.Analytics.getLivePollData(pollId, questionIndex);
     });
   })();
 };
@@ -335,15 +318,16 @@ Veritas.Models.Session.closePoll = function() {
         revealedAt: null
       };
 
-      // FIREBASE: Fast Write
-      // Write to the poll that was active
+      // 1. INSTANT UPDATE: Firebase
       Veritas.Utils.Firebase.update('sessions/' + pollId + '/live_session', {
+        pollId: pollId,
         status: 'CLOSED',
         updatedAt: nowIso,
         sessionPhase: 'ENDED',
         metadata: newMetadata
       });
 
+      // 2. BACKUP UPDATE: Sheets
       DataAccess.liveStatus.set("", -1, "CLOSED", newMetadata);
 
       Logger.log('Poll closed completely', { pollId: pollId });
@@ -384,7 +368,7 @@ Veritas.Models.Session.pausePollForTimerExpiry = function() {
 
       Logger.log('Responses closed due to timer expiry', { pollId: pollId, questionIndex: questionIndex });
 
-      return getLivePollData(pollId, questionIndex);
+      return Veritas.Models.Analytics.getLivePollData(pollId, questionIndex);
     });
   })();
 };
@@ -421,8 +405,9 @@ Veritas.Models.Session.revealResultsToStudents = function() {
       revealedAt: nowIso
     };
 
-    // FIREBASE: Fast Write
+    // 1. INSTANT UPDATE: Firebase
     Veritas.Utils.Firebase.update('sessions/' + pollId + '/live_session', {
+      pollId: pollId,
       status: 'PAUSED',
       updatedAt: nowIso,
       sessionPhase: 'RESULTS_REVEALED',
@@ -434,7 +419,7 @@ Veritas.Models.Session.revealResultsToStudents = function() {
 
     Logger.log('Results revealed to students', { pollId: pollId, questionIndex: questionIndex });
 
-    return getLivePollData(pollId, questionIndex);
+    return Veritas.Models.Analytics.getLivePollData(pollId, questionIndex);
   })();
 };
 
@@ -470,8 +455,9 @@ Veritas.Models.Session.hideResultsFromStudents = function() {
       revealedAt: null
     };
 
-    // FIREBASE: Fast Write
+    // 1. INSTANT UPDATE: Firebase
     Veritas.Utils.Firebase.update('sessions/' + pollId + '/live_session', {
+      pollId: pollId,
       status: 'PAUSED',
       updatedAt: nowIso,
       sessionPhase: 'RESULTS_HOLD',
@@ -479,11 +465,12 @@ Veritas.Models.Session.hideResultsFromStudents = function() {
       metadata: newMetadata
     });
 
+    // 2. BACKUP UPDATE: Sheets
     DataAccess.liveStatus.set(pollId, questionIndex, "PAUSED", newMetadata);
 
     Logger.log('Results hidden from students', { pollId: pollId, questionIndex: questionIndex });
 
-    return getLivePollData(pollId, questionIndex);
+    return Veritas.Models.Analytics.getLivePollData(pollId, questionIndex);
   })();
 };
 
@@ -529,7 +516,7 @@ Veritas.Models.Session.endQuestionAndRevealResults = function() {
 
     Logger.log('Question ended and results revealed', { pollId: pollId, questionIndex: questionIndex });
 
-    return getLivePollData(pollId, questionIndex);
+    return Veritas.Models.Analytics.getLivePollData(pollId, questionIndex);
   })();
 };
 
@@ -623,7 +610,7 @@ Veritas.Models.Session.resetLiveQuestion = function(pollId, questionIndex, clear
         };
       }
 
-      return getLivePollData(pollId, questionIndex);
+      return Veritas.Models.Analytics.getLivePollData(pollId, questionIndex);
     });
   })();
 };

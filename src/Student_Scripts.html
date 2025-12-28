@@ -4284,204 +4284,203 @@
             var flashlight = document.getElementById('flashlight-overlay');
             if (flashlight) {
                 flashlight.style.display = 'none'; // Ensure old overlay is hidden
+                // Set initial position to center or last known
+                flashlight.style.setProperty('--x', (window.innerWidth / 2) + 'px');
+                flashlight.style.setProperty('--y', (window.innerHeight / 2) + 'px');
             }
             if (questionContainer) {
                 questionContainer.classList.add('privacy-active');
             }
-            // Set initial position to center or last known
-            flashlight.style.setProperty('--x', (window.innerWidth / 2) + 'px');
-            flashlight.style.setProperty('--y', (window.innerHeight / 2) + 'px');
-        }
 
-        questionContainer.classList.remove('showing-results');
-        if (data.status === 'RESULTS_REVEALED') {
-            requestAnimationFrame(function () {
-                questionContainer.classList.add('showing-results');
-            });
-        }
+            questionContainer.classList.remove('showing-results');
+            if (data.status === 'RESULTS_REVEALED') {
+                requestAnimationFrame(function () {
+                    questionContainer.classList.add('showing-results');
+                });
+            }
 
-        decorateOptionsForResults(data);
-    }
+            decorateOptionsForResults(data);
+        }
 
         function escapeHtml(text) {
-        if (!text) return '';
-        var div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    function showStatusPanel(options) {
-        options = options || {};
-        hideConnectivityBanner();
-        hideSecureLobby();
-        if (studentContainer) studentContainer.style.display = 'block';
-        if (entryScreen) entryScreen.style.display = 'none';
-        if (questionContainer) questionContainer.style.display = 'none';
-        if (secureFocusContainer) secureFocusContainer.style.display = 'none';
-        if (studentLoader) studentLoader.style.display = 'none';
-        if (statusContainer) statusContainer.style.display = 'block';
-
-        // Theme Handling
-        var isDark = options.theme === 'dark';
-        var statusCard = statusContainer ? statusContainer.querySelector('.status-card') : null;
-
-        if (isDark) {
-            // Apply Dark Theme
-            if (statusContainer) {
-                statusContainer.classList.add('bg-gradient-to-br', 'from-slate-900', 'via-slate-800', 'to-slate-900', 'fixed', 'inset-0', 'z-[9000]', 'flex', 'items-center', 'justify-center');
-                statusContainer.classList.remove('text-center', 'py-12'); // Remove default layout
-            }
-            if (statusCard) {
-                statusCard.classList.remove('bg-white', 'border-gray-200', 'shadow-2xl', 'max-w-3xl');
-                statusCard.classList.add('bg-transparent', 'border-0', 'shadow-none', 'max-w-2xl', 'w-full');
-                // Making it transparent to match the "You Stepped Out" look which sits on the background
-                // OR if we want a card: bg-slate-800 border-slate-700
-            }
-            // Hide the Student Header if in full overlay mode
-            var header = document.querySelector('.student-header');
-            if (header) header.style.display = 'none';
-        } else {
-            // Revert to Light Theme
-            if (statusContainer) {
-                statusContainer.classList.remove('bg-gradient-to-br', 'from-slate-900', 'via-slate-800', 'to-slate-900', 'fixed', 'inset-0', 'z-[9000]', 'flex', 'items-center', 'justify-center');
-                statusContainer.classList.add('text-center', 'py-12');
-            }
-            if (statusCard) {
-                statusCard.classList.add('bg-white', 'border-gray-200', 'shadow-2xl', 'max-w-3xl');
-                statusCard.classList.remove('bg-transparent', 'border-0', 'shadow-none', 'max-w-2xl', 'w-full', 'bg-slate-800', 'border-slate-700');
-            }
-            var header = document.querySelector('.student-header');
-            if (header) header.style.display = ''; // Restore
+            if (!text) return '';
+            var div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
-        if (statusMessage) {
-            statusMessage.textContent = options.message || '';
-            statusMessage.className = options.messageClass || (isDark ? 'text-white text-3xl font-bold tracking-tight' : 'text-gray-900 text-2xl font-semibold');
-        }
-        if (statusSubMessage) {
-            if (options.subtext) {
-                statusSubMessage.style.display = 'block';
-                statusSubMessage.textContent = options.subtext;
-                statusSubMessage.className = options.subClass || (isDark ? 'text-gray-300 text-lg mt-4 max-w-md mx-auto leading-relaxed' : 'text-gray-700 text-lg mt-4');
-            } else {
-                statusSubMessage.style.display = 'none';
-                statusSubMessage.textContent = '';
-            }
-        }
-        var iconEl = statusContainer ? statusContainer.querySelector('.material-symbols-outlined') : null;
-        if (iconEl) {
-            iconEl.textContent = options.icon || 'info';
-            // Wrap icon in a circle for dark mode to match Lock screen
+        function showStatusPanel(options) {
+            options = options || {};
+            hideConnectivityBanner();
+            hideSecureLobby();
+            if (studentContainer) studentContainer.style.display = 'block';
+            if (entryScreen) entryScreen.style.display = 'none';
+            if (questionContainer) questionContainer.style.display = 'none';
+            if (secureFocusContainer) secureFocusContainer.style.display = 'none';
+            if (studentLoader) studentLoader.style.display = 'none';
+            if (statusContainer) statusContainer.style.display = 'block';
+
+            // Theme Handling
+            var isDark = options.theme === 'dark';
+            var statusCard = statusContainer ? statusContainer.querySelector('.status-card') : null;
+
             if (isDark) {
-                // Check if already wrapped, if not, we can't easily wrap structure here without rewriting innerHTML.
-                // Instead, just style the icon itself to be large and colored.
-                // The Lock screen uses a circle container: <div class="h-20 w-20 bg-amber-900/20 ...">
-                // Currently showStatusPanel assumes simple icon element.
-                // Let's just style the icon nicely.
-                iconEl.className = 'material-symbols-outlined text-7xl mb-6 inline-block ' + (options.iconClass || 'text-emerald-400');
-            } else {
-                iconEl.className = 'material-symbols-outlined text-6xl mb-4 inline-block ' + (options.iconClass || 'text-veritas-navy');
-            }
-        }
-        if (resumeControls) {
-            resumeControls.style.display = options.showResume ? 'block' : 'none';
-        }
-        if (secureExitControls) {
-            if (options.showExitAction) {
-                secureExitControls.classList.remove('hidden');
-                if (secureExitDescription) {
-                    secureExitDescription.textContent = options.exitActionDescription || 'Click below to exit fullscreen and close the secure window.';
-                    if (isDark) secureExitDescription.className = 'text-gray-400 text-sm mb-2';
+                // Apply Dark Theme
+                if (statusContainer) {
+                    statusContainer.classList.add('bg-gradient-to-br', 'from-slate-900', 'via-slate-800', 'to-slate-900', 'fixed', 'inset-0', 'z-[9000]', 'flex', 'items-center', 'justify-center');
+                    statusContainer.classList.remove('text-center', 'py-12'); // Remove default layout
                 }
-                if (secureExitLabel) {
-                    secureExitLabel.textContent = options.exitActionLabel || 'Exit Secure Session';
+                if (statusCard) {
+                    statusCard.classList.remove('bg-white', 'border-gray-200', 'shadow-2xl', 'max-w-3xl');
+                    statusCard.classList.add('bg-transparent', 'border-0', 'shadow-none', 'max-w-2xl', 'w-full');
+                    // Making it transparent to match the "You Stepped Out" look which sits on the background
+                    // OR if we want a card: bg-slate-800 border-slate-700
                 }
+                // Hide the Student Header if in full overlay mode
+                var header = document.querySelector('.student-header');
+                if (header) header.style.display = 'none';
             } else {
-                secureExitControls.classList.add('hidden');
+                // Revert to Light Theme
+                if (statusContainer) {
+                    statusContainer.classList.remove('bg-gradient-to-br', 'from-slate-900', 'via-slate-800', 'to-slate-900', 'fixed', 'inset-0', 'z-[9000]', 'flex', 'items-center', 'justify-center');
+                    statusContainer.classList.add('text-center', 'py-12');
+                }
+                if (statusCard) {
+                    statusCard.classList.add('bg-white', 'border-gray-200', 'shadow-2xl', 'max-w-3xl');
+                    statusCard.classList.remove('bg-transparent', 'border-0', 'shadow-none', 'max-w-2xl', 'w-full', 'bg-slate-800', 'border-slate-700');
+                }
+                var header = document.querySelector('.student-header');
+                if (header) header.style.display = ''; // Restore
+            }
+
+            if (statusMessage) {
+                statusMessage.textContent = options.message || '';
+                statusMessage.className = options.messageClass || (isDark ? 'text-white text-3xl font-bold tracking-tight' : 'text-gray-900 text-2xl font-semibold');
+            }
+            if (statusSubMessage) {
+                if (options.subtext) {
+                    statusSubMessage.style.display = 'block';
+                    statusSubMessage.textContent = options.subtext;
+                    statusSubMessage.className = options.subClass || (isDark ? 'text-gray-300 text-lg mt-4 max-w-md mx-auto leading-relaxed' : 'text-gray-700 text-lg mt-4');
+                } else {
+                    statusSubMessage.style.display = 'none';
+                    statusSubMessage.textContent = '';
+                }
+            }
+            var iconEl = statusContainer ? statusContainer.querySelector('.material-symbols-outlined') : null;
+            if (iconEl) {
+                iconEl.textContent = options.icon || 'info';
+                // Wrap icon in a circle for dark mode to match Lock screen
+                if (isDark) {
+                    // Check if already wrapped, if not, we can't easily wrap structure here without rewriting innerHTML.
+                    // Instead, just style the icon itself to be large and colored.
+                    // The Lock screen uses a circle container: <div class="h-20 w-20 bg-amber-900/20 ...">
+                    // Currently showStatusPanel assumes simple icon element.
+                    // Let's just style the icon nicely.
+                    iconEl.className = 'material-symbols-outlined text-7xl mb-6 inline-block ' + (options.iconClass || 'text-emerald-400');
+                } else {
+                    iconEl.className = 'material-symbols-outlined text-6xl mb-4 inline-block ' + (options.iconClass || 'text-veritas-navy');
+                }
+            }
+            if (resumeControls) {
+                resumeControls.style.display = options.showResume ? 'block' : 'none';
+            }
+            if (secureExitControls) {
+                if (options.showExitAction) {
+                    secureExitControls.classList.remove('hidden');
+                    if (secureExitDescription) {
+                        secureExitDescription.textContent = options.exitActionDescription || 'Click below to exit fullscreen and close the secure window.';
+                        if (isDark) secureExitDescription.className = 'text-gray-400 text-sm mb-2';
+                    }
+                    if (secureExitLabel) {
+                        secureExitLabel.textContent = options.exitActionLabel || 'Exit Secure Session';
+                    }
+                } else {
+                    secureExitControls.classList.add('hidden');
+                }
+            }
+            if (document && document.body) {
+                if (options.lockScroll) {
+                    document.body.classList.add('secure-overlay-active');
+                } else {
+                    document.body.classList.remove('secure-overlay-active');
+                }
             }
         }
-        if (document && document.body) {
-            if (options.lockScroll) {
-                document.body.classList.add('secure-overlay-active');
-            } else {
-                document.body.classList.remove('secure-overlay-active');
+
+        function showLockedMessage(message, subMessage) {
+            console.log('Showing locked message');
+            stopPolling();
+            recoveringFromOutage = false;
+            // Professional lock message with science-themed copy
+            showStatusPanel({
+                icon: 'lock',
+                iconClass: 'text-red-600',
+                message: message || 'Assessment Paused',
+                messageClass: 'text-gray-900 text-2xl font-bold',
+                subtext: subMessage || 'Proctoring protocol triggered. Your teacher can see this and will grant re-entry.',
+                subClass: 'text-gray-800 text-base mt-4 whitespace-pre-line',
+                showResume: false,
+                lockScroll: true
+            });
+            isTeacherBlocked = false;
+        }
+
+        /**
+         * VERITAS UI CONFIGURATION
+         * Theme: "Clear Protocol + Calm Guide" (Hybrid)
+         * Tone: Warm but Precise. Human but Authoritative.
+         */
+        const UX_COPY = {
+            // VIOLATION
+            LOCKED: {
+                title: "You Stepped Out",
+                icon: "door_open",
+                body: "The session detected activity outside this window.",
+                footer: "This was flagged automatically. Your instructor can bring you back in.",
+                badge: "OUTSIDE THE ROOM",
+                statusLight: "LINK ACTIVE"
+            },
+            // LOBBY
+            PRE_LIVE: {
+                title: "Checked In",
+                icon: "how_to_reg",
+                body: "You're in the room. Waiting for the green light."
+            },
+            // SUBMITTED
+            RESPONSE_SUBMITTED: {
+                title: "Answer Sent",
+                icon: "outgoing_mail",
+                body: "Recorded. Sit back while the class catches up."
+            },
+            // REVEAL
+            WAITING_FOR_REVEAL: {
+                title: "Time's Up",
+                icon: "timer_off",
+                body: "Answers are sealed. Reveal is in your instructor's hands."
+            },
+            // TRANSITION
+            BETWEEN_QUESTIONS: {
+                title: "Switching Gears",
+                icon: "swap_horiz",
+                body: "Next question on deck."
             }
-        }
-    }
+        };
 
-    function showLockedMessage(message, subMessage) {
-        console.log('Showing locked message');
-        stopPolling();
-        recoveringFromOutage = false;
-        // Professional lock message with science-themed copy
-        showStatusPanel({
-            icon: 'lock',
-            iconClass: 'text-red-600',
-            message: message || 'Assessment Paused',
-            messageClass: 'text-gray-900 text-2xl font-bold',
-            subtext: subMessage || 'Proctoring protocol triggered. Your teacher can see this and will grant re-entry.',
-            subClass: 'text-gray-800 text-base mt-4 whitespace-pre-line',
-            showResume: false,
-            lockScroll: true
-        });
-        isTeacherBlocked = false;
-    }
+        // --- AMBER LOCK SCREEN RENDERER ---
+        function showLockEnforcementUI(reason) {
+            var container = document.getElementById('lock-overlay');
+            if (!container) return;
 
-    /**
-     * VERITAS UI CONFIGURATION
-     * Theme: "Clear Protocol + Calm Guide" (Hybrid)
-     * Tone: Warm but Precise. Human but Authoritative.
-     */
-    const UX_COPY = {
-        // VIOLATION
-        LOCKED: {
-            title: "You Stepped Out",
-            icon: "door_open",
-            body: "The session detected activity outside this window.",
-            footer: "This was flagged automatically. Your instructor can bring you back in.",
-            badge: "OUTSIDE THE ROOM",
-            statusLight: "LINK ACTIVE"
-        },
-        // LOBBY
-        PRE_LIVE: {
-            title: "Checked In",
-            icon: "how_to_reg",
-            body: "You're in the room. Waiting for the green light."
-        },
-        // SUBMITTED
-        RESPONSE_SUBMITTED: {
-            title: "Answer Sent",
-            icon: "outgoing_mail",
-            body: "Recorded. Sit back while the class catches up."
-        },
-        // REVEAL
-        WAITING_FOR_REVEAL: {
-            title: "Time's Up",
-            icon: "timer_off",
-            body: "Answers are sealed. Reveal is in your instructor's hands."
-        },
-        // TRANSITION
-        BETWEEN_QUESTIONS: {
-            title: "Switching Gears",
-            icon: "swap_horiz",
-            body: "Next question on deck."
-        }
-    };
+            // Reset opacity to ensure visibility (cleanup from old trap code)
+            document.body.style.opacity = '1';
+            container.style.display = 'flex';
 
-    // --- AMBER LOCK SCREEN RENDERER ---
-    function showLockEnforcementUI(reason) {
-        var container = document.getElementById('lock-overlay');
-        if (!container) return;
+            // SECURITY FIX: Escape reason to prevent XSS (even though currently app-controlled)
+            // This protects against future refactoring where user-controlled data might flow here
+            var safeReason = reason ? escapeHtml(reason) : UX_COPY.LOCKED.body;
 
-        // Reset opacity to ensure visibility (cleanup from old trap code)
-        document.body.style.opacity = '1';
-        container.style.display = 'flex';
-
-        // SECURITY FIX: Escape reason to prevent XSS (even though currently app-controlled)
-        // This protects against future refactoring where user-controlled data might flow here
-        var safeReason = reason ? escapeHtml(reason) : UX_COPY.LOCKED.body;
-
-        container.innerHTML = `
+            container.innerHTML = `
                 <div class="flex flex-col items-center justify-center h-full w-full max-w-2xl mx-auto p-8 animate-fade-in text-center">
 
                     <div class="h-20 w-20 bg-amber-900/20 rounded-full flex items-center justify-center mb-6 border-2 border-amber-700">
@@ -4513,96 +4512,96 @@
                     </div>
                 </div>
             `;
-    }
-
-    /**
-     * Hide the lock enforcement overlay
-     */
-    function hideLockEnforcementUI() {
-        var container = document.getElementById('lock-overlay');
-        if (container) {
-            container.style.display = 'none';
-            container.innerHTML = '';
-        }
-        // Reset body opacity in case it was hidden by snipping trap
-        document.body.style.opacity = '1';
-    }
-
-    /**
-     * Render a status message in the status container
-     * Used for session ended, waiting states, etc.
-     */
-    function renderStatusMessage(title, message, options) {
-        options = options || {};
-        var icon = options.icon || 'check_circle';
-        var iconClass = options.iconClass || 'text-veritas-navy';
-
-        if (statusContainer) {
-            statusContainer.style.display = 'block';
-        }
-        if (questionContainer) {
-            questionContainer.style.display = 'none';
-        }
-        if (statusMessage) {
-            statusMessage.textContent = title || 'Status';
-            statusMessage.className = 'text-gray-900 text-2xl font-semibold';
-        }
-        if (statusSubMessage) {
-            statusSubMessage.textContent = message || '';
-            statusSubMessage.style.display = message ? 'block' : 'none';
-            statusSubMessage.className = 'text-gray-700 text-lg mt-4';
         }
 
-        // Update the icon
-        // Update the icon
-        var statusCard = statusContainer ? statusContainer.querySelector('.status-card') : null;
-        if (statusCard) {
-            // Check if we need to restore the original icon span (if it was replaced by SVG)
-            var iconContainer = statusCard.querySelector('.material-symbols-outlined') || statusCard.querySelector('div:first-child');
+        /**
+         * Hide the lock enforcement overlay
+         */
+        function hideLockEnforcementUI() {
+            var container = document.getElementById('lock-overlay');
+            if (container) {
+                container.style.display = 'none';
+                container.innerHTML = '';
+            }
+            // Reset body opacity in case it was hidden by snipping trap
+            document.body.style.opacity = '1';
+        }
 
-            // If we found a container but it's not the span we expect, or if we need to reset it
-            if (!iconContainer || iconContainer.tagName !== 'SPAN' || !iconContainer.classList.contains('material-symbols-outlined')) {
-                // Recreate the standard icon span
-                var newIconSpan = document.createElement('span');
-                newIconSpan.className = 'material-symbols-outlined text-6xl mb-4 inline-block ' + iconClass;
-                newIconSpan.textContent = icon;
+        /**
+         * Render a status message in the status container
+         * Used for session ended, waiting states, etc.
+         */
+        function renderStatusMessage(title, message, options) {
+            options = options || {};
+            var icon = options.icon || 'check_circle';
+            var iconClass = options.iconClass || 'text-veritas-navy';
 
-                if (iconContainer) {
-                    iconContainer.replaceWith(newIconSpan);
+            if (statusContainer) {
+                statusContainer.style.display = 'block';
+            }
+            if (questionContainer) {
+                questionContainer.style.display = 'none';
+            }
+            if (statusMessage) {
+                statusMessage.textContent = title || 'Status';
+                statusMessage.className = 'text-gray-900 text-2xl font-semibold';
+            }
+            if (statusSubMessage) {
+                statusSubMessage.textContent = message || '';
+                statusSubMessage.style.display = message ? 'block' : 'none';
+                statusSubMessage.className = 'text-gray-700 text-lg mt-4';
+            }
+
+            // Update the icon
+            // Update the icon
+            var statusCard = statusContainer ? statusContainer.querySelector('.status-card') : null;
+            if (statusCard) {
+                // Check if we need to restore the original icon span (if it was replaced by SVG)
+                var iconContainer = statusCard.querySelector('.material-symbols-outlined') || statusCard.querySelector('div:first-child');
+
+                // If we found a container but it's not the span we expect, or if we need to reset it
+                if (!iconContainer || iconContainer.tagName !== 'SPAN' || !iconContainer.classList.contains('material-symbols-outlined')) {
+                    // Recreate the standard icon span
+                    var newIconSpan = document.createElement('span');
+                    newIconSpan.className = 'material-symbols-outlined text-6xl mb-4 inline-block ' + iconClass;
+                    newIconSpan.textContent = icon;
+
+                    if (iconContainer) {
+                        iconContainer.replaceWith(newIconSpan);
+                    } else {
+                        // Should be first child
+                        statusCard.insertBefore(newIconSpan, statusCard.firstChild);
+                    }
                 } else {
-                    // Should be first child
-                    statusCard.insertBefore(newIconSpan, statusCard.firstChild);
+                    // It's the standard span, just update it
+                    iconContainer.textContent = icon;
+                    iconContainer.className = 'material-symbols-outlined text-6xl mb-4 inline-block ' + iconClass;
                 }
-            } else {
-                // It's the standard span, just update it
-                iconContainer.textContent = icon;
-                iconContainer.className = 'material-symbols-outlined text-6xl mb-4 inline-block ' + iconClass;
+            }
+
+            // Hide resume controls
+            var resumeControls = document.getElementById('resume-controls');
+            if (resumeControls) {
+                resumeControls.style.display = 'none';
+            }
+
+            // Show secure exit if session ended
+            var secureExitControls = document.getElementById('secure-exit-controls');
+            if (secureExitControls && options.showExit) {
+                secureExitControls.classList.remove('hidden');
             }
         }
 
-        // Hide resume controls
-        var resumeControls = document.getElementById('resume-controls');
-        if (resumeControls) {
-            resumeControls.style.display = 'none';
-        }
-
-        // Show secure exit if session ended
-        var secureExitControls = document.getElementById('secure-exit-controls');
-        if (secureExitControls && options.showExit) {
-            secureExitControls.classList.remove('hidden');
-        }
-    }
-
-    /**
-     * Show transition loading overlay with optional message
-     */
-    function showTransitionOverlay(message) {
-        var overlay = document.getElementById('transition-overlay');
+        /**
+         * Show transition loading overlay with optional message
+         */
+        function showTransitionOverlay(message) {
+            var overlay = document.getElementById('transition-overlay');
 
 
-        // Upgrade overlay content dynamically if it's the old simple version
-        if (overlay && !overlay.querySelector('.animate-pulse-ring')) {
-            overlay.innerHTML = `
+            // Upgrade overlay content dynamically if it's the old simple version
+            if (overlay && !overlay.querySelector('.animate-pulse-ring')) {
+                overlay.innerHTML = `
                     <div class="flex flex-col items-center justify-center p-8">
                         <div class="relative w-20 h-20 mb-6 flex items-center justify-center">
                             <div class="absolute inset-0 rounded-full bg-veritas-navy/10 animate-pulse-ring"></div>
@@ -4615,367 +4614,367 @@
                         <p class="text-slate-400 text-xs font-medium mt-2 uppercase tracking-widest">Please Wait</p>
                     </div>
                 `;
+            }
+
+            var msgEl = document.getElementById('transition-message');
+            if (overlay) {
+                overlay.style.display = 'flex';
+                requestAnimationFrame(function () {
+                    overlay.style.opacity = '1';
+                });
+            }
+            if (msgEl) {
+                var loadPhrases = [
+                    "Synapsing...", "Calibrating Neural Net...", "Crunching Data...",
+                    "Fetching Brilliance...", "Aligning Quarks...", "Beaming to Cloud..."
+                ];
+                msgEl.textContent = message || loadPhrases[Math.floor(Math.random() * loadPhrases.length)];
+            }
         }
 
-        var msgEl = document.getElementById('transition-message');
-        if (overlay) {
-            overlay.style.display = 'flex';
-            requestAnimationFrame(function () {
-                overlay.style.opacity = '1';
+        /**
+         * Hide transition loading overlay
+         */
+        function hideTransitionOverlay() {
+            var overlay = document.getElementById('transition-overlay');
+            if (overlay) {
+                overlay.style.opacity = '0';
+                setTimeout(function () {
+                    overlay.style.display = 'none';
+                }, 200);
+            }
+        }
+
+        function showTeacherBlockedMessage() {
+            console.log('Showing teacher block message');
+            stopPolling();
+            isInteractionBlocked = true;
+            isTeacherBlocked = true;
+            showStatusPanel({
+                icon: 'pause_circle',
+                iconClass: 'text-amber-600',
+                message: 'Session Paused',
+                messageClass: 'text-gray-900 text-xl font-semibold',
+                subtext: 'Your teacher has temporarily frozen responses. Hold position.',
+                subClass: 'text-gray-700 text-base mt-4',
+                showResume: false,
+                lockScroll: true
             });
         }
-        if (msgEl) {
-            var loadPhrases = [
-                "Synapsing...", "Calibrating Neural Net...", "Crunching Data...",
-                "Fetching Brilliance...", "Aligning Quarks...", "Beaming to Cloud..."
-            ];
-            msgEl.textContent = message || loadPhrases[Math.floor(Math.random() * loadPhrases.length)];
-        }
-    }
 
-    /**
-     * Hide transition loading overlay
-     */
-    function hideTransitionOverlay() {
-        var overlay = document.getElementById('transition-overlay');
-        if (overlay) {
-            overlay.style.opacity = '0';
-            setTimeout(function () {
-                overlay.style.display = 'none';
-            }, 200);
-        }
-    }
+        function showResumePrompt() {
+            console.log('Showing resume prompt');
+            stopPolling();
 
-    function showTeacherBlockedMessage() {
-        console.log('Showing teacher block message');
-        stopPolling();
-        isInteractionBlocked = true;
-        isTeacherBlocked = true;
-        showStatusPanel({
-            icon: 'pause_circle',
-            iconClass: 'text-amber-600',
-            message: 'Session Paused',
-            messageClass: 'text-gray-900 text-xl font-semibold',
-            subtext: 'Your teacher has temporarily frozen responses. Hold position.',
-            subClass: 'text-gray-700 text-base mt-4',
-            showResume: false,
-            lockScroll: true
-        });
-    }
+            // CRITICAL FIX: Explicitly hide the lock overlay so the Resume prompt is visible
+            hideLockEnforcementUI();
 
-    function showResumePrompt() {
-        console.log('Showing resume prompt');
-        stopPolling();
-
-        // CRITICAL FIX: Explicitly hide the lock overlay so the Resume prompt is visible
-        hideLockEnforcementUI();
-
-        var modeName = getFullModeName();
-        var resumeLabel = document.getElementById('resume-session-label');
-        if (resumeLabel) {
-            resumeLabel.textContent = 'Resume ' + modeName;
-        }
-        showStatusPanel({
-            theme: 'dark',
-            icon: 'fullscreen',
-            // iconClass: 'text-emerald-400', // Default is fine (emerald-400 set in function for dark mode)
-            message: 'Cleared for Re-Entry',
-            // messageClass: 'text-white text-3xl font-bold tracking-tight', // Default is fine
-            subtext: 'Click below to return to fullscreen and rejoin the session.',
-            // subClass: 'text-gray-300 text-lg mt-4', // Default is fine
-            showResume: true,
-            lockScroll: true
-        });
-    }
-
-    function handleError(error) {
-        console.error('Error:', error);
-
-        // Extract clean error message
-        var errorMsg = (error.message || error) || 'Unknown error';
-        var errorString = String(errorMsg);
-
-        // Remove "Error: " prefix if present to avoid duplication
-        if (typeof errorMsg === 'string' && errorMsg.indexOf('Error: ') === 0) {
-            errorMsg = errorMsg.substring(7);
+            var modeName = getFullModeName();
+            var resumeLabel = document.getElementById('resume-session-label');
+            if (resumeLabel) {
+                resumeLabel.textContent = 'Resume ' + modeName;
+            }
+            showStatusPanel({
+                theme: 'dark',
+                icon: 'fullscreen',
+                // iconClass: 'text-emerald-400', // Default is fine (emerald-400 set in function for dark mode)
+                message: 'Cleared for Re-Entry',
+                // messageClass: 'text-white text-3xl font-bold tracking-tight', // Default is fine
+                subtext: 'Click below to return to fullscreen and rejoin the session.',
+                // subClass: 'text-gray-300 text-lg mt-4', // Default is fine
+                showResume: true,
+                lockScroll: true
+            });
         }
 
-        // Handle generic network errors
-        if (errorString.includes('NetworkError') || errorString.includes('HTTP 0') || errorString.includes('Connection failure')) {
-            errorMsg = 'Network connection interrupted. Please check your internet connection and try again.';
+        function handleError(error) {
+            console.error('Error:', error);
+
+            // Extract clean error message
+            var errorMsg = (error.message || error) || 'Unknown error';
+            var errorString = String(errorMsg);
+
+            // Remove "Error: " prefix if present to avoid duplication
+            if (typeof errorMsg === 'string' && errorMsg.indexOf('Error: ') === 0) {
+                errorMsg = errorMsg.substring(7);
+            }
+
+            // Handle generic network errors
+            if (errorString.includes('NetworkError') || errorString.includes('HTTP 0') || errorString.includes('Connection failure')) {
+                errorMsg = 'Network connection interrupted. Please check your internet connection and try again.';
+            }
+
+            showStatusPanel({
+                icon: 'error',
+                iconClass: 'text-veritas-navy',
+                message: 'An error occurred: ' + errorMsg,
+                messageClass: 'text-gray-900 text-2xl font-bold',
+                showResume: false,
+                lockScroll: false
+            });
+            if (resumeControls) resumeControls.style.display = 'none';
         }
 
-        showStatusPanel({
-            icon: 'error',
-            iconClass: 'text-veritas-navy',
-            message: 'An error occurred: ' + errorMsg,
-            messageClass: 'text-gray-900 text-2xl font-bold',
-            showResume: false,
-            lockScroll: false
-        });
-        if (resumeControls) resumeControls.style.display = 'none';
-    }
+        // =========================================================================
+        // TI-84 CALCULATOR WIDGET MODULE
+        // =========================================================================
 
-    // =========================================================================
-    // TI-84 CALCULATOR WIDGET MODULE
-    // =========================================================================
+        var calcFab = document.getElementById('calc-fab');
+        var calcWindow = document.getElementById('calc-window');
+        var calcHeader = document.getElementById('calc-header');
+        var calcClose = document.getElementById('calc-close');
+        var calcIframe = document.getElementById('calc-iframe');
+        var calcLoader = document.getElementById('calc-loader');
+        var calcIframeLoaded = false;
+        var calcWindowOpen = false;
 
-    var calcFab = document.getElementById('calc-fab');
-    var calcWindow = document.getElementById('calc-window');
-    var calcHeader = document.getElementById('calc-header');
-    var calcClose = document.getElementById('calc-close');
-    var calcIframe = document.getElementById('calc-iframe');
-    var calcLoader = document.getElementById('calc-loader');
-    var calcIframeLoaded = false;
-    var calcWindowOpen = false;
+        /**
+         * Sync calculator FAB visibility based on server state
+         * @param {boolean} isEnabled - Whether calculator is enabled for this session
+         */
+        function syncCalculatorVisibility(isEnabled) {
+            if (!calcFab) return;
 
-    /**
-     * Sync calculator FAB visibility based on server state
-     * @param {boolean} isEnabled - Whether calculator is enabled for this session
-     */
-    function syncCalculatorVisibility(isEnabled) {
-        if (!calcFab) return;
+            if (isEnabled) {
+                calcFab.classList.remove('hidden');
+            } else {
+                calcFab.classList.add('hidden');
+                // Force close calculator window if disabled mid-exam
+                if (calcWindow) {
+                    calcWindow.classList.add('hidden');
+                    calcWindowOpen = false;
+                }
+            }
+        }
 
-        if (isEnabled) {
-            calcFab.classList.remove('hidden');
+        /**
+         * Open calculator window and lazy-load iframe
+         */
+        function openCalculator() {
+            if (!calcWindow || !calcIframe) return;
+
+            calcWindow.classList.remove('hidden');
+            calcWindowOpen = true;
+
+            // Lazy load iframe on first open
+            if (!calcIframeLoaded && calcIframe.dataset.src) {
+                calcIframe.src = calcIframe.dataset.src;
+                calcIframeLoaded = true;
+
+                calcIframe.addEventListener('load', function () {
+                    if (calcLoader) {
+                        calcLoader.style.display = 'none';
+                    }
+                    console.log('[Calculator] TI-84 iframe loaded');
+                }, { once: true });
+            }
+        }
+
+        /**
+         * Close calculator window
+         */
+        function closeCalculator() {
+            if (!calcWindow) return;
+            calcWindow.classList.add('hidden');
+            calcWindowOpen = false;
+        }
+
+        // FAB click handler
+        if (calcFab) {
+            calcFab.addEventListener('click', function () {
+                if (calcWindowOpen) {
+                    closeCalculator();
+                } else {
+                    openCalculator();
+                }
+            });
+        }
+
+        // Close button handler
+        if (calcClose) {
+            calcClose.addEventListener('click', function (e) {
+                e.stopPropagation();
+                closeCalculator();
+            });
+        }
+
+        // =========================================================================
+        // DRAGGABLE WINDOW LOGIC (Robust Mouse + Touch Support)
+        // =========================================================================
+
+        // =========================================================================
+        // ROBUST DRAG & DROP (Sovereign Shield Implementation)
+        // =========================================================================
+
+        function initCalculatorDrag() {
+            var header = document.getElementById('calc-header');
+            var win = document.getElementById('calc-window');
+            var iframe = document.getElementById('calc-iframe');
+
+            if (!header || !win) return;
+
+            // Create Drag Shield (Lazy init)
+            var shieldId = 'veritas-drag-shield';
+            var shield = document.getElementById(shieldId);
+            if (!shield) {
+                shield = document.createElement('div');
+                shield.id = shieldId;
+                shield.style.position = 'fixed';
+                shield.style.top = '0';
+                shield.style.left = '0';
+                shield.style.width = '100vw';
+                shield.style.height = '100vh';
+                shield.style.zIndex = '2147483647'; // Max z-index
+                shield.style.cursor = 'move';
+                shield.style.display = 'none';
+                shield.style.background = 'transparent'; // Invisible
+                document.body.appendChild(shield);
+            }
+
+            var isDragging = false;
+            var startX, startY, initialLeft, initialTop;
+
+            function onDragStart(e) {
+                if (e.target.closest('#calc-close')) return;
+
+                isDragging = true;
+
+                // Show Shield to capture all mouse events (prevents iframe theft)
+                shield.style.display = 'block';
+
+                var clientX = e.type.indexOf('touch') !== -1 ? e.touches[0].clientX : e.clientX;
+                var clientY = e.type.indexOf('touch') !== -1 ? e.touches[0].clientY : e.clientY;
+
+                startX = clientX;
+                startY = clientY;
+
+                var rect = win.getBoundingClientRect();
+                initialLeft = rect.left;
+                initialTop = rect.top;
+
+                // Clear transform, switch to static top/left for reliability
+                win.style.transform = 'none';
+                win.style.left = initialLeft + 'px';
+                win.style.top = initialTop + 'px';
+                win.style.right = 'auto';
+                win.style.bottom = 'auto';
+
+                if (e.cancelable && !e.target.tagName.match(/INPUT|TEXTAREA|SELECT|BUTTON/i)) {
+                    e.preventDefault();
+                }
+            }
+
+            function onDragMove(e) {
+                if (!isDragging) return;
+
+                // Prevent scrolling on touch
+                if (e.cancelable) e.preventDefault();
+
+                var clientX = e.type.indexOf('touch') !== -1 ? e.touches[0].clientX : e.clientX;
+                var clientY = e.type.indexOf('touch') !== -1 ? e.touches[0].clientY : e.clientY;
+
+                var deltaX = clientX - startX;
+                var deltaY = clientY - startY;
+
+                var newLeft = initialLeft + deltaX;
+                var newTop = initialTop + deltaY;
+
+                // Bounds Checking
+                var maxW = window.innerWidth - win.offsetWidth;
+                var maxH = window.innerHeight - win.offsetHeight;
+
+                newLeft = Math.max(0, Math.min(newLeft, maxW));
+                newTop = Math.max(0, Math.min(newTop, maxH));
+
+                win.style.left = newLeft + 'px';
+                win.style.top = newTop + 'px';
+            }
+
+            function onDragEnd() {
+                isDragging = false;
+                shield.style.display = 'none';
+            }
+
+            // Attach start listeners to header
+            header.style.cursor = 'move';
+            // Remove old listeners if any (by cloning? No, just add new ones, browser handles)
+            // But to be clean, let's assume this runs once.
+            header.addEventListener('mousedown', onDragStart);
+            header.addEventListener('touchstart', onDragStart, { passive: false });
+
+            // Attach move/end listeners to SHIELD (Sovereign Capture)
+            // This is the key: The events happen on the shield, not the window/document
+            shield.addEventListener('mousemove', onDragMove);
+            shield.addEventListener('touchmove', onDragMove, { passive: false });
+
+            shield.addEventListener('mouseup', onDragEnd);
+            shield.addEventListener('touchend', onDragEnd);
+            shield.addEventListener('mouseleave', onDragEnd);
+        }
+
+        // Initialize Drag
+        function initVisuals() {
+            // 1. Fix Question Header Initialization
+            var qProgress = document.getElementById('question-progress');
+            if (qProgress) {
+                // Hide initially until a real question index is received
+                qProgress.classList.add('hidden');
+                qProgress.textContent = 'WAITING TO START';
+            }
+
+            // 2. Ghost Screen / Duplicate Logo Killer
+            // The screenshot shows a duplicate "Veritas Live Polls" logo at the bottom.
+            // This detects and removes duplicate entry screens or rogue H1s.
+            var entryScreens = document.querySelectorAll('#entry-screen');
+            if (entryScreens.length > 1) {
+                console.warn('[VisualFix] Found ' + entryScreens.length + ' entry-screens. Removing duplicates.');
+                for (var i = 1; i < entryScreens.length; i++) {
+                    entryScreens[i].remove();
+                }
+            } else {
+                // Fallback: If ID is missing on duplicates, check H1s
+                var brands = document.querySelectorAll('h1');
+                if (brands.length > 1) {
+                    console.warn('[VisualFix] Found duplicate H1 elements. Cleaning up.');
+                    for (var j = 1; j < brands.length; j++) {
+                        // Traverse up to find the container to remove
+                        var wrapper = brands[j].closest('.flex.items-center.gap-4'); // The logo container class
+                        if (wrapper) wrapper.remove();
+                        else brands[j].remove();
+                    }
+                }
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function () {
+                initCalculatorDrag();
+                initVisuals();
+            });
         } else {
-            calcFab.classList.add('hidden');
-            // Force close calculator window if disabled mid-exam
+            initCalculatorDrag();
+            initVisuals();
+        }
+
+        // Handle calculator visibility when session ends or locks
+        function hideCalculatorOnSessionEnd() {
+            var calcFab = document.getElementById('calc-fab');
+            var calcWindow = document.getElementById('calc-window');
+            if (calcFab) calcFab.style.display = 'none';
             if (calcWindow) {
                 calcWindow.classList.add('hidden');
+                calcWindow.classList.remove('active');
+                calcWindow.style.display = 'none';
                 calcWindowOpen = false;
             }
         }
-    }
 
-    /**
-     * Open calculator window and lazy-load iframe
-     */
-    function openCalculator() {
-        if (!calcWindow || !calcIframe) return;
+        // Expose function for session state changes
+        window.syncCalculatorVisibility = syncCalculatorVisibility;
+        window.hideCalculatorOnSessionEnd = hideCalculatorOnSessionEnd;
+        window.updateStudentView = updateStudentView;
+        window.LockManager = LockManager;
+        window.ViewManager = ViewManager;
 
-        calcWindow.classList.remove('hidden');
-        calcWindowOpen = true;
-
-        // Lazy load iframe on first open
-        if (!calcIframeLoaded && calcIframe.dataset.src) {
-            calcIframe.src = calcIframe.dataset.src;
-            calcIframeLoaded = true;
-
-            calcIframe.addEventListener('load', function () {
-                if (calcLoader) {
-                    calcLoader.style.display = 'none';
-                }
-                console.log('[Calculator] TI-84 iframe loaded');
-            }, { once: true });
-        }
-    }
-
-    /**
-     * Close calculator window
-     */
-    function closeCalculator() {
-        if (!calcWindow) return;
-        calcWindow.classList.add('hidden');
-        calcWindowOpen = false;
-    }
-
-    // FAB click handler
-    if (calcFab) {
-        calcFab.addEventListener('click', function () {
-            if (calcWindowOpen) {
-                closeCalculator();
-            } else {
-                openCalculator();
-            }
-        });
-    }
-
-    // Close button handler
-    if (calcClose) {
-        calcClose.addEventListener('click', function (e) {
-            e.stopPropagation();
-            closeCalculator();
-        });
-    }
-
-    // =========================================================================
-    // DRAGGABLE WINDOW LOGIC (Robust Mouse + Touch Support)
-    // =========================================================================
-
-    // =========================================================================
-    // ROBUST DRAG & DROP (Sovereign Shield Implementation)
-    // =========================================================================
-
-    function initCalculatorDrag() {
-        var header = document.getElementById('calc-header');
-        var win = document.getElementById('calc-window');
-        var iframe = document.getElementById('calc-iframe');
-
-        if (!header || !win) return;
-
-        // Create Drag Shield (Lazy init)
-        var shieldId = 'veritas-drag-shield';
-        var shield = document.getElementById(shieldId);
-        if (!shield) {
-            shield = document.createElement('div');
-            shield.id = shieldId;
-            shield.style.position = 'fixed';
-            shield.style.top = '0';
-            shield.style.left = '0';
-            shield.style.width = '100vw';
-            shield.style.height = '100vh';
-            shield.style.zIndex = '2147483647'; // Max z-index
-            shield.style.cursor = 'move';
-            shield.style.display = 'none';
-            shield.style.background = 'transparent'; // Invisible
-            document.body.appendChild(shield);
-        }
-
-        var isDragging = false;
-        var startX, startY, initialLeft, initialTop;
-
-        function onDragStart(e) {
-            if (e.target.closest('#calc-close')) return;
-
-            isDragging = true;
-
-            // Show Shield to capture all mouse events (prevents iframe theft)
-            shield.style.display = 'block';
-
-            var clientX = e.type.indexOf('touch') !== -1 ? e.touches[0].clientX : e.clientX;
-            var clientY = e.type.indexOf('touch') !== -1 ? e.touches[0].clientY : e.clientY;
-
-            startX = clientX;
-            startY = clientY;
-
-            var rect = win.getBoundingClientRect();
-            initialLeft = rect.left;
-            initialTop = rect.top;
-
-            // Clear transform, switch to static top/left for reliability
-            win.style.transform = 'none';
-            win.style.left = initialLeft + 'px';
-            win.style.top = initialTop + 'px';
-            win.style.right = 'auto';
-            win.style.bottom = 'auto';
-
-            if (e.cancelable && !e.target.tagName.match(/INPUT|TEXTAREA|SELECT|BUTTON/i)) {
-                e.preventDefault();
-            }
-        }
-
-        function onDragMove(e) {
-            if (!isDragging) return;
-
-            // Prevent scrolling on touch
-            if (e.cancelable) e.preventDefault();
-
-            var clientX = e.type.indexOf('touch') !== -1 ? e.touches[0].clientX : e.clientX;
-            var clientY = e.type.indexOf('touch') !== -1 ? e.touches[0].clientY : e.clientY;
-
-            var deltaX = clientX - startX;
-            var deltaY = clientY - startY;
-
-            var newLeft = initialLeft + deltaX;
-            var newTop = initialTop + deltaY;
-
-            // Bounds Checking
-            var maxW = window.innerWidth - win.offsetWidth;
-            var maxH = window.innerHeight - win.offsetHeight;
-
-            newLeft = Math.max(0, Math.min(newLeft, maxW));
-            newTop = Math.max(0, Math.min(newTop, maxH));
-
-            win.style.left = newLeft + 'px';
-            win.style.top = newTop + 'px';
-        }
-
-        function onDragEnd() {
-            isDragging = false;
-            shield.style.display = 'none';
-        }
-
-        // Attach start listeners to header
-        header.style.cursor = 'move';
-        // Remove old listeners if any (by cloning? No, just add new ones, browser handles)
-        // But to be clean, let's assume this runs once.
-        header.addEventListener('mousedown', onDragStart);
-        header.addEventListener('touchstart', onDragStart, { passive: false });
-
-        // Attach move/end listeners to SHIELD (Sovereign Capture)
-        // This is the key: The events happen on the shield, not the window/document
-        shield.addEventListener('mousemove', onDragMove);
-        shield.addEventListener('touchmove', onDragMove, { passive: false });
-
-        shield.addEventListener('mouseup', onDragEnd);
-        shield.addEventListener('touchend', onDragEnd);
-        shield.addEventListener('mouseleave', onDragEnd);
-    }
-
-    // Initialize Drag
-    function initVisuals() {
-        // 1. Fix Question Header Initialization
-        var qProgress = document.getElementById('question-progress');
-        if (qProgress) {
-            // Hide initially until a real question index is received
-            qProgress.classList.add('hidden');
-            qProgress.textContent = 'WAITING TO START';
-        }
-
-        // 2. Ghost Screen / Duplicate Logo Killer
-        // The screenshot shows a duplicate "Veritas Live Polls" logo at the bottom.
-        // This detects and removes duplicate entry screens or rogue H1s.
-        var entryScreens = document.querySelectorAll('#entry-screen');
-        if (entryScreens.length > 1) {
-            console.warn('[VisualFix] Found ' + entryScreens.length + ' entry-screens. Removing duplicates.');
-            for (var i = 1; i < entryScreens.length; i++) {
-                entryScreens[i].remove();
-            }
-        } else {
-            // Fallback: If ID is missing on duplicates, check H1s
-            var brands = document.querySelectorAll('h1');
-            if (brands.length > 1) {
-                console.warn('[VisualFix] Found duplicate H1 elements. Cleaning up.');
-                for (var j = 1; j < brands.length; j++) {
-                    // Traverse up to find the container to remove
-                    var wrapper = brands[j].closest('.flex.items-center.gap-4'); // The logo container class
-                    if (wrapper) wrapper.remove();
-                    else brands[j].remove();
-                }
-            }
-        }
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function () {
-            initCalculatorDrag();
-            initVisuals();
-        });
-    } else {
-        initCalculatorDrag();
-        initVisuals();
-    }
-
-    // Handle calculator visibility when session ends or locks
-    function hideCalculatorOnSessionEnd() {
-        var calcFab = document.getElementById('calc-fab');
-        var calcWindow = document.getElementById('calc-window');
-        if (calcFab) calcFab.style.display = 'none';
-        if (calcWindow) {
-            calcWindow.classList.add('hidden');
-            calcWindow.classList.remove('active');
-            calcWindow.style.display = 'none';
-            calcWindowOpen = false;
-        }
-    }
-
-    // Expose function for session state changes
-    window.syncCalculatorVisibility = syncCalculatorVisibility;
-    window.hideCalculatorOnSessionEnd = hideCalculatorOnSessionEnd;
-    window.updateStudentView = updateStudentView;
-    window.LockManager = LockManager;
-    window.ViewManager = ViewManager;
-
-    }) ();
+    })();
 </script>

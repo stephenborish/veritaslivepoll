@@ -92,8 +92,8 @@
                     // If connected, we receive "signals" for state changes, so we can poll slowly.
                     // If disconnected, we fallback to fast polling to ensure responsiveness.
                     if (connected) {
-                        console.log('[Adaptive Polling] Firebase connected - switching to slow poll (15s)');
-                        defaultPollInterval = 15000;
+                        console.log('[Adaptive Polling] Firebase connected - switching to balanced poll (5s)');
+                        defaultPollInterval = 5000;
                     } else {
                         console.log('[Adaptive Polling] Firebase disconnected - switching to fast poll (2.5s)');
                         defaultPollInterval = 2500;
@@ -110,15 +110,13 @@
                         console.log('[Firebase] Live Session update received:', data);
 
                         // If we have full metadata and a current pollId, update UI directly
-                        if (data.metadata && data.pollId && typeof updateStudentView === 'function') {
+                        if (data.metadata && data.pollId && data.questionText && typeof updateStudentView === 'function') {
                             console.log('[Firebase] Fast Path: Updating view from pushed state');
-                            // Map Firebase data to state payload format
+                            // Pass through ALL data fields from Firebase - don't drop question content!
                             var statePayload = {
-                                ...data.metadata,
-                                pollId: data.pollId,
-                                questionIndex: data.questionIndex,
-                                status: data.status,
-                                sessionPhase: data.sessionPhase || data.metadata.sessionPhase
+                                ...data,  // Include all fields (questionText, options, etc.)
+                                ...data.metadata,  // Flatten metadata into payload
+                                sessionPhase: data.sessionPhase || (data.metadata && data.metadata.sessionPhase) || 'LIVE'
                             };
                             updateStudentView(statePayload);
                         } else {
@@ -2054,8 +2052,8 @@
         var currentPollState = {};
         var lastUnlockedState = null;
         var pollTimerId = null;
-        var defaultPollInterval = 2500;
-        var maxPollInterval = 12000;
+        var defaultPollInterval = 1500;
+        var maxPollInterval = 8000;
         var pollFailureCount = 0;
         var proctorPollInterval = null;
         var isInteractionBlocked = false;
@@ -3092,7 +3090,7 @@
             }
 
             updateStudentView(data);
-            var delay = Math.max(1200, Math.min(maxPollInterval, lastAdvisedInterval));
+            var delay = Math.max(500, Math.min(maxPollInterval, lastAdvisedInterval));
             scheduleNextPoll(delay);
         }
 

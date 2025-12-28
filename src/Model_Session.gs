@@ -99,49 +99,57 @@ Veritas.Models.Session.startPoll = function(pollId) {
  */
 Veritas.Models.Session.nextQuestion = function() {
   return withErrorHandling(function() {
-    return Veritas.Utils.withLock(function() {
-      const currentStatus = DataAccess.liveStatus.get();
-      const pollId = currentStatus[0];
+    // OPTIMIZATION: Read current state and poll data BEFORE acquiring lock
+    // This reduces lock hold time significantly
+    const currentStatus = DataAccess.liveStatus.get();
+    const pollId = currentStatus[0];
 
-      if (!pollId) return Veritas.Models.Session.stopPoll();
+    if (!pollId) return Veritas.Models.Session.stopPoll();
 
-      let newIndex = currentStatus[1] + 1;
-      const poll = DataAccess.polls.getById(pollId);
+    let newIndex = currentStatus[1] + 1;
+    const poll = DataAccess.polls.getById(pollId);
 
-      if (!poll || newIndex >= poll.questions.length) {
-        Logger.log('Poll completed', { pollId: pollId });
-        return Veritas.Models.Session.stopPoll();
-      }
+    if (!poll || newIndex >= poll.questions.length) {
+      Logger.log('Poll completed', { pollId: pollId });
+      return Veritas.Models.Session.stopPoll();
+    }
 
-      const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
-      const nowIso = new Date().toISOString();
+    const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
+    const nowIso = new Date().toISOString();
 
-      const newMetadata = {
-        ...previousMetadata,
-        reason: 'RUNNING',
-        advancedAt: nowIso,
-        timer: null,
-        startedAt: previousMetadata.startedAt || nowIso,
-        endedAt: null,
-        sessionPhase: 'LIVE',
-        isCollecting: true,
-        resultsVisibility: 'HIDDEN',
-        responsesClosedAt: null,
-        revealedAt: null
-      };
+    const newMetadata = {
+      ...previousMetadata,
+      reason: 'RUNNING',
+      advancedAt: nowIso,
+      timer: null,
+      startedAt: previousMetadata.startedAt || nowIso,
+      endedAt: null,
+      sessionPhase: 'LIVE',
+      isCollecting: true,
+      resultsVisibility: 'HIDDEN',
+      responsesClosedAt: null,
+      revealedAt: null
+    };
 
-      // 0. PREPARE DATA
-      const pollData = Veritas.Models.Analytics.getLightweightPollData(pollId, newIndex);
+    // OPTIMIZATION: Construct state for getLightweightPollData to avoid redundant reads
+    var newState = [pollId, newIndex, "OPEN"];
+    newState.metadata = newMetadata;
 
-      // 1. INSTANT UPDATE: Firebase
+    // 0. PREPARE DATA (uses preloaded poll and constructed state)
+    const pollData = Veritas.Models.Analytics.getLightweightPollData(pollId, newIndex, poll, newState);
+
+    // 1. INSTANT UPDATE: Firebase FIRST (before lock) - students get update immediately
+    try {
       Veritas.Utils.Firebase.update('sessions/' + pollId + '/live_session', pollData);
+    } catch (fbErr) {
+      Logger.log('Firebase fast push failed (non-fatal)', { error: fbErr.message });
+    }
 
-      // 2. BACKUP UPDATE: Sheets
+    // 2. BACKUP UPDATE: Sheets (inside lock for consistency)
+    return Veritas.Utils.withLock(function() {
       DataAccess.liveStatus.set(pollId, newIndex, "OPEN", newMetadata);
-
       Logger.log('Next question', { pollId: pollId, questionIndex: newIndex });
-
-      return Veritas.Models.Analytics.getLightweightPollData(pollId, newIndex);
+      return pollData;
     });
   })();
 };
@@ -151,48 +159,56 @@ Veritas.Models.Session.nextQuestion = function() {
  */
 Veritas.Models.Session.previousQuestion = function() {
   return withErrorHandling(function() {
-    return Veritas.Utils.withLock(function() {
-      const currentStatus = DataAccess.liveStatus.get();
-      const pollId = currentStatus[0];
+    // OPTIMIZATION: Read state BEFORE acquiring lock
+    const currentStatus = DataAccess.liveStatus.get();
+    const pollId = currentStatus[0];
 
-      if (!pollId) {
-        throw new Error('No active poll');
-      }
+    if (!pollId) {
+      throw new Error('No active poll');
+    }
 
-      let newIndex = currentStatus[1] - 1;
-      const poll = DataAccess.polls.getById(pollId);
+    let newIndex = currentStatus[1] - 1;
+    const poll = DataAccess.polls.getById(pollId);
 
-      if (!poll || newIndex < 0) {
-        throw new Error('Already at first question');
-      }
+    if (!poll || newIndex < 0) {
+      throw new Error('Already at first question');
+    }
 
-      const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
-      const nowIso = new Date().toISOString();
+    const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
+    const nowIso = new Date().toISOString();
 
-      const newMetadata = {
-        ...previousMetadata,
-        reason: 'RUNNING',
-        movedBackAt: nowIso,
-        timer: null,
-        startedAt: previousMetadata.startedAt || nowIso,
-        endedAt: null,
-        sessionPhase: 'LIVE',
-        isCollecting: true,
-        resultsVisibility: 'HIDDEN',
-        responsesClosedAt: null,
-        revealedAt: null
-      };
+    const newMetadata = {
+      ...previousMetadata,
+      reason: 'RUNNING',
+      movedBackAt: nowIso,
+      timer: null,
+      startedAt: previousMetadata.startedAt || nowIso,
+      endedAt: null,
+      sessionPhase: 'LIVE',
+      isCollecting: true,
+      resultsVisibility: 'HIDDEN',
+      responsesClosedAt: null,
+      revealedAt: null
+    };
 
-      // 0. PREPARE DATA
-      const pollData = Veritas.Models.Analytics.getLightweightPollData(pollId, newIndex);
+    // OPTIMIZATION: Construct state for getLightweightPollData
+    var newState = [pollId, newIndex, "OPEN"];
+    newState.metadata = newMetadata;
 
-      // FIREBASE: Fast Write
+    // 0. PREPARE DATA (uses preloaded poll)
+    const pollData = Veritas.Models.Analytics.getLightweightPollData(pollId, newIndex, poll, newState);
+
+    // 1. FIREBASE: Fast Write FIRST (before lock)
+    try {
       Veritas.Utils.Firebase.set('sessions/' + pollId + '/live_session', pollData);
+    } catch (fbErr) {
+      Logger.log('Firebase fast push failed (non-fatal)', { error: fbErr.message });
+    }
 
+    // 2. BACKUP: Sheets (inside lock)
+    return Veritas.Utils.withLock(function() {
       DataAccess.liveStatus.set(pollId, newIndex, "OPEN", newMetadata);
-
       Logger.log('Previous question', { pollId: pollId, questionIndex: newIndex });
-
       return pollData;
     });
   })();
@@ -203,38 +219,46 @@ Veritas.Models.Session.previousQuestion = function() {
  */
 Veritas.Models.Session.stopPoll = function() {
   return withErrorHandling(function() {
-    return Veritas.Utils.withLock(function() {
-      const currentStatus = DataAccess.liveStatus.get();
-      const pollId = currentStatus[0];
-      const questionIndex = currentStatus[1];
+    // OPTIMIZATION: Read state BEFORE acquiring lock
+    const currentStatus = DataAccess.liveStatus.get();
+    const pollId = currentStatus[0];
+    const questionIndex = currentStatus[1];
+    const poll = DataAccess.polls.getById(pollId);
 
-      const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
-      const nowIso = new Date().toISOString();
+    const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
+    const nowIso = new Date().toISOString();
 
-      const newMetadata = {
-        ...previousMetadata,
-        reason: 'RESPONSES_CLOSED',
-        pausedAt: nowIso,
-        startedAt: previousMetadata.startedAt || nowIso,
-        endedAt: null,
-        sessionPhase: 'RESULTS_HOLD',
-        isCollecting: false,
-        resultsVisibility: 'HIDDEN',
-        responsesClosedAt: nowIso,
-        revealedAt: null
-      };
+    const newMetadata = {
+      ...previousMetadata,
+      reason: 'RESPONSES_CLOSED',
+      pausedAt: nowIso,
+      startedAt: previousMetadata.startedAt || nowIso,
+      endedAt: null,
+      sessionPhase: 'RESULTS_HOLD',
+      isCollecting: false,
+      resultsVisibility: 'HIDDEN',
+      responsesClosedAt: nowIso,
+      revealedAt: null
+    };
 
-      // 0. PREPARE DATA
-      const pollData = Veritas.Models.Analytics.getLightweightPollData(pollId, questionIndex);
+    // OPTIMIZATION: Construct state for getLightweightPollData
+    var newState = [pollId, questionIndex, "PAUSED"];
+    newState.metadata = newMetadata;
 
-      // 1. INSTANT UPDATE: Firebase
+    // 0. PREPARE DATA
+    const pollData = Veritas.Models.Analytics.getLightweightPollData(pollId, questionIndex, poll, newState);
+
+    // 1. INSTANT UPDATE: Firebase FIRST
+    try {
       Veritas.Utils.Firebase.update('sessions/' + pollId + '/live_session', pollData);
+    } catch (fbErr) {
+      Logger.log('Firebase fast push failed (non-fatal)', { error: fbErr.message });
+    }
 
-      // 2. BACKUP UPDATE: Sheets
+    // 2. BACKUP UPDATE: Sheets (inside lock)
+    return Veritas.Utils.withLock(function() {
       DataAccess.liveStatus.set(pollId, questionIndex, "PAUSED", newMetadata);
-
       Logger.log('Responses closed for question', { pollId: pollId, questionIndex: questionIndex });
-
       return pollData;
     });
   })();
@@ -245,39 +269,47 @@ Veritas.Models.Session.stopPoll = function() {
  */
 Veritas.Models.Session.resumePoll = function() {
   return withErrorHandling(function() {
-    return Veritas.Utils.withLock(function() {
-      const currentStatus = DataAccess.liveStatus.get();
-      const pollId = currentStatus[0];
-      const questionIndex = currentStatus[1];
+    // OPTIMIZATION: Read state BEFORE acquiring lock
+    const currentStatus = DataAccess.liveStatus.get();
+    const pollId = currentStatus[0];
+    const questionIndex = currentStatus[1];
+    const poll = DataAccess.polls.getById(pollId);
 
-      if (!pollId || questionIndex < 0) {
-        throw new Error('No poll to resume');
-      }
+    if (!pollId || questionIndex < 0) {
+      throw new Error('No poll to resume');
+    }
 
-      const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
-      const nowIso = new Date().toISOString();
+    const previousMetadata = (currentStatus && currentStatus.metadata) ? currentStatus.metadata : {};
+    const nowIso = new Date().toISOString();
 
-      const newMetadata = {
-        ...previousMetadata,
-        reason: 'RESUMED',
-        resumedAt: nowIso,
-        sessionPhase: 'LIVE',
-        isCollecting: true,
-        resultsVisibility: 'HIDDEN',
-        responsesClosedAt: null
-      };
+    const newMetadata = {
+      ...previousMetadata,
+      reason: 'RESUMED',
+      resumedAt: nowIso,
+      sessionPhase: 'LIVE',
+      isCollecting: true,
+      resultsVisibility: 'HIDDEN',
+      responsesClosedAt: null
+    };
 
-      // 0. PREPARE DATA
-      const pollData = Veritas.Models.Analytics.getLightweightPollData(pollId, questionIndex);
+    // OPTIMIZATION: Construct state for getLightweightPollData
+    var newState = [pollId, questionIndex, "OPEN"];
+    newState.metadata = newMetadata;
 
-      // 1. INSTANT UPDATE: Firebase
+    // 0. PREPARE DATA
+    const pollData = Veritas.Models.Analytics.getLightweightPollData(pollId, questionIndex, poll, newState);
+
+    // 1. INSTANT UPDATE: Firebase FIRST
+    try {
       Veritas.Utils.Firebase.update('sessions/' + pollId + '/live_session', pollData);
+    } catch (fbErr) {
+      Logger.log('Firebase fast push failed (non-fatal)', { error: fbErr.message });
+    }
 
-      // 2. BACKUP UPDATE: Sheets
+    // 2. BACKUP UPDATE: Sheets (inside lock)
+    return Veritas.Utils.withLock(function() {
       DataAccess.liveStatus.set(pollId, questionIndex, "OPEN", newMetadata);
-
       Logger.log('Poll resumed', { pollId: pollId, questionIndex: questionIndex });
-
       return pollData;
     });
   })();

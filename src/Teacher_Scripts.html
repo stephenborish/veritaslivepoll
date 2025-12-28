@@ -2,6 +2,12 @@
   (function () {
     // --- Main App State ---
     var mainLoader = document.getElementById('loader');
+
+    // FIX: Initialize poll containers early to prevent race condition with loadInitialData
+    var pollsCardView = document.getElementById('polls-card-view');
+    var pollsTableView = document.getElementById('polls-table-view');
+    var pollsTableBody = document.getElementById('polls-table-body');
+    var pollsEmptyState = document.getElementById('polls-empty-state');
     var ALL_POLLS = [];
     var ALL_CLASSES = [];
     var CURRENT_POLL_DATA = {};
@@ -10927,8 +10933,7 @@
   // Card/Table View Toggle for Dashboard
   var viewCardsBtn = document.getElementById('view-cards-btn');
   var viewTableBtn = document.getElementById('view-table-btn');
-  var pollsCardView = document.getElementById('polls-card-view');
-  var pollsTableView = document.getElementById('polls-table-view');
+  // pollsCardView and pollsTableView moved to top of scope
 
   if (viewCardsBtn && viewTableBtn && pollsCardView && pollsTableView) {
     // Default to card view

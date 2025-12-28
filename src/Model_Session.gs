@@ -1329,8 +1329,8 @@ Veritas.Models.Session.getIndividualTimedSessionTeacherView = function(pollId, s
       }
       const timestampValue = row[1] ? Date.parse(row[1]) : NaN;
       responsesByStudent.get(email).push({
-        timestamp: timestampValue,
-        isCorrect: row[6] === true || row[6] === 'TRUE'
+        ts: timestampValue,
+        ok: row[6] === true || row[6] === 'TRUE'
       });
     });
 
@@ -1374,38 +1374,30 @@ Veritas.Models.Session.getIndividualTimedSessionTeacherView = function(pollId, s
 
         pauseActive = !!(state.additionalMetadata && state.additionalMetadata.pauseActive);
 
-        const answeredFromMetadata = state.additionalMetadata && typeof state.additionalMetadata.answeredCount === 'number'
-          ? state.additionalMetadata.answeredCount
-          : null;
-        const correctFromMetadata = state.additionalMetadata && typeof state.additionalMetadata.correctCount === 'number'
-          ? state.additionalMetadata.correctCount
-          : null;
-
-        let answeredFromResponses = null;
-        let correctFromResponses = null;
-        if ((answeredFromMetadata === null || correctFromMetadata === null) && state.startTime && responsesByStudent.has(email)) {
+        // FAST PATH: Use pre-calculated stats if available in metadata
+        const metadata = state.additionalMetadata || {};
+        if (typeof metadata.answeredCount === 'number') {
+          answered = metadata.answeredCount;
+          correctCount = metadata.correctCount || 0;
+        } else if (state.startTime && responsesByStudent.has(email)) {
+          // SLOW PATH Fallback: Only filter if metadata is missing
           const startMs = Date.parse(state.startTime);
           if (!isNaN(startMs)) {
             const endMs = state.endTime ? Date.parse(state.endTime) : null;
-            const bucket = responsesByStudent.get(email) || [];
-            const relevant = bucket.filter(function(entry) {
-              if (isNaN(entry.timestamp)) { return false; }
-              if (entry.timestamp < startMs) { return false; }
-              if (endMs && entry.timestamp > endMs) { return false; }
+            const relevant = (responsesByStudent.get(email) || []).filter(function(entry) {
+              if (isNaN(entry.ts)) return false;
+              if (entry.ts < startMs) return false;
+              if (endMs && entry.ts > endMs) return false;
               return true;
             });
-            answeredFromResponses = relevant.length;
-            correctFromResponses = relevant.filter(function(entry) { return entry.isCorrect === true; }).length;
+            answered = relevant.length;
+            correctCount = relevant.filter(function(entry) { return entry.ok; }).length;
           }
+        } else {
+          // MINIMAL PATH: Just use current index as low-fidelity progress
+          answered = Math.max(0, state.currentQuestionIndex || 0);
         }
-
-        answered = typeof answeredFromMetadata === 'number'
-          ? answeredFromMetadata
-          : (answeredFromResponses != null ? answeredFromResponses : Math.max(0, state.currentQuestionIndex || 0));
         progress = answered;
-        correctCount = typeof correctFromMetadata === 'number'
-          ? correctFromMetadata
-          : (correctFromResponses != null ? correctFromResponses : 0);
 
         if (pauseActive) {
           status = 'Paused';

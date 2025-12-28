@@ -2210,7 +2210,26 @@
       }
     }
     bindClick('focus-lockouts-btn', focusLockoutsSection);
-    bindClick('hud-focus-lockouts-btn', focusLockoutsSection);
+    // Initialize Locked Students Popover toggle
+    var hudFocusBtn = document.getElementById('hud-focus-lockouts-btn');
+    if (hudFocusBtn) {
+      hudFocusBtn.onclick = function (e) {
+        e.stopPropagation();
+        var popover = document.getElementById('locked-students-popover');
+        if (popover) {
+          popover.classList.toggle('hidden');
+        }
+      };
+    }
+    // Close popover on click outside
+    document.addEventListener('click', function (e) {
+      var popover = document.getElementById('locked-students-popover');
+      if (popover && !popover.classList.contains('hidden') && !popover.contains(e.target) && e.target !== hudFocusBtn) {
+        popover.classList.add('hidden');
+      }
+    });
+
+    // --- Tab Navigation System ---
     // New timer button event listeners
     bindClick('start-btn', startTimer);
     bindClick('pause-btn', pauseTimer);
@@ -4759,6 +4778,9 @@
 
       // Render Topic Heat (simplified version)
       var topicHeat = document.getElementById('analytics-topic-heat');
+      if (!topicHeat) {
+        return;
+      }
       if (analyticsData.topics && analyticsData.topics.length > 0) {
         var topicHtml = '<div class="space-y-2">';
         analyticsData.topics.forEach(function (topic) {
@@ -6123,15 +6145,15 @@
         }
       }
       if (hudFocusBtn) {
-        var isDisabled = pendingTotalForHud === 0;
-        hudFocusBtn.disabled = isDisabled;
-        hudFocusBtn.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
-      }
-      if (hudLockoutsCard) {
         if (pendingTotalForHud > 0) {
-          hudLockoutsCard.classList.add('student-needs-attention');
+          hudFocusBtn.disabled = false;
+          hudFocusBtn.classList.remove('opacity-50', 'pointer-events-none');
         } else {
-          hudLockoutsCard.classList.remove('student-needs-attention');
+          hudFocusBtn.disabled = true;
+          hudFocusBtn.classList.add('opacity-50', 'pointer-events-none');
+          // Hide popover if it was open but now empty
+          var popover = document.getElementById('locked-students-popover');
+          if (popover) popover.classList.add('hidden');
         }
       }
       sessionHudState.lastLockoutTotal = pendingTotalForHud;
@@ -6646,13 +6668,41 @@
       matrixDefs.forEach(function (def) {
         var pct = metacognition.matrixPercentages && typeof metacognition.matrixPercentages[def.key] === 'number' ? metacognition.matrixPercentages[def.key] : 0;
         var count = metacognition.matrixCounts && typeof metacognition.matrixCounts[def.key] === 'number' ? metacognition.matrixCounts[def.key] : 0;
-        html += '<div class="confidence-row">';
+
+        // Find students in this category
+        var categoryStudents = [];
+        if (Array.isArray(currentStudentStatusData)) {
+          categoryStudents = currentStudentStatusData.filter(function (s) {
+            if (s.status !== 'Submitted' || !s.confidence) return false;
+            var isRight = s.isCorrect === true;
+            var isSure = s.confidence >= 0.75; // Logic used in Model_Analytics.gs for matrix
+
+            // Simplified matching based on matrix keys
+            if (def.key === 'confidentCorrect') return isSure && isRight;
+            if (def.key === 'confidentIncorrect') return isSure && !isRight;
+            if (def.key === 'uncertainCorrect') return !isSure && isRight;
+            if (def.key === 'uncertainIncorrect') return !isSure && !isRight;
+            return false;
+          });
+        }
+
+        html += '<div class="confidence-row flex flex-col">';
         html += '<div class="flex items-center justify-between gap-2">';
         html += '<div class="flex items-center gap-1.5"><span class="text-sm">' + def.emoji + '</span><span class="text-xs font-semibold ' + def.textClass + '">' + def.label + '</span></div>';
         html += '<span class="text-sm font-bold ' + def.textClass + '">' + pct + '%</span>';
         html += '</div>';
-        html += '<div class="confidence-bar-track"><div class="confidence-bar-fill ' + def.barClass + '" style="width:' + pct + '%"></div></div>';
-        html += '<div class="flex items-center justify-between text-[11px] text-brand-dark-gray/60 dark:text-brand-white/60">';
+        html += '<div class="confidence-bar-track my-1"><div class="confidence-bar-fill ' + def.barClass + '" style="width:' + pct + '%"></div></div>';
+
+        // Students List in this quadrant
+        if (categoryStudents.length > 0) {
+          html += '<div class="flex flex-wrap gap-1 mt-1 mb-2">';
+          categoryStudents.forEach(function (s) {
+            html += '<span class="px-1.5 py-0.5 rounded bg-white/50 dark:bg-black/20 text-[10px] font-medium border border-black/5 truncate max-w-full">' + escapeHtml(formatStudentName(s)) + '</span>';
+          });
+          html += '</div>';
+        }
+
+        html += '<div class="flex items-center justify-between text-[11px] text-brand-dark-gray/60 dark:text-brand-white/60 mt-auto">';
         html += '<span>' + count + ' students</span>';
         html += '<span>live</span>';
         html += '</div>';
@@ -6722,68 +6772,55 @@
     }
 
     function updateViolationsAlert(flaggedStudents) {
-      var alertPanel = document.getElementById('violations-alert-panel');
-      var quickList = document.getElementById('violations-quick-list');
-      var summary = document.getElementById('violations-summary');
+      // REDESIGN: Populate the top-bar popover instead of the sidebar alert
+      var popoverList = document.getElementById('locked-popover-list');
+      if (!popoverList) return;
 
-      if (!flaggedStudents || flaggedStudents.length === 0 || violationsAlertDismissed) {
-        alertPanel.classList.add('hidden');
+      if (!flaggedStudents || flaggedStudents.length === 0) {
+        popoverList.innerHTML = '<div class="text-xs text-center text-gray-500 py-4 italic">No students need attention</div>';
         return;
-      }
-
-      alertPanel.classList.remove('hidden');
-
-      var lockedCount = flaggedStudents.filter(function (student) {
-        var normalized = deriveProctorStatus(student);
-        return normalized === 'LOCKED' || normalized === 'AWAITING_FULLSCREEN';
-      }).length;
-      var blockedCount = flaggedStudents.filter(function (student) {
-        return deriveProctorStatus(student) === 'BLOCKED';
-      }).length;
-      var total = flaggedStudents.length;
-
-      var summaryParts = [];
-      if (lockedCount) {
-        summaryParts.push(lockedCount + ' locked');
-      }
-      if (blockedCount) {
-        summaryParts.push(blockedCount + ' blocked');
-      }
-
-      var summaryLabel = summaryParts.join(' • ');
-      if (summaryLabel) {
-        summary.textContent = summaryLabel + (total > 1 ? ' students need attention' : ' student needs attention');
-      } else {
-        summary.textContent = total + (total > 1 ? ' students need attention' : ' student needs attention');
       }
 
       var html = '';
       flaggedStudents.forEach(function (student) {
-        if (isBlockedStatus(student)) {
-          html += '<button class="quick-unblock-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-semibold transition-colors" data-email="' + student.email + '">';
+        var isLocked = needsUnlockAttention(student);
+        var isBlocked = isBlockedStatus(student);
+
+        html += '<div class="flex items-center justify-between gap-3 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-700">';
+        html += '<div class="flex flex-col min-w-0">';
+        html += '<span class="text-xs font-bold truncate text-gray-900 dark:text-white">' + escapeHtml(formatStudentName(student)) + '</span>';
+        html += '<span class="text-[10px] text-gray-500 dark:text-gray-400">' + (isLocked ? 'Locked' : 'Blocked') + '</span>';
+        html += '</div>';
+
+        if (isLocked) {
+          html += '<button class="quick-approve-btn flex items-center justify-center h-8 w-8 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-900 transition-colors" data-email="' + student.email + '" data-poll-id="' + CURRENT_POLL_DATA.pollId + '" data-lock-version="' + (student.lockVersion || 0) + '" title="Approve re-entry">';
           html += '<span class="material-symbols-outlined text-base">lock_open</span>';
-          html += '<span>Unblock ' + escapeHtml(formatStudentName(student)) + '</span>';
           html += '</button>';
-        } else if (needsUnlockAttention(student)) {
-          html += '<button class="quick-approve-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-white text-sm font-semibold transition-colors" data-email="' + student.email + '" data-poll-id="' + CURRENT_POLL_DATA.pollId + '" data-lock-version="' + (student.lockVersion || 0) + '">';
-          html += '<span class="material-symbols-outlined text-base">lock_open</span>';
-          html += '<span>Approve ' + escapeHtml(formatStudentName(student)) + '</span>';
+        } else if (isBlocked) {
+          html += '<button class="quick-unblock-btn flex items-center justify-center h-8 w-8 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-900 transition-colors" data-email="' + student.email + '" title="Unblock Student">';
+          html += '<span class="material-symbols-outlined text-base">person_check</span>';
           html += '</button>';
         }
-      });
-      quickList.innerHTML = html;
 
-      quickList.querySelectorAll('.quick-approve-btn').forEach(function (btn) {
-        btn.onclick = async function () {
+        html += '</div>';
+      });
+
+      popoverList.innerHTML = html;
+
+      // Event Listeners
+      popoverList.querySelectorAll('.quick-approve-btn').forEach(function (btn) {
+        btn.onclick = async function (e) {
+          e.stopPropagation();
           var email = this.dataset.email;
           var pollId = this.dataset.pollId;
           var lockVersion = parseInt(this.dataset.lockVersion, 10);
-          await approveStudentUnlock(email, pollId, lockVersion, this);
+          await approveStudentUnlock(email, pollId, lockVersion, this, { skipConfirm: true });
         };
       });
 
-      quickList.querySelectorAll('.quick-unblock-btn').forEach(function (btn) {
-        btn.onclick = async function () {
+      popoverList.querySelectorAll('.quick-unblock-btn').forEach(function (btn) {
+        btn.onclick = async function (e) {
+          e.stopPropagation();
           var email = this.dataset.email;
           await requestTeacherUnblock(email, this);
         };
@@ -7345,116 +7382,32 @@
       var isCorrect = student.isCorrect === true;
       var isIncorrect = student.isCorrect === false;
       var name = formatStudentName(student);
-      var violationCount = (student.sessionViolations || 0) + (student.sessionExits || 0);
 
-      var statusStyles = {
-        'Submitted': {
-          icon: isCorrect ? 'check' : 'close',
-          iconClass: isCorrect ? 'correct' : 'incorrect',
-          tileClass: isCorrect ? 'submitted correct' : 'submitted incorrect',
-          aria: isCorrect ? 'Submitted and correct' : 'Submitted and incorrect'
-        },
-        'LOCKED': {
-          icon: 'lock',
-          iconClass: 'locked',
-          tileClass: 'locked animate-pulse-gentle',
-          aria: 'Locked after violation'
-        },
-        'BLOCKED': {
-          icon: 'block',
-          iconClass: 'blocked',
-          tileClass: 'blocked',
-          aria: 'Blocked after violation'
-        },
-        'AWAITING_FULLSCREEN': {
-          icon: 'fullscreen',
-          iconClass: 'fullscreen',
-          tileClass: 'awaiting',
-          aria: 'Needs fullscreen'
-        },
-        'Waiting...': {
-          icon: 'schedule',
-          iconClass: 'waiting',
-          tileClass: '',
-          aria: 'Waiting for response'
-        },
-        'default': {
-          icon: 'person',
-          iconClass: 'waiting',
-          tileClass: '',
-          aria: status || 'Status pending'
-        }
-      };
+      var tileClass = 'student-tile';
+      if (isLocked || isAwaitingFullscreen) tileClass += ' locked animate-pulse-gentle';
+      else if (isBlocked) tileClass += ' blocked';
+      else if (student.status === 'Submitted') {
+        tileClass += isCorrect ? ' submitted correct' : ' submitted incorrect';
+      }
 
-      var style = statusStyles[normalizedStatus] || statusStyles.default;
-      tile.className = 'student-tile ' + style.tileClass;
+      tile.className = tileClass;
 
-      var badges = [];
+      var emoji = '⏳';
       if (student.confidence) {
-        var cStyle = CONFIDENCE_LEVEL_STYLES[student.confidence] || {};
-        var confLabel = cStyle.label || describeConfidence(student.confidence) || 'Confidence noted';
-        var confBadgeClass = cStyle.badgeClass || 'bg-slate-100 text-slate-700';
-        badges.push('<span class="student-badge ' + confBadgeClass + '">' + (cStyle.emoji || '🧠') + ' ' + escapeHtml(confLabel) + '</span>');
-      }
-      if (violationCount > 0) {
-        badges.push('<span class="student-badge badge-violation" title="Proctoring violations">' +
-          '<span class="material-symbols-outlined text-sm">gavel</span>' +
-          '<span>' + violationCount + ' issue' + (violationCount === 1 ? '' : 's') + '</span>' +
-          '</span>');
+        emoji = (CONFIDENCE_LEVEL_STYLES[student.confidence] || {}).emoji || '🧠';
+      } else if (isLocked || isAwaitingFullscreen) {
+        emoji = '🔒';
       }
 
-      var html = '<div class="student-top">';
-      html += '<span class="student-status-icon ' + style.iconClass + '" aria-label="' + escapeHtml(style.aria || 'Status') + '"><span class="material-symbols-outlined">' + style.icon + '</span></span>';
-      html += '<div class="flex-1 min-w-0">';
-      html += '<div class="student-name">' + escapeHtml(name) + '</div>';
-      if (badges.length > 0) {
-        html += '<div class="student-badges">' + badges.join('') + '</div>';
+      var html = '<span class="text-lg shrink-0">' + emoji + '</span>';
+      html += '<div class="flex-1 min-w-0 font-bold text-xs truncate">' + escapeHtml(name) + '</div>';
+
+      if (isLocked || isAwaitingFullscreen) {
+        // We'll still keep the icon but the main management is now top-bar
+        html += '<span class="material-symbols-outlined text-rose-600 text-sm">warning</span>';
       }
-      html += '</div>';
-      html += '<div class="student-actions">';
-      if (normalizedStatus === 'LOCKED') {
-        html += '<button class="approve-reentry-btn student-action-btn" title="Approve re-entry" data-email="' + escapeHtml(student.email) + '" data-lock-version="' + (student.lockVersion || 0) + '"><span class="material-symbols-outlined text-base text-rose-600">lock_open</span></button>';
-      }
-      if (normalizedStatus === 'BLOCKED' || violationCount > 0) {
-        html += '<button class="resume-access-btn student-action-btn" title="Allow student to resume" data-email="' + escapeHtml(student.email || '') + '"><span class="material-symbols-outlined text-base text-emerald-600">door_open</span></button>';
-      }
-      html += '</div>';
-      html += '</div>';
 
       tile.innerHTML = html;
-
-      if (normalizedStatus === 'LOCKED') {
-        var approveBtn = tile.querySelector('.approve-reentry-btn');
-        if (approveBtn) {
-          approveBtn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            var email = this.getAttribute('data-email');
-            var lockVersion = parseInt(this.getAttribute('data-lock-version'), 10);
-            if (!CURRENT_POLL_DATA || !CURRENT_POLL_DATA.pollId) return;
-            approveStudentUnlock(email, CURRENT_POLL_DATA.pollId, lockVersion, this, { skipConfirm: true });
-          });
-        }
-        // GRID INTERACTION: Clicking the entire LOCKED tile triggers unlock approval flow
-        tile.style.cursor = 'pointer';
-        tile.addEventListener('click', function (e) {
-          // Don't trigger if clicking a button (button handler will handle it)
-          if (e.target.closest('button')) return;
-          var email = student.email;
-          var lockVersion = student.lockVersion || 0;
-          if (!CURRENT_POLL_DATA || !CURRENT_POLL_DATA.pollId) return;
-          approveStudentUnlock(email, CURRENT_POLL_DATA.pollId, lockVersion, null, { skipConfirm: true });
-        });
-      }
-
-      var resumeBtn = tile.querySelector('.resume-access-btn');
-      if (resumeBtn) {
-        resumeBtn.addEventListener('click', async function (e) {
-          e.stopPropagation();
-          var email = this.getAttribute('data-email');
-          await requestTeacherUnblock(email, this);
-        });
-      }
-
       return tile;
     }
 
@@ -7701,10 +7654,14 @@
 
       var fragment = document.createDocumentFragment();
       students.forEach(function (student) {
-        if (grid) {
-          fragment.appendChild(buildStudentStatusTile(student));
-        } else if (tbody) {
-          fragment.appendChild(buildStudentStatusRow(student));
+        // REDESIGN: Only show students who HAVEN'T submitted in the grid
+        // Students who submitted are moved to the Confidence Pulse
+        if (student.status !== 'Submitted' || isLockedOrBlocked(student)) {
+          if (grid) {
+            fragment.appendChild(buildStudentStatusTile(student));
+          } else if (tbody) {
+            fragment.appendChild(buildStudentStatusRow(student));
+          }
         }
       });
 
@@ -7827,7 +7784,6 @@
             restartPollingWithNewInterval();
           }
           updateLiveView(data);
-          updateActivityMetrics(pollId, questionIndex);
         })
         .withFailureHandler(function (e) {
           console.warn('Poll refresh error:', e);
@@ -7844,43 +7800,6 @@
         .getLivePollData(pollId, questionIndex);
     }
 
-    /**
-     * Update activity metrics panel with real-time data
-     */
-    function updateActivityMetrics(pollId, questionIndex) {
-      google.script.run
-        .withSuccessHandler(function (metrics) {
-          var avgTimeEl = document.getElementById('activity-avg-time');
-          var changesEl = document.getElementById('activity-answer-changes');
-          var activeEl = document.getElementById('activity-active-students');
-          var focusLossEl = document.getElementById('activity-focus-loss');
-          var lastUpdatedEl = document.getElementById('activity-last-updated');
-
-          if (avgTimeEl) {
-            avgTimeEl.textContent = metrics.averageTimeOnQuestion + 's';
-          }
-          if (changesEl) {
-            changesEl.textContent = metrics.answerChanges || 0;
-          }
-          if (activeEl) {
-            activeEl.textContent = metrics.activeStudents || 0;
-          }
-          if (focusLossEl) {
-            focusLossEl.textContent = metrics.focusLossEvents || 0;
-          }
-          if (lastUpdatedEl) {
-            var now = new Date();
-            var timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            lastUpdatedEl.textContent = timeStr;
-          }
-        })
-        .withFailureHandler(function (error) {
-          console.error('Failed to fetch activity metrics:', error);
-          // HIGH PRIORITY FIX: Show user-visible error notification
-          showToast('error', 'Activity Metrics Error', 'Unable to load real-time activity metrics. Data will refresh on next update.', 4000);
-        })
-        .getRealTimeActivityMetrics(pollId, questionIndex);
-    }
 
     function restartPollingWithNewInterval() {
       if (pollInterval) {
@@ -11194,7 +11113,9 @@
           console.log('[Firebase] Connection status changed:', realtimeConnected ? 'CONNECTED' : 'DISCONNECTED', 'pollId:', pollId);
 
           // ADAPTIVE POLLING: Reduce server load when Firebase is active
-          var newInterval = realtimeConnected ? 15000 : 2500;
+          // Periodic polling is now primarily for metrics (progress/score)
+          // Realtime status (ACTIVE/LOCKED) is handled via Firebase events
+          var newInterval = realtimeConnected ? 30000 : 2500;
 
           if (missionControlHeartbeat && missionControlHeartbeat.isRunning()) {
             console.log('[Adaptive Polling] Updating Mission Control heartbeat to ' + newInterval + 'ms');

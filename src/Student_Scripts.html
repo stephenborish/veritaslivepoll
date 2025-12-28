@@ -4323,29 +4323,30 @@
             var statusCard = statusContainer ? statusContainer.querySelector('.status-card') : null;
 
             if (isDark) {
-                // Apply Dark Theme
+                // Apply Premium Glass Dark Theme
                 if (statusContainer) {
-                    statusContainer.classList.add('bg-gradient-to-br', 'from-slate-900', 'via-slate-800', 'to-slate-900', 'fixed', 'inset-0', 'z-[9000]', 'flex', 'items-center', 'justify-center');
-                    statusContainer.classList.remove('text-center', 'py-12'); // Remove default layout
+                    statusContainer.className = 'fixed inset-0 z-[9000] flex items-center justify-center p-6 transition-all duration-700 backdrop-blur-3xl bg-slate-950/40 select-none';
+                    statusContainer.style.display = 'flex';
                 }
                 if (statusCard) {
-                    statusCard.classList.remove('bg-white', 'border-gray-200', 'shadow-2xl', 'max-w-3xl');
-                    statusCard.classList.add('bg-transparent', 'border-0', 'shadow-none', 'max-w-2xl', 'w-full');
-                    // Making it transparent to match the "You Stepped Out" look which sits on the background
-                    // OR if we want a card: bg-slate-800 border-slate-700
+                    statusCard.className = 'status-card relative w-full max-w-xl mx-auto p-12 overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/5 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] flex flex-col items-center text-center motion-slide-up';
+                    // Extra layer for better glass effect
+                    statusCard.style.backdropFilter = 'blur(20px)';
+                    statusCard.style.webkitBackdropFilter = 'blur(20px)';
                 }
                 // Hide the Student Header if in full overlay mode
                 var header = document.querySelector('.student-header');
                 if (header) header.style.display = 'none';
             } else {
-                // Revert to Light Theme
+                // Light/Default Theme
                 if (statusContainer) {
-                    statusContainer.classList.remove('bg-gradient-to-br', 'from-slate-900', 'via-slate-800', 'to-slate-900', 'fixed', 'inset-0', 'z-[9000]', 'flex', 'items-center', 'justify-center');
-                    statusContainer.classList.add('text-center', 'py-12');
+                    statusContainer.className = 'text-center py-12 animate-fade-in block';
+                    statusContainer.style.display = 'block';
                 }
                 if (statusCard) {
-                    statusCard.classList.add('bg-white', 'border-gray-200', 'shadow-2xl', 'max-w-3xl');
-                    statusCard.classList.remove('bg-transparent', 'border-0', 'shadow-none', 'max-w-2xl', 'w-full', 'bg-slate-800', 'border-slate-700');
+                    statusCard.className = 'status-card bg-white rounded-2xl border border-gray-200 p-8 sm:p-12 shadow-2xl max-w-3xl mx-auto';
+                    statusCard.style.backdropFilter = 'none';
+                    statusCard.style.webkitBackdropFilter = 'none';
                 }
                 var header = document.querySelector('.student-header');
                 if (header) header.style.display = ''; // Restore
@@ -4353,13 +4354,13 @@
 
             if (statusMessage) {
                 statusMessage.textContent = options.message || '';
-                statusMessage.className = options.messageClass || (isDark ? 'text-white text-3xl font-bold tracking-tight' : 'text-gray-900 text-2xl font-semibold');
+                statusMessage.className = options.messageClass || (isDark ? 'text-white text-4xl font-bold tracking-tight mb-2 drop-shadow-sm' : 'text-gray-900 text-2xl font-semibold');
             }
             if (statusSubMessage) {
                 if (options.subtext) {
                     statusSubMessage.style.display = 'block';
                     statusSubMessage.textContent = options.subtext;
-                    statusSubMessage.className = options.subClass || (isDark ? 'text-gray-300 text-lg mt-4 max-w-md mx-auto leading-relaxed' : 'text-gray-700 text-lg mt-4');
+                    statusSubMessage.className = options.subClass || (isDark ? 'text-slate-300 text-xl mt-4 max-w-lg mx-auto leading-relaxed' : 'text-gray-700 text-lg mt-4');
                 } else {
                     statusSubMessage.style.display = 'none';
                     statusSubMessage.textContent = '';
@@ -4368,27 +4369,35 @@
             var iconEl = statusContainer ? statusContainer.querySelector('.material-symbols-outlined') : null;
             if (iconEl) {
                 iconEl.textContent = options.icon || 'info';
-                // Wrap icon in a circle for dark mode to match Lock screen
                 if (isDark) {
-                    // Check if already wrapped, if not, we can't easily wrap structure here without rewriting innerHTML.
-                    // Instead, just style the icon itself to be large and colored.
-                    // The Lock screen uses a circle container: <div class="h-20 w-20 bg-amber-900/20 ...">
-                    // Currently showStatusPanel assumes simple icon element.
-                    // Let's just style the icon nicely.
-                    iconEl.className = 'material-symbols-outlined text-7xl mb-6 inline-block ' + (options.iconClass || 'text-emerald-400');
+                    // Modern icon accent
+                    iconEl.className = 'material-symbols-outlined text-8xl mb-10 select-none ' + (options.iconClass || 'text-emerald-400');
+                    iconEl.style.textShadow = '0 0 30px rgba(52, 211, 153, 0.4)';
                 } else {
                     iconEl.className = 'material-symbols-outlined text-6xl mb-4 inline-block ' + (options.iconClass || 'text-veritas-navy');
+                    iconEl.style.textShadow = 'none';
                 }
             }
             if (resumeControls) {
                 resumeControls.style.display = options.showResume ? 'block' : 'none';
+                if (isDark && options.showResume) {
+                    var btn = document.getElementById('resume-session-btn');
+                    if (btn) {
+                        btn.className = 'mx-auto mt-8 flex items-center justify-center gap-3 px-10 py-5 rounded-2xl bg-white text-slate-900 text-xl font-bold hover:bg-slate-50 transition-all duration-300 hover:scale-105 shadow-[0_20px_40px_-10px_rgba(255,255,255,0.2)] active:scale-95';
+                    }
+                }
             }
             if (secureExitControls) {
                 if (options.showExitAction) {
                     secureExitControls.classList.remove('hidden');
                     if (secureExitDescription) {
                         secureExitDescription.textContent = options.exitActionDescription || 'Click below to exit fullscreen and close the secure window.';
-                        if (isDark) secureExitDescription.className = 'text-gray-400 text-sm mb-2';
+                        if (isDark) secureExitDescription.className = 'text-slate-400 text-sm mt-12 mb-4 max-w-sm mx-auto';
+                    }
+                    if (secureExitBtn) {
+                        if (isDark) {
+                            secureExitBtn.className = 'mx-auto flex items-center justify-center gap-2 px-8 py-4 rounded-xl border border-white/10 bg-white/5 text-slate-300 text-base font-medium hover:bg-white/10 transition-all duration-300 hover:text-white';
+                        }
                     }
                     if (secureExitLabel) {
                         secureExitLabel.textContent = options.exitActionLabel || 'Exit Secure Session';

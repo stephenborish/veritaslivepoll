@@ -315,19 +315,6 @@ Veritas.TeacherApi.getActivitySummaryForPoll = function(pollId, sessionId) {
   })();
 };
 
-/**
- * Get real-time activity metrics for current question
- * @param {string} pollId - Poll ID
- * @param {number} questionIndex - Question index
- * @returns {Object} Real-time metrics
- */
-Veritas.TeacherApi.getRealTimeActivityMetrics = function(pollId, questionIndex) {
-  return withErrorHandling(function() {
-    Veritas.TeacherApi.assertTeacher();
-
-    return Veritas.Models.StudentActivity.getRealTimeMetrics(pollId, questionIndex);
-  })();
-};
 
 /**
  * Get detailed activity for a specific student

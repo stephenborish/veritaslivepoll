@@ -82,7 +82,7 @@ Veritas.Models.Session.startPoll = function(pollId) {
 
       Logger.log('Poll started', { pollId: pollId, pollName: poll.pollName });
 
-      return Veritas.Models.Analytics.getLightweightPollData(pollId, 0);
+      return pollData;
     });
   })();
 };

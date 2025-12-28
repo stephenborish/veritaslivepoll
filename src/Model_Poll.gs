@@ -153,13 +153,43 @@ Veritas.Models.Poll.copyPoll = function(sourcePollId, newPollName, targetClassNa
       ? targetClassName.trim()
       : sourcePoll.className;
 
-    // Deep copy all questions (images will be shared via fileIds)
+    // SANITIZED COPY: Only copy essential question data
+    // Excludes: student responses, statistics, session-specific data
     var copiedQuestions = sourcePoll.questions.map(function(q) {
-      return JSON.parse(JSON.stringify(q));
+      return {
+        questionText: q.questionText || '',
+        questionImageURL: q.questionImageURL || null,
+        questionImageFileId: q.questionImageFileId || null,
+        options: (q.options || []).map(function(opt) {
+          return {
+            text: opt.text || '',
+            imageURL: opt.imageURL || null,
+            imageFileId: opt.imageFileId || null
+          };
+        }),
+        correctAnswer: q.correctAnswer || null,
+        timerSeconds: q.timerSeconds || null,
+        metacognitionEnabled: !!q.metacognitionEnabled
+      };
     });
 
-    // Copy session type and time limit from source poll
-    var metadata = Veritas.Models.Poll.normalizeSecureMetadata(sourcePoll || {});
+    // Copy poll type settings, reset session-specific fields
+    var normalizedSource = Veritas.Models.Poll.normalizeSecureMetadata(sourcePoll || {});
+    var metadata = {
+      sessionType: normalizedSource.sessionType,
+      timeLimitMinutes: normalizedSource.timeLimitMinutes,
+      calculatorEnabled: normalizedSource.calculatorEnabled || false,
+      // Reset session-specific fields (new poll = fresh start)
+      missionControlState: '',
+      accessCode: '',
+      availableFrom: '',
+      dueBy: '',
+      secureSettings: {
+        timeLimitMinutes: normalizedSource.timeLimitMinutes,
+        calculatorEnabled: normalizedSource.calculatorEnabled || false,
+        proctoringRules: normalizedSource.secureSettings ? normalizedSource.secureSettings.proctoringRules : []
+      }
+    };
 
     // Create new poll with copied questions
     var newPollId = "P-" + Utilities.getUuid();

@@ -3739,22 +3739,9 @@
                     });
                 });
             } else if (hasAnsweredCurrent) {
-                // Ensure buttons are disabled if already answered
-                var buttons = optionsList.querySelectorAll('button');
-                buttons.forEach(function(btn) {
-                    btn.disabled = true;
-                });
-            }
-
-            // If already answered, show waiting state
-            if (hasAnsweredCurrent && statusMessage) {
-                statusMessage.textContent = 'Answer received - nice work.';
-                statusMessage.className = 'text-green-700 text-2xl font-semibold';
-                if (statusSubMessage) {
-                    statusSubMessage.textContent = 'Your teacher will reveal the answer shortly...';
-                    statusSubMessage.style.display = 'block';
-                    statusSubMessage.className = 'text-gray-700 text-lg mt-4';
-                }
+                // Student has already answered - show waiting screen instead of question
+                showWaitingForNextPhase('Response Captured');
+                return;
             }
         }
 

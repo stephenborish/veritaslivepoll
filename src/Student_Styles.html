@@ -1763,3 +1763,173 @@
     }
   }
 </style>
+  /* =============================================================================
+     REVIEW MODE & FLASHLIGHT (Redesign)
+     ============================================================================= */
+
+  /* Flashlight Overlay */
+  #flashlight-overlay {
+    background: rgba(255, 255, 255, 0.01); 
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    mask-image: radial-gradient(circle 140px at var(--x, 50%) var(--y, 50%), transparent 0%, transparent 95%, black 100%);
+    -webkit-mask-image: radial-gradient(circle 140px at var(--x, 50%) var(--y, 50%), transparent 0%, transparent 95%, black 100%);
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  
+  @media (pointer: coarse) {
+      #flashlight-overlay {
+        mask-image: radial-gradient(circle 170px at var(--x, 50%) var(--y, 50%), transparent 0%, transparent 95%, black 100%);
+        -webkit-mask-image: radial-gradient(circle 170px at var(--x, 50%) var(--y, 50%), transparent 0%, transparent 95%, black 100%);
+      }
+  }
+
+  /* Review Ribbon */
+  .review-ribbon-strip {
+    position: absolute;
+    left: -32px;
+    top: 0;
+    bottom: 0;
+    width: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: var(--text-muted);
+    border-right: 1px solid var(--brand-light-gray);
+    text-transform: uppercase;
+    opacity: 0.6;
+    pointer-events: none;
+  }
+  
+  /* Ensure parent allows ribbon positioning */
+  .student-card.results-stage {
+      position: relative;
+      overflow: visible !important; 
+  }
+
+  /* Answer Options in Review Mode */
+  .student-choices button.result-readonly {
+    cursor: default !important;
+    transform: none !important;
+    box-shadow: none !important;
+    background-color: #ffffff; /* Default bg */
+    border-color: var(--brand-light-gray);
+    padding-right: 60px; /* Space for flag */
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+  }
+  
+  .student-choices button.result-readonly:hover {
+      box-shadow: none !important;
+      transform: none !important;
+      background-color: #ffffff; /* No hover bg change */
+  }
+
+  /* Flags */
+  .percentage-flag {
+      position: absolute;
+      top: 12px;
+      right: -8px; 
+      background: var(--brand-dark-gray);
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 4px 0 0 4px;
+      box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+      z-index: 10;
+  }
+  .percentage-flag::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      bottom: -6px;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 0 8px 6px 0;
+      border-color: transparent #111 transparent transparent; /* Dark triangle for fold effect */
+  }
+
+  /* Correct / Incorrect States */
+  .student-choices button.result-correct {
+      background-color: #f0fdf4 !important; /* Green-50 */
+      border-color: #4ade80 !important; /* Green-400 */
+  }
+  
+  .student-choices button.result-incorrect {
+      background-color: #fef2f2 !important; /* Red-50 */
+      border-color: #f87171 !important; /* Red-400 */
+      opacity: 1 !important;
+  }
+  
+  .student-choices button.result-neutral {
+      opacity: 0.6;
+  }
+
+  /* Badges */
+  .result-badges {
+      position: absolute;
+      bottom: 8px;
+      right: 12px;
+      display: flex;
+      gap: 6px;
+      pointer-events: none;
+  }
+  
+  .badge-pill {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 4px;
+      letter-spacing: 0.05em;
+  }
+  
+  .badge-correct {
+      color: #166534; /* Green-800 */
+      background: #bbf7d0; /* Green-200 */
+  }
+  
+  .badge-your-choice {
+      color: #1e40af; /* Blue-800 */
+      background: #bfdbfe; /* Blue-200 */
+  }
+  
+  /* Remove old elements */
+  .result-readonly .percentage-bubble {
+      display: none !important; /* Hide old bubbles */
+  }
+  
+  .result-readonly .result-indicator {
+      display: none !important; /* Hide old big circles */
+  }
+  
+  /* Icon Markers (Check/X) */
+  .result-icon-marker {
+      position: absolute;
+      top: 50%;
+      right: 16px;
+      transform: translateY(-50%);
+      font-family: 'Material Symbols Outlined';
+      font-size: 24px;
+      font-weight: normal; 
+      line-height: 1;
+  }
+  
+  .result-correct .result-icon-marker {
+      color: #15803d; /* Green-700 */
+      content: 'check_circle';
+  }
+  
+  .result-incorrect .result-icon-marker {
+      color: #b91c1c; /* Red-700 */
+      content: 'cancel';
+  }
+

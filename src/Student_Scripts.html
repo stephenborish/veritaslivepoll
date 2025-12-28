@@ -4003,13 +4003,18 @@
                 var cleanText = displayText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
                 content += '<p class="option-text">' + escapeHtml(cleanText).replace(/\n/g, '<br>') + '</p>';
             }
-            content += '<span class="result-ribbon"></span>';
             content += '<span class="sr-only result-announcement"></span>';
             content += '</div>';
-            content += '<span class="percentage-bubble"></span>';
             content += '</div>';
             content += '</div>';
-            content += '<span class="result-indicator" aria-hidden="true"></span>';
+
+            // New Review Mode Elements
+            content += '<div class="result-metadata">';
+            content += '<div class="percentage-flag" style="display:none"></div>';
+            content += '<div class="result-icon-marker"></div>';
+            content += '</div>';
+            content += '<div class="result-badges"></div>';
+
             btn.innerHTML = content;
             btn.addEventListener('click', function (event) {
                 if (event && event.target && event.target.closest('.option-image')) {
@@ -4028,9 +4033,15 @@
 
         function resetResultDecorations() {
             if (questionContainer) {
-                questionContainer.classList.remove('results-stage');
-                questionContainer.classList.remove('showing-results');
+                questionContainer.classList.remove('results-stage', 'showing-results', 'review-mode');
+                // Remove ribbon if exists
+                var ribbon = questionContainer.querySelector('.review-ribbon-strip');
+                if (ribbon) ribbon.remove();
             }
+            // Disable flashlight
+            var flashlight = document.getElementById('flashlight-overlay');
+            if (flashlight) flashlight.style.display = 'none';
+
             if (questionSublineEl) {
                 questionSublineEl.classList.add('hidden');
                 questionSublineEl.textContent = '';
@@ -4044,20 +4055,17 @@
             buttons.forEach(function (btn) {
                 btn.disabled = false;
                 btn.className = optionBaseClass;
-                btn.classList.remove('result-readonly', 'result-correct', 'result-incorrect', 'result-your-choice');
-                var ribbon = btn.querySelector('.result-ribbon');
-                if (ribbon) {
-                    ribbon.textContent = '';
-                    ribbon.classList.remove('is-visible');
-                }
-                var indicator = btn.querySelector('.result-indicator');
-                if (indicator) {
-                    indicator.textContent = '';
-                }
-                var srOnly = btn.querySelector('.result-announcement');
-                if (srOnly) {
-                    srOnly.textContent = '';
-                }
+                btn.classList.remove('result-readonly', 'result-correct', 'result-incorrect', 'result-your-choice', 'result-neutral');
+
+                // Clear new elements
+                var flag = btn.querySelector('.percentage-flag');
+                if (flag) { flag.style.display = 'none'; flag.textContent = ''; }
+
+                var marker = btn.querySelector('.result-icon-marker');
+                if (marker) marker.textContent = '';
+
+                var badges = btn.querySelector('.result-badges');
+                if (badges) badges.innerHTML = '';
             });
         }
 
@@ -4103,21 +4111,8 @@
                 btn.className = optionBaseClass + ' result-readonly';
                 btn.classList.remove('result-correct', 'result-incorrect', 'result-your-choice');
 
-                var ribbon = btn.querySelector('.result-ribbon');
-                if (ribbon) {
-                    ribbon.textContent = '';
-                    ribbon.classList.remove('is-visible');
-                }
-
-                var indicator = btn.querySelector('.result-indicator');
-                if (indicator) {
-                    indicator.textContent = '';
-                }
-
                 var srOnly = btn.querySelector('.result-announcement');
-                if (srOnly) {
-                    srOnly.textContent = '';
-                }
+                if (srOnly) srOnly.textContent = '';
 
                 if (data.status !== 'RESULTS_REVEALED') {
                     return;
@@ -4125,13 +4120,15 @@
 
                 var percentage = typeof percentages[answerText] === 'number' ? percentages[answerText] : 0;
 
-                // Update percentage bubble
-                var percentageBubble = btn.querySelector('.percentage-bubble');
-                if (percentageBubble) {
-                    if (totalResponses > 0) {
-                        percentageBubble.textContent = percentage + '%';
+                // Update Flag
+                var flag = btn.querySelector('.percentage-flag');
+                if (flag) {
+                    flag.style.display = 'block';
+                    // Always show flag for every option as per "Percentages as Flags" requirement
+                    if (totalResponses > 0 || percentage > 0) {
+                        flag.textContent = percentage + '%';
                     } else {
-                        percentageBubble.textContent = '';
+                        flag.textContent = '0%';
                     }
                 }
 
@@ -4142,42 +4139,88 @@
                     ? null
                     : !!data.studentIsCorrect;
 
+                // State Classes
                 if (isCorrect) {
                     btn.classList.add('result-correct');
-                } else {
+                } else if (isStudentChoice && (studentIsCorrect === false || !isCorrect)) {
                     btn.classList.add('result-incorrect');
+                } else {
+                    // Neutral/Unselected options
+                    btn.classList.add('result-neutral');
                 }
 
-                if (isStudentChoice && (studentIsCorrect === false || !isCorrect)) {
-                    btn.classList.add('result-your-choice');
-                }
-
-                if (indicator) {
+                // Markers (Check/X)
+                var marker = btn.querySelector('.result-icon-marker');
+                if (marker) {
                     if (isCorrect) {
-                        indicator.textContent = '✓';
-                    } else if (isStudentChoice && studentIsCorrect === false) {
-                        indicator.textContent = '✕';
+                        marker.textContent = 'check_circle'; // Green Check
+                        marker.parentElement.parentElement.classList.add('result-correct'); // reinforce parent
+                    } else if (isStudentChoice && (studentIsCorrect === false || !isCorrect)) {
+                        marker.textContent = 'cancel'; // Red X
+                        marker.parentElement.parentElement.classList.add('result-incorrect');
                     } else {
-                        indicator.textContent = '';
+                        marker.textContent = ''; // No icon for others
                     }
                 }
 
+                // Badges
+                var badgesContainer = btn.querySelector('.result-badges');
+                if (badgesContainer) {
+                    badgesContainer.innerHTML = '';
+                    if (isStudentChoice) {
+                        var badge = document.createElement('span');
+                        badge.className = 'badge-pill badge-your-choice';
+                        badge.textContent = 'Your Choice';
+                        badgesContainer.appendChild(badge);
+                    }
+                    if (isCorrect) {
+                        var badge = document.createElement('span');
+                        badge.className = 'badge-pill badge-correct';
+                        badge.textContent = 'Correct';
+                        badgesContainer.appendChild(badge);
+                    }
+                }
+
+                // SR Announcement
                 if (srOnly) {
                     var srParts = [];
-                    if (isCorrect) {
-                        srParts.push('Correct answer');
-                    }
-                    if (isStudentChoice) {
-                        srParts.push('Your selection');
-                    }
-                    if (totalResponses > 0) {
-                        srParts.push(percentage + '% of class selected this choice');
-                    } else {
-                        srParts.push('No responses recorded');
-                    }
+                    if (isCorrect) srParts.push('Correct answer');
+                    if (isStudentChoice) srParts.push('Your selection');
+                    srParts.push(percentage + '% of class selected this choice');
                     srOnly.textContent = srParts.join('. ') + '.';
                 }
             });
+        }
+
+        // Flashlight Logic
+        var flashlightInitialized = false;
+        function initFlashlight() {
+            if (flashlightInitialized) return;
+            var overlay = document.getElementById('flashlight-overlay');
+            if (!overlay) return;
+
+            function updateSpotlight(x, y) {
+                overlay.style.setProperty('--x', x + 'px');
+                overlay.style.setProperty('--y', y + 'px');
+            }
+
+            document.addEventListener('mousemove', function (e) {
+                if (overlay.style.display !== 'none') {
+                    requestAnimationFrame(function () {
+                        updateSpotlight(e.clientX, e.clientY);
+                    });
+                }
+            });
+
+            document.addEventListener('touchmove', function (e) {
+                if (overlay.style.display !== 'none' && e.touches.length > 0) {
+                    requestAnimationFrame(function () {
+                        updateSpotlight(e.touches[0].clientX, e.touches[0].clientY);
+                    });
+                }
+            }, { passive: true });
+
+            flashlightInitialized = true;
         }
 
         function renderResultsStage(data) {
@@ -4218,9 +4261,9 @@
                 questionVisual.style.display = hasQuestionImage ? 'flex' : 'none';
             }
 
+            // Remove old styling text
             if (questionSublineEl) {
-                questionSublineEl.textContent = 'Shown after responses closed.';
-                questionSublineEl.classList.remove('hidden');
+                questionSublineEl.classList.add('hidden'); // Removed "Shown after responses closed."
             }
 
             if (data.status === 'RESULTS_REVEALED' && noResponsesMessageEl) {
@@ -4238,7 +4281,26 @@
 
             ensureOptionsRenderedForResults(data);
 
-            questionContainer.classList.add('results-stage');
+            questionContainer.classList.add('results-stage', 'review-mode');
+
+            // Add Review Ribbon
+            if (!questionContainer.querySelector('.review-ribbon-strip')) {
+                var ribbon = document.createElement('div');
+                ribbon.className = 'review-ribbon-strip animate-fade-in';
+                ribbon.textContent = 'REVIEW';
+                questionContainer.appendChild(ribbon);
+            }
+
+            // Enable Flashlight Mode
+            var flashlight = document.getElementById('flashlight-overlay');
+            if (flashlight) {
+                flashlight.style.display = 'block';
+                initFlashlight();
+                // Set initial position to center or last known
+                flashlight.style.setProperty('--x', (window.innerWidth / 2) + 'px');
+                flashlight.style.setProperty('--y', (window.innerHeight / 2) + 'px');
+            }
+
             questionContainer.classList.remove('showing-results');
             if (data.status === 'RESULTS_REVEALED') {
                 requestAnimationFrame(function () {

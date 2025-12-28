@@ -1768,22 +1768,26 @@
      ============================================================================= */
 
   /* Flashlight Overlay */
-  #flashlight-overlay {
-    background: rgba(255, 255, 255, 0.01);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    mask-image: radial-gradient(circle 140px at var(--x, 50%) var(--y, 50%), transparent 0%, transparent 95%, black 100%);
-    -webkit-mask-image: radial-gradient(circle 140px at var(--x, 50%) var(--y, 50%), transparent 0%, transparent 95%, black 100%);
-    pointer-events: none;
-    transition: opacity 0.3s ease;
+  /* Privacy Blur Mode (Replaces Flashlight) */
+  .privacy-active .question-textual,
+  .privacy-active .answer-area,
+  .privacy-active .question-visual {
+    filter: blur(8px);
+    transition: filter 0.3s ease;
+    cursor: help;
   }
 
-  @media (pointer: coarse) {
-    #flashlight-overlay {
-      mask-image: radial-gradient(circle 170px at var(--x, 50%) var(--y, 50%), transparent 0%, transparent 95%, black 100%);
-      -webkit-mask-image: radial-gradient(circle 170px at var(--x, 50%) var(--y, 50%), transparent 0%, transparent 95%, black 100%);
-    }
+  .privacy-active .question-textual:hover,
+  .privacy-active .answer-area:hover,
+  .privacy-active .question-visual:hover {
+    filter: none;
   }
+
+  /* Flashlight Overlay - REMOVED/HIDDEN */
+  #flashlight-overlay {
+    display: none !important;
+  }
+
 
   /* Review Ribbon */
   .review-ribbon-strip {

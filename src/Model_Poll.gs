@@ -726,8 +726,8 @@ Veritas.Models.Poll.normalizeQuestionObject = function(questionData, pollUpdated
     ? '&v=' + encodeURIComponent(new Date(pollUpdatedAt).getTime())
     : '&v=' + Date.now();
 
-  // Normalize question text
-  normalized.questionText = questionData.questionText || questionData.text || '';
+  // Normalize question text with robust fallbacks
+  normalized.questionText = questionData.questionText || questionData.text || questionData.stem || questionData.prompt || questionData.body || '';
 
   // NEW APPROACH: Use fileId to generate proxy URL with version for cache busting
   // Check for questionImageFileId first (new canonical field)

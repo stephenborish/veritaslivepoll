@@ -3699,9 +3699,17 @@
             questionContainer.style.display = 'block';
             if (statusContainer) statusContainer.style.display = 'none';
 
-            // Set question text
+            // Set question text with fallback and visibility check
             if (questionTextEl) {
-                questionTextEl.textContent = data.questionText || '';
+                var qText = data.questionText || data.text || data.stem || '';
+                if (!qText && data.options && data.options.length > 0) {
+                    // Fallback: If options exist but text is missing, show something
+                    qText = "[Question Text Missing]";
+                    console.warn('[renderQuestion] Question text is missing/empty', data);
+                }
+                questionTextEl.textContent = qText;
+                questionTextEl.style.display = 'block'; // Force visibility
+                questionTextEl.classList.remove('hidden');
             }
 
             // Handle question image

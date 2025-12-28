@@ -1819,11 +1819,11 @@ Veritas.Models.Analytics.getLightweightPollData = function(pollId, questionIndex
       pollId: pollId,
       pollName: poll.pollName,
       className: poll.className,
-      questionText: question.questionText || '',
+      questionText: question.questionText || question.text || question.stem || '',
       questionImageURL: question.questionImageURL || null,
       options: question.options || [],
       questionIndex: questionIndex,
-      totalQuestions: poll.questions.length,
+      totalQuestions: (poll.questions && poll.questions.length) ? poll.questions.length : 0,
       correctAnswer: question.correctAnswer || null,
       results: {}, // Skip results for lightweight
       studentStatusList: [], // Skip roster for lightweight

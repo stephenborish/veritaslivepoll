@@ -78,7 +78,9 @@ Veritas.Models.Session.startPoll = function(pollId) {
       // 2. SLOW WRITE: Backup to Sheets
       DataAccess.liveStatus.set(pollId, 0, "OPEN", metadata);
 
-      Veritas.Models.Session.ProctorAccess.resetForNewSession(pollId, sessionId);
+      // OPTIMIZATION: Removed redundant full-sheet scan (resetForNewSession)
+      // getState() handles session ID mismatches lazily, saving ~30s on startup.
+      // Veritas.Models.Session.ProctorAccess.resetForNewSession(pollId, sessionId);
 
       Logger.log('Poll started', { pollId: pollId, pollName: poll.pollName });
 
@@ -640,7 +642,8 @@ Veritas.Models.Session.startIndividualTimedSession = function(pollId) {
       calculatorEnabled: calculatorEnabled === true
     });
 
-    Veritas.Models.Session.ProctorAccess.resetForNewSession(pollId, sessionId);
+    // OPTIMIZATION: Removed redundant full-sheet scan
+    // Veritas.Models.Session.ProctorAccess.resetForNewSession(pollId, sessionId);
 
     Logger.log('Secure assessment session started', {
       pollId: pollId,

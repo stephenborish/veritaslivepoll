@@ -3125,24 +3125,39 @@
             if (statusContainer) {
                 statusContainer.style.display = 'block';
                 statusContainer.classList.remove('hidden');
+
+                // Inject SVG Checkmark
+                var iconEl = statusContainer.querySelector('.material-symbols-outlined');
+                if (iconEl) {
+                    // Replace icon with animated SVG
+                    // Note: We're hacking the icon container to show our SVG
+                    var checkHtml = `
+                    <svg class="w-24 h-24 mx-auto mb-6 text-veritas-navy" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle class="animate-draw-check" cx="26" cy="26" r="25" stroke="currentColor" stroke-width="2"/>
+                        <path class="animate-draw-check" d="M14.1 27.2l7.1 7.2 16.7-16.8" stroke="currentColor" stroke-width="2" style="animation-delay: 0.2s"/>
+                    </svg>
+                    `;
+                    // Temporarily replace the icon element styling or content
+                    // Ideally we should have a cleaner way, but let's replace the content and remove classes that might conflict
+                    iconEl.innerHTML = checkHtml;
+                    iconEl.className = 'block mb-4'; // Reset material-symbols classes
+                    iconEl.textContent = ''; // Remove text content
+                    // Actually, replace the whole element to be safe
+                    var newDiv = document.createElement('div');
+                    newDiv.innerHTML = checkHtml;
+                    iconEl.replaceWith(newDiv);
+                    // Add a hook to restore it later? 
+                    // renderStatusMessage handles restoration by resetting innerHTML/className
+                }
             }
             if (statusMessage) {
-                statusMessage.textContent = message || 'Response Locked In';
-                statusMessage.className = 'text-green-700 text-2xl font-semibold';
+                statusMessage.textContent = message || 'Response Captured';
+                statusMessage.className = 'text-veritas-navy text-3xl font-bold tracking-tight animate-fade-in';
             }
             if (statusSubMessage) {
-                statusSubMessage.textContent = 'Data transmitted. Awaiting next phase...';
+                statusSubMessage.textContent = "Data transmitted. Awaiting next phase...";
                 statusSubMessage.style.display = 'block';
-                statusSubMessage.className = 'text-gray-700 text-lg mt-4';
-            }
-            // Update status card icon to checkmark
-            var statusCard = statusContainer ? statusContainer.querySelector('.status-card') : null;
-            if (statusCard) {
-                var iconEl = statusCard.querySelector('.material-symbols-outlined');
-                if (iconEl) {
-                    iconEl.textContent = 'check_circle';
-                    iconEl.className = 'material-symbols-outlined text-6xl text-green-600 mb-4 inline-block';
-                }
+                statusSubMessage.className = 'text-slate-500 font-medium mt-2 animate-fade-in';
             }
             // Hide any resume controls
             var resumeControls = document.getElementById('resume-controls');
@@ -3798,12 +3813,17 @@
                 statusContainer.style.display = 'block';
                 questionContainer.style.display = 'none';
                 if (statusMessage) {
-                    statusMessage.textContent = 'Transmitting response...';
-                    statusMessage.className = 'text-veritas-navy text-2xl font-semibold';
+                    var waitPhrases = [
+                        "Locking in your genius...", "Securing your brilliance...",
+                        "Beaming answer to HQ...", "Writing to the digital ledger..."
+                    ];
+                    statusMessage.textContent = waitPhrases[Math.floor(Math.random() * waitPhrases.length)];
+                    statusMessage.className = 'text-veritas-navy text-2xl font-bold animate-text-shimmer';
                 }
                 if (statusSubMessage) {
-                    statusSubMessage.textContent = '';
-                    statusSubMessage.style.display = 'none';
+                    statusSubMessage.textContent = 'Please wait while we confirm your submission.';
+                    statusSubMessage.style.display = 'block';
+                    statusSubMessage.className = 'text-slate-500 text-sm mt-2 animate-pulse';
                 }
                 submitAnswerToServer(pollId, questionIndex, answerText, null);
             }
@@ -4238,15 +4258,49 @@
             if (secureFocusContainer) secureFocusContainer.style.display = 'none';
             if (studentLoader) studentLoader.style.display = 'none';
             if (statusContainer) statusContainer.style.display = 'block';
+
+            // Theme Handling
+            var isDark = options.theme === 'dark';
+            var statusCard = statusContainer ? statusContainer.querySelector('.status-card') : null;
+
+            if (isDark) {
+                // Apply Dark Theme
+                if (statusContainer) {
+                    statusContainer.classList.add('bg-gradient-to-br', 'from-slate-900', 'via-slate-800', 'to-slate-900', 'fixed', 'inset-0', 'z-[9000]', 'flex', 'items-center', 'justify-center');
+                    statusContainer.classList.remove('text-center', 'py-12'); // Remove default layout
+                }
+                if (statusCard) {
+                    statusCard.classList.remove('bg-white', 'border-gray-200', 'shadow-2xl', 'max-w-3xl');
+                    statusCard.classList.add('bg-transparent', 'border-0', 'shadow-none', 'max-w-2xl', 'w-full');
+                    // Making it transparent to match the "You Stepped Out" look which sits on the background
+                    // OR if we want a card: bg-slate-800 border-slate-700
+                }
+                // Hide the Student Header if in full overlay mode
+                var header = document.querySelector('.student-header');
+                if (header) header.style.display = 'none';
+            } else {
+                // Revert to Light Theme
+                if (statusContainer) {
+                    statusContainer.classList.remove('bg-gradient-to-br', 'from-slate-900', 'via-slate-800', 'to-slate-900', 'fixed', 'inset-0', 'z-[9000]', 'flex', 'items-center', 'justify-center');
+                    statusContainer.classList.add('text-center', 'py-12');
+                }
+                if (statusCard) {
+                    statusCard.classList.add('bg-white', 'border-gray-200', 'shadow-2xl', 'max-w-3xl');
+                    statusCard.classList.remove('bg-transparent', 'border-0', 'shadow-none', 'max-w-2xl', 'w-full', 'bg-slate-800', 'border-slate-700');
+                }
+                var header = document.querySelector('.student-header');
+                if (header) header.style.display = ''; // Restore
+            }
+
             if (statusMessage) {
                 statusMessage.textContent = options.message || '';
-                statusMessage.className = options.messageClass || 'text-white text-2xl font-semibold';
+                statusMessage.className = options.messageClass || (isDark ? 'text-white text-3xl font-bold tracking-tight' : 'text-gray-900 text-2xl font-semibold');
             }
             if (statusSubMessage) {
                 if (options.subtext) {
                     statusSubMessage.style.display = 'block';
                     statusSubMessage.textContent = options.subtext;
-                    statusSubMessage.className = options.subClass || 'text-white/70 text-base mt-4';
+                    statusSubMessage.className = options.subClass || (isDark ? 'text-gray-300 text-lg mt-4 max-w-md mx-auto leading-relaxed' : 'text-gray-700 text-lg mt-4');
                 } else {
                     statusSubMessage.style.display = 'none';
                     statusSubMessage.textContent = '';
@@ -4255,7 +4309,17 @@
             var iconEl = statusContainer ? statusContainer.querySelector('.material-symbols-outlined') : null;
             if (iconEl) {
                 iconEl.textContent = options.icon || 'info';
-                iconEl.className = 'material-symbols-outlined text-6xl mb-4 inline-block ' + (options.iconClass || 'text-white');
+                // Wrap icon in a circle for dark mode to match Lock screen
+                if (isDark) {
+                    // Check if already wrapped, if not, we can't easily wrap structure here without rewriting innerHTML.
+                    // Instead, just style the icon itself to be large and colored.
+                    // The Lock screen uses a circle container: <div class="h-20 w-20 bg-amber-900/20 ...">
+                    // Currently showStatusPanel assumes simple icon element.
+                    // Let's just style the icon nicely.
+                    iconEl.className = 'material-symbols-outlined text-7xl mb-6 inline-block ' + (options.iconClass || 'text-emerald-400');
+                } else {
+                    iconEl.className = 'material-symbols-outlined text-6xl mb-4 inline-block ' + (options.iconClass || 'text-veritas-navy');
+                }
             }
             if (resumeControls) {
                 resumeControls.style.display = options.showResume ? 'block' : 'none';
@@ -4265,6 +4329,7 @@
                     secureExitControls.classList.remove('hidden');
                     if (secureExitDescription) {
                         secureExitDescription.textContent = options.exitActionDescription || 'Click below to exit fullscreen and close the secure window.';
+                        if (isDark) secureExitDescription.className = 'text-gray-400 text-sm mb-2';
                     }
                     if (secureExitLabel) {
                         secureExitLabel.textContent = options.exitActionLabel || 'Exit Secure Session';
@@ -4427,12 +4492,29 @@
             }
 
             // Update the icon
+            // Update the icon
             var statusCard = statusContainer ? statusContainer.querySelector('.status-card') : null;
             if (statusCard) {
-                var iconEl = statusCard.querySelector('.material-symbols-outlined');
-                if (iconEl) {
-                    iconEl.textContent = icon;
-                    iconEl.className = 'material-symbols-outlined text-6xl mb-4 inline-block ' + iconClass;
+                // Check if we need to restore the original icon span (if it was replaced by SVG)
+                var iconContainer = statusCard.querySelector('.material-symbols-outlined') || statusCard.querySelector('div:first-child');
+
+                // If we found a container but it's not the span we expect, or if we need to reset it
+                if (!iconContainer || iconContainer.tagName !== 'SPAN' || !iconContainer.classList.contains('material-symbols-outlined')) {
+                    // Recreate the standard icon span
+                    var newIconSpan = document.createElement('span');
+                    newIconSpan.className = 'material-symbols-outlined text-6xl mb-4 inline-block ' + iconClass;
+                    newIconSpan.textContent = icon;
+
+                    if (iconContainer) {
+                        iconContainer.replaceWith(newIconSpan);
+                    } else {
+                        // Should be first child
+                        statusCard.insertBefore(newIconSpan, statusCard.firstChild);
+                    }
+                } else {
+                    // It's the standard span, just update it
+                    iconContainer.textContent = icon;
+                    iconContainer.className = 'material-symbols-outlined text-6xl mb-4 inline-block ' + iconClass;
                 }
             }
 
@@ -4454,6 +4536,25 @@
          */
         function showTransitionOverlay(message) {
             var overlay = document.getElementById('transition-overlay');
+
+
+            // Upgrade overlay content dynamically if it's the old simple version
+            if (overlay && !overlay.querySelector('.animate-pulse-ring')) {
+                overlay.innerHTML = `
+                    <div class="flex flex-col items-center justify-center p-8">
+                        <div class="relative w-20 h-20 mb-6 flex items-center justify-center">
+                            <div class="absolute inset-0 rounded-full bg-veritas-navy/10 animate-pulse-ring"></div>
+                            <div class="absolute inset-0 rounded-full bg-veritas-navy/5 animate-pulse-ring" style="animation-delay: 0.5s;"></div>
+                            <div class="relative w-12 h-12 rounded-full bg-veritas-navy flex items-center justify-center shadow-lg transform transition-transform duration-500 hover:rotate-180">
+                                <span class="material-symbols-outlined text-2xl text-white">sync</span>
+                            </div>
+                        </div>
+                        <p id="transition-message" class="text-veritas-navy text-lg font-bold tracking-wide animate-text-shimmer">Loading...</p>
+                        <p class="text-slate-400 text-xs font-medium mt-2 uppercase tracking-widest">Please Wait</p>
+                    </div>
+                `;
+            }
+
             var msgEl = document.getElementById('transition-message');
             if (overlay) {
                 overlay.style.display = 'flex';
@@ -4461,8 +4562,12 @@
                     overlay.style.opacity = '1';
                 });
             }
-            if (msgEl && message) {
-                msgEl.textContent = message;
+            if (msgEl) {
+                var loadPhrases = [
+                    "Synapsing...", "Calibrating Neural Net...", "Crunching Data...",
+                    "Fetching Brilliance...", "Aligning Quarks...", "Beaming to Cloud..."
+                ];
+                msgEl.textContent = message || loadPhrases[Math.floor(Math.random() * loadPhrases.length)];
             }
         }
 
@@ -4509,12 +4614,13 @@
                 resumeLabel.textContent = 'Resume ' + modeName;
             }
             showStatusPanel({
+                theme: 'dark',
                 icon: 'fullscreen',
-                iconClass: 'text-emerald-600',
+                // iconClass: 'text-emerald-400', // Default is fine (emerald-400 set in function for dark mode)
                 message: 'Cleared for Re-Entry',
-                messageClass: 'text-gray-900 text-xl font-semibold',
+                // messageClass: 'text-white text-3xl font-bold tracking-tight', // Default is fine
                 subtext: 'Click below to return to fullscreen and rejoin the session.',
-                subClass: 'text-gray-600 text-base mt-2',
+                // subClass: 'text-gray-300 text-lg mt-4', // Default is fine
                 showResume: true,
                 lockScroll: true
             });

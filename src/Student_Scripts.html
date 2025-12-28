@@ -3751,8 +3751,8 @@
                 noResponsesMessageEl.textContent = '';
             }
 
-            // Clear results decorations
-            questionContainer.classList.remove('results-stage', 'showing-results');
+            // Clear results decorations (removes blur, ribbon, review-mode class, etc.)
+            resetResultDecorations();
 
             // Render options only if question changed or options empty
             if (questionChanged || optionsList.children.length === 0) {

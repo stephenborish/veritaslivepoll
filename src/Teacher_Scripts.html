@@ -5452,10 +5452,10 @@
           }
 
           updateLiveView(data);
-          if (data \u0026\u0026 data.pollId) {
+          if (data && data.pollId) {
         // ENRICHED SIGNAL
         var qIndex = data.questionIndex;
-        var qDef = (CURRENT_POLL_DATA \u0026\u0026 CURRENT_POLL_DATA.questions) ?CURRENT_POLL_DATA.questions[qIndex]: null;
+        var qDef = (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions) ?CURRENT_POLL_DATA.questions[qIndex]: null;
 
         broadcastSessionState(data.pollId, {
           questionIndex: qIndex,
@@ -5499,10 +5499,10 @@
           return;
         }
         updateLiveView(data);
-        if (data \u0026\u0026 data.pollId) {
+        if (data && data.pollId) {
       // ENRICHED SIGNAL
       var qIndex = data.questionIndex;
-      var qDef = (CURRENT_POLL_DATA \u0026\u0026 CURRENT_POLL_DATA.questions) ?CURRENT_POLL_DATA.questions[qIndex]: null;
+      var qDef = (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions) ?CURRENT_POLL_DATA.questions[qIndex]: null;
 
       broadcastSessionState(data.pollId, {
         questionIndex: qIndex,
@@ -5534,10 +5534,10 @@
       .withSuccessHandler(function (data) {
         isPaused = true;
         updateLiveView(data);
-        if (data \u0026\u0026 data.pollId) {
+        if (data && data.pollId) {
       // ENRICHED SIGNAL
       var qIndex = data.questionIndex;
-      var qDef = (CURRENT_POLL_DATA \u0026\u0026 CURRENT_POLL_DATA.questions) ?CURRENT_POLL_DATA.questions[qIndex]: null;
+      var qDef = (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions) ?CURRENT_POLL_DATA.questions[qIndex]: null;
 
       broadcastSessionState(data.pollId, {
         questionIndex: qIndex,
@@ -5573,10 +5573,10 @@
         if (endShowBtn) { endShowBtn.disabled = false; }
         isPaused = true;
         updateLiveView(data);
-        if (data \u0026\u0026 data.pollId) {
+        if (data && data.pollId) {
       // ENRICHED SIGNAL
       var qIndex = data.questionIndex;
-      var qDef = (CURRENT_POLL_DATA \u0026\u0026 CURRENT_POLL_DATA.questions) ?CURRENT_POLL_DATA.questions[qIndex]: null;
+      var qDef = (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions) ?CURRENT_POLL_DATA.questions[qIndex]: null;
 
       broadcastSessionState(data.pollId, {
         questionIndex: qIndex,
@@ -5625,10 +5625,10 @@
         }
 
         updateLiveView(data);
-        if (data \u0026\u0026 data.pollId) {
+        if (data && data.pollId) {
       // ENRICHED SIGNAL
       var qIndex = data.questionIndex;
-      var qDef = (CURRENT_POLL_DATA \u0026\u0026 CURRENT_POLL_DATA.questions) ?CURRENT_POLL_DATA.questions[qIndex]: null;
+      var qDef = (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions) ?CURRENT_POLL_DATA.questions[qIndex]: null;
 
       broadcastSessionState(data.pollId, {
         questionIndex: qIndex,
@@ -5717,10 +5717,10 @@
         }
 
         updateLiveView(data);
-        if (data \u0026\u0026 data.pollId) {
+        if (data && data.pollId) {
       // ENRICHED SIGNAL: Pass question data from data or local cache
       var qIndex = data.questionIndex;
-      var qDef = (CURRENT_POLL_DATA \u0026\u0026 CURRENT_POLL_DATA.questions) ?CURRENT_POLL_DATA.questions[qIndex]: null;
+      var qDef = (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions) ?CURRENT_POLL_DATA.questions[qIndex]: null;
 
       broadcastSessionState(data.pollId, {
         questionIndex: qIndex,
@@ -5763,7 +5763,7 @@
     }
     var clearResponses = await veritasConfirm('Select OK to reset and clear responses, or Cancel to reset while keeping submissions.', {
       title: 'Responses',
-      confirmText: 'Reset \u0026 clear',
+      confirmText: 'Reset & clear',
       cancelText: 'Keep submissions',
       destructive: true
     });
@@ -5796,10 +5796,10 @@
 
         isPaused = false;
         updateLiveView(data);
-        if (data \u0026\u0026 data.pollId) {
+        if (data && data.pollId) {
       // ENRICHED SIGNAL
       var qIndex = data.questionIndex;
-      var qDef = (CURRENT_POLL_DATA \u0026\u0026 CURRENT_POLL_DATA.questions) ?CURRENT_POLL_DATA.questions[qIndex]: null;
+      var qDef = (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions) ?CURRENT_POLL_DATA.questions[qIndex]: null;
 
       broadcastSessionState(data.pollId, {
         questionIndex: qIndex,

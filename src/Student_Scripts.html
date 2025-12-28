@@ -2275,6 +2275,12 @@
                 // If we are in LOBBY or PRE_LIVE, do not lock.
                 if (currentPollState && (currentPollState.status === 'LOBBY' || currentPollState.status === 'PRE_LIVE' || currentPollState.sessionPhase === 'LOBBY')) return;
 
+                // EXTRA GUARD: If Lobby is actually visible on screen, do NOT lock
+                if (secureLobbyCard && secureLobbyCard.style.display !== 'none') {
+                    console.log('[Proctor] Blur ignored - Lobby is visible');
+                    return;
+                }
+
                 violationLogged = true;
                 handlePotentialViolation('tab_switch');
             });
@@ -2285,6 +2291,12 @@
                     if (!secureSessionActive || isEnteringFullscreen || isInteractionBlocked || isTeacherBlocked) return;
 
                     if (currentPollState && (currentPollState.status === 'LOBBY' || currentPollState.status === 'PRE_LIVE' || currentPollState.sessionPhase === 'LOBBY')) return;
+
+                    // EXTRA GUARD: If Lobby is actually visible on screen, do NOT lock
+                    if (secureLobbyCard && secureLobbyCard.style.display !== 'none') {
+                        console.log('[Proctor] visibilitychange ignored - Lobby is visible');
+                        return;
+                    }
 
                     violationLogged = true;
                     handlePotentialViolation('tab_hidden');
@@ -2500,6 +2512,7 @@
             if (questionContainer) questionContainer.style.display = 'none';
             // Explicitly hide secure assessment canvas until we begin
             if (secureFocusContainer) secureFocusContainer.style.display = 'none';
+            secureSessionActive = false; // DEACTIVATE proctoring when in lobby
             toggleSecureLayout(false);
             if (questionProgressEl) {
                 questionProgressEl.textContent = 'STANDBY';
@@ -3200,7 +3213,10 @@
         }
 
         function isSessionActive() {
-            return studentContainer && studentContainer.style.display !== 'none' && entryScreen && entryScreen.style.display === 'none';
+            // Refined: Check if the actual assessment/quiz view is visible
+            var isFocusVisible = secureFocusContainer && secureFocusContainer.style.display !== 'none';
+            var isQuestionVisible = questionContainer && questionContainer.style.display !== 'none';
+            return (isFocusVisible || isQuestionVisible) && !LockManager.isLocked();
         }
 
         window.addEventListener('offline', function () {
@@ -3220,9 +3236,14 @@
                 submessage: 'Syncing now...'
             });
             startPolling(true);
-            // Re-assert session active state if recovering
+            // Re-assert session active state if recovering and session is truly active
             if (isSessionActive() && !isInteractionBlocked) {
-                secureSessionActive = true;
+                // Determine if we should really set secureSessionActive
+                // This prevents lobby-to-online transition bugs
+                var isFocusVisible = secureFocusContainer && secureFocusContainer.style.display !== 'none';
+                if (isFocusVisible) {
+                    secureSessionActive = true;
+                }
             }
         });
 

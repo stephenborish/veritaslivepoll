@@ -1819,11 +1819,27 @@ Veritas.Models.Analytics.getLightweightPollData = function(pollId, questionIndex
       pollId: pollId,
       pollName: poll.pollName,
       className: poll.className,
+      questionText: question.questionText || '',
+      questionImageURL: question.questionImageURL || null,
+      options: question.options || [],
       questionIndex: questionIndex,
-      questionCount: poll.questions.length,
-      currentQuestion: question,
+      totalQuestions: poll.questions.length,
+      correctAnswer: question.correctAnswer || null,
+      results: {}, // Skip results for lightweight
+      studentStatusList: [], // Skip roster for lightweight
+      totalStudents: 0, // Will be updated on next poll
+      totalResponses: 0,
+      timerSeconds: question.timerSeconds || null,
       metadata: metadata,
-      studentStatusList: [], // Skip for lightweight
+      authoritativeStatus: derivedStatus,
+      metacognition: {
+        enabled: !!question.metacognitionEnabled,
+        matrixCounts: { confidentCorrect: 0, confidentIncorrect: 0, uncertainCorrect: 0, uncertainIncorrect: 0 },
+        matrixPercentages: { confidentCorrect: 0, confidentIncorrect: 0, uncertainCorrect: 0, uncertainIncorrect: 0 },
+        levels: {},
+        flaggedStudents: []
+      },
+      metacognitionEnabled: !!question.metacognitionEnabled,
       isLightweight: true
     };
   })();
@@ -2140,7 +2156,8 @@ Veritas.Models.Analytics.getLivePollData = function(pollId, questionIndex) {
       timerSeconds: question.timerSeconds || null,
       metadata: metadata,
       authoritativeStatus: derivedStatus,
-      metacognition: metacognitionSummary
+      metacognition: metacognitionSummary,
+      metacognitionEnabled: !!question.metacognitionEnabled
     };
   })();
 };

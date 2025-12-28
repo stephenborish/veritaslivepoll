@@ -750,15 +750,57 @@ function flushAnswersWorkerTrigger() {
 }
 
 // =============================================================================
+// STUDENT EMULATOR (Testing/Development)
+// =============================================================================
+
+/**
+ * Check if student emulator is available
+ * @returns {Object} {available: boolean, reason: string}
+ */
+function isEmulatorAvailable() {
+  return Veritas.TeacherApi.isEmulatorAvailable();
+}
+
+/**
+ * Start student emulation for a live poll
+ * @param {string} pollId - Poll ID to emulate
+ * @param {Object} options - Emulation options {studentCount, concurrent, minDelayMs, maxDelayMs, accuracy, violationRate}
+ * @returns {Object} Emulation results
+ */
+function startLivePollEmulation(pollId, options) {
+  return Veritas.TeacherApi.startLivePollEmulation(pollId, options);
+}
+
+/**
+ * Start student emulation for a secure assessment
+ * @param {string} pollId - Poll ID to emulate
+ * @param {string} sessionId - Session ID
+ * @param {Object} options - Emulation options
+ * @returns {Object} Emulation results
+ */
+function startSecureAssessmentEmulation(pollId, sessionId, options) {
+  return Veritas.TeacherApi.startSecureAssessmentEmulation(pollId, sessionId, options);
+}
+
+/**
+ * Enable/disable emulator mode
+ * @param {boolean} enabled - Whether to enable emulator
+ * @returns {Object} Result
+ */
+function setEmulatorEnabled(enabled) {
+  return Veritas.TeacherApi.setEmulatorEnabled(enabled);
+}
+
+// =============================================================================
 // SUMMARY
 // =============================================================================
 //
-// Total Exposed Functions: 81
+// Total Exposed Functions: 85
 //
 // Routing: 2 functions
 // - doGet, include
 //
-// Teacher API: 59 functions
+// Teacher API: 63 functions
 // - Dashboard & Core: 3 (getTeacherDashboardData, getPollEditorHtml, getStudentLinksForClass)
 // - Analytics: 7 (getAnalyticsData, getPostPollAnalytics, etc.)
 // - Poll Management: 6 (createNewPoll, updatePoll, deletePoll, etc.)
@@ -766,6 +808,7 @@ function flushAnswersWorkerTrigger() {
 // - Live Poll Control: 9 (startPoll, nextQuestion, stopPoll, etc.)
 // - Secure Assessment: 15 (startIndividualTimedSession, adjustTime, etc.)
 // - Setup & Utilities: 3 (setupSheet, safeUiAlert, clearAllCaches)
+// - Student Emulator: 4 (isEmulatorAvailable, startLivePollEmulation, etc.)
 //
 // Student API: 7 functions
 // - Live Poll: 2 (getStudentPollStatus, submitLivePollAnswer)

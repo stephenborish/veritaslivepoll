@@ -11766,29 +11766,7 @@
         }
       }
 
-      // Violations Listener (Real-time Proctoring Alerts)
-      // This allows the teacher to see the violation reason immediately without waiting for a poll
-      var violationsPath = 'sessions/' + pollId + '/violations';
-      violationsRef = firebaseDb.ref(violationsPath);
-      violationsRef.on('child_added', function (snapshot) {
-        var studentKey = snapshot.key;
-        var violationData = snapshot.val();
-        if (violationData && violationData.reason) {
-          console.log('[Firebase] Violation reported:', studentKey, violationData);
-          // Update Debug HUD
-          lastViolation = {
-            studentKey: studentKey,
-            reason: violationData.reason,
-            timestamp: violationData.timestamp || Date.now()
-          };
-          updateDebugHud();
 
-          // Find student and update local status if possible
-          // Note: We don't overwrite the main status list here to avoid race conditions with polling,
-          // but we can trigger a toast or update the specific row if needed.
-          // Ideally, the main student listener ('sessions/pollId/students') will handle the LOCKED status change.
-        }
-      });
     }
 
     async function setFirebaseStatus(email, status) {

@@ -4415,29 +4415,31 @@
         return;
       }
 
-      google.script.run
-        .withSuccessHandler(async function (result) {
-          confirmBtn.disabled = false;
-          confirmBtn.textContent = 'Add Students';
-          closeBulkAddStudentsModal();
+      var db = firebase.database();
+      var rostersRef = db.ref('rosters');
 
-          if (result.success) {
-            await veritasAlert(result.message, { title: 'Students added' });
-            rosterDirty = false;
-            onRosterDataLoaded(result.data, selectedRosterClass);
-          } else {
-            await veritasAlert('Failed to add students: ' + (result.error || 'Unknown error'), {
-              title: 'Bulk add students',
-              destructive: true
-            });
-          }
-        })
-        .withFailureHandler(function (error) {
-          confirmBtn.disabled = false;
-          confirmBtn.textContent = 'Add Students';
-          handleError(error);
-        })
-        .bulkAddStudentsToRoster(selectedRosterClass, entries);
+      rostersRef.once('value').then(function (snapshot) {
+        var data = snapshot.val() || { classes: [], rosters: {} };
+        if (!data.rosters) data.rosters = {};
+
+        var currentRoster = data.rosters[selectedRosterClass] || [];
+        data.rosters[selectedRosterClass] = currentRoster.concat(entries);
+
+        return rostersRef.set(data);
+      }).then(function () {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Add Students';
+        closeBulkAddStudentsModal();
+        rosterDirty = false;
+
+        // Re-load to sync UI
+        loadRosterData();
+        showToast('success', 'Students added', 'Successfully added ' + entries.length + ' students.');
+      }).catch(function (error) {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Add Students';
+        handleError(error);
+      });
     }
 
     async function onAddClass() {
@@ -4459,17 +4461,28 @@
         return;
       }
 
-      google.script.run
-        .withSuccessHandler(function (data) {
-          rosterStatus.textContent = 'Class created.';
-          selectedRosterClass = className;
-          onRosterDataLoaded(data, className);
-        })
-        .withFailureHandler(function (error) {
-          rosterStatus.textContent = '';
-          handleError(error);
-        })
-        .createClassRecord(className, '');
+      var db = firebase.database();
+      var rostersRef = db.ref('rosters');
+
+      rostersRef.once('value').then(function (snapshot) {
+        var data = snapshot.val() || { classes: [], rosters: {} };
+        if (!data.classes) data.classes = [];
+        if (!data.rosters) data.rosters = {};
+
+        if (!data.classes.includes(className)) {
+          data.classes.push(className);
+        }
+        data.rosters[className] = data.rosters[className] || [];
+
+        return rostersRef.set(data);
+      }).then(function () {
+        rosterStatus.textContent = 'Class created.';
+        selectedRosterClass = className;
+        loadRosterData();
+      }).catch(function (error) {
+        rosterStatus.textContent = '';
+        handleError(error);
+      });
     }
 
     async function onRenameClass() {
@@ -4498,17 +4511,32 @@
         return;
       }
 
-      google.script.run
-        .withSuccessHandler(function (data) {
-          rosterStatus.textContent = 'Class renamed.';
-          selectedRosterClass = newName;
-          onRosterDataLoaded(data, newName);
-        })
-        .withFailureHandler(function (error) {
-          rosterStatus.textContent = '';
-          handleError(error);
-        })
-        .renameClass(selectedRosterClass, newName);
+      var db = firebase.database();
+      var rostersRef = db.ref('rosters');
+
+      rostersRef.once('value').then(function (snapshot) {
+        var data = snapshot.val() || { classes: [], rosters: {} };
+        if (!data.classes) data.classes = [];
+        if (!data.rosters) data.rosters = {};
+
+        // Update classes list
+        data.classes = data.classes.map(function (c) { return c === selectedRosterClass ? newName : c; });
+
+        // Move roster data
+        if (data.rosters[selectedRosterClass]) {
+          data.rosters[newName] = data.rosters[selectedRosterClass];
+          delete data.rosters[selectedRosterClass];
+        }
+
+        return rostersRef.set(data);
+      }).then(function () {
+        rosterStatus.textContent = 'Class renamed.';
+        selectedRosterClass = newName;
+        loadRosterData();
+      }).catch(function (error) {
+        rosterStatus.textContent = '';
+        handleError(error);
+      });
     }
 
     async function onDeleteClass() {
@@ -4537,17 +4565,26 @@
         return;
       }
 
-      google.script.run
-        .withSuccessHandler(function (data) {
-          rosterStatus.textContent = 'Class deleted.';
-          selectedRosterClass = '';
-          onRosterDataLoaded(data, '');
-        })
-        .withFailureHandler(function (error) {
-          rosterStatus.textContent = '';
-          handleError(error);
-        })
-        .deleteClassRecord(classToDelete);
+      var db = firebase.database();
+      var rostersRef = db.ref('rosters');
+
+      rostersRef.once('value').then(function (snapshot) {
+        var data = snapshot.val() || { classes: [], rosters: {} };
+        if (!data.classes) data.classes = [];
+        if (!data.rosters) data.rosters = {};
+
+        data.classes = data.classes.filter(function (c) { return c !== classToDelete; });
+        delete data.rosters[classToDelete];
+
+        return rostersRef.set(data);
+      }).then(function () {
+        rosterStatus.textContent = 'Class deleted.';
+        selectedRosterClass = '';
+        loadRosterData();
+      }).catch(function (error) {
+        rosterStatus.textContent = '';
+        handleError(error);
+      });
     }
 
     // --- Archived Polls ---
@@ -4576,21 +4613,39 @@
         return;
       }
 
-      google.script.run
-        .withSuccessHandler(function (polls) {
-          archivedPolls = polls || [];
-          if (archivedPolls.length > 0) {
-            if (!archivedPolls.some(function (p) { return p.pollId === selectedArchivedPollId; })) {
-              selectedArchivedPollId = archivedPolls[0].pollId;
-            }
-          } else {
-            selectedArchivedPollId = '';
+      var db = firebase.database();
+      var historyRef = db.ref('history');
+
+      historyRef.once('value').then(function (snapshot) {
+        var fbHistory = snapshot.val() || {};
+        var flattened = [];
+
+        // Flatten { pollId: { sessionId: payload } } to array [ payload ]
+        Object.keys(fbHistory).forEach(function (pollId) {
+          var sessions = fbHistory[pollId];
+          Object.keys(sessions).forEach(function (sessionId) {
+            var sessionData = sessions[sessionId];
+            // Ensure it has required UI fields if missing from legacy entries
+            sessionData.pollId = sessionData.pollId || pollId;
+            sessionData.lastRunAt = sessionData.timestamp;
+            flattened.push(sessionData);
+          });
+        });
+
+        // Sort by timestamp descending
+        flattened.sort(function (a, b) { return (b.timestamp || 0) - (a.timestamp || 0); });
+
+        archivedPolls = flattened;
+        if (archivedPolls.length > 0) {
+          if (!archivedPolls.some(function (p) { return p.pollId === selectedArchivedPollId; })) {
+            selectedArchivedPollId = archivedPolls[0].pollId;
           }
-          renderArchivedList();
-          renderArchivedDetail();
-        })
-        .withFailureHandler(handleError)
-        .getArchivedPolls();
+        } else {
+          selectedArchivedPollId = '';
+        }
+        renderArchivedList();
+        renderArchivedDetail();
+      }).catch(handleError);
     }
 
     function renderArchivedList() {
@@ -4699,18 +4754,23 @@
       loadingEl.classList.remove('hidden');
       reportEl.classList.add('hidden');
 
-      google.script.run
-        .withSuccessHandler(function (data) {
+      // google.script.run
+      //   .withSuccessHandler(function (data) { ... })
+      //   .getEnhancedPostPollAnalytics(pollId);
+
+      const getAnalytics = firebase.functions().httpsCallable('getAnalytics');
+      getAnalytics({ pollId: pollId })
+        .then(function (result) {
+          var data = result.data;
           if (data.success) {
             renderPostPollAnalytics(data);
           } else {
             loadingEl.innerHTML = '<div class="text-center py-12"><p class="text-red-600">Error: ' + escapeHtml(data.error || 'Failed to load analytics') + '</p></div>';
           }
         })
-        .withFailureHandler(function (error) {
+        .catch(function (error) {
           loadingEl.innerHTML = '<div class="text-center py-12"><p class="text-red-600">Error: ' + escapeHtml(error.message || 'Unknown error') + '</p></div>';
-        })
-        .getEnhancedPostPollAnalytics(pollId);
+        });
     }
 
     function renderPostPollAnalytics(data) {
@@ -5071,23 +5131,23 @@
         return;
       }
 
-      google.script.run
-        .withSuccessHandler(function (data) {
-          analyticsData = data;
+      const getAnalytics = firebase.functions().httpsCallable('getAnalytics');
+      getAnalytics(analyticsFilters)
+        .then(function (result) {
+          analyticsData = result.data;
           // Clear loading states
           document.getElementById('analytics-overview-loading').classList.add('hidden');
           document.getElementById('analytics-items-loading').classList.add('hidden');
           document.getElementById('analytics-students-loading').classList.add('hidden');
           renderAnalyticsByTab();
         })
-        .withFailureHandler(function (error) {
+        .catch(function (error) {
           console.error('Analytics loading error:', error);
           // Show error states
           document.getElementById('analytics-overview-loading').innerHTML = '<p class="text-red-600">Error loading analytics: ' + escapeHtml(error.message || 'Unknown error') + '</p>';
           document.getElementById('analytics-items-loading').innerHTML = '<p class="text-red-600">Error loading analytics: ' + escapeHtml(error.message || 'Unknown error') + '</p>';
           document.getElementById('analytics-students-loading').innerHTML = '<p class="text-red-600">Error loading analytics: ' + escapeHtml(error.message || 'Unknown error') + '</p>';
-        })
-        .getAnalyticsData(analyticsFilters);
+        });
     }
 
     function renderAnalyticsByTab() {
@@ -5332,25 +5392,22 @@
       var dateFrom = analyticsFilters && analyticsFilters.dateFrom ? analyticsFilters.dateFrom : null;
       var dateTo = analyticsFilters && analyticsFilters.dateTo ? analyticsFilters.dateTo : null;
 
-      google.script.run
-        .withSuccessHandler(function (data) {
+      const getAnalytics = firebase.functions().httpsCallable('getAnalytics');
+      getAnalytics({ className: className }) // Simplified for now
+        .then(function (result) {
+          var data = result.data;
           if (data && data.success) {
             currentStudentInsights = data;
             filteredStudentInsights = data.students || [];
             renderStudentInsights();
           } else {
-            // Handle backend-level failures with user feedback
             var errorMsg = data && data.error ? data.error : 'Failed to load insights';
             showStudentInsightsError(errorMsg);
           }
         })
-        .withFailureHandler(function (error) {
-          console.error('Failed to load student insights:', error);
-          // FIX: Show user-visible error message instead of silent console log
-          var errorMsg = error && error.message ? error.message : 'Network error loading insights';
-          showStudentInsightsError(errorMsg);
-        })
-        .getStudentInsights(className, { dateFrom: dateFrom, dateTo: dateTo });
+        .catch(function (error) {
+          showStudentInsightsError(error.message || 'Unknown error');
+        });
     }
 
     function renderStudentInsights() {
@@ -5799,6 +5856,16 @@
           }
           setButtonLoading(startPollBtn, false);
 
+          if (result.data && (result.data.success === false || result.data.error)) {
+            handleError(result.data.error || 'Failed to start poll in Firebase.');
+            return;
+          }
+
+          var data = result.data;
+
+          // Legacy support: Ensure mode is present
+          data.mode = data.mode || 'standard';
+
           // OPTIMIZATION: Check for lightweight mode
           if (data.mode === 'lightweight') {
             handleLightweightSessionUpdate(data);
@@ -5806,39 +5873,29 @@
           }
 
           updateLiveView(data);
-          if (data && data.pollId) {
-            // ENRICHED SIGNAL
-            var qIndex = data.questionIndex;
-            var qDef = (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions) ? CURRENT_POLL_DATA.questions[qIndex] : null;
 
-            broadcastSessionState(data.pollId, {
-              questionIndex: qIndex,
-              status: 'OPEN',
-              sessionPhase: data.sessionPhase || 'LIVE',
-              resultsVisibility: data.resultsVisibility,
-              questionText: data.questionText || (qDef ? qDef.questionText : ''),
-              questionImageURL: data.questionImageURL || (qDef ? qDef.questionImageURL : ''),
-              options: data.options || (qDef ? qDef.options : [])
-            });
+          // ENRICHED SIGNAL handled via updateLiveView -> broadcastSessionState
 
-            // Trigger emulation if enabled
-            console.log('[Emulator] Checking emulation trigger:', {
-              emulatorAvailable: emulatorAvailable,
-              emulatorEnabled: !!emulatorEnabled,
-              checked: emulatorEnabled ? emulatorEnabled.checked : 'N/A'
-            });
-            if (emulatorAvailable && emulatorEnabled && emulatorEnabled.checked) {
-              triggerLivePollEmulation(data.pollId);
-            } else if (emulatorEnabled && emulatorEnabled.checked && !emulatorAvailable) {
-              console.warn('[Emulator] Checkbox is checked but emulator not available');
-            }
+          // Trigger emulation if enabled
+          if (emulatorAvailable && emulatorEnabled && emulatorEnabled.checked && data && data.pollId) {
+            triggerLivePollEmulation(data.pollId);
           }
         })
-        .withFailureHandler(function (error) {
+        .catch(function (error) {
           setButtonLoading(startPollBtn, false);
           handleError(error);
-        })
-        .startPoll(pollId);
+        });
+
+      // Call Cloud Function for Start Poll
+      var setSessionFn = firebase.functions().httpsCallable('setLiveSessionState');
+      setSessionFn({
+        pollId: pollId,
+        status: 'OPEN',
+        questionIndex: 0,
+        // Provide initial question data for the server to echo back if needed
+        questionText: (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[0]) ? CURRENT_POLL_DATA.questions[0].questionText : '',
+        options: (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[0]) ? CURRENT_POLL_DATA.questions[0].options : []
+      });
     }
 
     function onResumePoll() {
@@ -5856,33 +5913,29 @@
         previewOnlyNotice('resume a live poll');
         return;
       }
-      google.script.run
-        .withSuccessHandler(function (data) {
+      google.script.run = null; // Removed GAS call
+
+      var setSessionFn = firebase.functions().httpsCallable('setLiveSessionState');
+      var pollId = CURRENT_POLL_DATA.pollId;
+      var qIndex = CURRENT_POLL_DATA.questionIndex || 0;
+
+      setSessionFn({
+        pollId: pollId,
+        status: 'OPEN',
+        questionIndex: qIndex
+      })
+        .then(function (result) {
+          var data = result.data;
           // Soft-fail check
           if (data && (data.success === false || data.error)) {
-            var msg = data.message || data.error || 'Unknown error resuming poll';
-            veritasAlert(msg, { title: 'Unable to Resume Poll', destructive: true });
+            handleError(data.error);
             return;
           }
-          updateLiveView(data);
-          if (data && data.pollId) {
-            // ENRICHED SIGNAL
-            var qIndex = data.questionIndex;
-            var qDef = (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions) ? CURRENT_POLL_DATA.questions[qIndex] : null;
-
-            broadcastSessionState(data.pollId, {
-              questionIndex: qIndex,
-              status: 'OPEN',
-              sessionPhase: data.sessionPhase || 'LIVE',
-              resultsVisibility: data.resultsVisibility,
-              questionText: data.questionText || (qDef ? qDef.questionText : ''),
-              questionImageURL: data.questionImageURL || (qDef ? qDef.questionImageURL : ''),
-              options: data.options || (qDef ? qDef.options : [])
-            });
-          }
+          // Resume logic is simple: state becomes OPEN
+          // updateLiveView and listeners handle the rest
+          console.log('Poll Resumed:', data);
         })
-        .withFailureHandler(handleError)
-        .resumePoll();
+        .catch(handleError);
     }
 
     function onStopPoll() {
@@ -5896,28 +5949,22 @@
         previewOnlyNotice('pause the live poll');
         return;
       }
-      google.script.run
-        .withSuccessHandler(function (data) {
-          isPaused = true;
-          updateLiveView(data);
-          if (data && data.pollId) {
-            // ENRICHED SIGNAL
-            var qIndex = data.questionIndex;
-            var qDef = (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions) ? CURRENT_POLL_DATA.questions[qIndex] : null;
+      google.script.run = null; // Removed GAS call
 
-            broadcastSessionState(data.pollId, {
-              questionIndex: qIndex,
-              status: 'PAUSED',
-              sessionPhase: data.sessionPhase || 'RESULTS_HOLD',
-              resultsVisibility: data.resultsVisibility,
-              questionText: data.questionText || (qDef ? qDef.questionText : ''),
-              questionImageURL: data.questionImageURL || (qDef ? qDef.questionImageURL : ''),
-              options: data.options || (qDef ? qDef.options : [])
-            });
-          }
+      var setSessionFn = firebase.functions().httpsCallable('setLiveSessionState');
+      var pollId = CURRENT_POLL_DATA.pollId;
+      var qIndex = CURRENT_POLL_DATA.questionIndex || 0;
+
+      setSessionFn({
+        pollId: pollId,
+        status: 'PAUSED', // Stop = Pause in this context
+        questionIndex: qIndex
+      })
+        .then(function (result) {
+          isPaused = true;
+          console.log('Poll Stopped (Paused):', result.data);
         })
-        .withFailureHandler(handleError)
-        .stopPoll();
+        .catch(handleError);
     }
 
     function onEndQuestionAndShowAnswer() {
@@ -5987,44 +6034,32 @@
         previewOnlyNotice('navigate to a previous question');
         return;
       }
-      google.script.run
-        .withSuccessHandler(function (data) {
-          // OPTIMIZATION: Check for lightweight mode
-          if (data.mode === 'lightweight') {
-            handleLightweightSessionUpdate(data);
-            // Clear navigation flags here since handleLightweightSessionUpdate triggers bg fetch
-            // but we want to unblock navigation immediately
-            isNavigating = false;
-            navigationRequestInFlight = false;
-            return;
-          }
+      var nextIndex = (CURRENT_POLL_DATA.questionIndex || 0) - 1;
+      if (nextIndex < 0) nextIndex = 0; // Boundary check
 
-          updateLiveView(data);
-          if (data && data.pollId) {
-            // ENRICHED SIGNAL
-            var qIndex = data.questionIndex;
-            var qDef = (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions) ? CURRENT_POLL_DATA.questions[qIndex] : null;
+      var setSessionFn = firebase.functions().httpsCallable('setLiveSessionState');
+      var pollId = CURRENT_POLL_DATA.pollId;
 
-            broadcastSessionState(data.pollId, {
-              questionIndex: qIndex,
-              status: 'OPEN',
-              sessionPhase: data.sessionPhase || 'LIVE',
-              resultsVisibility: data.resultsVisibility,
-              questionText: data.questionText || (qDef ? qDef.questionText : ''),
-              questionImageURL: data.questionImageURL || (qDef ? qDef.questionImageURL : ''),
-              options: data.options || (qDef ? qDef.options : [])
-            });
-          }
-          // Clear navigation flag after a short delay to ensure state is fully synced
+      // Fetch qDef for payload
+      var qDef = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[nextIndex]) ? CURRENT_POLL_DATA.questions[nextIndex] : null;
+
+      setSessionFn({
+        pollId: pollId,
+        questionIndex: nextIndex,
+        status: 'OPEN',
+        questionText: qDef ? qDef.questionText : '',
+        options: qDef ? qDef.options : []
+      })
+        .then(function (result) {
+          // UI updates handled by listeners, but we unblock navigation
           setTimeout(function () {
             isNavigating = false;
           }, 500);
         })
-        .withFailureHandler(function (error) {
+        .catch(function (error) {
           isNavigating = false;
           handleError(error);
-        })
-        .previousQuestion();
+        });
     }
 
     function onNextQuestion() {
@@ -6079,46 +6114,34 @@
         }
       }
 
-      google.script.run
-        .withSuccessHandler(function (data) {
-          // OPTIMIZATION: Check for lightweight mode
-          if (data.mode === 'lightweight') {
-            // Re-apply update to confirm server state and ensure consistency
-            handleLightweightSessionUpdate(data);
+      var nextIndex = (CURRENT_POLL_DATA.questionIndex || 0) + 1;
+      // Optimistic update logic preserved above...
 
-            isNavigating = false;
-            navigationRequestInFlight = false;
-            return;
-          }
+      var setSessionFn = firebase.functions().httpsCallable('setLiveSessionState');
+      var pollId = CURRENT_POLL_DATA.pollId;
 
-          updateLiveView(data);
-          if (data && data.pollId) {
-            // ENRICHED SIGNAL: Pass question data from data or local cache
-            var qIndex = data.questionIndex;
-            var qDef = (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions) ? CURRENT_POLL_DATA.questions[qIndex] : null;
+      // Fetch qDef for payload - CRITICAL for fast path
+      var qDef = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[nextIndex]) ? CURRENT_POLL_DATA.questions[nextIndex] : null;
 
-            broadcastSessionState(data.pollId, {
-              questionIndex: qIndex,
-              status: 'OPEN',
-              sessionPhase: data.sessionPhase || 'LIVE',
-              resultsVisibility: data.resultsVisibility,
-              questionText: data.questionText || (qDef ? qDef.questionText : ''),
-              questionImageURL: data.questionImageURL || (qDef ? qDef.questionImageURL : ''),
-              options: data.options || (qDef ? qDef.options : [])
-            });
-          }
-          // Clear navigation flag after a short delay to ensure state is fully synced
+      setSessionFn({
+        pollId: pollId,
+        questionIndex: nextIndex,
+        status: 'OPEN',
+        questionText: qDef ? qDef.questionText : '',
+        options: qDef ? qDef.options : []
+      })
+        .then(function (result) {
+          // UI updates handled by listeners, but we unblock navigation
           setTimeout(function () {
             isNavigating = false;
             navigationRequestInFlight = false;
           }, 500);
         })
-        .withFailureHandler(function (error) {
+        .catch(function (error) {
           isNavigating = false;
           navigationRequestInFlight = false;
           handleError(error);
-        })
-        .nextQuestion();
+        });
     }
 
     async function onResetQuestion() {
@@ -6159,36 +6182,32 @@
         return;
       }
 
-      google.script.run
-        .withSuccessHandler(function (data) {
-          // OPTIMIZATION: Check for lightweight mode
-          if (data.mode === 'lightweight') {
-            isPaused = false;
-            handleLightweightSessionUpdate(data);
-            showToast('success', 'Question Reset', 'All responses have been cleared.');
-            return;
-          }
+      var setSessionFn = firebase.functions().httpsCallable('setLiveSessionState');
 
+      // If clearResponses is true, we ideally need a separate function or flag
+      // But for now we just reset state. Handling clearResponses requires DB delete.
+
+      if (clearResponses) {
+        firebase.database().ref('answers/' + pollId).remove()
+          .then(function () {
+            console.log('Responses cleared for poll reset.');
+          })
+          .catch(console.error);
+      }
+
+      setSessionFn({
+        pollId: pollId,
+        questionIndex: questionIndex,
+        status: 'OPEN',
+        // Resend question data to ensure consistency
+        questionText: (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[questionIndex]) ? CURRENT_POLL_DATA.questions[questionIndex].questionText : '',
+        options: (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[questionIndex]) ? CURRENT_POLL_DATA.questions[questionIndex].options : []
+      })
+        .then(function (result) {
           isPaused = false;
-          updateLiveView(data);
-          if (data && data.pollId) {
-            // ENRICHED SIGNAL
-            var qIndex = data.questionIndex;
-            var qDef = (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions) ? CURRENT_POLL_DATA.questions[qIndex] : null;
-
-            broadcastSessionState(data.pollId, {
-              questionIndex: qIndex,
-              status: 'OPEN',
-              sessionPhase: data.sessionPhase || 'LIVE',
-              resultsVisibility: data.resultsVisibility,
-              questionText: data.questionText || (qDef ? qDef.questionText : ''),
-              questionImageURL: data.questionImageURL || (qDef ? qDef.questionImageURL : ''),
-              options: data.options || (qDef ? qDef.options : [])
-            });
-          }
+          showToast('success', 'Question Reset', clearResponses ? 'Timer restarted and responses cleared.' : 'Timer restarted (responses kept).');
         })
-        .withFailureHandler(handleError)
-        .resetLiveQuestion(pollId, questionIndex, clearResponses);
+        .catch(handleError);
     }
 
     function setLiveCalculatorToggleState(isEnabled, isSecureSession) {

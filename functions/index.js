@@ -10,6 +10,8 @@ const admin = require("firebase-admin");
 
 admin.initializeApp();
 
+const analyticsEngine = require("./analytics_engine");
+
 /**
  * Update the Live Session State (The "Next Question" Signal).
  * Replaces the "broadcastSessionState" client-side hack and GAS backend delay.
@@ -150,7 +152,12 @@ exports.finalizeSession = onCall({ cors: true }, async (request) => {
   const answersSnap = await answersRef.once("value");
   const answers = answersSnap.val() || {};
 
-  // 2. Fetch session metadata (question index, etc)
+  // 2. Fetch poll metadata (name, class)
+  const pollRef = db.ref(`polls/${pollId}`);
+  const pollSnap = await pollRef.once("value");
+  const pollMeta = pollSnap.val() || {};
+
+  // 3. Fetch session metadata (question index, etc)
   const sessionSnap = await liveSessionRef.once("value");
   const sessionData = sessionSnap.val() || {};
 
@@ -160,9 +167,12 @@ exports.finalizeSession = onCall({ cors: true }, async (request) => {
     sessionId: sessionId,
     timestamp: admin.database.ServerValue.TIMESTAMP,
     pollId: pollId,
+    pollName: pollMeta.pollName || "Untitled Poll",
+    className: pollMeta.className || "Unassigned",
     finalQuestionIndex: sessionData.questionIndex || 0,
     totalResponses: Object.keys(answers).length,
     answers: answers, // Persist raw answers
+    questions: pollMeta.questions || [], // Snapshot of questions at time of run
     // Todo: Add aggregated stats here
   };
 
@@ -178,4 +188,78 @@ exports.finalizeSession = onCall({ cors: true }, async (request) => {
 
   logger.info(`Session Finalized: ${pollId} -> ${sessionId}`);
   return { success: true, sessionId: sessionId };
+});
+
+/**
+ * Get Comprehensive Analytics (The "Analytics Hub" Signal).
+ * Consolidates multiple legacy GAS endpoints into one powerful engine.
+ */
+exports.getAnalytics = onCall({ cors: true }, async (request) => {
+  const { className, pollId, studentEmail } = request.data;
+  const db = admin.database();
+
+  logger.info(`Analytics Request: class=${className}, poll=${pollId}, student=${studentEmail}`);
+
+  // 1. Fetch Data
+  const historySnap = await db.ref("history").once("value");
+  const historyData = historySnap.val() || {};
+
+  const rostersSnap = await db.ref("rosters").once("value");
+  const rostersData = rostersSnap.val() || {};
+
+  const pollsSnap = await db.ref("polls").once("value");
+  const pollsData = pollsSnap.val() || {};
+
+  // 2. Process based on request scope
+  if (pollId) {
+    // Specific Post-Poll Analytics
+    const poll = pollsData[pollId];
+    if (!poll) throw new HttpsError("not-found", "Poll not found");
+
+    // Get all sessions for this poll from history
+    const pollHistory = historyData[pollId] || {};
+    // For post-poll analysis, we usually look at the latest session
+    const sessions = Object.values(pollHistory).sort((a, b) => b.timestamp - a.timestamp);
+    const latestSession = sessions[0];
+
+    if (!latestSession) {
+      return { success: false, error: "No history found for this poll" };
+    }
+
+    const itemAnalysis = analyticsEngine.computeItemAnalysis(latestSession, latestSession.answers || {});
+
+    return {
+      success: true,
+      pollId,
+      pollName: latestSession.pollName,
+      className: latestSession.className,
+      questionCount: latestSession.questions ? latestSession.questions.length : 0,
+      itemAnalysis
+    };
+  }
+
+  if (studentEmail && className) {
+    // Specific Student Insights
+    const roster = Object.values(rostersData[className] || {});
+    const student = roster.find(s => s.email === studentEmail);
+
+    // Flatten all sessions for this person
+    const allSessions = [];
+    Object.keys(historyData).forEach(pId => {
+      Object.values(historyData[pId]).forEach(sess => {
+        if (sess.className === className) allSessions.push(sess);
+      });
+    });
+
+    const insights = analyticsEngine.computeStudentInsights(allSessions, student ? [student] : []);
+    return { success: true, studentEmail, insights: insights[0] };
+  }
+
+  // Default: Dashboard / Overview Analytics
+  const results = analyticsEngine.computeAnalytics(historyData, rostersData);
+
+  return {
+    success: true,
+    ...results
+  };
 });

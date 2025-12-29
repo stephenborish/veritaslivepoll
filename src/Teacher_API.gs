@@ -1805,7 +1805,9 @@ Veritas.TeacherApi.startLivePollEmulation = function(pollId, options) {
       return { success: false, error: 'Poll not found: ' + pollId };
     }
 
-    var className = poll.className + ' (Emulated)';
+    // IMPORTANT: Use the poll's actual class name so emulated students
+    // pass enrollment checks when submitting answers
+    var className = poll.className;
 
     Logger.log('[Emulator] Starting live poll emulation', {
       pollId: pollId,
@@ -1866,7 +1868,9 @@ Veritas.TeacherApi.startSecureAssessmentEmulation = function(pollId, sessionId, 
       return { success: false, error: 'Poll not found: ' + pollId };
     }
 
-    var className = poll.className + ' (Emulated)';
+    // IMPORTANT: Use the poll's actual class name so emulated students
+    // pass enrollment checks when submitting answers
+    var className = poll.className;
 
     Logger.log('[Emulator] Starting secure assessment emulation', {
       pollId: pollId,

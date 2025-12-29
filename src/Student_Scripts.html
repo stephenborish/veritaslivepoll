@@ -35,6 +35,8 @@
         // --- FIREBASE INIT ---
         var currentFirebasePollId = null; // Store pollId for debug HUD
         var lastQuestionIndex = -1;
+        var liveSessionRef = null;
+        var connectedRef = null;
 
         // UUID Generator (Polyfill)
         function generateUUID() {
@@ -49,6 +51,44 @@
 
         async function initFirebaseSidecar(pollId, studentEmail) {
             if (!FIREBASE_CONFIG || !pollId || !studentEmail) return;
+
+            // CHECK: If pollId changed, cleanup old listeners
+            if (currentFirebasePollId && currentFirebasePollId !== pollId) {
+                console.log('[Firebase] PollId changed from ' + currentFirebasePollId + ' to ' + pollId + ' - Validating cleanup...');
+                
+                // 1. Detach Student Status Listener
+                if (firebaseRef) {
+                    try {
+                        firebaseRef.off();
+                        console.log('[Firebase] Detached old student status listener');
+                    } catch(e) { console.warn('Error detaching firebaseRef:', e); }
+                    firebaseRef = null;
+                }
+                
+                // 2. Detach Live Session Listener
+                if (liveSessionRef) {
+                    try {
+                        liveSessionRef.off();
+                         console.log('[Firebase] Detached old live session listener');
+                    } catch(e) { console.warn('Error detaching liveSessionRef:', e); }
+                    liveSessionRef = null;
+                }
+
+                 // 3. Detach Connected Listener (optional, but cleaner)
+                if (connectedRef) {
+                    try {
+                        connectedRef.off();
+                    } catch(e) {} 
+                    connectedRef = null;
+                }
+
+                currentFirebasePollId = null;
+            }
+
+            // Prevent double init for same pollId
+            if (firebaseRef && currentFirebasePollId === pollId) {
+                return;
+            }
 
             if (typeof firebase !== 'undefined' && !firebase.apps.length) {
                 firebase.initializeApp(FIREBASE_CONFIG);
@@ -84,7 +124,8 @@
                 });
 
                 // Connection State for HUD & Adaptive Polling
-                firebaseDb.ref('.info/connected').on('value', function (snap) {
+                connectedRef = firebaseDb.ref('.info/connected');
+                connectedRef.on('value', function (snap) {
                     var connected = snap.val() === true;
                     updateDebugHud(null, connected, currentFirebasePollId);
 
@@ -103,7 +144,9 @@
                 // 4. Signal-to-Poll: Listen for public state changes
                 // When teacher advances slide, a signal is written here.
                 // NEW: Listen to 'live_session' for instant updates (Hybrid Architecture)
-                var liveSessionRef = firebaseDb.ref('sessions/' + pollId + '/live_session');
+                var sessionPath = 'sessions/' + pollId + '/live_session';
+                liveSessionRef = firebaseDb.ref(sessionPath);
+                
                 liveSessionRef.on('value', function (snapshot) {
                     var data = snapshot.val();
                     if (data) {
@@ -139,7 +182,21 @@
                             updateStudentView(statePayload);
                         } else {
                             // Fallback to polling for full state if data is incomplete
-                            console.log('[Firebase] Slow Path: Incomplete data, polling server');
+                            // FIX: If status changed (e.g. CLOSED), we should respect that even without text
+                            if (data.status && data.status !== 'OPEN') {
+                                console.log('[Firebase] Fast Path (Status Only): Processing status change to ' + data.status);
+                                // Call updateStudentView with minimal data to trigger status change
+                                if (typeof updateStudentView === 'function') {
+                                    updateStudentView({
+                                        pollId: data.pollId || pollId,
+                                        questionIndex: data.questionIndex,
+                                        status: data.status,
+                                        sessionPhase: data.sessionPhase || 'LIVE'
+                                    });
+                                }
+                            }
+                            
+                            console.log('[Firebase] Slow Path: Incomplete data, polling server to ensure consistency');
                             startPolling(true);
                         }
                     }
@@ -427,15 +484,17 @@
                     LockManager.lock('Teacher Remote Lock');
                 }
             } else if (status === 'ACTIVE') {
-                // Teacher signalled unlock; defer to authoritative server confirmation
-                // This prevents accidental unlocks from stale or spoofed RTDB writes.
-                // FIX: Check both LockManager and Poison Pill state
+                 // Teacher signalled unlock
+                // IMPLEMENTATION FIX: Check both LockManager and Poison Pill state
                 var isLocked = LockManager.isLocked() || isPoisonPillActive();
+                
                 if (isLocked) {
-                    console.log('[Firebase] Unlock signal received - immediately checking server for AWAITING_FULLSCREEN');
-                    // FIX: Immediately call checkProctorState instead of startPolling
-                    // startPolling fails when poison pill is active, but we need to check for AWAITING_FULLSCREEN
+                    console.log('[Firebase] Unlock signal received - checking server for AWAITING_FULLSCREEN');
+                    // FIX: Explicitly call checkProctorState immediately
+                    // This bypasses the polling delay and handles the 'resume' flow
                     checkProctorState();
+                } else {
+                    console.log('[Firebase] Unlock signal received but not locally locked - ignoring');
                 }
             }
         }

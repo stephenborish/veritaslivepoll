@@ -2614,46 +2614,54 @@
     }
 
     function setMainSection(section) {
-      currentMainSection = section;
-      dashboard.style.display = section === 'dashboard' ? 'block' : 'none';
-      liveView.style.display = section === 'live' ? 'grid' : 'none';
-      rosterManager.style.display = section === 'roster' ? 'grid' : 'none';
-      archivedView.style.display = section === 'archived' ? 'grid' : 'none';
-      analyticsView.style.display = section === 'analytics' ? 'flex' : 'none';
-      var individualTimedView = document.getElementById('individual-timed-view');
-      if (individualTimedView) {
-        individualTimedView.style.display = section === 'individual-timed' ? 'block' : 'none';
-      }
-      var createPollView = document.getElementById('create-poll-view');
-      if (createPollView) {
-        createPollView.style.display = section === 'create-poll' ? 'flex' : 'none';
-      }
-
-      var navButtons = document.querySelectorAll('.sidebar-nav-btn[data-section-target]');
-      navButtons.forEach(function (btn) {
-        var target = btn.getAttribute('data-section-target');
-        var isActive = target === section;
-        btn.classList.toggle('is-active', isActive);
-        btn.setAttribute('aria-current', isActive ? 'page' : 'false');
-        if (isActive) {
-          btn.classList.add('font-semibold');
-        } else {
-          btn.classList.remove('font-semibold');
+      function updateUI() {
+        currentMainSection = section;
+        dashboard.style.display = section === 'dashboard' ? 'block' : 'none';
+        liveView.style.display = section === 'live' ? 'grid' : 'none';
+        rosterManager.style.display = section === 'roster' ? 'grid' : 'none';
+        archivedView.style.display = section === 'archived' ? 'grid' : 'none';
+        analyticsView.style.display = section === 'analytics' ? 'flex' : 'none';
+        var individualTimedView = document.getElementById('individual-timed-view');
+        if (individualTimedView) {
+          individualTimedView.style.display = section === 'individual-timed' ? 'block' : 'none';
         }
-      });
-
-      if (headerSessionControls) {
-        if (section === 'dashboard') {
-          headerSessionControls.classList.remove('hidden');
-        } else {
-          headerSessionControls.classList.add('hidden');
+        var createPollView = document.getElementById('create-poll-view');
+        if (createPollView) {
+          createPollView.style.display = section === 'create-poll' ? 'flex' : 'none';
         }
+
+        var navButtons = document.querySelectorAll('.sidebar-nav-btn[data-section-target]');
+        navButtons.forEach(function (btn) {
+          var target = btn.getAttribute('data-section-target');
+          var isActive = target === section;
+          btn.classList.toggle('is-active', isActive);
+          btn.setAttribute('aria-current', isActive ? 'page' : 'false');
+          if (isActive) {
+            btn.classList.add('font-semibold');
+          } else {
+            btn.classList.remove('font-semibold');
+          }
+        });
+
+        if (headerSessionControls) {
+          if (section === 'dashboard') {
+            headerSessionControls.classList.remove('hidden');
+          } else {
+            headerSessionControls.classList.add('hidden');
+          }
+        }
+
+        if (section === 'live') {
+          setActiveMobilePanelForViewport(activeMobilePanel || 'question');
+        }
+        updateMobileLayoutVisibility();
       }
 
-      if (section === 'live') {
-        setActiveMobilePanelForViewport(activeMobilePanel || 'question');
+      if (document.startViewTransition) {
+        document.startViewTransition(updateUI);
+      } else {
+        updateUI();
       }
-      updateMobileLayoutVisibility();
     }
 
     function updateMobileLayoutVisibility() {

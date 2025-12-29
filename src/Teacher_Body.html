@@ -97,10 +97,12 @@
           <!-- Content dynamically populated by updateSecureSessionMeta() -->
         </div>
         <!-- Student Emulator Controls (Dev/Testing) -->
-        <div id="emulator-controls" class="hidden flex flex-row items-center gap-3 text-xs text-brand-white/90 bg-amber-600/20 rounded-lg px-3 py-1.5 border border-amber-500/30">
+        <div id="emulator-controls"
+          class="hidden flex flex-row items-center gap-3 text-xs text-brand-white/90 bg-amber-600/20 rounded-lg px-3 py-1.5 border border-amber-500/30">
           <span class="material-symbols-outlined text-amber-400 text-base">science</span>
           <label class="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" id="emulator-enabled" class="w-4 h-4 rounded border-white/30 bg-white/10 text-amber-500 focus:ring-amber-500/50">
+            <input type="checkbox" id="emulator-enabled"
+              class="w-4 h-4 rounded border-white/30 bg-white/10 text-amber-500 focus:ring-amber-500/50">
             <span class="text-amber-200 font-medium">Emulate Students</span>
           </label>
           <div id="emulator-options" class="hidden flex items-center gap-2 ml-2 pl-2 border-l border-amber-500/30">
@@ -110,7 +112,8 @@
                 class="w-14 h-6 rounded border border-white/30 bg-white/10 px-2 text-xs text-white focus:ring-amber-500/50">
             </label>
             <label class="flex items-center gap-1">
-              <input type="checkbox" id="emulator-concurrent" class="w-3.5 h-3.5 rounded border-white/30 bg-white/10 text-amber-500">
+              <input type="checkbox" id="emulator-concurrent"
+                class="w-3.5 h-3.5 rounded border-white/30 bg-white/10 text-amber-500">
               <span class="text-white/70">Concurrent</span>
             </label>
           </div>
@@ -138,7 +141,9 @@
           <span class="material-symbols-outlined text-lg sm:text-xl">menu</span>
         </button>
         <div class="min-w-0 flex flex-col justify-center">
-          <h1 id="header-poll-name" class="text-white font-bold text-xs sm:text-sm md:text-base truncate leading-tight max-w-[100px] sm:max-w-none">Poll Name
+          <h1 id="header-poll-name"
+            class="text-white font-bold text-xs sm:text-sm md:text-base truncate leading-tight max-w-[100px] sm:max-w-none">
+            Poll Name
           </h1>
           <div class="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs text-white/70">
             <span id="live-question-info"
@@ -320,7 +325,7 @@
       <!-- Dashboard View (Default) - Redesigned -->
       <div id="dashboard" class="p-8 max-w-7xl mx-auto">
         <!-- Poll Library & Session Management (Combined) -->
-        <div class="dashboard-card">
+        <div class="dashboard-card glass-card premium-shadow p-8 rounded-2xl">
           <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
             <div>
               <h2 class="text-2xl font-bold text-veritas-navy mb-1">Poll Library & Session Management</h2>
@@ -773,8 +778,7 @@
               <span class="material-symbols-outlined text-base">play_arrow</span>
               <span id="mobile-timer-label">Start</span>
             </button>
-            <button id="mobile-pause-btn" type="button"
-              class="live-mobile-pill live-mobile-pill-muted hidden">
+            <button id="mobile-pause-btn" type="button" class="live-mobile-pill live-mobile-pill-muted hidden">
               <span class="material-symbols-outlined text-base">pause</span>
               <span>Pause</span>
             </button>
@@ -796,13 +800,11 @@
           </div>
         </div>
         <div class="live-mobile-actions__buttons">
-          <button id="mobile-resume-btn" type="button"
-            class="live-mobile-action live-mobile-action-ghost hidden">
+          <button id="mobile-resume-btn" type="button" class="live-mobile-action live-mobile-action-ghost hidden">
             <span class="material-symbols-outlined text-base">play_circle</span>
             <span>Resume</span>
           </button>
-          <button id="mobile-reveal-btn" type="button"
-            class="live-mobile-action live-mobile-action-primary">
+          <button id="mobile-reveal-btn" type="button" class="live-mobile-action live-mobile-action-primary">
             <span class="material-symbols-outlined text-base">visibility</span>
             <span>Reveal</span>
           </button>

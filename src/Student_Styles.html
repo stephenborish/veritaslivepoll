@@ -199,6 +199,34 @@
     animation: text-shimmer 3s linear infinite;
   }
 
+  /* Premium Waiting Particles */
+  .shimmer-particle {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: var(--veritas-gold);
+    border-radius: 50%;
+    opacity: 0.3;
+    filter: blur(2px);
+    animation: particle-rise 6s linear infinite;
+  }
+
+  @keyframes particle-rise {
+    0% {
+      transform: translateY(0) scale(1);
+      opacity: 0;
+    }
+
+    50% {
+      opacity: 0.5;
+    }
+
+    100% {
+      transform: translateY(-100px) scale(1.5);
+      opacity: 0;
+    }
+  }
+
   body {
     background: #ffffff;
     color: #000000;

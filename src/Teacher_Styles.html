@@ -71,6 +71,11 @@
     --radius-xl: 16px;
     --radius-full: 9999px;
 
+    /* View Transitions Names */
+    --vt-header: header-main;
+    --vt-sidebar: sidebar-main;
+    --vt-content: content-main;
+
     /* Animation Timing */
     --transition-smooth: 400ms cubic-bezier(0.4, 0, 0.2, 1);
     --transition-fast: 200ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -143,6 +148,46 @@
     to {
       opacity: 1;
     }
+  }
+
+  /* View Transition Assignments */
+  #header-default,
+  #header-live {
+    view-transition-name: var(--vt-header);
+  }
+
+  #dashboard-sidebar {
+    view-transition-name: var(--vt-sidebar);
+  }
+
+  main {
+    view-transition-name: var(--vt-content);
+  }
+
+  /* Glassmorphism Utilities */
+  .glass-card {
+    background: var(--bg-glass);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-glass);
+  }
+
+  .dark .glass-card {
+    background: var(--bg-glass-dark);
+    border-color: var(--glass-border-dark);
+  }
+
+  .premium-shadow {
+    box-shadow: var(--shadow-premium);
+  }
+
+  .premium-glow-navy:hover {
+    box-shadow: var(--glow-navy);
+  }
+
+  .premium-glow-gold:hover {
+    box-shadow: var(--glow-gold);
   }
 
   .teacher-question-image {
@@ -3833,6 +3878,7 @@
 
   /* Mobile: Make live session header more compact */
   @media (max-width: 640px) {
+
     /* Reduce header height and make it single-line */
     #header-live {
       height: auto;
@@ -3934,7 +3980,8 @@
   @media (max-width: 768px) {
     .live-view-shell {
       padding: 8px !important;
-      padding-bottom: 80px !important; /* Space for FAB */
+      padding-bottom: 80px !important;
+      /* Space for FAB */
     }
 
     .live-view-grid {
@@ -4025,6 +4072,7 @@
 
   /* Fix for answer bars overflow on mobile */
   @media (max-width: 640px) {
+
     .answer-choice-container,
     .answer-bar-wrapper {
       overflow-x: hidden;

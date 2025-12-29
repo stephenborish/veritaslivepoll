@@ -592,21 +592,33 @@ Veritas.StudentEmulator.chooseAnswer_ = function(emulator, student, question, pr
 
   // Determine if answer is correct
   var correctProb = config.correctAnswerProbability + profile.correctProbabilityBonus;
-  var isCorrect = Math.random() < correctProb;
+  var shouldBeCorrect = Math.random() < correctProb;
 
   var answer;
-  if (isCorrect && question.correctAnswer) {
+  var isCorrect = false;
+
+  // Get options - handle both array of strings and array of objects with text property
+  var options = question.options || question.answers || [];
+
+  // Normalize options to array of answer strings
+  var answerTexts = options.map(function(opt) {
+    if (typeof opt === 'string') return opt;
+    if (opt && typeof opt === 'object') return opt.text || opt.label || '';
+    return '';
+  }).filter(function(text) { return text.length > 0; });
+
+  if (shouldBeCorrect && question.correctAnswer) {
     answer = question.correctAnswer;
+    isCorrect = true;
+  } else if (answerTexts.length > 0) {
+    // Pick a random answer
+    var randomIndex = Math.floor(Math.random() * answerTexts.length);
+    answer = answerTexts[randomIndex];
+    isCorrect = (answer === question.correctAnswer);
   } else {
-    // Pick a random answer (possibly wrong)
-    var answers = question.answers || [];
-    if (answers.length > 0) {
-      var randomIndex = Math.floor(Math.random() * answers.length);
-      answer = answers[randomIndex];
-      isCorrect = (answer === question.correctAnswer);
-    } else {
-      answer = 'A'; // Fallback
-    }
+    // Fallback if no options found
+    answer = question.correctAnswer || 'A';
+    isCorrect = (answer === question.correctAnswer);
   }
 
   // Choose confidence level

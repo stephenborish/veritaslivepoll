@@ -11569,6 +11569,43 @@
 
         firebaseRef.on('child_added', function (snapshot) {
           lastRTDBEvent = { timestamp: Date.now(), type: 'child_added' };
+
+          // TASK: Instant Render on Join (Latency Fix)
+          var studentKey = snapshot.key;
+          var status = snapshot.val();
+          var studentEmail = studentKey.replace(/,/g, '.'); // Restore email
+
+          if (!missionControlStudents) missionControlStudents = [];
+
+          // Check for duplication
+          var exists = missionControlStudents.some(function (s) { return s.email === studentEmail; });
+
+          if (!exists) {
+            console.log('[Firebase] New student detected via Fast Path:', studentEmail);
+            // Add temp student object (Name will be Email until full sync)
+            var newStudent = {
+              name: studentEmail, // Temporary display name
+              email: studentEmail,
+              status: status,
+              proctorStatus: status === 'ACTIVE' ? 'ACTIVE' : 'LOCKED', // Infer from status
+              progress: 0,
+              score: 0
+            };
+
+            missionControlStudents.push(newStudent);
+
+            // Sort by name (email) to keep list tidy
+            missionControlStudents.sort(function (a, b) {
+              return (a.name || '').localeCompare(b.name || '');
+            });
+
+            // Update UI immediately
+            // We pass a synthetic view object
+            renderIndividualStudentCards({ students: missionControlStudents });
+
+            // Also update realtime UI to apply any locks/status
+            updateRealtimeUI();
+          }
         });
 
         // Listen for changes

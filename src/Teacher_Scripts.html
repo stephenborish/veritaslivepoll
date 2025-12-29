@@ -2222,21 +2222,21 @@
 
       console.log('[Emulator] Triggering live poll emulation', { pollId: pollId, studentCount: studentCount, concurrent: concurrent });
 
-      veritasToast('Starting emulation with ' + studentCount + ' students...', 'info');
+      showToast('info', 'Emulator', 'Starting emulation with ' + studentCount + ' students...');
 
       google.script.run
         .withSuccessHandler(function(result) {
           if (result && result.success) {
             console.log('[Emulator] Live poll emulation complete', result);
-            veritasToast('Emulation complete: ' + result.successfulSubmissions + '/' + result.totalSubmissions + ' submissions', 'good');
+            showToast('success', 'Emulator', 'Emulation complete: ' + result.successfulSubmissions + '/' + result.totalSubmissions + ' submissions');
           } else {
             console.error('[Emulator] Live poll emulation failed', result);
-            veritasToast('Emulation failed: ' + (result ? result.error : 'Unknown error'), 'bad');
+            showToast('error', 'Emulator', 'Emulation failed: ' + (result ? result.error : 'Unknown error'));
           }
         })
         .withFailureHandler(function(error) {
           console.error('[Emulator] Live poll emulation error', error);
-          veritasToast('Emulation error: ' + error.message, 'bad');
+          showToast('error', 'Emulator', 'Emulation error: ' + error.message);
         })
         .startLivePollEmulation(pollId, {
           studentCount: studentCount,
@@ -2254,21 +2254,21 @@
 
       console.log('[Emulator] Triggering secure assessment emulation', { pollId: pollId, sessionId: sessionId, studentCount: studentCount });
 
-      veritasToast('Starting secure assessment emulation with ' + studentCount + ' students...', 'info');
+      showToast('info', 'Emulator', 'Starting secure assessment emulation with ' + studentCount + ' students...');
 
       google.script.run
         .withSuccessHandler(function(result) {
           if (result && result.success) {
             console.log('[Emulator] Secure assessment emulation complete', result);
-            veritasToast('Emulation complete: ' + result.successfulSubmissions + '/' + result.totalSubmissions + ' submissions', 'good');
+            showToast('success', 'Emulator', 'Emulation complete: ' + result.successfulSubmissions + '/' + result.totalSubmissions + ' submissions');
           } else {
             console.error('[Emulator] Secure assessment emulation failed', result);
-            veritasToast('Emulation failed: ' + (result ? result.error : 'Unknown error'), 'bad');
+            showToast('error', 'Emulator', 'Emulation failed: ' + (result ? result.error : 'Unknown error'));
           }
         })
         .withFailureHandler(function(error) {
           console.error('[Emulator] Secure assessment emulation error', error);
-          veritasToast('Emulation error: ' + error.message, 'bad');
+          showToast('error', 'Emulator', 'Emulation error: ' + error.message);
         })
         .startSecureAssessmentEmulation(pollId, sessionId, {
           studentCount: studentCount

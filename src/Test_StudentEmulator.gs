@@ -271,11 +271,39 @@ Veritas.StudentEmulator.simulateSingleStudentLivePoll_ = function(emulator, stud
 
   Veritas.StudentEmulator.log_(emulator, 'Simulating ' + student.email + ' (' + profile.name + ')');
 
-  var status = Veritas.StudentEmulator.waitForLiveStatus_(emulator, student);
+  // Get current poll status
+  var status;
+  try {
+    status = Veritas.StudentApi.getStudentPollStatus(student.token, {
+      lastStateVersion: 0,
+      lastSuccessAt: Date.now(),
+      failureCount: 0
+    });
+  } catch (e) {
+    Veritas.StudentEmulator.log_(emulator, '  ERROR getting poll status: ' + e.message);
+    student.state = 'ERROR';
+    emulator.results.errors.push({
+      student: student.email,
+      error: 'getStudentPollStatus failed: ' + e.message,
+      time: new Date().toISOString()
+    });
+    return;
+  }
 
-  if (!status || status.status !== 'LIVE') {
-    Veritas.StudentEmulator.log_(emulator, '  Poll not live, status: ' + (status ? status.status : 'UNKNOWN'));
+  // Enhanced logging for debugging
+  Veritas.StudentEmulator.log_(emulator, '  Status: ' + status.status + ', questionIndex: ' + status.questionIndex + ', hasSubmitted: ' + status.hasSubmitted);
+
+  if (status.status !== 'LIVE') {
+    Veritas.StudentEmulator.log_(emulator, '  Cannot submit - status is ' + status.status + (status.message ? ' (' + status.message + ')' : ''));
     student.state = 'WAITING';
+    // Track skipped students for debugging
+    emulator.results.timeline.push({
+      time: new Date().toISOString(),
+      student: student.email,
+      event: 'STATUS_NOT_LIVE',
+      status: status.status,
+      message: status.message || ''
+    });
     return;
   }
 
@@ -575,6 +603,12 @@ Veritas.StudentEmulator.enrollStudents_ = function(emulator, className) {
 
   // Save roster
   Veritas.Data.Rosters.save(className, rosterData);
+
+  // CRITICAL: Flush spreadsheet writes to ensure roster is persisted before status checks
+  // Without this, subsequent roster reads may return stale data
+  SpreadsheetApp.flush();
+
+  Veritas.StudentEmulator.log_(emulator, 'Enrolled ' + rosterData.length + ' students in class: ' + className);
 };
 
 /**

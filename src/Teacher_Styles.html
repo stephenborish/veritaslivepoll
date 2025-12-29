@@ -3826,6 +3826,233 @@
       flex-wrap: wrap;
     }
   }
+
+  /* =============================================================================
+     MOBILE LIVE SESSION LAYOUT FIXES
+     ============================================================================= */
+
+  /* Mobile: Make live session header more compact */
+  @media (max-width: 640px) {
+    /* Reduce header height and make it single-line */
+    #header-live {
+      height: auto;
+      min-height: 48px;
+      padding: 8px 12px;
+    }
+
+    #header-live .flex.w-full {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* Compact poll context */
+    #header-live .min-w-0.flex.flex-col {
+      flex: 0 1 auto;
+      min-width: 0;
+    }
+
+    #header-poll-name {
+      font-size: 12px !important;
+      max-width: 120px;
+    }
+
+    /* Make timer controls more compact on mobile */
+    #timer-main-container {
+      padding: 4px !important;
+      gap: 4px !important;
+    }
+
+    #timer-display {
+      width: 50px !important;
+      font-size: 14px !important;
+      padding: 0 !important;
+    }
+
+    #timer-main-container button {
+      width: 28px !important;
+      height: 28px !important;
+    }
+
+    #timer-main-container .material-symbols-outlined {
+      font-size: 18px !important;
+    }
+
+    /* Hide less essential buttons on very small screens */
+    #reset-btn,
+    #header-next-btn {
+      display: none !important;
+    }
+
+    /* Compact reveal button */
+    #header-end-show-btn {
+      padding: 6px 10px !important;
+      font-size: 12px !important;
+      height: auto !important;
+    }
+
+    #header-end-show-btn .material-symbols-outlined {
+      font-size: 16px !important;
+    }
+
+    /* More actions button */
+    #live-more-actions-btn {
+      width: 32px !important;
+      height: 32px !important;
+    }
+  }
+
+  /* Mobile: Live status bar compactness */
+  @media (max-width: 640px) {
+    #live-status-bar {
+      padding: 6px 12px !important;
+      gap: 8px !important;
+      height: auto !important;
+      min-height: 36px;
+      flex-wrap: wrap;
+    }
+
+    #live-status-bar .material-symbols-outlined {
+      font-size: 14px !important;
+    }
+
+    #live-status-bar .font-bold {
+      font-size: 13px !important;
+    }
+
+    #live-status-bar .text-sm {
+      font-size: 11px !important;
+    }
+
+    /* Hide sparklines on mobile */
+    #live-status-bar [id*="sparkline"],
+    #live-status-bar .sparkline-container {
+      display: none !important;
+    }
+  }
+
+  /* Mobile: Main content area adjustments */
+  @media (max-width: 768px) {
+    .live-view-shell {
+      padding: 8px !important;
+      padding-bottom: 80px !important; /* Space for FAB */
+    }
+
+    .live-view-grid {
+      gap: 8px !important;
+    }
+
+    /* Question card compact mode */
+    .live-question-card {
+      padding: 12px !important;
+    }
+
+    .live-question-card .question-stem-text {
+      font-size: 15px !important;
+      line-height: 1.4 !important;
+    }
+
+    /* Answer choices on mobile */
+    #results-bars {
+      gap: 6px !important;
+    }
+
+    #results-bars .answer-choice-btn,
+    #results-bars button {
+      padding: 10px 12px !important;
+      font-size: 14px !important;
+      min-height: 44px !important;
+    }
+
+    /* Student panel - collapse by default on very small screens */
+    #live-sidebar {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .live-student-panel {
+      max-height: 180px;
+    }
+
+    #student-status-grid {
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
+      gap: 4px !important;
+    }
+
+    .student-tile {
+      padding: 6px 8px !important;
+      min-height: 40px !important;
+    }
+
+    .student-name {
+      font-size: 11px !important;
+    }
+
+    .student-sub {
+      font-size: 10px !important;
+    }
+  }
+
+  /* Very small screens (iPhone SE etc) */
+  @media (max-width: 375px) {
+    #header-live {
+      padding: 6px 8px;
+    }
+
+    #header-poll-name {
+      max-width: 80px;
+      font-size: 11px !important;
+    }
+
+    #timer-display {
+      width: 44px !important;
+      font-size: 12px !important;
+    }
+
+    .live-question-card .question-stem-text {
+      font-size: 14px !important;
+    }
+
+    #results-bars button {
+      padding: 8px 10px !important;
+      font-size: 13px !important;
+    }
+
+    /* Collapse sidebar completely on very small screens */
+    #live-sidebar {
+      max-height: 150px;
+    }
+  }
+
+  /* Fix for answer bars overflow on mobile */
+  @media (max-width: 640px) {
+    .answer-choice-container,
+    .answer-bar-wrapper {
+      overflow-x: hidden;
+    }
+
+    .answer-bar-wrapper .answer-text,
+    #results-bars .answer-text {
+      white-space: normal !important;
+      word-break: break-word;
+    }
+  }
+
+  /* Ensure FAB doesn't overlap content on mobile */
+  @media (max-width: 640px) {
+    .fab-container {
+      bottom: 12px !important;
+      right: 12px !important;
+    }
+
+    .fab-button {
+      width: 48px !important;
+      height: 48px !important;
+    }
+
+    .fab-action {
+      margin-bottom: 8px !important;
+    }
+  }
 </style>
 </style>
 </head>

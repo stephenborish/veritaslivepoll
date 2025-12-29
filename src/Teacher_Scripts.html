@@ -53,6 +53,8 @@
     var realtimeStatuses = {}; // key -> status
     var realtimeConnected = false;
     var lastQuestionIndex = -1;
+    var currentMainSection = 'dashboard';
+    var activeMobilePanel = 'question';
 
     // OPTIMIZATION: Adaptive polling with backoff (like student view)
     var pollFailureCount = 0;
@@ -1938,6 +1940,8 @@
     var dashboardSidebarToggleButtons = [];
     var dashboard = document.getElementById('dashboard');
     var liveView = document.getElementById('live-view');
+    var liveMobileNav = document.getElementById('live-mobile-nav');
+    var liveMobileActions = document.getElementById('live-mobile-actions');
     var rosterManager = document.getElementById('roster-manager');
     var archivedView = document.getElementById('archived-view');
     var analyticsView = document.getElementById('analytics-view');
@@ -2315,6 +2319,16 @@
     registerDashboardSidebarToggle('dashboard-sidebar-toggle');
     registerDashboardSidebarToggle('dashboard-sidebar-toggle-live');
     updateDashboardSidebarToggleState();
+
+    var mobileTabs = document.querySelectorAll('.live-mobile-tab');
+    mobileTabs.forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        var panel = tab.getAttribute('data-panel');
+        setActiveMobilePanelForViewport(panel);
+      });
+    });
+    updateMobileLayoutVisibility();
+
     function focusLockoutsSection() {
       var panel = document.getElementById('exited-students-panel');
       if (panel) {
@@ -2354,6 +2368,27 @@
     bindClick('subtract-10s-btn', function () {
       parseInputToTotalSeconds();
       editTime(-10);
+    });
+    bindClick('mobile-start-btn', startTimer);
+    bindClick('mobile-pause-btn', pauseTimer);
+    bindClick('mobile-reset-btn', onResetQuestion);
+    bindClick('mobile-next-btn', onNextQuestion);
+    bindClick('mobile-reveal-btn', onEndQuestionAndShowAnswer);
+    bindClick('mobile-resume-btn', onResumePoll);
+    bindClick('mobile-stop-btn', onEndPoll);
+    bindClick('add-10s-btn-mobile', function () {
+      parseInputToTotalSeconds();
+      editTime(10);
+    });
+    bindClick('subtract-10s-btn-mobile', function () {
+      parseInputToTotalSeconds();
+      editTime(-10);
+    });
+    bindClick('mobile-locks-btn', function () {
+      var focusBtn = document.getElementById('hud-focus-lockouts-btn');
+      if (focusBtn && !focusBtn.disabled) {
+        focusBtn.click();
+      }
     });
 
     // Timer display input event listener
@@ -2569,6 +2604,7 @@
     }
 
     function setMainSection(section) {
+      currentMainSection = section;
       dashboard.style.display = section === 'dashboard' ? 'block' : 'none';
       liveView.style.display = section === 'live' ? 'grid' : 'none';
       rosterManager.style.display = section === 'roster' ? 'grid' : 'none';
@@ -2603,7 +2639,48 @@
           headerSessionControls.classList.add('hidden');
         }
       }
+
+      if (section === 'live') {
+        setActiveMobilePanelForViewport(activeMobilePanel || 'question');
+      }
+      updateMobileLayoutVisibility();
     }
+
+    function updateMobileLayoutVisibility() {
+      var isMobileViewport = window.innerWidth <= 1024;
+
+      if (liveMobileNav) {
+        liveMobileNav.style.display = (isMobileViewport && currentMainSection === 'live') ? 'flex' : 'none';
+      }
+
+      if (liveMobileActions) {
+        liveMobileActions.style.display = (isMobileViewport && currentMainSection === 'live') ? 'flex' : 'none';
+      }
+
+      setActiveMobilePanelForViewport(activeMobilePanel || 'question');
+    }
+
+    function setActiveMobilePanelForViewport(panel) {
+      activeMobilePanel = panel || 'question';
+      var panels = document.querySelectorAll('[data-mobile-panel]');
+      var isMobileViewport = window.innerWidth <= 1024;
+
+      panels.forEach(function (panelEl) {
+        var matches = panelEl.getAttribute('data-mobile-panel') === activeMobilePanel || !isMobileViewport;
+        panelEl.classList.toggle('is-active', matches);
+      });
+
+      var tabButtons = document.querySelectorAll('.live-mobile-tab');
+      tabButtons.forEach(function (btn) {
+        var isActive = btn.getAttribute('data-panel') === activeMobilePanel;
+        btn.classList.toggle('is-active', isActive);
+        btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      });
+    }
+
+    window.addEventListener('resize', function () {
+      updateMobileLayoutVisibility();
+    });
 
     function clearLiveIntervals() {
       if (pollInterval) {
@@ -6079,6 +6156,7 @@
     var hudResponseCount = document.getElementById('hud-response-count');
     var hudResponseCaption = document.getElementById('hud-response-caption');
     var hudResponseTrend = document.getElementById('hud-response-trend');
+    var mobileResponseChip = document.getElementById('mobile-response-chip');
 
     if (responsesEl) {
       responsesEl.textContent = totalResponses + ' / ' + totalStudents;
@@ -6095,6 +6173,9 @@
 
     if (hudResponseCount) {
       hudResponseCount.textContent = (totalStudents > 0 ? totalResponses : '0') + ' / ' + (totalStudents || 0);
+    }
+    if (mobileResponseChip) {
+      mobileResponseChip.textContent = (totalStudents > 0 ? totalResponses : 0) + ' / ' + (totalStudents || 0);
     }
     if (hudResponseCaption) {
       hudResponseCaption.textContent = totalStudents > 0 ? completionPct + '% complete' : 'Awaiting roster data';
@@ -6211,6 +6292,7 @@
     var hudAccuracyValue = document.getElementById('hud-accuracy-value');
     var hudAccuracyCaption = document.getElementById('hud-accuracy-caption');
     var hudAccuracyTrend = document.getElementById('hud-accuracy-trend');
+    var mobileAccuracyChip = document.getElementById('mobile-accuracy-chip');
     var accuracyPct = countedResponses > 0 ? Math.round((correctCount / countedResponses) * 100) : 0;
     if (accuracyEl) {
       accuracyEl.textContent = accuracyPct + '%';
@@ -6225,6 +6307,9 @@
 
     if (hudAccuracyValue) {
       hudAccuracyValue.textContent = countedResponses > 0 ? accuracyPct + '%' : '--%';
+    }
+    if (mobileAccuracyChip) {
+      mobileAccuracyChip.textContent = countedResponses > 0 ? accuracyPct + '%' : '--%';
     }
 
     // Update progress ring for accuracy
@@ -6293,6 +6378,9 @@
     var hudLockoutsCaption = document.getElementById('hud-lockouts-caption');
     var hudLockoutsCard = document.getElementById('hud-lockouts-card');
     var hudFocusBtn = document.getElementById('hud-focus-lockouts-btn');
+    var mobileLockChip = document.getElementById('mobile-lock-chip');
+    var mobileLocksBtn = document.getElementById('mobile-locks-btn');
+    var mobileLocksLabel = document.getElementById('mobile-locks-label');
     if (lockoutsCaption) {
       var pendingTotal = (lockedCount || 0) + (blockedCount || 0);
       if (pendingTotal === 0) {
@@ -6308,6 +6396,12 @@
     var pendingTotalForHud = (lockedCount || 0) + (blockedCount || 0);
     if (hudLockoutsValue) {
       hudLockoutsValue.textContent = pendingTotalForHud;
+    }
+    if (mobileLockChip) {
+      mobileLockChip.textContent = pendingTotalForHud;
+    }
+    if (mobileLocksLabel) {
+      mobileLocksLabel.textContent = pendingTotalForHud === 1 ? '1 Locked' : pendingTotalForHud + ' Locked';
     }
     if (hudLockoutsCaption) {
       if (pendingTotalForHud === 0) {
@@ -6327,6 +6421,9 @@
         var popover = document.getElementById('locked-students-popover');
         if (popover) popover.classList.add('hidden');
       }
+    }
+    if (mobileLocksBtn) {
+      mobileLocksBtn.disabled = pendingTotalForHud === 0;
     }
     sessionHudState.lastLockoutTotal = pendingTotalForHud;
 
@@ -6475,6 +6572,7 @@
     // Enable/disable navigation buttons
     var backBtn = document.getElementById('header-back-btn');
     var nextBtn = document.getElementById('header-next-btn');
+    var mobileNextBtn = document.getElementById('mobile-next-btn');
     if (backBtn) {
       backBtn.disabled = data.questionIndex <= 0;
       if (data.questionIndex <= 0) {
@@ -6496,22 +6594,34 @@
         nextBtn.style.cursor = 'pointer';
       }
     }
+    if (mobileNextBtn) {
+      mobileNextBtn.disabled = data.questionIndex >= data.totalQuestions - 1;
+    }
 
     // Show/hide end-show/start buttons based on state
     var isResultsRevealed = resultsVisibility === 'REVEALED';
+
+    var mobileResumeBtn = document.getElementById('mobile-resume-btn');
+    var mobileRevealBtn = document.getElementById('mobile-reveal-btn');
 
     if (isResultsRevealed) {
       // Results already revealed - hide both action buttons
       document.getElementById('header-start-btn').style.display = 'none';
       document.getElementById('header-end-show-btn').style.display = 'none';
+      if (mobileResumeBtn) mobileResumeBtn.classList.add('hidden');
+      if (mobileRevealBtn) mobileRevealBtn.classList.add('hidden');
     } else if (isPaused) {
       // Paused (responses closed) but not revealed - show resume and reveal buttons
       document.getElementById('header-start-btn').style.display = 'flex';
       document.getElementById('header-end-show-btn').style.display = 'flex';
+      if (mobileResumeBtn) mobileResumeBtn.classList.remove('hidden');
+      if (mobileRevealBtn) mobileRevealBtn.classList.remove('hidden');
     } else {
       // Active (collecting responses) - show only reveal button (teacher can end early)
       document.getElementById('header-start-btn').style.display = 'none';
       document.getElementById('header-end-show-btn').style.display = 'flex';
+      if (mobileResumeBtn) mobileResumeBtn.classList.add('hidden');
+      if (mobileRevealBtn) mobileRevealBtn.classList.remove('hidden');
     }
 
     if (questionChanged) {
@@ -8180,10 +8290,27 @@
     var timerDisplay = document.getElementById('timer-display');
     var add30sPresetBtn = document.getElementById('add-30s-btn-preset');
     var add60sPresetBtn = document.getElementById('add-60s-btn-preset');
+    var mobileStartBtn = document.getElementById('mobile-start-btn');
+    var mobilePauseBtn = document.getElementById('mobile-pause-btn');
+    var mobileTimerLabel = document.getElementById('mobile-timer-label');
+    var timerDisplayCompact = document.getElementById('timer-display-compact');
+    var mobileAdd10sBtn = document.getElementById('add-10s-btn-mobile');
+    var mobileSubtract10sBtn = document.getElementById('subtract-10s-btn-mobile');
 
     // Toggle Start/Pause buttons
     if (startBtn) startBtn.classList.toggle('hidden', running);
     if (pauseBtn) pauseBtn.classList.toggle('hidden', !running);
+    if (mobileStartBtn) mobileStartBtn.classList.toggle('hidden', running);
+    if (mobilePauseBtn) mobilePauseBtn.classList.toggle('hidden', !running);
+    if (mobileTimerLabel) {
+      if (running) {
+        mobileTimerLabel.textContent = 'Running';
+      } else if (totalSeconds < timerPresetSeconds) {
+        mobileTimerLabel.textContent = 'Resume';
+      } else {
+        mobileTimerLabel.textContent = 'Start';
+      }
+    }
 
     // Disable editing buttons AND the input field while timer is running
     if (add10sBtn) add10sBtn.disabled = running;
@@ -8191,6 +8318,9 @@
     if (timerDisplay) timerDisplay.disabled = running;
     if (add30sPresetBtn) add30sPresetBtn.disabled = running;
     if (add60sPresetBtn) add60sPresetBtn.disabled = running;
+    if (mobileAdd10sBtn) mobileAdd10sBtn.disabled = running;
+    if (mobileSubtract10sBtn) mobileSubtract10sBtn.disabled = running;
+    if (timerDisplayCompact) timerDisplayCompact.disabled = running;
 
     updateHudTimer();
   }

@@ -2168,21 +2168,31 @@
 
     // --- Emulator Controls ---
     function initEmulatorControls() {
-      if (!emulatorControls || !emulatorEnabled) return;
+      console.log('[Emulator] Initializing controls...', {
+        emulatorControlsExists: !!emulatorControls,
+        emulatorEnabledExists: !!emulatorEnabled
+      });
+
+      if (!emulatorControls || !emulatorEnabled) {
+        console.warn('[Emulator] DOM elements not found - emulator controls will not be available');
+        return;
+      }
 
       // Check if emulator is available
       google.script.run
         .withSuccessHandler(function(result) {
+          console.log('[Emulator] isEmulatorAvailable result:', result);
           emulatorAvailable = result && result.available;
           if (emulatorAvailable) {
             emulatorControls.classList.remove('hidden');
-            console.log('[Emulator] Available and enabled');
+            console.log('[Emulator] ✓ Available and controls shown');
           } else {
-            console.log('[Emulator] Not available:', result ? result.reason : 'unknown');
+            console.log('[Emulator] ✗ Not available:', result ? result.reason : 'unknown');
+            console.log('[Emulator] To enable, set DEV_MODE=true or EMULATOR_ENABLED=true in Script Properties');
           }
         })
         .withFailureHandler(function(error) {
-          console.log('[Emulator] Check failed:', error);
+          console.error('[Emulator] Check failed:', error);
           emulatorAvailable = false;
         })
         .isEmulatorAvailable();
@@ -5657,8 +5667,15 @@
         });
 
         // Trigger emulation if enabled
+        console.log('[Emulator] Checking emulation trigger:', {
+          emulatorAvailable: emulatorAvailable,
+          emulatorEnabled: !!emulatorEnabled,
+          checked: emulatorEnabled ? emulatorEnabled.checked : 'N/A'
+        });
         if (emulatorAvailable && emulatorEnabled && emulatorEnabled.checked) {
           triggerLivePollEmulation(data.pollId);
+        } else if (emulatorEnabled && emulatorEnabled.checked && !emulatorAvailable) {
+          console.warn('[Emulator] Checkbox is checked but emulator not available');
         }
       }
     })

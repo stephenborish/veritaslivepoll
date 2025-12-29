@@ -3,8 +3,8 @@
  * Migrated from Google Apps Script to run essentially "at the edge".
  */
 
-const {onCall, HttpsError} = require("firebase-functions/v2/https");
-const {onValueWritten} = require("firebase-functions/v2/database");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onValueWritten } = require("firebase-functions/v2/database");
 const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
 
@@ -21,7 +21,7 @@ admin.initializeApp();
  *   questionIndex: 1
  * });
  */
-exports.setLiveSessionState = onCall({cors: true}, async (request) => {
+exports.setLiveSessionState = onCall({ cors: true }, async (request) => {
   // 1. Auth Check (Phase 1: trust caller with ID, Todo: Auth context)
   // const uid = request.auth.uid;
 
@@ -31,8 +31,8 @@ exports.setLiveSessionState = onCall({cors: true}, async (request) => {
 
   if (!pollId) {
     throw new HttpsError(
-        "invalid-argument",
-        "The function must be called with a pollId.",
+      "invalid-argument",
+      "The function must be called with a pollId.",
     );
   }
 
@@ -62,7 +62,7 @@ exports.setLiveSessionState = onCall({cors: true}, async (request) => {
 
   await sessionRef.set(payload);
 
-  return {success: true, timestamp: Date.now()};
+  return { success: true, timestamp: Date.now() };
 });
 
 /**
@@ -74,58 +74,108 @@ exports.setLiveSessionState = onCall({cors: true}, async (request) => {
  * 2. Atomic: Server updates student list.
  */
 exports.onAnswerSubmitted = onValueWritten(
-    {
-      ref: "/answers/{pollId}/{studentEmailKey}",
-    },
-    async (event) => {
-      const data = event.data.after.val(); // The answer object
-      const pollId = event.params.pollId;
-      const studentEmailKey = event.params.studentEmailKey;
+  {
+    ref: "/answers/{pollId}/{studentEmailKey}",
+  },
+  async (event) => {
+    const data = event.data.after.val(); // The answer object
+    const pollId = event.params.pollId;
+    const studentEmailKey = event.params.studentEmailKey;
 
-      // Ignore deletions
-      if (!data) return;
+    // Ignore deletions
+    if (!data) return;
 
-      logger.info(`Answer: Poll ${pollId} from ${studentEmailKey}`, data);
+    logger.info(`Answer: Poll ${pollId} from ${studentEmailKey}`, data);
 
-      // 1. Fetch Correct Answer from Secure Key Store
-      let isCorrect = null;
-      if (data.questionIndex !== undefined) {
-        const keyPath = `sessions/${pollId}/answers_key/${data.questionIndex}`;
-        const keyRef = admin.database().ref(keyPath);
-        const keySnap = await keyRef.once("value");
-        const correctVal = keySnap.val();
+    // 1. Fetch Correct Answer from Secure Key Store
+    let isCorrect = null;
+    if (data.questionIndex !== undefined) {
+      const keyPath = `sessions/${pollId}/answers_key/${data.questionIndex}`;
+      const keyRef = admin.database().ref(keyPath);
+      const keySnap = await keyRef.once("value");
+      const correctVal = keySnap.val();
 
-        if (correctVal !== null && data.answer) {
+      if (correctVal !== null && data.answer) {
         // Simple string comparison for now.
         // TODO: Enhance for multi-select arrays if needed.
-          const ansStr = String(data.answer).trim().toLowerCase();
-          const keyStr = String(correctVal).trim().toLowerCase();
-          isCorrect = (ansStr === keyStr);
-        }
+        const ansStr = String(data.answer).trim().toLowerCase();
+        const keyStr = String(correctVal).trim().toLowerCase();
+        isCorrect = (ansStr === keyStr);
       }
+    }
 
-      // 2. Update Teacher Dashboard View
-      // Ideally, the 'answers' node should rely on the *studentKey*, not email.
-      // For this migration, we assume client sends studentKey.
+    // 2. Update Teacher Dashboard View
+    // Ideally, the 'answers' node should rely on the *studentKey*, not email.
+    // For this migration, we assume client sends studentKey.
 
-      const studentStatusPath =
+    const studentStatusPath =
       `sessions/${pollId}/students/${studentEmailKey}`;
-      const studentStatusRef = admin.database().ref(studentStatusPath);
+    const studentStatusRef = admin.database().ref(studentStatusPath);
 
-      // Check current status to avoid overwriting LOCKED state?
-      // For now, simple set to FINISHED is consistent with legacy behavior.
-      // We update status AND payload the correctness result if available
-      const updatePayload = {
-        status: "FINISHED",
-        lastAnswerTimestamp: admin.database.ServerValue.TIMESTAMP,
-      };
+    // Check current status to avoid overwriting LOCKED state?
+    // For now, simple set to FINISHED is consistent with legacy behavior.
+    // We update status AND payload the correctness result if available
+    const updatePayload = {
+      status: "FINISHED",
+      lastAnswerTimestamp: admin.database.ServerValue.TIMESTAMP,
+    };
 
-      if (isCorrect !== null) {
-        updatePayload.lastAnswerCorrect = isCorrect;
-      }
+    if (isCorrect !== null) {
+      updatePayload.lastAnswerCorrect = isCorrect;
+    }
 
-      await studentStatusRef.update(updatePayload);
-      logger.info(
-          `Student ${studentEmailKey} marked FINISHED (Correct: ${isCorrect})`,
-      );
-    });
+    await studentStatusRef.update(updatePayload);
+    logger.info(
+      `Student ${studentEmailKey} marked FINISHED (Correct: ${isCorrect})`,
+    );
+  });
+/**
+ * Finalize Session (The "End Poll" Signal).
+ * 1. Reads all answers for the poll.
+ * 2. Writes a permanent history record.
+ * 3. Clears the live session state.
+ */
+exports.finalizeSession = onCall({ cors: true }, async (request) => {
+  const { pollId } = request.data;
+  if (!pollId) {
+    throw new HttpsError("invalid-argument", "Missing pollId");
+  }
+
+  const db = admin.database();
+  const answersRef = db.ref(`answers/${pollId}`);
+  const liveSessionRef = db.ref(`sessions/${pollId}/live_session`);
+  const historyRef = db.ref(`history/${pollId}`);
+
+  // 1. Fetch all answers
+  const answersSnap = await answersRef.once("value");
+  const answers = answersSnap.val() || {};
+
+  // 2. Fetch session metadata (question index, etc)
+  const sessionSnap = await liveSessionRef.once("value");
+  const sessionData = sessionSnap.val() || {};
+
+  const sessionId = Date.now().toString(); // Simple ID
+
+  const historyPayload = {
+    sessionId: sessionId,
+    timestamp: admin.database.ServerValue.TIMESTAMP,
+    pollId: pollId,
+    finalQuestionIndex: sessionData.questionIndex || 0,
+    totalResponses: Object.keys(answers).length,
+    answers: answers, // Persist raw answers
+    // Todo: Add aggregated stats here
+  };
+
+  // 3. Write to History
+  await historyRef.child(sessionId).set(historyPayload);
+
+  // 4. Clear/Reset Live Session (Optional, or just mark as CLOSED)
+  // For now, we just mark it as ended
+  await liveSessionRef.update({
+    status: "ENDED",
+    endedAt: admin.database.ServerValue.TIMESTAMP,
+  });
+
+  logger.info(`Session Finalized: ${pollId} -> ${sessionId}`);
+  return { success: true, sessionId: sessionId };
+});

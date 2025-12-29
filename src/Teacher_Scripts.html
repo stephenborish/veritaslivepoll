@@ -2746,26 +2746,56 @@
         return;
       }
 
-      google.script.run
-        .withSuccessHandler(function (data) {
-          dashboardSummary = data;
-          renderDashboardSummary();
-        })
-        .withFailureHandler(function (error) {
-          console.error('Error loading dashboard summary:', error);
-          // Show empty states if loading fails - but don't break the page
-          try {
-            renderDashboardSummary();
-          } catch (e) {
-            console.error('Error rendering dashboard summary:', e);
-          }
-        })
-        .getDashboardSummary();
+      // FIREBASE MIGRATION: Load Polls directly from RTDB
+      // This replaces google.script.run.getDashboardSummary()
+
+      if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+      var db = firebase.database();
+      var pollsRef = db.ref('polls');
+
+      // Listen for poll updates (realtime dashboard)
+      pollsRef.on('value', function (snapshot) {
+        var pollsObj = snapshot.val();
+        var pollsList = [];
+
+        if (pollsObj) {
+          // Convert object to array
+          Object.keys(pollsObj).forEach(function (key) {
+            var p = pollsObj[key];
+            p.pollId = key; // Ensure ID is present
+            pollsList.push(p);
+          });
+
+          // Sort by createdAt desc (newest first)
+          pollsList.sort(function (a, b) {
+            return (b.createdAt || 0) - (a.createdAt || 0);
+          });
+        }
+
+        // Construct equivalent dashboard summary object
+        dashboardSummary = {
+          polls: pollsList,
+          totalPolls: pollsList.length,
+          // Legacy/Placeholder stats (can be enriched later)
+          activeSessions: 0,
+          totalResponses: 0
+        };
+
+        console.log('[Firebase] Dashboard polls loaded:', pollsList.length);
+        renderDashboardSummary();
+
+      }, function (error) {
+        console.error('[Firebase] Dashboard Poll Load Error:', error);
+        // Fallback or error state
+      });
     }
 
     function renderDashboardSummary() {
       // Recent sessions and activity pulse features have been removed
       // The dashboard now only shows the poll library
+      var polls = (dashboardSummary && dashboardSummary.polls) ? dashboardSummary.polls : [];
+      renderPollCards(polls);
+      renderPollTable(polls);
     }
 
     function renderRecentSessions() {
@@ -3298,23 +3328,42 @@
         return;
       }
 
-      google.script.run
-        .withSuccessHandler(function (poll) {
+      // FIREBASE MIGRATION: Load Poll for Editing from RTDB
+      // Ensures we get the latest version (Source of Truth)
+
+      var db = firebase.database();
+      db.ref('polls/' + pollId).once('value')
+        .then(function (snapshot) {
+          var poll = snapshot.val();
           if (button) {
             button.disabled = false;
             button.innerHTML = originalLabel;
           }
-          // Use unified wizard for editing
-          openPollWizard(poll);
+          if (poll) {
+            // Determine if this is a legacy poll structure or migrated one.
+            // Our unified wizard expects specific fields.
+            // The GAS version likely did some transformation. 
+            // Since we write the 'clean' structure in createNewPoll, we can use it directly.
+            // Ensure pollId is present
+            poll.pollId = pollId;
+            openPollWizard(poll);
+          } else {
+            veritasAlert('Failed to load poll data (Not found).', { title: 'Error' });
+          }
         })
-        .withFailureHandler(function (error) {
+        .catch(function (error) {
           if (button) {
             button.disabled = false;
             button.innerHTML = originalLabel;
           }
           handleError(error);
-        })
+        });
+
+      /* LEGACY GAS LOAD REMOVED
+      google.script.run
+        .withSuccessHandler(...)
         .getPollForEditing(pollId);
+      */
     }
 
     function renderPollCards(polls) {
@@ -3753,22 +3802,47 @@
       // Since we don't have a button reference to disable easily (detached dropdown), use global loader or modal
       // Or just let it run. The user sees the modal close.
 
-      google.script.run
-        .withSuccessHandler(async function (result) {
-          if (result.success) {
-            refreshPollData(result.polls);
-            await veritasAlert(result.message, { title: 'Poll copied' });
-          } else {
-            await veritasAlert('Failed to copy poll: ' + (result.error || 'Unknown error'), {
-              title: 'Copy poll failed',
-              destructive: true
-            });
+      // FIREBASE MIGRATION: Duplicate Poll in RTDB
+      // 1. Fetch source
+      // 2. Clone & Modify
+      // 3. Save as new
+
+      var db = firebase.database();
+
+      db.ref('polls/' + pollId).once('value')
+        .then(function (snapshot) {
+          var sourcePoll = snapshot.val();
+          if (!sourcePoll) {
+            throw new Error('Source poll not found.');
           }
+
+          // Generate new ID
+          var newPollRef = db.ref('polls').push();
+          var newPollId = newPollRef.key;
+
+          // Clone and modify
+          var newPoll = JSON.parse(JSON.stringify(sourcePoll));
+          newPoll.pollId = newPollId;
+          newPoll.pollName = newName;
+          newPoll.createdAt = firebase.database.ServerValue.TIMESTAMP;
+          newPoll.updatedAt = firebase.database.ServerValue.TIMESTAMP;
+          newPoll.lastRunAt = null; // Reset run history
+
+          // Save
+          return newPollRef.set(newPoll).then(function () {
+            veritasAlert('Poll copied successfully.', { title: 'Success' });
+          });
         })
-        .withFailureHandler(function (error) {
+        .catch(function (error) {
+          console.error('Copy Poll Error:', error);
           handleError(error);
-        })
+        });
+
+      /* LEGACY GAS COPY REMOVED
+      google.script.run
+        .withSuccessHandler(...)
         .copyPoll(pollId, newName, poll.className);
+      */
     }
 
     async function handleDeletePoll(pollId) {
@@ -3788,12 +3862,32 @@
         return;
       }
 
-      google.script.run
-        .withSuccessHandler(function (polls) {
-          refreshPollData(polls);
+      // FIREBASE MIGRATION: Cascading Delete in RTDB
+      // Remove from polls, answers, history, and sessions
+
+      var db = firebase.database();
+      var updates = {};
+      updates['polls/' + pollId] = null;
+      updates['answers/' + pollId] = null;
+      updates['history/' + pollId] = null;
+      updates['sessions/' + pollId] = null;
+
+      db.ref().update(updates)
+        .then(function () {
+          // Dashboard listens to 'polls/' value changes, so it will auto-update.
+          // But we can trigger a manual refresh or just show the alert.
+          // The listener in showDashboard/renderDashboardSummary will handle the UI removal.
+          veritasAlert('Poll deleted successfully.', { title: 'Success' });
         })
-        .withFailureHandler(handleError)
+        .catch(function (error) {
+          handleError(error);
+        });
+
+      /* LEGACY GAS DELETE REMOVED
+      google.script.run
+        .withSuccessHandler(...)
         .deletePoll(pollId);
+      */
     }
 
     function attachPollActionHandlers(root) {
@@ -3999,16 +4093,48 @@
         return;
       }
 
-      google.script.run
-        .withSuccessHandler(function (data) {
+      // FIREBASE MIGRATION: Roster Management
+      // Strategy: Check Firebase first. If empty, fetch from GAS and Migrate.
+
+      var db = firebase.database();
+      var rostersRef = db.ref('rosters');
+
+      rostersRef.once('value').then(function (snapshot) {
+        var fbData = snapshot.val();
+
+        if (fbData && fbData.rosters && Object.keys(fbData.rosters).length > 0) {
+          console.log('[Firebase] Rosters loaded from RTDB');
           rosterStatus.textContent = '';
-          onRosterDataLoaded(data, selectedRosterClass);
-        })
-        .withFailureHandler(function (error) {
-          rosterStatus.textContent = '';
-          handleError(error);
-        })
-        .getRosterManagerData();
+          onRosterDataLoaded(fbData, selectedRosterClass);
+        } else {
+          console.log('[Firebase] Rosters empty, fetching from legacy GAS for migration...');
+
+          // Fallback to legacy GAS (Migration Step)
+          google.script.run
+            .withSuccessHandler(function (data) {
+              rosterStatus.textContent = '';
+              console.log('[Firebase] Legacy roster data fetched. Migrating to RTDB...');
+
+              // WRITE TO FIREBASE (Migration)
+              if (data) {
+                rostersRef.set(data).then(function () {
+                  console.log('[Firebase] Roster migration complete.');
+                });
+              }
+
+              onRosterDataLoaded(data, selectedRosterClass);
+            })
+            .withFailureHandler(function (error) {
+              rosterStatus.textContent = '';
+              handleError(error);
+            })
+            .getRosterManagerData();
+        }
+      }).catch(function (e) {
+        console.error('[Firebase] Roster fetch error:', e);
+        rosterStatus.textContent = '';
+        handleError(e);
+      });
     }
 
     function onRosterDataLoaded(data, focusClass) {
@@ -4185,18 +4311,47 @@
         return;
       }
 
-      google.script.run
-        .withSuccessHandler(function (data) {
+      // FIREBASE MIGRATION: Save Roster Class
+
+      var db = firebase.database();
+
+      // Update specific class path
+      var updates = {};
+      updates['rosters/rosters/' + selectedRosterClass] = entries;
+      updates['rosters/updatedAt'] = firebase.database.ServerValue.TIMESTAMP;
+
+      db.ref().update(updates)
+        .then(function () {
+          // Also ensure class is in the classes list
+          db.ref('rosters/classes').transaction(function (classes) {
+            if (!classes) return [selectedRosterClass];
+            if (!classes.includes(selectedRosterClass)) {
+              classes.push(selectedRosterClass);
+            }
+            return classes;
+          });
+
+          // Success response
           saveRosterBtn.disabled = false;
           rosterStatus.textContent = 'Roster saved.';
           rosterDirty = false;
-          onRosterDataLoaded(data, selectedRosterClass);
+
+          // Update local data cache
+          if (!rosterData) rosterData = {};
+          rosterData[selectedRosterClass] = entries;
+
+          // Re-render (pass current data)
+          onRosterDataLoaded({
+            rosters: rosterData,
+            classes: (window.currentClasses && window.currentClasses.includes(selectedRosterClass))
+              ? window.currentClasses
+              : (window.currentClasses || []).concat([selectedRosterClass])
+          }, selectedRosterClass);
         })
-        .withFailureHandler(function (error) {
+        .catch(function (error) {
           saveRosterBtn.disabled = false;
           handleError(error);
-        })
-        .saveRoster(selectedRosterClass, entries);
+        });
     }
 
     async function openBulkAddStudentsModal() {
@@ -5779,32 +5934,41 @@
         previewOnlyNotice('reveal answers');
         return;
       }
-      google.script.run
-        .withSuccessHandler(function (data) {
+      // FIREBASE MIGRATION: Call finalizeSession Cloud Function
+      // Replaces google.script.run.endQuestionAndRevealResults()
+
+      var finalizeFn = firebase.functions().httpsCallable('finalizeSession');
+      var pollId = CURRENT_POLL_DATA.pollId;
+
+      finalizeFn({ pollId: pollId })
+        .then(function (result) {
+          console.log('Session Finalized via Cloud Function:', result.data);
           if (endShowBtn) { endShowBtn.disabled = false; }
           isPaused = true;
-          updateLiveView(data);
-          if (data && data.pollId) {
-            // ENRICHED SIGNAL
-            var qIndex = data.questionIndex;
-            var qDef = (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions) ? CURRENT_POLL_DATA.questions[qIndex] : null;
 
-            broadcastSessionState(data.pollId, {
-              questionIndex: qIndex,
-              status: 'PAUSED',
-              sessionPhase: 'RESULTS_REVEALED',
-              resultsVisibility: 'REVEALED',
-              questionText: data.questionText || (qDef ? qDef.questionText : ''),
-              questionImageURL: data.questionImageURL || (qDef ? qDef.questionImageURL : ''),
-              options: data.options || (qDef ? qDef.options : [])
-            });
-          }
+          // Synthesize success data for updateLiveView
+          var syntheticData = {
+            pollId: pollId,
+            questionIndex: CURRENT_POLL_DATA.questionIndex,
+            status: 'ENDED',
+            sessionPhase: 'RESULTS_REVEALED',
+            resultsVisibility: 'REVEALED'
+          };
+
+          updateLiveView(syntheticData);
+
+          broadcastSessionState(pollId, {
+            status: 'ENDED',
+            sessionPhase: 'RESULTS_REVEALED',
+            resultsVisibility: 'REVEALED',
+            questionIndex: CURRENT_POLL_DATA.questionIndex
+          });
         })
-        .withFailureHandler(function (error) {
+        .catch(function (error) {
+          console.error('Finalize Session Error:', error);
           if (endShowBtn) { endShowBtn.disabled = false; }
           handleError(error);
-        })
-        .endQuestionAndRevealResults();
+        });
     }
 
     function onPreviousQuestion() {
@@ -8084,29 +8248,35 @@
       var questionIndex = CURRENT_POLL_DATA.questionIndex;
       if (!pollId || questionIndex === undefined) return;
 
+      // FIREBASE MIGRATION: Polling is deprecated in favor of Realtime Listeners
+      // `initFirebaseMissionControl` handles updates via `child_changed` / `child_added`.
+      // We keep this function only as a connection heartbeat / fallback check.
+
+      if (!realtimeConnected) {
+        console.warn('[Firebase] Connection lost, attempting reconnect...');
+        if (firebaseRef) {
+          firebaseRef.once('value').then(function (snap) {
+            // Force a full refresh if we reconnect
+            if (snap.exists()) {
+              console.log('[Firebase] Reconnected, refreshing data...');
+              // Construct synthetic data object for updateLiveView
+              // This requires a bit of mapping from FB format to App format
+              // For now, we rely on the specific listeners to handle updates.
+            }
+          });
+        }
+      }
+      return;
+
+      /* LEGACY POLLING REMOVED
+      
       google.script.run
         .withSuccessHandler(function (data) {
-          // OPTIMIZATION: Reset failure count and interval on success
-          pollFailureCount = 0;
-          if (currentPollInterval !== basePollInterval) {
-            currentPollInterval = basePollInterval;
-            restartPollingWithNewInterval();
-          }
+          // ...
           updateLiveView(data);
         })
-        .withFailureHandler(function (e) {
-          console.warn('Poll refresh error:', e);
-          // OPTIMIZATION: Implement backoff on failures
-          pollFailureCount++;
-          var newInterval = basePollInterval + Math.min(2000, pollFailureCount * 500);
-          newInterval = Math.min(maxPollInterval, Math.max(basePollInterval, newInterval));
-          if (newInterval !== currentPollInterval) {
-            currentPollInterval = newInterval;
-            console.log('Adjusting poll interval to ' + currentPollInterval + 'ms due to failures');
-            restartPollingWithNewInterval();
-          }
-        })
         .getLivePollData(pollId, questionIndex);
+      */
     }
 
 
@@ -12868,6 +13038,21 @@
       runner[fnName].apply(runner, args);
     }
 
+
+
+    /* LEGACY GAS SAVE REMOVED
+    google.script.run
+      .withSuccessHandler(function (result) {
+        setButtonLoading(saveRosterBtn, false);
+        onRosterSaved(result);
+      })
+      .withFailureHandler(function (error) {
+        setButtonLoading(saveRosterBtn, false);
+        handleError(error);
+      })
+      .saveRosterData(currentClasses, rosterData);
+    */
+
     function handleAdjustStudentTime(deltaMinutes) {
       if (!currentManagedStudent) { return; }
       runMissionControlAction('adjustSecureAssessmentTime', [currentMissionControlPollId, currentSecureSessionId, currentManagedStudent.email, deltaMinutes]);
@@ -14115,58 +14300,87 @@
 
       console.log(actionText + ' poll:', wizardState.pollName, wizardState.className, apiQuestions, metadata);
 
+      // FIREBASE MIGRATION: Write definitions directly to RTDB (Source of Truth)
+      // Remove dependency on Google Sheets for poll storage.
+      var dbRef = firebase.database().ref('polls');
+
       if (wizardState.isEditMode && wizardState.pollId) {
-        // Update existing poll
-        google.script.run
-          .withSuccessHandler(async function (response) {
-            console.log('Update response:', response);
-            if (response && !response.error) {
-              await veritasAlert('Poll updated successfully!', { title: 'Success' });
-              // Update poll data and navigate to dashboard instead of reloading
-              completeWizardPublish(response);
-            } else {
-              await veritasAlert('Failed to update: ' + (response.error || response.message || 'Unknown error'), { title: 'Error', destructive: true });
-              if (publishBtn) {
-                publishBtn.disabled = false;
-                publishBtn.innerHTML = '<span class="material-symbols-outlined">' + actionIcon + '</span> Update Poll';
-              }
-            }
+        // UPDATE EXISTING POLL
+        var pollId = wizardState.pollId;
+        var existingPollRef = dbRef.child(pollId);
+
+        // Construct updated payload
+        var updatePayload = {
+          pollName: wizardState.pollName.trim(),
+          className: wizardState.className.trim(),
+          questions: apiQuestions,
+          metadata: metadata,
+          updatedAt: firebase.database.ServerValue.TIMESTAMP
+        };
+
+        existingPollRef.update(updatePayload)
+          .then(async function () {
+            console.log('Poll updated in Firebase:', pollId);
+            await veritasAlert('Poll updated successfully!', { title: 'Success' });
+
+            // Synthesize a response object compatible with legacy dashboard expectations
+            var response = {
+              pollId: pollId,
+              pollName: updatePayload.pollName,
+              className: updatePayload.className,
+              questions: updatePayload.questions,
+              metadata: updatePayload.metadata,
+              success: true
+            };
+            completeWizardPublish(response);
           })
-          .withFailureHandler(async function (error) {
-            console.error('Update error:', error);
-            await veritasAlert('Error: ' + (error.message || error), { title: 'Error', destructive: true });
+          .catch(async function (error) {
+            console.error('Firebase Update Error:', error);
+            await veritasAlert('Failed to update: ' + error.message, { title: 'Error', destructive: true });
             if (publishBtn) {
               publishBtn.disabled = false;
               publishBtn.innerHTML = '<span class="material-symbols-outlined">' + actionIcon + '</span> Update Poll';
             }
-          })
-          .updatePoll(wizardState.pollId, wizardState.pollName.trim(), wizardState.className.trim(), apiQuestions, metadata);
+          });
+
       } else {
-        // Create new poll
-        google.script.run
-          .withSuccessHandler(async function (response) {
-            console.log('Publish response:', response);
-            if (response && !response.error) {
-              await veritasAlert('Poll published successfully!', { title: 'Success' });
-              // Update poll data and navigate to dashboard instead of reloading
-              completeWizardPublish(response);
-            } else {
-              await veritasAlert('Failed to publish: ' + (response.error || response.message || 'Unknown error'), { title: 'Error', destructive: true });
-              if (publishBtn) {
-                publishBtn.disabled = false;
-                publishBtn.innerHTML = '<span class="material-symbols-outlined">' + actionIcon + '</span> Publish Poll';
-              }
-            }
+        // CREATE NEW POLL
+        var newPollRef = dbRef.push(); // Generate ID
+        var newPollId = newPollRef.key;
+
+        var newPollPayload = {
+          pollId: newPollId,
+          pollName: wizardState.pollName.trim(),
+          className: wizardState.className.trim(),
+          questions: apiQuestions,
+          metadata: metadata,
+          createdAt: firebase.database.ServerValue.TIMESTAMP,
+          ownerId: 'TEACHER' // Phase 1: Single user assumption
+        };
+
+        newPollRef.set(newPollPayload)
+          .then(async function () {
+            console.log('Poll created in Firebase:', newPollId);
+            await veritasAlert('Poll published successfully!', { title: 'Success' });
+
+            var response = {
+              pollId: newPollId,
+              pollName: newPollPayload.pollName,
+              className: newPollPayload.className,
+              questions: newPollPayload.questions,
+              metadata: newPollPayload.metadata,
+              success: true
+            };
+            completeWizardPublish(response);
           })
-          .withFailureHandler(async function (error) {
-            console.error('Publish error:', error);
-            await veritasAlert('Error: ' + (error.message || error), { title: 'Error', destructive: true });
+          .catch(async function (error) {
+            console.error('Firebase Create Error:', error);
+            await veritasAlert('Failed to publish: ' + error.message, { title: 'Error', destructive: true });
             if (publishBtn) {
               publishBtn.disabled = false;
               publishBtn.innerHTML = '<span class="material-symbols-outlined">' + actionIcon + '</span> Publish Poll';
             }
-          })
-          .createNewPoll(wizardState.pollName.trim(), wizardState.className.trim(), apiQuestions, metadata);
+          });
       }
     }
 

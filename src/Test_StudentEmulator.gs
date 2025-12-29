@@ -21,6 +21,9 @@ Veritas.StudentEmulator.DEFAULT_CONFIG = {
   minAnswerDelayMs: 500,        // Minimum delay before answering
   maxAnswerDelayMs: 5000,       // Maximum delay before answering
   pollIntervalMs: 1000,         // How often students poll for state changes
+  maxLobbyWaitMs: 60000,        // How long to wait for poll/session to go live
+  maxQuestionWaitMs: 45000,     // How long to wait for a question before skipping
+  maxSecureStartWaitMs: 60000,  // How long to keep retrying a secure start
 
   // Behavior distribution (percentages, should sum to 100)
   behaviorDistribution: {
@@ -304,29 +307,38 @@ Veritas.StudentEmulator.simulateSingleStudentLivePoll_ = function(emulator, stud
     return;
   }
 
-  // Answer each question
-  for (var q = 0; q < poll.questions.length; q++) {
-    var question = poll.questions[q];
+  var lastContext = {
+    lastStateVersion: status.stateVersion || 0,
+    lastSuccessAt: Date.now(),
+    failureCount: 0
+  };
 
-    // Check if this question is active
-    if (status.questionIndex !== q) {
-      Veritas.StudentEmulator.log_(emulator, '  Waiting for question ' + q + '...');
+  for (var q = 0; q < poll.questions.length; q++) {
+    var waitResult = Veritas.StudentEmulator.waitForQuestion_(emulator, student, q, lastContext);
+    status = waitResult.status;
+    lastContext = waitResult.context;
+
+    if (!status || status.status !== 'LIVE') {
+      Veritas.StudentEmulator.log_(emulator, '  Stopped at Q' + q + ' - session status: ' + (status ? status.status : 'UNKNOWN'));
+      break;
+    }
+
+    if (status.questionIndex > q) {
+      Veritas.StudentEmulator.log_(emulator, '  Skipping Q' + q + ' - teacher already advanced');
       continue;
     }
 
-    // Simulate thinking time
+    var question = poll.questions[q];
+
     var delay = Veritas.StudentEmulator.calculateDelay_(emulator, profile);
     Utilities.sleep(delay);
 
-    // Maybe trigger violation (for violator profile)
     if (profile.triggersViolations && Math.random() < emulator.config.violationProbability) {
       Veritas.StudentEmulator.triggerViolation_(emulator, student, poll.pollId);
     }
 
-    // Choose answer
     var answerResult = Veritas.StudentEmulator.chooseAnswer_(emulator, student, question, profile);
 
-    // Submit answer
     var submission = Veritas.StudentApi.submitLivePollAnswer(
       poll.pollId,
       q,
@@ -469,15 +481,11 @@ Veritas.StudentEmulator.simulateSingleStudentSecureAssessment_ = function(emulat
 
   try {
     // 1. Begin the attempt (enter lobby/start timer)
-    var beginResult = Veritas.StudentApi.beginIndividualTimedAttempt(
-      poll.pollId,
-      sessionId,
-      student.token,
-      { accessCode: accessCode }
-    );
+    var beginResult = Veritas.StudentEmulator.startSecureSession_(emulator, student, poll, sessionId, accessCode);
 
-    if (!beginResult.success && beginResult.error) {
-      Veritas.StudentEmulator.log_(emulator, '  Failed to begin attempt: ' + beginResult.error);
+    if (!beginResult || !beginResult.success) {
+      var errMsg = beginResult && beginResult.error ? beginResult.error : 'Unknown start error';
+      Veritas.StudentEmulator.log_(emulator, '  Failed to begin attempt: ' + errMsg);
       return;
     }
 
@@ -487,37 +495,40 @@ Veritas.StudentEmulator.simulateSingleStudentSecureAssessment_ = function(emulat
       event: 'ASSESSMENT_STARTED'
     });
 
-    // 2. Answer each question in sequence
-    for (var q = 0; q < poll.questions.length; q++) {
-      var question = poll.questions[q];
+    var sessionState = Veritas.StudentEmulator.waitForSecureActive_(emulator, student);
+    if (!sessionState || sessionState.status === 'ENDED') {
+      Veritas.StudentEmulator.log_(emulator, '  Session ended before start for ' + student.email);
+      return;
+    }
 
-      // Simulate thinking time (longer for secure assessments)
+    while (sessionState && sessionState.status === 'ACTIVE') {
+      var actualIndex = typeof sessionState.actualQuestionIndex === 'number'
+        ? sessionState.actualQuestionIndex
+        : sessionState.progressIndex;
+      var question = sessionState.question || poll.questions[actualIndex];
+
       var delay = Veritas.StudentEmulator.calculateDelay_(emulator, profile) * 1.5;
-      Utilities.sleep(Math.min(delay, 10000)); // Cap at 10 seconds for testing
+      Utilities.sleep(Math.min(delay, 10000));
 
-      // Maybe trigger violation
       if (profile.triggersViolations && Math.random() < emulator.config.violationProbability) {
         Veritas.StudentEmulator.triggerViolation_(emulator, student, poll.pollId);
 
-        // Simulate waiting for teacher unlock
         Utilities.sleep(2000);
 
-        // Check if still locked
-        var state = Veritas.StudentApi.getIndividualTimedSessionState(student.token);
-        if (state.isLocked) {
+        var proctorState = Veritas.StudentApi.getIndividualTimedSessionState(student.token);
+        if (proctorState && proctorState.isLocked) {
           Veritas.StudentEmulator.log_(emulator, '  Still locked, waiting...');
-          // In real scenario, would wait for teacher unlock
+          sessionState = Veritas.StudentApi.getIndividualTimedSessionState(student.token);
+          continue;
         }
       }
 
-      // Choose answer
       var answerResult = Veritas.StudentEmulator.chooseAnswer_(emulator, student, question, profile);
 
-      // Submit answer
       var submission = Veritas.StudentApi.submitIndividualTimedAnswer(
         poll.pollId,
         sessionId,
-        q,
+        actualIndex,
         answerResult.answer,
         student.token,
         answerResult.confidence,
@@ -529,17 +540,27 @@ Veritas.StudentEmulator.simulateSingleStudentSecureAssessment_ = function(emulat
       if (submission.success) {
         emulator.results.successfulSubmissions++;
         student.submissions.push({
-          questionIndex: q,
+          questionIndex: actualIndex,
           answer: answerResult.answer,
           confidence: answerResult.confidence,
           isCorrect: answerResult.isCorrect,
           time: new Date().toISOString()
         });
-        Veritas.StudentEmulator.log_(emulator, '  Q' + q + ': Submitted "' + answerResult.answer + '"');
+        Veritas.StudentEmulator.log_(emulator, '  Q' + actualIndex + ': Submitted "' + answerResult.answer + '"');
       } else {
         emulator.results.failedSubmissions++;
-        Veritas.StudentEmulator.log_(emulator, '  Q' + q + ': FAILED - ' + (submission.error || 'Unknown error'));
+        Veritas.StudentEmulator.log_(emulator, '  Q' + actualIndex + ': FAILED - ' + (submission.error || 'Unknown error'));
       }
+
+      emulator.results.timeline.push({
+        time: new Date().toISOString(),
+        student: student.email,
+        event: 'ANSWER_SUBMITTED',
+        questionIndex: actualIndex,
+        success: submission.success
+      });
+
+      sessionState = Veritas.StudentApi.getIndividualTimedSessionState(student.token);
     }
 
     student.state = 'COMPLETED';
@@ -598,6 +619,153 @@ Veritas.StudentEmulator.generateTokens_ = function(emulator, className) {
   emulator.students.forEach(function(student) {
     student.token = Veritas.Utils.TokenManager.generateToken(student.email, className);
   });
+};
+
+/**
+ * Poll for live status until the poll goes live or timeout
+ * @private
+ */
+Veritas.StudentEmulator.waitForLiveStatus_ = function(emulator, student) {
+  var start = Date.now();
+  var context = {
+    lastStateVersion: 0,
+    lastSuccessAt: Date.now(),
+    failureCount: 0
+  };
+  var lastStatus = null;
+
+  while (Date.now() - start < emulator.config.maxLobbyWaitMs) {
+    var result = Veritas.StudentEmulator.fetchStatusWithContext_(emulator, student, context);
+    var status = result.status;
+    context = result.context;
+
+    if (status) {
+      lastStatus = status;
+    }
+
+    if (status && status.status === 'LIVE') {
+      return status;
+    }
+
+    Utilities.sleep(emulator.config.pollIntervalMs);
+  }
+
+  return lastStatus;
+};
+
+/**
+ * Wait for the target question index or until teacher advances
+ * @private
+ */
+Veritas.StudentEmulator.waitForQuestion_ = function(emulator, student, questionIndex, context) {
+  var start = Date.now();
+  var latestContext = context || { lastStateVersion: 0, lastSuccessAt: Date.now(), failureCount: 0 };
+  var status = null;
+
+  while (Date.now() - start < emulator.config.maxQuestionWaitMs) {
+    var result = Veritas.StudentEmulator.fetchStatusWithContext_(emulator, student, latestContext);
+    status = result.status;
+    latestContext = result.context;
+
+    if (!status || status.status !== 'LIVE') {
+      break;
+    }
+
+    if (status.questionIndex === questionIndex || status.questionIndex > questionIndex) {
+      break;
+    }
+
+    Utilities.sleep(emulator.config.pollIntervalMs);
+  }
+
+  return {
+    status: status,
+    context: latestContext
+  };
+};
+
+/**
+ * Begin secure session with retries for transient failures
+ * @private
+ */
+Veritas.StudentEmulator.startSecureSession_ = function(emulator, student, poll, sessionId, accessCode) {
+  var start = Date.now();
+  var attempt = 0;
+  var lastError = null;
+
+  while (Date.now() - start < emulator.config.maxSecureStartWaitMs) {
+    attempt++;
+    try {
+      var beginResult = Veritas.StudentApi.beginIndividualTimedAttempt(
+        poll.pollId,
+        sessionId,
+        student.token,
+        { accessCode: accessCode }
+      );
+
+      if (beginResult && beginResult.success) {
+        return beginResult;
+      }
+
+      lastError = beginResult && beginResult.error ? beginResult.error : 'Unknown start error';
+    } catch (err) {
+      lastError = err.message;
+    }
+
+    Utilities.sleep(Math.min(2000 * attempt, 5000));
+  }
+
+  return { success: false, error: lastError || 'Timed out starting secure session' };
+};
+
+/**
+ * Wait for secure session to reach ACTIVE or terminal state
+ * @private
+ */
+Veritas.StudentEmulator.waitForSecureActive_ = function(emulator, student) {
+  var start = Date.now();
+  var status = null;
+
+  while (Date.now() - start < emulator.config.maxSecureStartWaitMs) {
+    status = Veritas.StudentApi.getIndividualTimedSessionState(student.token);
+
+    if (!status) {
+      Utilities.sleep(emulator.config.pollIntervalMs);
+      continue;
+    }
+
+    if (status.status === 'ACTIVE' || status.status === 'LOCKED' || status.status === 'COMPLETED' || status.status === 'ENDED') {
+      return status;
+    }
+
+    Utilities.sleep(emulator.config.pollIntervalMs);
+  }
+
+  return status;
+};
+
+/**
+ * Fetch poll status with defensive context tracking
+ * @private
+ */
+Veritas.StudentEmulator.fetchStatusWithContext_ = function(emulator, student, context) {
+  var ctx = context || { lastStateVersion: 0, lastSuccessAt: Date.now(), failureCount: 0 };
+
+  try {
+    var status = Veritas.StudentApi.getStudentPollStatus(student.token, ctx);
+    ctx.lastStateVersion = status && status.stateVersion ? status.stateVersion : ctx.lastStateVersion;
+    ctx.lastSuccessAt = Date.now();
+    ctx.failureCount = 0;
+    return { status: status, context: ctx };
+  } catch (err) {
+    ctx.failureCount = (ctx.failureCount || 0) + 1;
+    emulator.results.errors.push({
+      student: student.email,
+      error: err.message,
+      time: new Date().toISOString()
+    });
+    return { status: null, context: ctx };
+  }
 };
 
 /**

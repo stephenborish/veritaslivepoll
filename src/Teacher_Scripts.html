@@ -96,6 +96,24 @@
       }
     };
 
+    // Enhanced Error Handling
+    var ERROR_MESSAGES = {
+      'NetworkError': { title: 'Connection Problem', message: 'Please check your internet and try again.' },
+      'permission-denied': { title: 'Access Denied', message: 'You don\'t have permission for this action.' },
+      'not-found': { title: 'Not Found', message: 'The requested item could not be found.' },
+      'default': { title: 'Error', message: 'An unexpected error occurred. Please try again.' }
+    };
+
+    function showUserFriendlyError(error) {
+      var errorKey = (error && error.code) || 'default';
+      var errorInfo = ERROR_MESSAGES[errorKey] || ERROR_MESSAGES['default'];
+      if (typeof showToast === 'function') {
+        showToast('error', errorInfo.title, errorInfo.message);
+      } else {
+        console.error(errorInfo.title + ': ' + errorInfo.message, error);
+      }
+    }
+
     var CONFIDENCE_LEVEL_STYLES = {
       'guessing': {
         label: 'Guessing',

@@ -11397,11 +11397,14 @@
           var setLiveSessionState = firebase.functions().httpsCallable('setLiveSessionState');
           console.log('[Firebase] Calling Cloud Function: setLiveSessionState...');
 
+          var correctAns = state.correctAnswer || (questionDef ? questionDef.correctAnswer : null);
+
           var result = await setLiveSessionState({
             pollId: pollId,
             status: state.status || 'OPEN',
             questionIndex: state.questionIndex,
             questionText: finalQuestionText,
+            correctAnswer: correctAns, // Secure transmission to CF
             options: finalOptions
           });
           console.log('[Firebase] Cloud Function Success:', result.data);

@@ -55,30 +55,30 @@
             // CHECK: If pollId changed, cleanup old listeners
             if (currentFirebasePollId && currentFirebasePollId !== pollId) {
                 console.log('[Firebase] PollId changed from ' + currentFirebasePollId + ' to ' + pollId + ' - Validating cleanup...');
-                
+
                 // 1. Detach Student Status Listener
                 if (firebaseRef) {
                     try {
                         firebaseRef.off();
                         console.log('[Firebase] Detached old student status listener');
-                    } catch(e) { console.warn('Error detaching firebaseRef:', e); }
+                    } catch (e) { console.warn('Error detaching firebaseRef:', e); }
                     firebaseRef = null;
                 }
-                
+
                 // 2. Detach Live Session Listener
                 if (liveSessionRef) {
                     try {
                         liveSessionRef.off();
-                         console.log('[Firebase] Detached old live session listener');
-                    } catch(e) { console.warn('Error detaching liveSessionRef:', e); }
+                        console.log('[Firebase] Detached old live session listener');
+                    } catch (e) { console.warn('Error detaching liveSessionRef:', e); }
                     liveSessionRef = null;
                 }
 
-                 // 3. Detach Connected Listener (optional, but cleaner)
+                // 3. Detach Connected Listener (optional, but cleaner)
                 if (connectedRef) {
                     try {
                         connectedRef.off();
-                    } catch(e) {} 
+                    } catch (e) { }
                     connectedRef = null;
                 }
 
@@ -146,7 +146,7 @@
                 // NEW: Listen to 'live_session' for instant updates (Hybrid Architecture)
                 var sessionPath = 'sessions/' + pollId + '/live_session';
                 liveSessionRef = firebaseDb.ref(sessionPath);
-                
+
                 liveSessionRef.on('value', function (snapshot) {
                     var data = snapshot.val();
                     if (data) {
@@ -195,7 +195,7 @@
                                     });
                                 }
                             }
-                            
+
                             console.log('[Firebase] Slow Path: Incomplete data, polling server to ensure consistency');
                             startPolling(true);
                         }
@@ -237,14 +237,20 @@
                     clientTimestamp: Date.now()
                 };
 
-                // WRITE DIRECTLY TO FIREBASE (Scoped Path)
-                // Path: sessions/{pollId}/responses/{questionIndex}/{safeEmail}
-                var safeEmail = studentEmail.replace(/\./g, ','); // Firebase keys can't have '.'
-                var path = 'sessions/' + pollId + '/responses/' + questionIndex + '/' + safeEmail;
+                // WRITE DIRECTLY TO FIREBASE (Cloud Function Trigger Path)
+                // Path: answers/{pollId}/{studentKey}
+                // The Cloud Function 'onAnswerSubmitted' listens here to grade/process.
+                var key = studentKey || studentEmail.replace(/\./g, ',');
+                if (!key) {
+                    console.error('[Firebase] No student key available for submission');
+                    return null;
+                }
+
+                var path = 'answers/' + pollId + '/' + key;
 
                 await firebaseDb.ref(path).set(payload);
 
-                console.log('[Firebase] Fast Answer Submitted:', payload);
+                console.log('[Firebase] Write to ' + path + ' successful:', payload);
                 return { success: true, responseId: responseId, timestamp: timestamp };
             } catch (e) {
                 console.error('[Firebase] Fast Answer Failed:', e);
@@ -484,10 +490,10 @@
                     LockManager.lock('Teacher Remote Lock');
                 }
             } else if (status === 'ACTIVE') {
-                 // Teacher signalled unlock
+                // Teacher signalled unlock
                 // IMPLEMENTATION FIX: Check both LockManager and Poison Pill state
                 var isLocked = LockManager.isLocked() || isPoisonPillActive();
-                
+
                 if (isLocked) {
                     console.log('[Firebase] Unlock signal received - checking server for AWAITING_FULLSCREEN');
                     // FIX: Explicitly call checkProctorState immediately

@@ -1744,3 +1744,172 @@ Veritas.TeacherApi.toggleSessionCalculator = function(pollId) {
     return newState;
   })();
 };
+
+// =============================================================================
+// STUDENT EMULATOR (Testing/Development)
+// =============================================================================
+
+/**
+ * Check if student emulator is available (dev mode check)
+ * @returns {Object} {available: boolean, reason: string}
+ */
+Veritas.TeacherApi.isEmulatorAvailable = function() {
+  return withErrorHandling(function() {
+    Veritas.TeacherApi.assertTeacher();
+
+    // Check if StudentEmulator module exists
+    if (!Veritas.StudentEmulator) {
+      return { available: false, reason: 'StudentEmulator module not loaded' };
+    }
+
+    // Check for dev mode via property
+    var props = PropertiesService.getScriptProperties();
+    var devMode = props.getProperty('DEV_MODE') === 'true';
+    var emulatorEnabled = props.getProperty('EMULATOR_ENABLED') === 'true';
+
+    if (!devMode && !emulatorEnabled) {
+      return { available: false, reason: 'Emulator requires DEV_MODE or EMULATOR_ENABLED property' };
+    }
+
+    return { available: true };
+  })();
+};
+
+/**
+ * Start student emulation for a live poll
+ * @param {string} pollId - Poll ID to emulate
+ * @param {Object} options - Emulation options
+ * @returns {Object} Emulation results
+ */
+Veritas.TeacherApi.startLivePollEmulation = function(pollId, options) {
+  return withErrorHandling(function() {
+    Veritas.TeacherApi.assertTeacher();
+
+    // Verify emulator is available
+    var availability = Veritas.TeacherApi.isEmulatorAvailable();
+    if (!availability.available) {
+      return { success: false, error: availability.reason };
+    }
+
+    if (!pollId) {
+      return { success: false, error: 'pollId is required' };
+    }
+
+    var opts = options || {};
+    var studentCount = opts.studentCount || 5;
+    var concurrent = opts.concurrent || false;
+
+    // Get poll to determine class name
+    var poll = DataAccess.polls.getById(pollId);
+    if (!poll) {
+      return { success: false, error: 'Poll not found: ' + pollId };
+    }
+
+    var className = poll.className + ' (Emulated)';
+
+    Logger.log('[Emulator] Starting live poll emulation', {
+      pollId: pollId,
+      studentCount: studentCount,
+      concurrent: concurrent,
+      className: className
+    });
+
+    var simulationFn = concurrent
+      ? Veritas.StudentEmulator.simulateConcurrentLivePoll
+      : Veritas.StudentEmulator.simulateLivePoll;
+
+    var results = simulationFn({
+      pollId: pollId,
+      className: className,
+      studentCount: studentCount,
+      autoStart: false, // Poll should already be started
+      config: {
+        verbose: true,
+        minAnswerDelayMs: opts.minDelayMs || 500,
+        maxAnswerDelayMs: opts.maxDelayMs || 3000,
+        correctAnswerProbability: opts.accuracy || 0.65,
+        violationProbability: opts.violationRate || 0.1
+      }
+    });
+
+    return results;
+  })();
+};
+
+/**
+ * Start student emulation for a secure assessment
+ * @param {string} pollId - Poll ID to emulate
+ * @param {string} sessionId - Session ID
+ * @param {Object} options - Emulation options
+ * @returns {Object} Emulation results
+ */
+Veritas.TeacherApi.startSecureAssessmentEmulation = function(pollId, sessionId, options) {
+  return withErrorHandling(function() {
+    Veritas.TeacherApi.assertTeacher();
+
+    // Verify emulator is available
+    var availability = Veritas.TeacherApi.isEmulatorAvailable();
+    if (!availability.available) {
+      return { success: false, error: availability.reason };
+    }
+
+    if (!pollId) {
+      return { success: false, error: 'pollId is required' };
+    }
+
+    var opts = options || {};
+    var studentCount = opts.studentCount || 5;
+
+    // Get poll to determine class name
+    var poll = DataAccess.polls.getById(pollId);
+    if (!poll) {
+      return { success: false, error: 'Poll not found: ' + pollId };
+    }
+
+    var className = poll.className + ' (Emulated)';
+
+    Logger.log('[Emulator] Starting secure assessment emulation', {
+      pollId: pollId,
+      sessionId: sessionId,
+      studentCount: studentCount,
+      className: className
+    });
+
+    var results = Veritas.StudentEmulator.simulateSecureAssessment({
+      pollId: pollId,
+      sessionId: sessionId,
+      className: className,
+      studentCount: studentCount,
+      accessCode: poll.accessCode || '',
+      autoStart: false, // Session should already be started
+      config: {
+        verbose: true,
+        minAnswerDelayMs: opts.minDelayMs || 1000,
+        maxAnswerDelayMs: opts.maxDelayMs || 5000,
+        correctAnswerProbability: opts.accuracy || 0.65,
+        violationProbability: opts.violationRate || 0.15
+      }
+    });
+
+    return results;
+  })();
+};
+
+/**
+ * Enable/disable emulator mode via script property
+ * @param {boolean} enabled - Whether to enable emulator
+ * @returns {Object} Result
+ */
+Veritas.TeacherApi.setEmulatorEnabled = function(enabled) {
+  return withErrorHandling(function() {
+    Veritas.TeacherApi.assertTeacher();
+
+    var props = PropertiesService.getScriptProperties();
+    props.setProperty('EMULATOR_ENABLED', enabled ? 'true' : 'false');
+
+    return {
+      success: true,
+      emulatorEnabled: enabled
+    };
+  })();
+};

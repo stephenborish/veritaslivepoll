@@ -2009,6 +2009,14 @@
     var saveRosterBtn = document.getElementById('save-roster-btn');
     var refreshArchivedBtn = document.getElementById('refresh-archived-btn');
 
+    // Emulator controls
+    var emulatorControls = document.getElementById('emulator-controls');
+    var emulatorEnabled = document.getElementById('emulator-enabled');
+    var emulatorOptions = document.getElementById('emulator-options');
+    var emulatorStudentCount = document.getElementById('emulator-student-count');
+    var emulatorConcurrent = document.getElementById('emulator-concurrent');
+    var emulatorAvailable = false;
+
     storeButtonDefaultHtml(startPollBtn);
     storeButtonDefaultHtml(sendLinkBtn);
     storeButtonDefaultHtml(viewLinksBtn);
@@ -2152,6 +2160,105 @@
       startPollBtn.addEventListener('click', onStartPoll);
     } else {
       console.warn('Missing click target: start-poll-btn');
+    }
+
+    // --- Emulator Controls ---
+    function initEmulatorControls() {
+      if (!emulatorControls || !emulatorEnabled) return;
+
+      // Check if emulator is available
+      google.script.run
+        .withSuccessHandler(function(result) {
+          emulatorAvailable = result && result.available;
+          if (emulatorAvailable) {
+            emulatorControls.classList.remove('hidden');
+            console.log('[Emulator] Available and enabled');
+          } else {
+            console.log('[Emulator] Not available:', result ? result.reason : 'unknown');
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.log('[Emulator] Check failed:', error);
+          emulatorAvailable = false;
+        })
+        .isEmulatorAvailable();
+
+      // Toggle options visibility when checkbox changes
+      emulatorEnabled.addEventListener('change', function() {
+        if (emulatorOptions) {
+          if (this.checked) {
+            emulatorOptions.classList.remove('hidden');
+          } else {
+            emulatorOptions.classList.add('hidden');
+          }
+        }
+      });
+    }
+
+    // Initialize emulator controls after a short delay to ensure DOM is ready
+    setTimeout(initEmulatorControls, 500);
+
+    /**
+     * Trigger student emulation for a live poll
+     * @param {string} pollId - Poll ID to emulate
+     */
+    function triggerLivePollEmulation(pollId) {
+      var studentCount = emulatorStudentCount ? parseInt(emulatorStudentCount.value, 10) || 5 : 5;
+      var concurrent = emulatorConcurrent ? emulatorConcurrent.checked : false;
+
+      console.log('[Emulator] Triggering live poll emulation', { pollId: pollId, studentCount: studentCount, concurrent: concurrent });
+
+      veritasToast('Starting emulation with ' + studentCount + ' students...', 'info');
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result && result.success) {
+            console.log('[Emulator] Live poll emulation complete', result);
+            veritasToast('Emulation complete: ' + result.successfulSubmissions + '/' + result.totalSubmissions + ' submissions', 'good');
+          } else {
+            console.error('[Emulator] Live poll emulation failed', result);
+            veritasToast('Emulation failed: ' + (result ? result.error : 'Unknown error'), 'bad');
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('[Emulator] Live poll emulation error', error);
+          veritasToast('Emulation error: ' + error.message, 'bad');
+        })
+        .startLivePollEmulation(pollId, {
+          studentCount: studentCount,
+          concurrent: concurrent
+        });
+    }
+
+    /**
+     * Trigger student emulation for a secure assessment
+     * @param {string} pollId - Poll ID to emulate
+     * @param {string} sessionId - Session ID
+     */
+    function triggerSecureAssessmentEmulation(pollId, sessionId) {
+      var studentCount = emulatorStudentCount ? parseInt(emulatorStudentCount.value, 10) || 5 : 5;
+
+      console.log('[Emulator] Triggering secure assessment emulation', { pollId: pollId, sessionId: sessionId, studentCount: studentCount });
+
+      veritasToast('Starting secure assessment emulation with ' + studentCount + ' students...', 'info');
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result && result.success) {
+            console.log('[Emulator] Secure assessment emulation complete', result);
+            veritasToast('Emulation complete: ' + result.successfulSubmissions + '/' + result.totalSubmissions + ' submissions', 'good');
+          } else {
+            console.error('[Emulator] Secure assessment emulation failed', result);
+            veritasToast('Emulation failed: ' + (result ? result.error : 'Unknown error'), 'bad');
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('[Emulator] Secure assessment emulation error', error);
+          veritasToast('Emulation error: ' + error.message, 'bad');
+        })
+        .startSecureAssessmentEmulation(pollId, sessionId, {
+          studentCount: studentCount
+        });
     }
 
     // --- Calculator Toggles ---
@@ -5413,6 +5520,11 @@
             }
             setButtonLoading(startPollBtn, false);
             showIndividualTimedDashboard(result);
+
+            // Trigger emulation if enabled
+            if (emulatorAvailable && emulatorEnabled && emulatorEnabled.checked) {
+              triggerSecureAssessmentEmulation(pollId, result.sessionId);
+            }
           })
           .withFailureHandler(function (error) {
             setButtonLoading(startPollBtn, false);
@@ -5466,6 +5578,11 @@
           questionImageURL: data.questionImageURL || (qDef ? qDef.questionImageURL : ''),
           options: data.options || (qDef ? qDef.options : [])
         });
+
+        // Trigger emulation if enabled
+        if (emulatorAvailable && emulatorEnabled && emulatorEnabled.checked) {
+          triggerLivePollEmulation(data.pollId);
+        }
       }
     })
         .withFailureHandler(function (error) {

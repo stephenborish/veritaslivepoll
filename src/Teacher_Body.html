@@ -598,12 +598,28 @@
           <div id="hud-pace-chip" class="hidden"></div>
         </div>
 
+        <!-- Mobile Nav Controls (phone/tablet) -->
+        <div id="live-mobile-nav" class="live-mobile-nav" style="display: none;" role="tablist"
+          aria-label="Live dashboard sections">
+          <button class="live-mobile-tab is-active" data-panel="question" role="tab" aria-selected="true">
+            <span class="material-symbols-outlined text-base">quiz</span>
+            <span>Question</span>
+            <span id="mobile-response-chip" class="live-mobile-tab-chip">0 / 0</span>
+          </button>
+          <button class="live-mobile-tab" data-panel="students" role="tab" aria-selected="false">
+            <span class="material-symbols-outlined text-base">group</span>
+            <span>Students</span>
+            <span id="mobile-lock-chip" class="live-mobile-tab-chip">0</span>
+          </button>
+        </div>
+
         <!-- Main Content Wrapper (Scrollable) -->
-        <div class="flex-1 min-h-0 overflow-y-auto bg-gray-50 dark:bg-gray-800 px-4 pb-8 md:pb-10 live-view-shell">
+        <div class="flex-1 min-h-0 overflow-y-auto bg-gray-50 dark:bg-gray-800 px-4 pb-32 lg:pb-10 live-view-shell">
 
           <div class="flex flex-col lg:flex-row gap-4 h-full min-h-0 live-view-grid">
             <!-- LEFT COLUMN: Question + Answer Choices (Adaptive Width) -->
-            <div class="flex-1 min-w-0 flex flex-col gap-4">
+            <section id="live-question-panel" class="live-mobile-panel flex-1 min-w-0 flex flex-col gap-4"
+              data-mobile-panel="question">
 
               <!-- Question Display Area -->
               <div
@@ -665,14 +681,15 @@
                   </div>
                 </div>
               </div>
-            </div>
+            </section>
 
             <!-- RIGHT COLUMN: STUDENTS + CONFIDENCE PULSE (Fixed Width) -->
-            <div id="live-sidebar"
-              class="w-full lg:w-96 flex-none flex flex-col gap-4 h-full overflow-hidden min-h-0 transition-all duration-300 ease-in-out">
+            <section id="live-students-panel"
+              class="live-mobile-panel w-full lg:w-96 flex-none flex flex-col gap-4 h-full overflow-hidden min-h-0 transition-all duration-300 ease-in-out"
+              data-mobile-panel="students">
 
               <!-- STUDENTS PANEL -->
-              <div
+              <div id="live-sidebar"
                 class="flex-1 flex flex-col bg-white dark:bg-brand-dark-gray/30 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden min-h-0 live-student-panel">
 
                 <!-- Student Header with Status Summary -->
@@ -734,19 +751,75 @@
                 </div>
 
               </div>
-            </div>
-            <!-- END STUDENTS PANEL -->
 
-            <!-- CONFIDENCE PULSE PANEL -->
-            <div id="confidence-pulse-container" class="shrink-0">
-              <!-- Confidence pulse will be rendered here dynamically -->
-            </div>
+              <!-- CONFIDENCE PULSE PANEL -->
+              <div id="confidence-pulse-container" class="shrink-0">
+                <!-- Confidence pulse will be rendered here dynamically -->
+              </div>
+            </section>
+            <!-- END STUDENTS PANEL -->
 
           </div>
           <!-- END RIGHT COLUMN -->
 
         </div> <!-- Closes the new .flex.gap-6 -->
       </div> <!-- Closes the new .flex-1.overflow-y-auto -->
+
+      <!-- Sticky Mobile Action Bar -->
+      <div id="live-mobile-actions" class="live-mobile-actions" style="display: none;" aria-live="polite">
+        <div class="live-mobile-actions__row">
+          <div class="live-mobile-timer" id="timer-compact-container">
+            <button id="mobile-start-btn" type="button" class="live-mobile-pill live-mobile-pill-primary">
+              <span class="material-symbols-outlined text-base">play_arrow</span>
+              <span id="mobile-timer-label">Start</span>
+            </button>
+            <button id="mobile-pause-btn" type="button"
+              class="live-mobile-pill live-mobile-pill-muted hidden">
+              <span class="material-symbols-outlined text-base">pause</span>
+              <span>Pause</span>
+            </button>
+            <div class="live-mobile-timebox">
+              <button id="subtract-10s-btn-mobile" type="button" aria-label="Subtract 10 seconds">-10s</button>
+              <input id="timer-display-compact" type="text" aria-label="Timer" readonly />
+              <button id="add-10s-btn-mobile" type="button" aria-label="Add 10 seconds">+10s</button>
+            </div>
+          </div>
+          <div class="live-mobile-metrics">
+            <div class="live-mobile-metric">
+              <span class="live-mobile-metric-label">Accuracy</span>
+              <span id="mobile-accuracy-chip" class="live-mobile-metric-value">--%</span>
+            </div>
+            <button id="mobile-locks-btn" type="button" class="live-mobile-pill live-mobile-pill-warning" disabled>
+              <span class="material-symbols-outlined text-base">lock_person</span>
+              <span id="mobile-locks-label">Locked</span>
+            </button>
+          </div>
+        </div>
+        <div class="live-mobile-actions__buttons">
+          <button id="mobile-resume-btn" type="button"
+            class="live-mobile-action live-mobile-action-ghost hidden">
+            <span class="material-symbols-outlined text-base">play_circle</span>
+            <span>Resume</span>
+          </button>
+          <button id="mobile-reveal-btn" type="button"
+            class="live-mobile-action live-mobile-action-primary">
+            <span class="material-symbols-outlined text-base">visibility</span>
+            <span>Reveal</span>
+          </button>
+          <button id="mobile-next-btn" type="button" class="live-mobile-action live-mobile-action-info">
+            <span class="material-symbols-outlined text-base">arrow_forward</span>
+            <span>Next</span>
+          </button>
+          <button id="mobile-reset-btn" type="button" class="live-mobile-action live-mobile-action-ghost">
+            <span class="material-symbols-outlined text-base">replay</span>
+            <span>Reset</span>
+          </button>
+          <button id="mobile-stop-btn" type="button" class="live-mobile-action live-mobile-action-danger">
+            <span class="material-symbols-outlined text-base">stop_circle</span>
+            <span>End</span>
+          </button>
+        </div>
+      </div>
 
       <!-- Hidden elements for compatibility -->
       <div class="hidden">

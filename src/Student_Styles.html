@@ -574,6 +574,53 @@
     display: none !important;
   }
 
+  @media (max-width: 768px) {
+    .page-shell {
+      padding: 80px 16px 40px;
+    }
+
+    .hud-bar {
+      flex-wrap: wrap;
+      height: auto;
+      gap: 8px;
+      padding: 10px 14px;
+    }
+
+    .hud-left,
+    .hud-right {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .hud-center {
+      position: static;
+      transform: none;
+      width: 100%;
+      text-align: left;
+      order: 3;
+    }
+
+    .hud-progress {
+      font-size: 0.9rem;
+      letter-spacing: 0.08em;
+    }
+
+    .secure-session-footer {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .secure-submit-btn {
+      width: 100%;
+    }
+
+    .question-visual {
+      float: none;
+      margin: 0 0 12px;
+      max-width: 100%;
+    }
+  }
+
   .student-card {
     width: 100%;
     max-width: 1200px;

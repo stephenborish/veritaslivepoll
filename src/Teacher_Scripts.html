@@ -6283,16 +6283,22 @@
         previewOnlyNotice('reveal results to students');
         return;
       }
-      google.script.run
-        .withSuccessHandler(function (data) {
+      const setLiveSessionState = firebase.functions().httpsCallable('setLiveSessionState');
+      setLiveSessionState({
+        pollId: CURRENT_POLL_DATA.pollId,
+        status: 'PAUSED',
+        questionIndex: CURRENT_QUESTION_INDEX,
+        sessionPhase: 'RESULTS_REVEALED',
+        resultsVisibility: 'REVEALED'
+      })
+        .then(function (result) {
           if (revealBtn) { revealBtn.disabled = false; }
-          updateLiveView(data);
+          // The UI will update via the RTDB listener (liveSessionRef)
         })
-        .withFailureHandler(function (error) {
+        .catch(function (error) {
           if (revealBtn) { revealBtn.disabled = false; }
           handleError(error);
-        })
-        .revealResultsToStudents();
+        });
     }
 
     function onHideResults() {
@@ -6303,16 +6309,22 @@
         previewOnlyNotice('hide results from students');
         return;
       }
-      google.script.run
-        .withSuccessHandler(function (data) {
+      const setLiveSessionState = firebase.functions().httpsCallable('setLiveSessionState');
+      setLiveSessionState({
+        pollId: CURRENT_POLL_DATA.pollId,
+        status: 'PAUSED',
+        questionIndex: CURRENT_QUESTION_INDEX,
+        sessionPhase: 'RESULTS_HOLD',
+        resultsVisibility: 'HIDDEN'
+      })
+        .then(function (result) {
           if (hideBtn) { hideBtn.disabled = false; }
-          updateLiveView(data);
+          // UI updates via listener
         })
-        .withFailureHandler(function (error) {
+        .catch(function (error) {
           if (hideBtn) { hideBtn.disabled = false; }
           handleError(error);
-        })
-        .hideResultsFromStudents();
+        });
     }
 
     async function onEndPoll() {
@@ -6327,31 +6339,14 @@
         previewOnlyNotice('end the live poll');
         return;
       }
-      google.script.run
-        .withSuccessHandler(function (data) {
-          if (data && data.status !== 'ENDED') {
-            showDashboard();
-          }
-          // Broadcast session end (CLOSED)
-          if (data && data.pollId) {
-            broadcastSessionState(data.pollId, {
-              questionIndex: -1,
-              status: 'CLOSED',
-              sessionPhase: 'ENDED',
-              resultsVisibility: 'HIDDEN'
-            });
-          } else if (CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId) {
-            // Fallback if data doesn't contain pollId (e.g. status only)
-            broadcastSessionState(CURRENT_POLL_DATA.pollId, {
-              questionIndex: -1,
-              status: 'CLOSED',
-              sessionPhase: 'ENDED',
-              resultsVisibility: 'HIDDEN'
-            });
-          }
+      const finalizeSession = firebase.functions().httpsCallable('finalizeSession');
+      finalizeSession({
+        pollId: (CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId) || ''
+      })
+        .then(function (result) {
+          showDashboard();
         })
-        .withFailureHandler(handleError)
-        .closePoll();
+        .catch(handleError);
     }
 
     // --- Live View & Data Polling ---
@@ -13021,18 +13016,27 @@
         onViewLinks();
       } else {
         // Fallback: manually trigger the links modal
-        google.script.run
-          .withSuccessHandler(function (response) {
-            if (response.success && response.links) {
-              openLinksModalWithData(className, response.links);
+        // FIREBASE MIGRATION: Load links from Firebase rosters
+        firebase.database().ref('rosters/rosters/' + className).once('value')
+          .then(function (snapshot) {
+            var roster = snapshot.val();
+            if (roster && roster.length > 0) {
+              // Transform roster to links format
+              var links = roster.map(function (s) {
+                return {
+                  name: s.name,
+                  email: s.email,
+                  link: WEB_APP_URL + '?role=student&pollId=' + (CURRENT_POLL_DATA ? CURRENT_POLL_DATA.pollId : '') + '&email=' + encodeURIComponent(s.email)
+                };
+              });
+              openLinksModalWithData(className, links);
             } else {
-              veritasAlert('Could not load student links.', { title: 'View Links', destructive: true });
+              veritasAlert('No students found in this class roster.', { title: 'View Links', destructive: true });
             }
           })
-          .withFailureHandler(function (error) {
+          .catch(function (error) {
             handleError(error);
-          })
-          .getStudentLinksForClass(className);
+          });
       }
     });
 
@@ -13052,17 +13056,48 @@
         return;
       }
       if (!currentMissionControlPollId || !currentSecureSessionId || !currentManagedStudent) { return; }
+
       setStudentManagerLoading(true);
-      var runner = google.script.run
-        .withSuccessHandler(function () {
+
+      var pollId = currentMissionControlPollId;
+      var studentEmail = args[2] || currentManagedStudent.email;
+      var emailKey = (typeof generateStudentKey === 'function') ? generateStudentKey(studentEmail) : studentEmail.replace(/[.$#[\]]/g, '_');
+
+      var studentRef = firebase.database().ref('sessions/' + pollId + '/students/' + emailKey);
+      var dbUpdate = null;
+
+      if (fnName === 'adjustSecureAssessmentTime') {
+        var delta = args[3];
+        dbUpdate = studentRef.child('timeAdjustment').transaction(function (current) {
+          return (current || 0) + delta;
+        });
+      } else if (fnName === 'pauseSecureAssessmentStudent') {
+        dbUpdate = studentRef.update({
+          status: 'PAUSED',
+          pauseActive: true
+        });
+      } else if (fnName === 'resumeSecureAssessmentStudent') {
+        dbUpdate = studentRef.update({
+          status: 'ACTIVE',
+          pauseActive: false
+        });
+      } else if (fnName === 'forceSubmitSecureAssessmentStudent') {
+        dbUpdate = studentRef.update({
+          status: 'FINISHED'
+        });
+      }
+
+      if (dbUpdate) {
+        dbUpdate.then(function () {
           setStudentManagerLoading(false);
           pollIndividualSessionState();
-        })
-        .withFailureHandler(function (error) {
+        }).catch(function (error) {
           setStudentManagerLoading(false);
           handleError(error);
         });
-      runner[fnName].apply(runner, args);
+      } else {
+        setStudentManagerLoading(false);
+      }
     }
 
 

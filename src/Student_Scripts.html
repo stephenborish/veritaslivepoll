@@ -1533,118 +1533,26 @@
                 if (secureQuestionImage) secureQuestionImage.style.display = 'none';
                 if (secureOptionsList) secureOptionsList.innerHTML = '';
 
-                // Trigger server sync in background (fire and forget for UI, but important for persistence)
-                // FIX: Pass the client-generated responseId to ensure deduplication works server-side
-                google.script.run
-                    .withSuccessHandler(function () {
-                        console.log('Server sync confirmed');
-                        // We can poll here to get the next question officially
-                        setTimeout(function () { pollForIndividualSessionState(); }, 50);
-                    })
-                    .withFailureHandler(function (e) {
-                        console.warn('Server sync failed (data safe in Firebase):', e);
-                        // Still poll to try and get next question if network recovers
-                        setTimeout(function () { pollForIndividualSessionState(); }, 2000);
-                    })
-                    .submitIndividualTimedAnswer(
-                        answerDetails.pollId,
-                        answerDetails.sessionId,
-                        answerDetails.actualQuestionIndex,
-                        answerDetails.answer,
-                        SESSION_TOKEN,
-                        answerDetails.confidenceLevel,
-                        fbResult.responseId // PASS UUID HERE
-                    );
+                // Firebase write was successful, the Cloud Function processes it.
+                // No need for a redundant google.script.run sync.
+                console.log('[Firebase] Submission finalized. Polling for next state.');
+                setTimeout(function () { pollForIndividualSessionState(); }, 50);
             } else {
-                console.warn('Firebase write failed/skipped, falling back to legacy server path');
-                fallbackSubmitToServer(answerDetails, retryCount, maxRetries);
-            }
-        });
-    }
-
-    function fallbackSubmitToServer(answerDetails, retryCount, maxRetries) {
-        google.script.run
-            .withSuccessHandler(function (response) {
-                setSecureSubmitLoading(false);
-                disableSecureOptions(false);
-                hideSecureConfidencePrompt(); // Ensure hidden on success
-                if (response && response.success) {
-                    // Success - clear local backup
-                    try {
-                        localStorage.removeItem('secure_pending_answer');
-                    } catch (e) {
-                        console.warn('Could not clear local backup', e);
-                    }
-
-                    // Clear current question state immediately to prevent re-display
-                    var previousQuestionKey = secureCurrentQuestionKey;
-                    secureSelectedOptionIndex = null;
-                    secureQuestionState = null;
-                    secureCurrentQuestionKey = null;
-
-                    // Show loading state instead of blank screen
-                    if (secureQuestionText) {
-                        secureQuestionText.innerHTML = '<div style="display: flex; align-items: center; gap: 12px; padding: 20px 0;"><div style="width: 24px; height: 24px; border: 3px solid rgba(18, 56, 93, 0.2); border-top-color: #12385d; border-radius: 50%; animation: veritas-spin 0.7s linear infinite;"></div><span style="color: #4b5563; font-size: 1.1rem;">Loading next question...</span></div>';
-                    }
-                    if (secureQuestionImage) secureQuestionImage.style.display = 'none';
-                    if (secureOptionsList) secureOptionsList.innerHTML = '';
-
-                    // Immediate polling to load next question faster
-                    setTimeout(function () {
-                        pollForIndividualSessionState();
-                    }, 100);
-                } else {
-                    // If server says non-current question, resync immediately
-                    var errorMessage = (response && response.error) || 'Failed to submit answer.';
-                    if (/non-current question/i.test(errorMessage)) {
-                        console.warn('Sync mismatch detected (non-current question). Force resyncing state.');
-                        pollForIndividualSessionState();
-                        return; // Skip handleError to avoid alerting user during auto-recovery
-                    }
-                    handleError(errorMessage);
-                }
-            })
-            .withFailureHandler(function (error) {
-                // Check if network error and retries available
-                var isNetworkError = /network|timeout|unavailable|DNS|failed to fetch/i.test(error.toString());
-
-                if (isNetworkError && retryCount < maxRetries) {
-                    console.warn('Submission failed, retrying... (' + (retryCount + 1) + '/' + maxRetries + ')');
-
-                    // Exponential backoff: 1s, 2s, 4s
-                    var delay = Math.pow(2, retryCount) * 1000;
-
-                    setTimeout(function () {
-                        setSecureSubmitLoading(false); // Reset to allow retry
-                        secureSubmitting = false; // Important: reset locking flag
-                        fallbackSubmitToServer(answerDetails, retryCount + 1, maxRetries);
-                    }, delay);
-
-                    return; // Don't show error yet
-                }
-
-                setSecureSubmitLoading(false);
-                disableSecureOptions(false);
-                hideSecureConfidencePrompt(); // Ensure hidden on error
-
-                // Save to local storage for manual recovery
+                console.warn('[Firebase] Write failed. Saving to local backup for manual recovery.');
                 try {
                     localStorage.setItem('secure_pending_answer', JSON.stringify(answerDetails));
                 } catch (e) {
                     console.error('Failed to backup answer', e);
                 }
-
-                handleError('Submission failed after ' + (retryCount + 1) + ' attempts. Your answer is backed up. Please check your connection and try again.');
-            })
-            .submitIndividualTimedAnswer(
-                answerDetails.pollId,
-                answerDetails.sessionId,
-                answerDetails.actualQuestionIndex,
-                answerDetails.answer,
-                SESSION_TOKEN,
-                answerDetails.confidenceLevel
-            );
+                setSecureSubmitLoading(false);
+                disableSecureOptions(false);
+                hideSecureConfidencePrompt();
+                handleError('Submission failed. Your answer is backed up locally. Please check your connection and try again.');
+            }
+        });
     }
+
+
 
     function stopSecureCountdown() {
         secureCountdownController.stop();
@@ -3314,22 +3222,25 @@
                     .then(function () {
                         console.log('Fullscreen entered - confirming with server');
                         // Call studentConfirmFullscreen with the current lockVersion
-                        google.script.run
-                            .withSuccessHandler(function (response) {
-                                if (response.success && response.status === 'OK') {
+                        // Call confirmFullscreen Cloud Function
+                        var confirmFullscreenFn = firebase.functions().httpsCallable('confirmFullscreen');
+                        confirmFullscreenFn({
+                            pollId: CURRENT_POLL_ID || (ACTIVE_SESSION && ACTIVE_SESSION.pollId),
+                            studentEmail: STUDENT_INFO.id || STUDENT_INFO.email,
+                            lockVersion: currentLockVersion
+                        })
+                            .then(function (result) {
+                                if (result.data && result.data.success) {
                                     console.log('[Proctor] Server confirmed unlock via fullscreen confirmation - Firebase listener will handle state change.');
-                                    // The Firebase listener will pick up the 'ACTIVE' status and clear the lock locally.
-                                    // No need to clearPersistedLock() or startPolling() here directly.
                                 } else {
-                                    console.error('Failed to confirm fullscreen:', response);
+                                    console.error('Failed to confirm fullscreen:', result.data?.reason);
                                     statusMessage.textContent = 'Failed to resume. Please try again.';
                                 }
                             })
-                            .withFailureHandler(function (error) {
+                            .catch(function (error) {
                                 console.error('Error confirming fullscreen:', error);
                                 statusMessage.textContent = 'Error resuming session.';
-                            })
-                            .studentConfirmFullscreen(currentLockVersion, SESSION_TOKEN);
+                            });
                     })
                     .catch(function (e) {
                         console.warn('Fullscreen denied on resume:', e);
@@ -3977,63 +3888,37 @@
                     statusMessage.textContent = 'Response Received';
                     statusMessage.className = 'text-green-700 text-2xl font-semibold';
                     if (statusSubMessage) {
-                        statusSubMessage.textContent = 'Recorded via Firebase. Syncing to backup...';
+                        statusSubMessage.textContent = 'Recorded via Firebase.';
                         statusSubMessage.style.display = 'block';
                         statusSubMessage.className = 'text-gray-700 text-lg mt-4';
                     }
-                    // Background sync to Sheets
-                    syncToSheets(pollId, questionIndex, answerText, confidence);
                 } else {
-                    console.warn('[Firebase] Fast write failed, falling back to Sheets');
-                    syncToSheets(pollId, questionIndex, answerText, confidence);
+                    console.warn('[Firebase] Fast write failed.');
+                    handleLivePollError('Firebase submission failed. Please check your connection.');
                 }
             });
-
-        function syncToSheets(pId, qIdx, text, conf) {
-            google.script.run
-                .withSuccessHandler(function (response) {
-                    if (!response.success) {
-                        console.error('[Sheets] Backup sync failed:', response.error);
-                        // If primary Firebase succeeded, we don't necessarily need to error UI
-                        // but we should log it. If both failed, then show error.
-                        if (statusMessage.textContent !== 'Response Received') {
-                            handleLivePollError(response.error);
-                        }
-                    } else {
-                        console.log('[Sheets] Backup sync successful');
-                    }
-                })
-                .withFailureHandler(function (error) {
-                    console.error('[Sheets] Network error during backup sync:', error);
-                    if (statusMessage.textContent !== 'Response Received') {
-                        handleLivePollError(error);
-                    }
-                })
-                .submitLivePollAnswer(pId, qIdx, text, SESSION_TOKEN, conf);
+    } function handleLivePollError(error) {
+        hasAnsweredCurrent = false;
+        pendingSubmission = false;
+        pendingAnswerText = null;
+        statusMessage.textContent = error || 'We hit a hiccup. Try again?';
+        statusMessage.className = 'text-red-700 text-2xl font-semibold';
+        if (statusSubMessage) {
+            statusSubMessage.style.display = 'none';
+            statusSubMessage.textContent = '';
         }
-
-        function handleLivePollError(error) {
-            hasAnsweredCurrent = false;
-            pendingSubmission = false;
-            pendingAnswerText = null;
-            statusMessage.textContent = error || 'We hit a hiccup. Try again?';
-            statusMessage.className = 'text-red-700 text-2xl font-semibold';
-            if (statusSubMessage) {
-                statusSubMessage.style.display = 'none';
-                statusSubMessage.textContent = '';
-            }
-            setTimeout(function () {
-                if (!isInteractionBlocked) {
-                    questionContainer.style.display = 'block';
-                    statusContainer.style.display = 'none';
-                    var buttons = optionsList.querySelectorAll('button');
-                    for (var i = 0; i < buttons.length; i++) {
-                        buttons[i].disabled = false;
-                        buttons[i].className = optionBaseClass;
-                    }
+        setTimeout(function () {
+            if (!isInteractionBlocked) {
+                questionContainer.style.display = 'block';
+                statusContainer.style.display = 'none';
+                var buttons = optionsList.querySelectorAll('button');
+                for (var i = 0; i < buttons.length; i++) {
+                    buttons[i].disabled = false;
+                    buttons[i].className = optionBaseClass;
                 }
-            }, 2000);
-        }
+            }
+        }, 2000);
+    }
     }
 
     function shuffle(array) {

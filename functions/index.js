@@ -28,7 +28,7 @@ exports.setLiveSessionState = onCall({ cors: true }, async (request) => {
   // const uid = request.auth.uid;
 
   const {
-    pollId, status, questionIndex, questionText, options, correctAnswer,
+    pollId, status, questionIndex, questionText, options, correctAnswer, metadata,
   } = request.data;
 
   if (!pollId) {
@@ -44,18 +44,26 @@ exports.setLiveSessionState = onCall({ cors: true }, async (request) => {
   // Write directly to Realtime DB
   const sessionRef = admin.database().ref(`sessions/${pollId}/live_session`);
 
+  // Merge with existing metadata if present
+  const existingSnapshot = await sessionRef.child("metadata").once("value");
+  const existingMetadata = existingSnapshot.val() || {};
+
   const payload = {
     pollId: pollId,
-    questionIndex: questionIndex,
+    questionIndex: questionIndex !== undefined ? questionIndex : (status === "PRE_LIVE" ? -1 : 0),
     status: status || "OPEN",
     timestamp: admin.database.ServerValue.TIMESTAMP,
     questionText: questionText || "",
     options: options || [],
     serverProcessed: true, // Flag to prove it came from us
+    metadata: {
+      ...existingMetadata,
+      ...metadata,
+    },
   };
 
   // 3. SECURE OPTION: Store the answer key internally (not exposed to students)
-  if (correctAnswer !== undefined) {
+  if (correctAnswer !== undefined && questionIndex !== undefined) {
     const keyPath = `sessions/${pollId}/answers_key/${questionIndex}`;
     const keyRef = admin.database().ref(keyPath);
     await keyRef.set(correctAnswer);
@@ -605,3 +613,53 @@ exports.manageRoster = onCall({ cors: true }, async (request) => {
       throw new HttpsError("invalid-argument", `Unknown action: ${action}`);
   }
 });
+
+/**
+ * Confirm Fullscreen (Student Signal).
+ * Resets student status from 'AWAITING_FULLSCREEN' to 'ACTIVE'
+ * if lockVersion matches.
+ */
+exports.confirmFullscreen = onCall({ cors: true }, async (request) => {
+  const { pollId, studentEmail, lockVersion } = request.data;
+
+  if (!pollId || !studentEmail || lockVersion === undefined) {
+    throw new HttpsError("invalid-argument", "Missing required parameters");
+  }
+
+  const emailKey = studentEmail.replace(/[.$#[\]]/g, "_");
+  const studentRef = admin.database().ref(`sessions/${pollId}/students/${emailKey}`);
+
+  const result = await studentRef.transaction((student) => {
+    if (!student) return;
+
+    if (student.status !== "AWAITING_FULLSCREEN") {
+      return; // Not in the state that allows confirmation
+    }
+
+    if (student.lockVersion !== lockVersion) {
+      return; // Version mismatch
+    }
+
+    student.status = "ACTIVE";
+    student.lastFullscreenConfirmationAt = admin.database.ServerValue.TIMESTAMP;
+
+    return student;
+  });
+
+  if (result.committed && result.snapshot.exists()) {
+    // Log activity
+    const activityRef = admin.database().ref(`sessions/${pollId}/activities/${emailKey}`);
+    await activityRef.push({
+      type: "FULLSCREEN_CONFIRM",
+      timestamp: admin.database.ServerValue.TIMESTAMP,
+    });
+
+    return { success: true };
+  } else {
+    return {
+      success: false,
+      reason: result.snapshot.exists() ? "invalid_state_or_version" : "student_not_found"
+    };
+  }
+});
+

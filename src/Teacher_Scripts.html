@@ -6258,7 +6258,7 @@
       }
     }
 
-    function onToggleLiveCalculator() {
+    async function onToggleLiveCalculator() {
       if (!liveCalculatorToggle || PREVIEW_MODE) {
         if (PREVIEW_MODE) { previewOnlyNotice('toggle the calculator'); }
         return;
@@ -6274,23 +6274,29 @@
       liveCalculatorToggle.setAttribute('aria-busy', 'true');
       liveCalculatorToggle.disabled = true;
 
-      google.script.run
-        .withSuccessHandler(function (enabled) {
-          liveCalculatorToggle.removeAttribute('aria-busy');
-          liveCalculatorToggle.disabled = false;
-          // FIX TASK D: Server returns boolean directly, not {calculatorEnabled: true}
-          var isEnabled = enabled === true;
-          setLiveCalculatorToggleState(isEnabled, true);
-          // Show toast feedback
-          showToast('success', isEnabled ? 'Calculator enabled' : 'Calculator disabled',
-            isEnabled ? 'Students can now access the calculator.' : 'Calculator has been disabled for students.');
-        })
-        .withFailureHandler(function (error) {
-          liveCalculatorToggle.removeAttribute('aria-busy');
-          liveCalculatorToggle.disabled = false;
-          handleError(error);
-        })
-        .toggleSessionCalculator(pollId);
+      try {
+        var setLiveSessionState = firebase.functions().httpsCallable('setLiveSessionState');
+        var result = await setLiveSessionState({
+          pollId: pollId,
+          metadata: {
+            calculatorEnabled: targetState
+          }
+        });
+
+        liveCalculatorToggle.removeAttribute('aria-busy');
+        liveCalculatorToggle.disabled = false;
+
+        // Update local state and UI
+        setLiveCalculatorToggleState(targetState, true);
+
+        // Show toast feedback
+        showToast('success', targetState ? 'Calculator enabled' : 'Calculator disabled',
+          targetState ? 'Students can now access the calculator.' : 'Calculator has been disabled for students.');
+      } catch (error) {
+        liveCalculatorToggle.removeAttribute('aria-busy');
+        liveCalculatorToggle.disabled = false;
+        handleError(error);
+      }
     }
 
     function onRevealResults() {
@@ -6691,12 +6697,14 @@
         return;
       }
 
-      google.script.run
-        .withSuccessHandler(function () {
+      const finalizeSession = firebase.functions().httpsCallable('finalizeSession');
+      finalizeSession({
+        pollId: pollId
+      })
+        .then(function () {
           showDashboard();
         })
-        .withFailureHandler(handleError)
-        .endIndividualTimedSession(pollId);
+        .catch(handleError);
     }
 
     function updateLiveView(data) {
@@ -7502,16 +7510,18 @@
       for (var i = 0; i < lockedStudents.length; i++) {
         var student = lockedStudents[i];
         try {
-          var response = await new Promise(function (resolve, reject) {
-            var safeLockVersion = parseInt(student.lockVersion, 10);
-            if (isNaN(safeLockVersion)) safeLockVersion = 0;
-            google.script.run
-              .withSuccessHandler(resolve)
-              .withFailureHandler(reject)
-              .teacherApproveUnlock(student.email, CURRENT_POLL_DATA.pollId, safeLockVersion);
+          var manageProctoring = firebase.functions().httpsCallable('manageProctoring');
+          var safeLockVersion = parseInt(student.lockVersion, 10);
+          if (isNaN(safeLockVersion)) safeLockVersion = 0;
+
+          var response = await manageProctoring({
+            action: 'UNLOCK',
+            studentEmail: student.email,
+            pollId: CURRENT_POLL_DATA.pollId,
+            lockVersion: safeLockVersion
           });
 
-          if (response.ok) {
+          if (response.data && response.data.success) {
             successCount++;
             // Update local status
             currentStudentStatusData = currentStudentStatusData.map(function (s) {
@@ -7520,7 +7530,7 @@
                   name: s.name,
                   email: s.email,
                   status: 'AWAITING_FULLSCREEN',
-                  lockVersion: response.lockVersion || student.lockVersion,
+                  lockVersion: response.data.lockVersion || student.lockVersion,
                   lockReason: s.lockReason,
                   lockedAt: s.lockedAt,
                   answer: s.answer,
@@ -7683,53 +7693,57 @@
      * This handles the edge case where Firebase reported a violation but the server call failed.
      */
     async function teacherForceUnlock(email, pollId, buttonElement) {
-      google.script.run
-        .withSuccessHandler(async function (response) {
-          if (response.ok) {
-            // SUCCESS: Now write to Firebase for instant student feedback
-            setFirebaseStatus(email, 'ACTIVE');
-            currentStudentStatusData = currentStudentStatusData.map(function (s) {
-              if (s.email === email) {
-                return {
-                  name: s.name,
-                  email: s.email,
-                  status: 'AWAITING_FULLSCREEN',
-                  lockVersion: response.lockVersion || 0,
-                  lockReason: s.lockReason,
-                  lockedAt: s.lockedAt,
-                  answer: s.answer,
-                  isCorrect: s.isCorrect,
-                  timestamp: s.timestamp
-                };
-              }
-              return s;
-            });
-            renderStudentStatus();
-            // Simple toast notification instead of blocking alert dialog
-            showToast('success', 'Approval Successful', 'Student can now re-enter fullscreen.', 3000);
-          } else {
-            await veritasAlert(response.message || 'Failed to force unlock student.', {
-              title: 'Unlock failed',
-              destructive: true
-            });
-            if (buttonElement) {
-              buttonElement.disabled = false;
-              var lastSpan = buttonElement.querySelector('span:last-child');
-              if (lastSpan) lastSpan.textContent = formatStudentName(email);
+      try {
+        var manageProctoring = firebase.functions().httpsCallable('manageProctoring');
+        var response = await manageProctoring({
+          action: 'RESET',
+          studentEmail: email,
+          pollId: pollId
+        });
+
+        if (response.data && response.data.success) {
+          // SUCCESS: Now write to Firebase for instant student feedback
+          setFirebaseStatus(email, 'ACTIVE');
+          currentStudentStatusData = currentStudentStatusData.map(function (s) {
+            if (s.email === email) {
+              return {
+                name: s.name,
+                email: s.email,
+                status: 'AWAITING_FULLSCREEN',
+                lockVersion: response.data.lockVersion || 0,
+                lockReason: s.lockReason,
+                lockedAt: s.lockedAt,
+                answer: s.answer,
+                isCorrect: s.isCorrect,
+                timestamp: s.timestamp
+              };
             }
-          }
-        })
-        .withFailureHandler(async function (error) {
-          await veritasAlert('Error: ' + (error.message || error), {
-            title: 'Force unlock failed',
+            return s;
+          });
+          renderStudentStatus();
+          // Simple toast notification instead of blocking alert dialog
+          showToast('success', 'Approval Successful', 'Student can now re-enter fullscreen.', 3000);
+        } else {
+          await veritasAlert(response.data?.reason || 'Failed to force unlock student.', {
+            title: 'Unlock failed',
             destructive: true
           });
           if (buttonElement) {
             buttonElement.disabled = false;
-            buttonElement.querySelector('span:last-child').textContent = formatStudentName(email);
+            var lastSpan = buttonElement.querySelector('span:last-child');
+            if (lastSpan) lastSpan.textContent = formatStudentName(email);
           }
-        })
-        .teacherForceUnlock(email, pollId);
+        }
+      } catch (error) {
+        await veritasAlert('Error: ' + (error.message || error), {
+          title: 'Force unlock failed',
+          destructive: true
+        });
+        if (buttonElement) {
+          buttonElement.disabled = false;
+          buttonElement.querySelector('span:last-child').textContent = formatStudentName(email);
+        }
+      }
     }
 
     function createResetButton(student) {
@@ -7807,21 +7821,32 @@
 
     function runTeacherBlock(email, pollId, reason) {
       return new Promise(function (resolve, reject) {
-        google.script.run
-          .withSuccessHandler(resolve)
-          .withFailureHandler(reject)
-          // FIX: Correct parameter order - API expects (pollId, studentEmail, reason)
-          .teacherBlockStudent(pollId, email, reason || '');
+        var manageProctoring = firebase.functions().httpsCallable('manageProctoring');
+        manageProctoring({
+          action: 'BLOCK',
+          studentEmail: email,
+          pollId: pollId,
+          reason: reason || ''
+        })
+          .then(function (result) {
+            resolve(result.data);
+          })
+          .catch(reject);
       });
     }
 
     function runTeacherUnblock(email, pollId) {
       return new Promise(function (resolve, reject) {
-        google.script.run
-          .withSuccessHandler(resolve)
-          .withFailureHandler(reject)
-          // FIX: Correct parameter order - API expects (pollId, studentEmail)
-          .teacherUnblockStudent(pollId, email);
+        var manageProctoring = firebase.functions().httpsCallable('manageProctoring');
+        manageProctoring({
+          action: 'UNBLOCK',
+          studentEmail: email,
+          pollId: pollId
+        })
+          .then(function (result) {
+            resolve(result.data);
+          })
+          .catch(reject);
       });
     }
 

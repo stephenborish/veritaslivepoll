@@ -368,3 +368,240 @@ exports.reportStudentViolation = onCall({ cors: true }, async (request) => {
     lockVersion: result.snapshot ? result.snapshot.val().lockVersion : 1,
   };
 });
+
+/**
+ * Create a new poll
+ * Replaces google.script.run.createNewPoll
+ */
+exports.createPoll = onCall({ cors: true }, async (request) => {
+  const { pollName, className, questions, metadata } = request.data;
+
+  if (!pollName || !className || !questions) {
+    throw new HttpsError("invalid-argument", "Missing required fields");
+  }
+
+  const pollId = Date.now().toString();
+  const db = admin.database();
+
+  const pollData = {
+    pollId,
+    pollName,
+    className,
+    questions: questions || [],
+    questionCount: (questions || []).length,
+    createdAt: admin.database.ServerValue.TIMESTAMP,
+    updatedAt: admin.database.ServerValue.TIMESTAMP,
+    // Metadata fields
+    sessionType: metadata?.sessionType || "LIVE_POLL",
+    timeLimitMinutes: metadata?.timeLimitMinutes || 0,
+    accessCode: metadata?.accessCode || "",
+    availableFrom: metadata?.availableFrom || "",
+    dueBy: metadata?.dueBy || "",
+    secureSettings: metadata?.secureSettings || {},
+    missionControlState: metadata?.missionControlState || "",
+  };
+
+  await db.ref(`polls/${pollId}`).set(pollData);
+
+  logger.info(`Poll created: ${pollId} - ${pollName}`);
+
+  return {
+    success: true,
+    pollId,
+    poll: pollData,
+  };
+});
+
+/**
+ * Update an existing poll
+ * Replaces google.script.run.updatePoll
+ */
+exports.updatePoll = onCall({ cors: true }, async (request) => {
+  const { pollId, pollName, className, questions, metadata } = request.data;
+
+  if (!pollId) {
+    throw new HttpsError("invalid-argument", "Missing pollId");
+  }
+
+  const db = admin.database();
+  const pollRef = db.ref(`polls/${pollId}`);
+
+  // Check if poll exists
+  const snapshot = await pollRef.once("value");
+  if (!snapshot.exists()) {
+    throw new HttpsError("not-found", "Poll not found");
+  }
+
+  const updateData = {
+    updatedAt: admin.database.ServerValue.TIMESTAMP,
+  };
+
+  if (pollName) updateData.pollName = pollName;
+  if (className) updateData.className = className;
+  if (questions) {
+    updateData.questions = questions;
+    updateData.questionCount = questions.length;
+  }
+
+  // Update metadata if provided
+  if (metadata) {
+    if (metadata.sessionType) updateData.sessionType = metadata.sessionType;
+    if (metadata.timeLimitMinutes !== undefined) {
+      updateData.timeLimitMinutes = metadata.timeLimitMinutes;
+    }
+    if (metadata.accessCode !== undefined) {
+      updateData.accessCode = metadata.accessCode;
+    }
+    if (metadata.availableFrom !== undefined) {
+      updateData.availableFrom = metadata.availableFrom;
+    }
+    if (metadata.dueBy !== undefined) updateData.dueBy = metadata.dueBy;
+    if (metadata.secureSettings) {
+      updateData.secureSettings = metadata.secureSettings;
+    }
+    if (metadata.missionControlState !== undefined) {
+      updateData.missionControlState = metadata.missionControlState;
+    }
+  }
+
+  await pollRef.update(updateData);
+
+  logger.info(`Poll updated: ${pollId}`);
+
+  return {
+    success: true,
+    pollId,
+  };
+});
+
+/**
+ * Manage roster operations (CRUD)
+ * Replaces google.script.run.saveRoster, bulkAddStudentsToRoster,
+ * renameClass, deleteClassRecord
+ */
+exports.manageRoster = onCall({ cors: true }, async (request) => {
+  const { action, className, newClassName, students } = request.data;
+
+  if (!action || !className) {
+    throw new HttpsError("invalid-argument", "Missing required fields");
+  }
+
+  const db = admin.database();
+  const rosterRef = db.ref(`rosters/rosters/${className}`);
+
+  switch (action) {
+    case "SAVE":
+      // Save/replace entire roster
+      if (!students || !Array.isArray(students)) {
+        throw new HttpsError("invalid-argument", "Students array required");
+      }
+
+      await rosterRef.set(students);
+      logger.info(`Roster saved: ${className} (${students.length} students)`);
+
+      return {
+        success: true,
+        className,
+        studentCount: students.length,
+      };
+
+    case "BULK_ADD":
+      // Add students to existing roster
+      if (!students || !Array.isArray(students)) {
+        throw new HttpsError("invalid-argument", "Students array required");
+      }
+
+      const existingSnapshot = await rosterRef.once("value");
+      const existingRoster = existingSnapshot.val() || [];
+      const existingEmails = new Set(
+        existingRoster.map((s) => s.email.toLowerCase()),
+      );
+
+      const newStudents = students.filter(
+        (s) => !existingEmails.has(s.email.toLowerCase()),
+      );
+      const updatedRoster = [...existingRoster, ...newStudents];
+
+      await rosterRef.set(updatedRoster);
+      logger.info(
+        `Roster bulk add: ${className} (+${newStudents.length} students)`,
+      );
+
+      return {
+        success: true,
+        className,
+        addedCount: newStudents.length,
+        totalCount: updatedRoster.length,
+      };
+
+    case "RENAME":
+      // Rename class (move roster to new name)
+      if (!newClassName) {
+        throw new HttpsError("invalid-argument", "newClassName required");
+      }
+
+      const snapshot = await rosterRef.once("value");
+      if (!snapshot.exists()) {
+        throw new HttpsError("not-found", "Class not found");
+      }
+
+      const rosterData = snapshot.val();
+      const newRosterRef = db.ref(`rosters/rosters/${newClassName}`);
+
+      // Check if new name already exists
+      const newSnapshot = await newRosterRef.once("value");
+      if (newSnapshot.exists()) {
+        throw new HttpsError(
+          "already-exists",
+          "A class with that name already exists",
+        );
+      }
+
+      // Copy to new location and delete old
+      await newRosterRef.set(rosterData);
+      await rosterRef.remove();
+
+      // Also update all polls with this className
+      const pollsRef = db.ref("polls");
+      const pollsSnapshot = await pollsRef.once("value");
+      const polls = pollsSnapshot.val() || {};
+
+      const updates = {};
+      Object.keys(polls).forEach((pollId) => {
+        if (polls[pollId].className === className) {
+          updates[`polls/${pollId}/className`] = newClassName;
+        }
+      });
+
+      if (Object.keys(updates).length > 0) {
+        await db.ref().update(updates);
+      }
+
+      logger.info(`Class renamed: ${className} -> ${newClassName}`);
+
+      return {
+        success: true,
+        oldClassName: className,
+        newClassName,
+        pollsUpdated: Object.keys(updates).length,
+      };
+
+    case "DELETE":
+      // Delete class roster
+      const deleteSnapshot = await rosterRef.once("value");
+      if (!deleteSnapshot.exists()) {
+        throw new HttpsError("not-found", "Class not found");
+      }
+
+      await rosterRef.remove();
+      logger.info(`Class deleted: ${className}`);
+
+      return {
+        success: true,
+        className,
+      };
+
+    default:
+      throw new HttpsError("invalid-argument", `Unknown action: ${action}`);
+  }
+});

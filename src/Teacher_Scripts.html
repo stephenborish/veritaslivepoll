@@ -4537,31 +4537,30 @@
         return;
       }
 
-      var db = firebase.database();
-      var rostersRef = db.ref('rosters');
-
-      rostersRef.once('value').then(function (snapshot) {
-        var data = snapshot.val() || { classes: [], rosters: {} };
-        if (!data.classes) data.classes = [];
-        if (!data.rosters) data.rosters = {};
-
-        // Update classes list
-        data.classes = data.classes.map(function (c) { return c === selectedRosterClass ? newName : c; });
-
-        // Move roster data
-        if (data.rosters[selectedRosterClass]) {
-          data.rosters[newName] = data.rosters[selectedRosterClass];
-          delete data.rosters[selectedRosterClass];
+      // Use manageRoster Cloud Function
+      var manageRosterFn = firebase.functions().httpsCallable('manageRoster');
+      manageRosterFn({
+        action: 'RENAME',
+        className: selectedRosterClass,
+        newClassName: newName
+      }).then(function (result) {
+        if (result.data && result.data.success) {
+          rosterStatus.textContent = 'Class renamed.';
+          if (result.data.pollsUpdated > 0) {
+            rosterStatus.textContent += ' (' + result.data.pollsUpdated + ' poll' + (result.data.pollsUpdated === 1 ? '' : 's') + ' updated)';
+          }
+          selectedRosterClass = newName;
+          loadRosterData();
+        } else {
+          throw new Error(result.data?.error || 'Failed to rename class');
         }
-
-        return rostersRef.set(data);
-      }).then(function () {
-        rosterStatus.textContent = 'Class renamed.';
-        selectedRosterClass = newName;
-        loadRosterData();
       }).catch(function (error) {
         rosterStatus.textContent = '';
-        handleError(error);
+        if (typeof showUserFriendlyError === 'function') {
+          showUserFriendlyError(error);
+        } else {
+          handleError(error);
+        }
       });
     }
 
@@ -4591,25 +4590,26 @@
         return;
       }
 
-      var db = firebase.database();
-      var rostersRef = db.ref('rosters');
-
-      rostersRef.once('value').then(function (snapshot) {
-        var data = snapshot.val() || { classes: [], rosters: {} };
-        if (!data.classes) data.classes = [];
-        if (!data.rosters) data.rosters = {};
-
-        data.classes = data.classes.filter(function (c) { return c !== classToDelete; });
-        delete data.rosters[classToDelete];
-
-        return rostersRef.set(data);
-      }).then(function () {
-        rosterStatus.textContent = 'Class deleted.';
-        selectedRosterClass = '';
-        loadRosterData();
+      // Use manageRoster Cloud Function
+      var manageRosterFn = firebase.functions().httpsCallable('manageRoster');
+      manageRosterFn({
+        action: 'DELETE',
+        className: classToDelete
+      }).then(function (result) {
+        if (result.data && result.data.success) {
+          rosterStatus.textContent = 'Class deleted.';
+          selectedRosterClass = '';
+          loadRosterData();
+        } else {
+          throw new Error(result.data?.error || 'Failed to delete class');
+        }
       }).catch(function (error) {
         rosterStatus.textContent = '';
-        handleError(error);
+        if (typeof showUserFriendlyError === 'function') {
+          showUserFriendlyError(error);
+        } else {
+          handleError(error);
+        }
       });
     }
 
@@ -11044,17 +11044,51 @@
           return;
         }
 
-        var request = google.script.run
-          .withSuccessHandler(async function (updatedPolls) {
+        // Firebase Cloud Functions for poll creation/editing
+        try {
+          var pollMetadata = {
+            sessionType: currentSessionType,
+            timeLimitMinutes: securePayload.timeLimitMinutes,
+            accessCode: securePayload.accessCode,
+            availableFrom: securePayload.availableFrom,
+            dueBy: securePayload.dueBy,
+            secureSettings: securePayload.secureSettings
+          };
+
+          var result;
+          if (editingPollId) {
+            // Update existing poll
+            var updatePollFn = firebase.functions().httpsCallable('updatePoll');
+            result = await updatePollFn({
+              pollId: editingPollId,
+              pollName: pollName,
+              className: className,
+              questions: payloadQuestions,
+              metadata: pollMetadata
+            });
+          } else {
+            // Create new poll
+            var createPollFn = firebase.functions().httpsCallable('createPoll');
+            result = await createPollFn({
+              pollName: pollName,
+              className: className,
+              questions: payloadQuestions,
+              metadata: pollMetadata
+            });
+          }
+
+          if (result.data && result.data.success) {
             // OPTIMIZATION: Invalidate cache when data changes
             LocalCache.invalidate('dashboardData');
-            // Use the captured questionCount variable (not from server response)
-            refreshPollData(updatedPolls);
+
+            // Reload polls from Firebase
+            await loadInitialData();
+
             resetPollDirty('All changes saved');
             savePollBtn.disabled = false;
             savePollBtn.innerHTML = defaultLabel;
 
-            // Generate success message with the count we know is correct
+            // Generate success message
             var successMessage = editingPollId
               ? '✅ Poll updated successfully with ' + questionCount + ' question' + (questionCount === 1 ? '' : 's') + '!'
               : '✅ Poll created successfully with ' + questionCount + ' question' + (questionCount === 1 ? '' : 's') + '!';
@@ -11068,27 +11102,21 @@
               onPollSelectChange();
             }
             await veritasAlert(successMessage, { title: 'Save poll' });
-          })
-          .withFailureHandler(function (error) {
-            console.error('Poll save error:', error);
-            handleError(error);
-            savePollBtn.disabled = false;
-            savePollBtn.innerHTML = defaultLabel;
-          });
-
-        var pollMetadata = {
-          sessionType: currentSessionType,
-          timeLimitMinutes: securePayload.timeLimitMinutes,
-          accessCode: securePayload.accessCode,
-          availableFrom: securePayload.availableFrom,
-          dueBy: securePayload.dueBy,
-          secureSettings: securePayload.secureSettings
-        };
-
-        if (editingPollId) {
-          request.updatePoll(editingPollId, pollName, className, payloadQuestions, pollMetadata);
-        } else {
-          request.createNewPoll(pollName, className, payloadQuestions, pollMetadata);
+          } else {
+            throw new Error(result.data?.error || 'Failed to save poll');
+          }
+        } catch (firebaseError) {
+          console.error('Firebase poll save error:', firebaseError);
+          if (typeof showUserFriendlyError === 'function') {
+            showUserFriendlyError(firebaseError);
+          } else {
+            await veritasAlert('❌ Error saving poll: ' + (firebaseError.message || firebaseError), {
+              title: 'Save poll',
+              destructive: true
+            });
+          }
+          savePollBtn.disabled = false;
+          savePollBtn.innerHTML = defaultLabel;
         }
       } catch (err) {
         console.error('Upload/save error:', err);

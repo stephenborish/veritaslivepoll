@@ -609,6 +609,97 @@ exports.manageRoster = onCall({ cors: true }, async (request) => {
         className,
       };
 
+    case "GET_LINKS":
+      // Generate/Retrieve tokens and short URLs for all students in a class
+      const snapshotLinks = await rosterRef.once("value");
+      if (!snapshotLinks.exists()) {
+        throw new HttpsError("not-found", "Class not found");
+      }
+
+      const roster = snapshotLinks.val() || [];
+      const tokensRef = db.ref("tokens");
+      const tokensLinksIndexRef = db.ref(`tokens_index/${className}`);
+
+      const existingTokensSnapshot = await tokensLinksIndexRef.once("value");
+      const existingTokens = existingTokensSnapshot.val() || {};
+
+      const links = await Promise.all(
+        roster.map(async (student) => {
+          const studentEmail = student.email.toLowerCase();
+          let token = existingTokens[studentEmail.replace(/\./g, "_")];
+
+          if (!token) {
+            // Generate new token if not exists
+            token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+            const expiryDate = new Date();
+            expiryDate.setDate(expiryDate.getDate() + 30); // 30 days expiry
+
+            await tokensRef.child(token).set({
+              email: student.email,
+              className: className,
+              created: Date.now(),
+              expires: expiryDate.getTime(),
+            });
+
+            await tokensLinksIndexRef.child(studentEmail.replace(/\./g, "_")).set(token);
+          }
+
+          // In a real environment, we might call a URL shortener here.
+          // For now, we return the structured link data.
+          return {
+            name: student.name,
+            email: student.email,
+            token: token,
+            hasActiveLink: true,
+          };
+        })
+      );
+
+      return {
+        success: true,
+        links: links,
+      };
+
+    case "GET_DATA":
+      // Fetch all rosters and classes
+      const rostersSnapshotData = await db.ref("rosters").once("value");
+      const rostersRaw = rostersSnapshotData.val() || {};
+
+      return {
+        success: true,
+        rosters: rostersRaw.rosters || {},
+        classes: rostersRaw.classes || [],
+      };
+
+    case "SEND_EMAILS":
+      // Prepare email data and return to client to use a mail bridge
+      // This ensures token logic is in CF, while GAS only handles the actual 'send'
+      const res = await exports.manageRoster.run({
+        data: { action: "GET_LINKS", className: className },
+      });
+      const studentLinks = res.links;
+
+      const pollSnapshot = await db.ref(`polls/${pollId}`).once("value");
+      const pollData = pollSnapshot.val() || { pollName: "Veritas Poll" };
+
+      const emailDate = new Date().toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      });
+
+      const isSecure = (pollData.sessionType || "").toUpperCase().includes("SECURE");
+      const subject = isSecure
+        ? `Your VERITAS Secure Assessment Link – ${emailDate}`
+        : `Your VERITAS Live Poll Link – ${emailDate}`;
+
+      return {
+        success: true,
+        subject: subject,
+        pollName: pollData.pollName,
+        links: studentLinks,
+      };
+
     default:
       throw new HttpsError("invalid-argument", `Unknown action: ${action}`);
   }

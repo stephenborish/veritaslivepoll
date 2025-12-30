@@ -2196,24 +2196,19 @@
         return;
       }
 
-      // Check if emulator is available
-      google.script.run
-        .withSuccessHandler(function (result) {
-          console.log('[Emulator] isEmulatorAvailable result:', result);
-          emulatorAvailable = result && result.available;
-          if (emulatorAvailable) {
-            emulatorControls.classList.remove('hidden');
-            console.log('[Emulator] ✓ Available and controls shown');
-          } else {
-            console.log('[Emulator] ✗ Not available:', result ? result.reason : 'unknown');
-            console.log('[Emulator] To enable, set DEV_MODE=true or EMULATOR_ENABLED=true in Script Properties');
-          }
-        })
-        .withFailureHandler(function (error) {
-          console.error('[Emulator] Check failed:', error);
-          emulatorAvailable = false;
-        })
-        .isEmulatorAvailable();
+      // FIREBASE MIGRATION: Emulator Availability
+      // Instead of GAS, check if we are in a local environment or if a specific flag is set
+      emulatorAvailable = !!(typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.projectId && FIREBASE_CONFIG.projectId.includes('emulator'));
+
+      // Fallback: Enable if specifically requested via URL param or similar
+      if (window.location.search.includes('emulator=true')) emulatorAvailable = true;
+
+      if (emulatorAvailable) {
+        emulatorControls.classList.remove('hidden');
+        console.log('[Emulator] ✓ Available and controls shown');
+      } else {
+        console.log('[Emulator] ✗ Not available (Live environment)');
+      }
 
       // Toggle options visibility when checkbox changes
       emulatorEnabled.addEventListener('change', function () {
@@ -2235,31 +2230,29 @@
      * @param {string} pollId - Poll ID to emulate
      */
     function triggerLivePollEmulation(pollId) {
+      if (!emulatorAvailable) return;
       var studentCount = emulatorStudentCount ? parseInt(emulatorStudentCount.value, 10) || 5 : 5;
       var concurrent = emulatorConcurrent ? emulatorConcurrent.checked : false;
 
       console.log('[Emulator] Triggering live poll emulation', { pollId: pollId, studentCount: studentCount, concurrent: concurrent });
-
       showToast('info', 'Emulator', 'Starting emulation with ' + studentCount + ' students...');
 
-      google.script.run
-        .withSuccessHandler(function (result) {
-          if (result && result.success) {
-            console.log('[Emulator] Live poll emulation complete', result);
-            showToast('success', 'Emulator', 'Emulation complete: ' + result.successfulSubmissions + '/' + result.totalSubmissions + ' submissions');
-          } else {
-            console.error('[Emulator] Live poll emulation failed', result);
-            showToast('error', 'Emulator', 'Emulation failed: ' + (result ? result.error : 'Unknown error'));
-          }
-        })
-        .withFailureHandler(function (error) {
-          console.error('[Emulator] Live poll emulation error', error);
-          showToast('error', 'Emulator', 'Emulation error: ' + error.message);
-        })
-        .startLivePollEmulation(pollId, {
-          studentCount: studentCount,
-          concurrent: concurrent
-        });
+      // FIREBASE MIGRATION: Call Cloud Function for emulation
+      firebase.functions().httpsCallable('manageProctoring')({
+        action: 'EMULATE_LIVE',
+        pollId: pollId,
+        studentCount: studentCount,
+        concurrent: concurrent
+      }).then(function (result) {
+        var res = result.data;
+        if (res && res.success) {
+          showToast('success', 'Emulator', 'Emulation complete: ' + res.successfulSubmissions + '/' + res.totalSubmissions);
+        } else {
+          throw new Error((res && res.error) || 'Emulation failed');
+        }
+      }).catch(function (error) {
+        showToast('error', 'Emulator', 'Emulation error: ' + error.message);
+      });
     }
 
     /**
@@ -2268,29 +2261,26 @@
      * @param {string} sessionId - Session ID
      */
     function triggerSecureAssessmentEmulation(pollId, sessionId) {
+      if (!emulatorAvailable) return;
       var studentCount = emulatorStudentCount ? parseInt(emulatorStudentCount.value, 10) || 5 : 5;
 
       console.log('[Emulator] Triggering secure assessment emulation', { pollId: pollId, sessionId: sessionId, studentCount: studentCount });
+      showToast('info', 'Emulator', 'Starting secure assessment emulation...');
 
-      showToast('info', 'Emulator', 'Starting secure assessment emulation with ' + studentCount + ' students...');
-
-      google.script.run
-        .withSuccessHandler(function (result) {
-          if (result && result.success) {
-            console.log('[Emulator] Secure assessment emulation complete', result);
-            showToast('success', 'Emulator', 'Emulation complete: ' + result.successfulSubmissions + '/' + result.totalSubmissions + ' submissions');
-          } else {
-            console.error('[Emulator] Secure assessment emulation failed', result);
-            showToast('error', 'Emulator', 'Emulation failed: ' + (result ? result.error : 'Unknown error'));
-          }
-        })
-        .withFailureHandler(function (error) {
-          console.error('[Emulator] Secure assessment emulation error', error);
-          showToast('error', 'Emulator', 'Emulation error: ' + error.message);
-        })
-        .startSecureAssessmentEmulation(pollId, sessionId, {
-          studentCount: studentCount
-        });
+      firebase.functions().httpsCallable('manageProctoring')({
+        action: 'EMULATE_SECURE',
+        pollId: pollId,
+        studentCount: studentCount
+      }).then(function (result) {
+        var res = result.data;
+        if (res && res.success) {
+          showToast('success', 'Emulator', 'Emulation complete');
+        } else {
+          throw new Error((res && res.error) || 'Emulation failed');
+        }
+      }).catch(function (error) {
+        showToast('error', 'Emulator', 'Emulation error: ' + error.message);
+      });
     }
 
     // --- Calculator Toggles ---
@@ -2984,36 +2974,21 @@
         return;
       }
 
-      // OPTIMIZATION: Try localStorage cache first
-      var cachedData = LocalCache.get('dashboardData');
-      if (cachedData) {
-        console.log('Using cached dashboard data');
-        onDashboardDataLoaded(cachedData);
-        // Refresh in background to update cache
-        google.script.run
-          .withSuccessHandler(function (data) {
-            try {
-              LocalCache.set('dashboardData', data, 300000); // Cache for 5 minutes
-            } catch (e) {
-              console.warn('Failed to cache dashboard data:', e);
-            }
-            onDashboardDataLoaded(data);
-          })
-          .withFailureHandler(handleError)
-          .getTeacherDashboardData();
-      } else {
-        google.script.run
-          .withSuccessHandler(function (data) {
-            try {
-              LocalCache.set('dashboardData', data, 300000); // Cache for 5 minutes
-            } catch (e) {
-              console.warn('Failed to cache dashboard data:', e);
-            }
-            onDashboardDataLoaded(data);
-          })
-          .withFailureHandler(handleError)
-          .getTeacherDashboardData();
-      }
+      // FIREBASE MIGRATION: Roster data is usually loaded via showRosterManager
+      // But we can pre-fetch it here if needed, or just let the app load polls.
+      // The polls are already being loaded via loadDashboardSummary() which uses the RTDB listener.
+
+      console.log('[Firebase] loadInitialData: Relying on RTDB listeners for polls.');
+
+      // We still need to load Classes for the dropdowns
+      var db = firebase.database();
+      db.ref('rosters/classes').once('value').then(function (snapshot) {
+        var classes = snapshot.val() || [];
+        onDashboardDataLoaded({
+          polls: dashboardSummary ? dashboardSummary.polls : [],
+          classes: classes
+        });
+      });
     }
 
     function onDashboardDataLoaded(data) {
@@ -3829,46 +3804,30 @@
       // Or just let it run. The user sees the modal close.
 
       // FIREBASE MIGRATION: Duplicate Poll in RTDB
-      // 1. Fetch source
-      // 2. Clone & Modify
-      // 3. Save as new
+      var clone = deepClone(poll);
+      clone.pollName = newName;
+      clone.createdAt = Date.now();
+      clone.updatedAt = clone.createdAt;
 
-      var db = firebase.database();
-
-      db.ref('polls/' + pollId).once('value')
-        .then(function (snapshot) {
-          var sourcePoll = snapshot.val();
-          if (!sourcePoll) {
-            throw new Error('Source poll not found.');
-          }
-
-          // Generate new ID
-          var newPollRef = db.ref('polls').push();
-          var newPollId = newPollRef.key;
-
-          // Clone and modify
-          var newPoll = JSON.parse(JSON.stringify(sourcePoll));
-          newPoll.pollId = newPollId;
-          newPoll.pollName = newName;
-          newPoll.createdAt = firebase.database.ServerValue.TIMESTAMP;
-          newPoll.updatedAt = firebase.database.ServerValue.TIMESTAMP;
-          newPoll.lastRunAt = null; // Reset run history
-
-          // Save
-          return newPollRef.set(newPoll).then(function () {
-            veritasAlert('Poll copied successfully.', { title: 'Success' });
-          });
-        })
-        .catch(function (error) {
-          console.error('Copy Poll Error:', error);
-          handleError(error);
-        });
-
-      /* LEGACY GAS COPY REMOVED
-      google.script.run
-        .withSuccessHandler(...)
-        .copyPoll(pollId, newName, poll.className);
-      */
+      firebase.functions().httpsCallable('createPoll')({
+        pollName: clone.pollName,
+        className: clone.className,
+        questions: clone.questions,
+        sessionType: clone.sessionType || 'LIVE_POLL',
+        timeLimitMinutes: clone.timeLimitMinutes || null,
+        accessCode: clone.accessCode || '',
+        availableFrom: clone.availableFrom || '',
+        dueBy: clone.dueBy || '',
+        secureSettings: clone.secureSettings || {}
+      }).then(function (result) {
+        if (result.data && result.data.success) {
+          veritasAlert('Poll copied successfully.', { title: 'Success' });
+        } else {
+          throw new Error('Failed to copy poll');
+        }
+      }).catch(function (error) {
+        handleError(error);
+      });
     }
 
     async function handleDeletePoll(pollId) {
@@ -3888,9 +3847,6 @@
         return;
       }
 
-      // FIREBASE MIGRATION: Cascading Delete in RTDB
-      // Remove from polls, answers, history, and sessions
-
       var db = firebase.database();
       var updates = {};
       updates['polls/' + pollId] = null;
@@ -3900,20 +3856,11 @@
 
       db.ref().update(updates)
         .then(function () {
-          // Dashboard listens to 'polls/' value changes, so it will auto-update.
-          // But we can trigger a manual refresh or just show the alert.
-          // The listener in showDashboard/renderDashboardSummary will handle the UI removal.
           veritasAlert('Poll deleted successfully.', { title: 'Success' });
         })
         .catch(function (error) {
           handleError(error);
         });
-
-      /* LEGACY GAS DELETE REMOVED
-      google.script.run
-        .withSuccessHandler(...)
-        .deletePoll(pollId);
-      */
     }
 
     function attachPollActionHandlers(root) {
@@ -3921,61 +3868,68 @@
         return;
       }
 
+      // 1. Select Button
       root.querySelectorAll('.poll-select-btn').forEach(function (btn) {
-        btn.onclick = function () {
+        btn.onclick = function (e) {
+          e.stopPropagation();
           var id = this.dataset.pollId;
-          if (!id) {
-            return;
+          if (id) {
+            pollSelect.value = id;
+            onPollSelectChange();
+            showDashboard();
           }
-          pollSelect.value = id;
-          onPollSelectChange();
-          showDashboard();
         };
       });
 
-      // Dropdown Trigger
+      // 2. Options Dropdown Trigger
       root.querySelectorAll('.poll-options-btn').forEach(function (btn) {
         btn.onclick = function (e) {
           e.stopPropagation();
           var id = this.dataset.pollId;
-          togglePollDropdown(this, id);
+          if (id) {
+            togglePollDropdown(this, id);
+          }
         };
       });
 
-      // Bind card-view specific buttons (cards still use individual buttons for now, or we can update them too?
-      // The request specifically showed a dropdown menu which usually replaces a row of buttons in a table.
-      // The card view has buttons at the bottom. I'll leave card view as is unless requested,
-      // but I must ensure card view handlers still work if they exist.)
+      // 3. Name Link (Clicks to Edit)
+      root.querySelectorAll('.poll-name-link').forEach(function (link) {
+        link.onclick = function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var id = this.dataset.pollId;
+          if (id) {
+            startEditPoll(id);
+          }
+        };
+      });
 
+      // 4. Card-specific action buttons
       root.querySelectorAll('.poll-copy-btn').forEach(function (btn) {
-        btn.onclick = function () {
+        btn.onclick = function (e) {
+          e.stopPropagation();
           handleCopyPoll(this.dataset.pollId);
         };
       });
 
       root.querySelectorAll('.poll-edit-btn').forEach(function (btn) {
-        btn.onclick = function () {
-          startEditPoll(this.dataset.pollId, this);
+        btn.onclick = function (e) {
+          e.stopPropagation();
+          startEditPoll(this.dataset.pollId);
         };
       });
 
       root.querySelectorAll('.poll-preview-btn').forEach(function (btn) {
-        btn.onclick = function () {
+        btn.onclick = function (e) {
+          e.stopPropagation();
           openPollPreview(this.dataset.pollId);
         };
       });
 
       root.querySelectorAll('.poll-delete-btn').forEach(function (btn) {
-        btn.onclick = function () {
-          handleDeletePoll(this.dataset.pollId);
-        };
-      });
-
-      root.querySelectorAll('.poll-name-link').forEach(function (link) {
-        link.onclick = function (e) {
-          e.preventDefault();
+        btn.onclick = function (e) {
           e.stopPropagation();
-          startEditPoll(this.dataset.pollId);
+          handleDeletePoll(this.dataset.pollId);
         };
       });
     }
@@ -4120,46 +4074,23 @@
       }
 
       // FIREBASE MIGRATION: Roster Management
-      // Strategy: Check Firebase first. If empty, fetch from GAS and Migrate.
+      // We use the manageRoster Cloud Function to fetch all class and student data.
 
-      var db = firebase.database();
-      var rostersRef = db.ref('rosters');
-
-      rostersRef.once('value').then(function (snapshot) {
-        var fbData = snapshot.val();
-
-        if (fbData && fbData.rosters && Object.keys(fbData.rosters).length > 0) {
-          console.log('[Firebase] Rosters loaded from RTDB');
-          rosterStatus.textContent = '';
-          onRosterDataLoaded(fbData, selectedRosterClass);
-        } else {
-          console.log('[Firebase] Rosters empty, fetching from legacy GAS for migration...');
-
-          // Fallback to legacy GAS (Migration Step)
-          google.script.run
-            .withSuccessHandler(function (data) {
-              rosterStatus.textContent = '';
-              console.log('[Firebase] Legacy roster data fetched. Migrating to RTDB...');
-
-              // WRITE TO FIREBASE (Migration)
-              if (data) {
-                rostersRef.set(data).then(function () {
-                  console.log('[Firebase] Roster migration complete.');
-                });
-              }
-
-              onRosterDataLoaded(data, selectedRosterClass);
-            })
-            .withFailureHandler(function (error) {
-              rosterStatus.textContent = '';
-              handleError(error);
-            })
-            .getRosterManagerData();
-        }
-      }).catch(function (e) {
-        console.error('[Firebase] Roster fetch error:', e);
+      firebase.functions().httpsCallable('manageRoster')({
+        action: 'GET_DATA'
+      }).then(function (result) {
+        var data = result.data;
         rosterStatus.textContent = '';
-        handleError(e);
+        if (data && data.success) {
+          console.log('[Firebase] Rosters loaded via Cloud Function');
+          onRosterDataLoaded(data, selectedRosterClass);
+        } else {
+          throw new Error('Could not load roster data');
+        }
+      }).catch(function (error) {
+        rosterStatus.textContent = '';
+        console.error('[Firebase] Roster fetch error:', error);
+        handleError(error);
       });
     }
 
@@ -5834,28 +5765,33 @@
           return;
         }
 
-        google.script.run
-          .withSuccessHandler(function (result) {
-            // Soft-fail check
-            if (result && (result.success === false || result.error)) {
-              setButtonLoading(startPollBtn, false);
-              var msg = result.message || result.error || 'Unknown error starting secure session';
-              veritasAlert(msg, { title: 'Unable to Start Session', destructive: true });
-              return;
-            }
-            setButtonLoading(startPollBtn, false);
-            showIndividualTimedDashboard(result);
+        // FIREBASE MIGRATION: Start Secure Assessment via Cloud Function
+        firebase.functions().httpsCallable('setLiveSessionState')({
+          pollId: pollId,
+          status: 'OPEN',
+          questionIndex: 0,
+          metadata: {
+            sessionPhase: 'ASSESSMENT_START',
+            resultsVisibility: 'HIDDEN'
+          }
+        }).then(function (result) {
+          var data = result.data;
+          setButtonLoading(startPollBtn, false);
+          if (data && data.success) {
+            // result here should contain the new sessionId
+            showIndividualTimedDashboard(data);
 
             // Trigger emulation if enabled
             if (emulatorAvailable && emulatorEnabled && emulatorEnabled.checked) {
-              triggerSecureAssessmentEmulation(pollId, result.sessionId);
+              triggerSecureAssessmentEmulation(pollId, data.sessionId);
             }
-          })
-          .withFailureHandler(function (error) {
-            setButtonLoading(startPollBtn, false);
-            handleError(error);
-          })
-          .startIndividualTimedSession(pollId);
+          } else {
+            throw new Error((data && data.error) || 'Failed to start secure session');
+          }
+        }).catch(function (error) {
+          setButtonLoading(startPollBtn, false);
+          handleError(error);
+        });
         return;
       }
 
@@ -5870,57 +5806,29 @@
         return;
       }
 
-      // Default to live session
-      google.script.run
-        .withSuccessHandler(function (data) {
-          // Soft-fail check
-          if (data && (data.success === false || data.error)) {
-            setButtonLoading(startPollBtn, false);
-            var msg = data.message || data.error || 'Unknown error starting poll';
-            veritasAlert(msg, { title: 'Unable to Start Poll', destructive: true });
-            return;
-          }
-          setButtonLoading(startPollBtn, false);
-
-          if (result.data && (result.data.success === false || result.data.error)) {
-            handleError(result.data.error || 'Failed to start poll in Firebase.');
-            return;
-          }
-
-          var data = result.data;
-
-          // Legacy support: Ensure mode is present
-          data.mode = data.mode || 'standard';
-
-          // OPTIMIZATION: Check for lightweight mode
-          if (data.mode === 'lightweight') {
-            handleLightweightSessionUpdate(data);
-            return;
-          }
-
-          updateLiveView(data);
-
-          // ENRICHED SIGNAL handled via updateLiveView -> broadcastSessionState
-
-          // Trigger emulation if enabled
-          if (emulatorAvailable && emulatorEnabled && emulatorEnabled.checked && data && data.pollId) {
-            triggerLivePollEmulation(data.pollId);
-          }
-        })
-        .catch(function (error) {
-          setButtonLoading(startPollBtn, false);
-          handleError(error);
-        });
-
-      // Call Cloud Function for Start Poll
-      var setSessionFn = firebase.functions().httpsCallable('setLiveSessionState');
-      setSessionFn({
+      // FIREBASE MIGRATION: Start Live Poll via Cloud Function
+      firebase.functions().httpsCallable('setLiveSessionState')({
         pollId: pollId,
         status: 'OPEN',
         questionIndex: 0,
-        // Provide initial question data for the server to echo back if needed
-        questionText: (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[0]) ? CURRENT_POLL_DATA.questions[0].questionText : '',
-        options: (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[0]) ? CURRENT_POLL_DATA.questions[0].options : []
+        metadata: {
+          sessionPhase: 'LIVE',
+          resultsVisibility: 'HIDDEN'
+        }
+      }).then(function (result) {
+        setButtonLoading(startPollBtn, false);
+        var res = result.data;
+        if (res && res.success) {
+          // RTDB listener will handle the UI update via onQuestionStateChange
+          if (emulatorAvailable && emulatorEnabled && emulatorEnabled.checked) {
+            triggerLivePollEmulation(pollId);
+          }
+        } else {
+          throw new Error(res.error || 'Failed to start poll');
+        }
+      }).catch(function (error) {
+        setButtonLoading(startPollBtn, false);
+        handleError(error);
       });
     }
 
@@ -5935,33 +5843,26 @@
       updateTimerStatus('Timer idle.', 'info');
       isPaused = false;
       isLiveSession = true;
+
       if (PREVIEW_MODE) {
         previewOnlyNotice('resume a live poll');
         return;
       }
-      google.script.run = null; // Removed GAS call
 
-      var setSessionFn = firebase.functions().httpsCallable('setLiveSessionState');
-      var pollId = CURRENT_POLL_DATA.pollId;
-      var qIndex = CURRENT_POLL_DATA.questionIndex || 0;
+      var pollId = (CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId) || '';
+      var qIndex = (typeof CURRENT_POLL_DATA.questionIndex === 'number') ? CURRENT_POLL_DATA.questionIndex : 0;
 
-      setSessionFn({
+      firebase.functions().httpsCallable('setLiveSessionState')({
         pollId: pollId,
         status: 'OPEN',
         questionIndex: qIndex
-      })
-        .then(function (result) {
-          var data = result.data;
-          // Soft-fail check
-          if (data && (data.success === false || data.error)) {
-            handleError(data.error);
-            return;
-          }
-          // Resume logic is simple: state becomes OPEN
-          // updateLiveView and listeners handle the rest
-          console.log('Poll Resumed:', data);
-        })
-        .catch(handleError);
+      }).then(function (result) {
+        var data = result.data;
+        if (data && (data.success === false || data.error)) {
+          throw new Error(data.error || 'Failed to resume poll');
+        }
+        console.log('[Firebase] Poll Resumed:', data);
+      }).catch(handleError);
     }
 
     function onStopPoll() {
@@ -7619,73 +7520,39 @@
 
       recordTeacherAction('Unlock ' + email);
 
-      // Server call FIRST, then Firebase write on success
-      // This prevents desync where Firebase shows ACTIVE but server has no lock record
-      google.script.run
-        .withSuccessHandler(async function (response) {
-          if (response.ok) {
-            // SUCCESS: Now write to Firebase for instant student feedback
-            setFirebaseStatus(email, 'ACTIVE');
-            currentStudentStatusData = currentStudentStatusData.map(function (s) {
-              if (s.email === email) {
-                return {
-                  name: s.name,
-                  email: s.email,
-                  status: 'AWAITING_FULLSCREEN',
-                  lockVersion: response.lockVersion || lockVersion,
-                  lockReason: s.lockReason,
-                  lockedAt: s.lockedAt,
-                  answer: s.answer,
-                  isCorrect: s.isCorrect,
-                  timestamp: s.timestamp
-                };
-              }
-              return s;
-            });
-            renderStudentStatus();
-            // Simple toast notification instead of blocking alert dialog
-            showToast('success', 'Approval Successful', 'Student can now re-enter fullscreen.', 3000);
-          } else {
-            // Provide specific error messages based on failure reason
-            var errorMsg = 'Failed to unlock student. Please try again.';
-            if (response.reason === 'not_locked') {
-              // CRITICAL FIX: Student is locked client-side (Firebase shows locked, student has poison pill)
-              // but server has no record. Use force unlock to create the record and let student resume.
-              console.warn('[Proctor] Server has no lock record - using force unlock for:', email);
-              teacherForceUnlock(email, pollId, buttonElement);
-              return;
-            } else if (response.reason === 'version_mismatch') {
-              errorMsg = 'Lock version mismatch (student may have violated again). Refreshing status and retrying...';
-              // Auto-retry with correct version
-              if (response.lockVersion !== undefined) {
-                setTimeout(function () {
-                  approveStudentUnlock(email, pollId, response.lockVersion, buttonElement, { skipConfirm: true });
-                }, 500);
-                return;
-              }
-            }
-            await veritasAlert(response.message || errorMsg, {
-              title: 'Unlock failed',
-              destructive: true
-            });
-            if (buttonElement) {
-              buttonElement.disabled = false;
-              var lastSpan = buttonElement.querySelector('span:last-child');
-              if (lastSpan) lastSpan.textContent = formatStudentName(email);
-            }
-          }
-        })
-        .withFailureHandler(async function (error) {
-          await veritasAlert('Error: ' + (error.message || error), {
-            title: 'Unlock failed',
-            destructive: true
-          });
+      // FIREBASE MIGRATION: Approve unlock via Cloud Function
+      firebase.functions().httpsCallable('manageRoster')({
+        action: 'APPROVE_UNLOCK',
+        pollId: pollId,
+        studentEmail: email,
+        lockVersion: lockVersion
+      }).then(function (result) {
+        var response = result.data;
+        if (response && response.success) {
+          // Success: Instant UI feedback is good, but RTDB listener handles the source of truth
           if (buttonElement) {
             buttonElement.disabled = false;
-            buttonElement.querySelector('span:last-child').textContent = formatStudentName(email);
+            var lastSpan = buttonElement.querySelector('span:last-child');
+            if (lastSpan) lastSpan.textContent = 'Unlocked';
+
+            setTimeout(function () {
+              if (currentManagedStudent && currentManagedStudent.email === email) {
+                populateStudentModal(currentManagedStudent);
+              }
+            }, 1000);
           }
-        })
-        .teacherApproveUnlock(email, pollId, lockVersion);
+          showToast('success', 'Unlocked', email + ' has been approved to rejoin.');
+        } else {
+          throw new Error((response && response.error) || 'Failed to approve unlock');
+        }
+      }).catch(function (error) {
+        if (buttonElement) {
+          buttonElement.disabled = false;
+          var lastSpan = buttonElement.querySelector('span:last-child');
+          if (lastSpan) lastSpan.textContent = 'Approve Unlock';
+        }
+        handleError(error);
+      });
     }
 
     /**
@@ -8225,14 +8092,19 @@
           button.disabled = true;
           var label = button.querySelector('span:last-child');
           if (label) label.textContent = 'Resetting...';
-          google.script.run
-            .withSuccessHandler(pollForResults)
-            .withFailureHandler(function (error) {
+          // FIREBASE MIGRATION: Reset Student Response via RTDB
+          var emailKey = generateStudentKey(email);
+          firebase.database().ref('answers/' + pollId + '/' + questionIndex + '/' + emailKey).set(null)
+            .then(function () {
+              button.disabled = false;
+              button.innerHTML = originalHtml;
+              pollForResults(); // Trigger UI check
+            })
+            .catch(function (error) {
               handleError(error);
               button.disabled = false;
               button.innerHTML = originalHtml;
-            })
-            .resetStudentResponse(email, pollId, questionIndex);
+            });
         };
       });
 
@@ -8792,71 +8664,65 @@
       if (PREVIEW_MODE) {
         await previewOnlyNotice('email poll links');
         setButtonLoading(btn, false);
-        if (viewLinksBtn) {
-          if (restoreViewLinks) {
-            viewLinksBtn.disabled = false;
-            viewLinksBtn.removeAttribute('aria-disabled');
-          }
-        }
         return;
       }
 
-      google.script.run
-        .withSuccessHandler(async function (response) {
-          setButtonLoading(btn, false);
-          if (viewLinksBtn) {
-            if (restoreViewLinks) {
-              viewLinksBtn.disabled = false;
-              viewLinksBtn.removeAttribute('aria-disabled');
-            }
-          }
+      var baseUrl = window.location.href.split('?')[0];
 
-          if (response.success && response.failedCount === 0) {
-            showToast('success', 'Emails Sent', 'Successfully sent ' + response.sentCount + ' links.');
-          } else {
-            // Partial or full failure
-            var msg = 'Sent: ' + response.sentCount + ', Failed: ' + response.failedCount + '.';
-            if (response.failures && response.failures.length > 0) {
-              msg += '\n\nFailures:\n' + response.failures.map(function (f) { return f.name + ': ' + f.error; }).join('\n');
-            }
-            if (response.error) {
-              msg = 'Error: ' + response.error;
-            }
+      firebase.functions().httpsCallable('manageRoster')({
+        action: 'SEND_EMAILS',
+        className: className,
+        pollId: CURRENT_POLL_DATA.pollId
+      }).then(function (result) {
+        var payload = result.data;
+        if (!payload.success) throw new Error('Could not prepare email data');
 
-            await veritasAlert(msg, {
-              title: 'Email Delivery Report',
-              destructive: true
-            });
+        // Add the base URL for the bridge to build full links
+        payload.baseUrl = baseUrl;
 
-            // Show fallback instructions
+        // Call the GAS mail bridge for actual sending
+        google.script.run
+          .withSuccessHandler(function (response) {
+            setButtonLoading(btn, false);
             if (viewLinksBtn) {
-              viewLinksBtn.click(); // Auto-open links view as fallback
-              showToast('info', 'Fallback', 'Opening link list for manual distribution.', 4000);
+              if (restoreViewLinks) {
+                viewLinksBtn.disabled = false;
+                viewLinksBtn.removeAttribute('aria-disabled');
+              }
             }
-          }
-        })
-        .withFailureHandler(function (error) {
-          setButtonLoading(btn, false);
-          if (viewLinksBtn) {
-            if (restoreViewLinks) {
-              viewLinksBtn.disabled = false;
-              viewLinksBtn.removeAttribute('aria-disabled');
-            }
-          }
 
-          var errorStr = (error && error.toString()) || '';
-          if (errorStr.indexOf('Authorization is required') !== -1 || errorStr.indexOf('ScriptApp.invalidateAuth') !== -1) {
-            veritasConfirm('Email sending requires authorization. Would you like to run the authorization check now?', { title: 'Authorization Required' })
-              .then(function (yes) {
-                if (yes) {
-                  google.script.run.authorizeEmail(); // Trigger auth prompt
-                }
+            if (response.success) {
+              veritasAlert('Emails sent successfully to ' + response.sentCount + ' students.', { title: 'Emails Sent' });
+            } else {
+              var msg = 'Sent: ' + (response.sentCount || 0) + ', Failed: ' + (response.failedCount || 0) + '.';
+              if (response.failures && response.failures.length > 0) {
+                msg += '\n\nFailures:\n' + response.failures.map(function (f) { return f.name + ': ' + f.error; }).join('\n');
+              }
+              if (response.error) {
+                msg = 'Error: ' + response.error;
+              }
+
+              veritasAlert(msg, {
+                title: 'Email Delivery Report',
+                destructive: true
               });
-          } else {
+
+              // Show fallback instructions
+              if (viewLinksBtn) {
+                viewLinksBtn.click(); // Auto-open links view as fallback
+                showToast('info', 'Fallback', 'Opening link list for manual distribution.', 4000);
+              }
+            }
+          })
+          .withFailureHandler(function (error) {
+            setButtonLoading(btn, false);
             handleError(error);
-          }
-        })
-        .sendPollLinkToClass(className, CURRENT_POLL_DATA.pollId);
+          })
+          .sendEmailBridge(payload);
+      }).catch(function (error) {
+        setButtonLoading(btn, false);
+        handleError(error);
+      });
     }
 
     async function onViewLinks() {
@@ -8908,75 +8774,75 @@
         return;
       }
 
-      google.script.run
-        .withSuccessHandler(function (response) {
-          if (!response.success) return handleError(new Error('Could not load links'));
+      var baseUrl = window.location.href.split('?')[0];
 
-          var container = document.getElementById('links-container');
-          var html = '<div class="overflow-x-auto"><table class="w-full border-collapse">';
-          html += '<thead><tr class="bg-brand-light-gray dark:bg-brand-dark-gray/50 border-b-2 border-brand-light-gray dark:border-brand-dark-gray/40">';
-          html += '<th class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Student Name</th>';
-          html += '<th class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Email</th>';
-          html += '<th class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Link</th>';
-          html += '<th class="px-4 py-3 text-center text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Actions</th>';
-          html += '</tr></thead><tbody>';
+      firebase.functions().httpsCallable('manageRoster')({
+        action: 'GET_LINKS',
+        className: className
+      }).then(function (result) {
+        var response = result.data;
+        if (!response.success) return handleError(new Error('Could not load links'));
 
-          response.links.forEach(function (link) {
-            var displayUrl = link.hasActiveLink ? (link.url || link.fullUrl) : null;
-            var copyUrl = link.fullUrl || link.url || '';
-            html += '<tr class="border-b border-brand-light-gray/50 dark:border-brand-dark-gray/20 hover:bg-brand-light-gray/30 dark:hover:bg-brand-dark-gray/10">';
-            html += '<td class="px-4 py-3 text-sm text-brand-dark-gray dark:text-brand-white">' + escapeHtml(link.name) + '</td>';
-            html += '<td class="px-4 py-3 text-sm text-brand-dark-gray dark:text-brand-white">' + escapeHtml(link.email) + '</td>';
-            html += '<td class="px-4 py-3 text-xs font-mono text-brand-dark-gray/70 dark:text-brand-white/70 max-w-[200px] truncate" title="' + (displayUrl ? escapeHtml(displayUrl) : 'No active link') + '">' + (displayUrl ? escapeHtml(displayUrl) : '<i class="text-gray-400">No active link</i>') + '</td>';
-            html += '<td class="px-4 py-3 text-center">';
-            if (link.hasActiveLink) {
-              html += '<button class="copy-link-btn px-3 py-1.5 text-xs font-semibold rounded-md bg-primary text-brand-white hover:bg-primary/90 transition-colors" data-url="' + escapeHtml(copyUrl) + '">Copy</button>';
-            }
-            html += '</td></tr>';
-          });
+        var container = document.getElementById('links-container');
+        var html = '<div class="overflow-x-auto"><table class="w-full border-collapse">';
+        html += '<thead><tr class="bg-brand-light-gray dark:bg-brand-dark-gray/50 border-b-2 border-brand-light-gray dark:border-brand-dark-gray/40">';
+        html += '<th class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Student Name</th>';
+        html += '<th class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Email</th>';
+        html += '<th class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Link</th>';
+        html += '<th class="px-4 py-3 text-center text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Actions</th>';
+        html += '</tr></thead><tbody>';
 
-          html += '</tbody></table></div>';
-          container.innerHTML = html;
+        response.links.forEach(function (link) {
+          var fullUrl = baseUrl + '?token=' + link.token;
+          html += '<tr class="border-b border-brand-light-gray/50 dark:border-brand-dark-gray/20 hover:bg-brand-light-gray/30 dark:hover:bg-brand-dark-gray/10">';
+          html += '<td class="px-4 py-3 text-sm text-brand-dark-gray dark:text-brand-white">' + escapeHtml(link.name) + '</td>';
+          html += '<td class="px-4 py-3 text-sm text-brand-dark-gray dark:text-brand-white">' + escapeHtml(link.email) + '</td>';
+          html += '<td class="px-4 py-3 text-xs font-mono text-brand-dark-gray/70 dark:text-brand-white/70 max-w-[200px] truncate" title="' + escapeHtml(fullUrl) + '">' + escapeHtml(fullUrl) + '</td>';
+          html += '<td class="px-4 py-3 text-center">';
+          html += '<button class="copy-link-btn px-3 py-1.5 text-xs font-semibold rounded-md bg-primary text-brand-white hover:bg-primary/90 transition-colors" data-url="' + escapeHtml(fullUrl) + '">Copy</button>';
+          html += '</td></tr>';
+        });
 
-          container.querySelectorAll('.copy-link-btn').forEach(function (btn) {
-            btn.onclick = async function () {
-              var url = this.dataset.url;
-              try {
-                if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-                  await navigator.clipboard.writeText(url);
-                } else {
-                  await veritasAlert('Automatic copy is not supported in this browser. Please copy the link manually.', { title: 'Copy link' });
-                  return;
-                }
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
 
-                btn.textContent = '✓ Copied!';
-                btn.className = 'copy-link-btn px-3 py-1.5 text-xs font-semibold rounded-md bg-green-600 text-brand-white';
-                setTimeout(function () {
-                  btn.textContent = 'Copy';
-                  btn.className = 'copy-link-btn px-3 py-1.5 text-xs font-semibold rounded-md bg-primary text-brand-white hover:bg-primary/90 transition-colors';
-                }, 2000);
-              } catch (err) {
-                await veritasAlert('Could not copy link. Please copy it manually.', { title: 'Copy link', destructive: true });
+        container.querySelectorAll('.copy-link-btn').forEach(function (btn) {
+          btn.onclick = async function () {
+            var url = this.dataset.url;
+            try {
+              if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                await navigator.clipboard.writeText(url);
+              } else {
+                await veritasAlert('Automatic copy is not supported in this browser. Please copy the link manually.', { title: 'Copy link' });
+                return;
               }
-            };
-          });
 
-          // Apply comprehensive modal visibility fix
-          if (linksModal.parentElement !== document.body) {
-            document.body.appendChild(linksModal);
-          }
-          linksModal.classList.remove('hidden');
-          linksModal.style.cssText = 'display: flex !important; visibility: visible !important; position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; z-index: 99999 !important; background-color: rgba(0,0,0,0.6) !important;';
-          linksModal.setAttribute('aria-hidden', 'false');
-          document.body.style.overflow = 'hidden';
+              btn.textContent = '✓ Copied!';
+              btn.className = 'copy-link-btn px-3 py-1.5 text-xs font-semibold rounded-md bg-green-600 text-brand-white';
+              setTimeout(function () {
+                btn.textContent = 'Copy';
+                btn.className = 'copy-link-btn px-3 py-1.5 text-xs font-semibold rounded-md bg-primary text-brand-white hover:bg-primary/90 transition-colors';
+              }, 2000);
+            } catch (err) {
+              await veritasAlert('Could not copy link. Please copy it manually.', { title: 'Copy link', destructive: true });
+            }
+          };
+        });
 
-          setButtonLoading(btn, false);
-        })
-        .withFailureHandler(function (err) {
-          handleError(err);
-          setButtonLoading(btn, false);
-        })
-        .getStudentLinksForClass(className);
+        // Apply comprehensive modal visibility fix
+        if (linksModal.parentElement !== document.body) {
+          document.body.appendChild(linksModal);
+        }
+        linksModal.classList.remove('hidden');
+        linksModal.style.cssText = 'display: flex !important; visibility: visible !important; position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; z-index: 99999 !important; background-color: rgba(0,0,0,0.6) !important;';
+        linksModal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+
+        setButtonLoading(btn, false);
+      }).catch(function (error) {
+        handleError(error);
+        setButtonLoading(btn, false);
+      });
     }
 
     function closeLinksModal() {
@@ -9218,23 +9084,25 @@
         secureSettings: currentPreviewPoll.secureSettings || {}
       };
 
-      google.script.run
-        .withSuccessHandler(async function (polls) {
-          refreshPollData(polls);
+      // FIREBASE MIGRATION: Update Poll via Cloud Function
+      firebase.functions().httpsCallable('updatePoll')({
+        pollId: currentPreviewPoll.pollId,
+        pollName: currentPreviewPoll.pollName,
+        className: currentPreviewPoll.className,
+        questions: currentPreviewPoll.questions,
+        metadata: previewMetadata
+      }).then(function (result) {
+        if (result.data && result.data.success) {
+          // RTDB listener will update ALL_POLLS and UI
           renderPreviewNav();
           renderPreviewQuestion();
-          await veritasAlert('Question deleted successfully.', { title: 'Question deleted' });
-        })
-        .withFailureHandler(function (error) {
-          handleError(error);
-        })
-        .updatePoll(
-          currentPreviewPoll.pollId,
-          currentPreviewPoll.pollName,
-          currentPreviewPoll.className,
-          currentPreviewPoll.questions,
-          previewMetadata
-        );
+          veritasAlert('Question deleted successfully.', { title: 'Question deleted' });
+        } else {
+          throw new Error('Failed to update poll');
+        }
+      }).catch(function (error) {
+        handleError(error);
+      });
     }
 
     function togglePreviewReorder() {
@@ -9277,21 +9145,22 @@
         secureSettings: currentPreviewPoll.secureSettings || {}
       };
 
-      google.script.run
-        .withSuccessHandler(async function (polls) {
-          refreshPollData(polls);
-          await veritasAlert('Question order updated successfully.', { title: 'Questions reordered' });
-        })
-        .withFailureHandler(function (error) {
-          handleError(error);
-        })
-        .updatePoll(
-          currentPreviewPoll.pollId,
-          currentPreviewPoll.pollName,
-          currentPreviewPoll.className,
-          currentPreviewPoll.questions,
-          reorderMetadata
-        );
+      // FIREBASE MIGRATION: Update Poll via Cloud Function
+      firebase.functions().httpsCallable('updatePoll')({
+        pollId: currentPreviewPoll.pollId,
+        pollName: currentPreviewPoll.pollName,
+        className: currentPreviewPoll.className,
+        questions: currentPreviewPoll.questions,
+        metadata: reorderMetadata
+      }).then(function (result) {
+        if (result.data && result.data.success) {
+          veritasAlert('Question order updated successfully.', { title: 'Questions reordered' });
+        } else {
+          throw new Error('Failed to update poll');
+        }
+      }).catch(function (error) {
+        handleError(error);
+      });
     }
 
     var draggedItemIndex = null;
@@ -9894,17 +9763,33 @@
         return;
       }
 
-      // Real mode - load from server
-      google.script.run
-        .withSuccessHandler(function (data) {
-          questionBankData = data.questions || [];
+      // FIREBASE MIGRATION: Synthesize Question Bank from ALL_POLLS
+      (function () {
+        try {
+          var questions = [];
+          (ALL_POLLS || []).forEach(function (poll) {
+            if (!poll || !poll.questions) return;
+            poll.questions.forEach(function (q, idx) {
+              questions.push({
+                pollId: poll.pollId,
+                pollName: poll.pollName,
+                questionIndex: idx,
+                questionText: q.questionText || '',
+                answers: q.answers || q.options || [],
+                topicTag: q.topicTag || q.topic || '',
+                difficultyLevel: q.difficultyLevel || ''
+              });
+            });
+          });
+
+          questionBankData = questions;
           renderQuestionBank();
           populatePollFilter();
-        })
-        .withFailureHandler(function (error) {
-          container.innerHTML = '<p class="text-center text-red-600 py-8">Failed to load question bank: ' + (error.message || error) + '</p>';
-        })
-        .getAllQuestionsForBank();
+        } catch (error) {
+          console.error('Question Bank synthesis failed:', error);
+          container.innerHTML = '<p class="text-center text-red-600 py-8">Failed to synthesize question bank: ' + error.message + '</p>';
+        }
+      })();
     }
 
     function populatePollFilter() {
@@ -13546,18 +13431,13 @@
         return;
       }
 
-      google.script.run
-        .withSuccessHandler(function (poll) {
-          if (poll) {
-            openPollWizard(poll);
-          } else {
-            veritasAlert('Failed to load poll data.', { title: 'Error' });
-          }
-        })
-        .withFailureHandler(function (error) {
-          handleError(error);
-        })
-        .getPollForEditing(pollId);
+      // FIREBASE MIGRATION: Get from synced ALL_POLLS
+      var poll = ALL_POLLS.find(function (p) { return p.pollId === pollId; });
+      if (poll) {
+        openPollWizard(poll);
+      } else {
+        veritasAlert('Failed to load poll data for editing.', { title: 'Error' });
+      }
     }
 
     // Global Wizard API
@@ -14561,12 +14441,18 @@
         console.warn('[Optimization] CURRENT_POLL_DATA missing, falling back to full refresh');
         // If we don't have poll definition, we must fetch full data explicitly
         // pollForResults() fails here because it relies on CURRENT_POLL_DATA being populated
-        google.script.run
-          .withSuccessHandler(function (fullData) {
-            updateLiveView(fullData);
-          })
-          .withFailureHandler(handleError)
-          .getLivePollData(data.pollId, data.questionIndex);
+        // FIREBASE MIGRATION: Synthesize from synced ALL_POLLS
+        var poll = ALL_POLLS.find(function (p) { return p.pollId === data.pollId; });
+        if (poll && poll.questions) {
+          CURRENT_POLL_DATA = poll;
+          var questionDef = poll.questions[data.questionIndex];
+          if (questionDef) {
+            // Re-trigger the synthesis with CURRENT_POLL_DATA populated
+            onQuestionStateChange(data);
+            return;
+          }
+        }
+        console.error('[Firebase] Failed to locate poll definition for sync:', data.pollId);
         return;
       }
 

@@ -1432,6 +1432,17 @@
     var RUNTIME_POLL_INTERVAL = 200;
 
     function bootstrapAppsScriptRuntime() {
+      // WEB DEPLOYMENT OVERRIDE
+      // If we are served via Firebase Hosting (or localhost), assume Firebase Mode immediately.
+      var hostname = window.location.hostname;
+      if (hostname.includes('web.app') || hostname.includes('veritas.courses') || hostname === 'localhost' || hostname.includes('127.0.0.1')) {
+        console.log('[Runtime] Web environment detected (' + hostname + '). Forcing Firebase Mode.');
+        PREVIEW_MODE = false;
+        previewBootstrapped = false;
+        loadInitialData();
+        return;
+      }
+
       if (hasAppsScriptRuntime()) {
         PREVIEW_MODE = false;
         loadInitialData();

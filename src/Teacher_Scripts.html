@@ -4140,20 +4140,20 @@ let effectiveDuration = (duration !== null && duration !== undefined)
 
                   var nonResponderHtml = '';
                   if (nonResponders.length > 0) {
-                  nonResponderHtml = '<div class="mt-3">
+                  nonResponderHtml = `<div class="mt-3">
                     <h4 class="text-xs font-semibold uppercase text-brand-dark-gray/60 dark:text-brand-white/60">No
                       Response</h4>
-                    <div class="flex flex-wrap gap-2 mt-1">';
+                    <div class="flex flex-wrap gap-2 mt-1">`;
                       nonResponders.forEach(function (student) {
                       var chipClass = student.violation ? 'bg-orange-100 text-orange-800 dark:bg-orange-500/20
                       dark:text-orange-200' : 'bg-brand-light-gray text-brand-dark-gray dark:bg-brand-dark-gray/50
                       dark:text-brand-white/80';
                       var displayName = student.name ? formatStudentName(student) : student.email;
-                      nonResponderHtml += '<span class="px-2 py-1 rounded-full text-xs ' + chipClass + '">' +
-                        escapeHtml(displayName) + '</span>';
+                      nonResponderHtml += `<span
+                        class="px-2 py-1 rounded-full text-xs ${chipClass}">${escapeHtml(displayName)}</span>`;
                       });
-                      nonResponderHtml += '</div>
-                  </div>';
+                      nonResponderHtml += `</div>
+                  </div>`;
                   }
 
                   var imageHtml = question.questionImageURL ? '<div class="mt-3"><img
@@ -4285,8 +4285,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                           html += '</ul>';
                         }
 
-                        html += '
-                      </div>
+                        html += '</div>
                     </div>';
                     });
 
@@ -4301,8 +4300,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                   var html = '<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">';
 
                     // Mean
-                    html += '<div
-                      class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/30 rounded-lg p-4">
+                    html += '<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/30 rounded-lg p-4">
                       ';
                       html += '<div class="text-sm text-blue-700 dark:text-blue-300 font-semibold mb-1">Mean Score</div>
                       ';
@@ -4315,8 +4313,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                       html += '</div>';
 
                     // Median
-                    html += '<div
-                      class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/30 rounded-lg p-4">
+                    html += '<div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/30 rounded-lg p-4">
                       ';
                       html += '<div class="text-sm text-green-700 dark:text-green-300 font-semibold mb-1">Median Score
                       </div>';
@@ -4325,8 +4322,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                       html += '</div>';
 
                     // Std Dev
-                    html += '<div
-                      class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700/30 rounded-lg p-4">
+                    html += '<div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700/30 rounded-lg p-4">
                       ';
                       html += '<div class="text-sm text-purple-700 dark:text-purple-300 font-semibold mb-1">Std.
                         Deviation</div>';
@@ -4339,8 +4335,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                       html += '</div>';
 
                     // Participation
-                    html += '<div
-                      class="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700/30 rounded-lg p-4">
+                    html += '<div class="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700/30 rounded-lg p-4">
                       ';
                       html += '<div class="text-sm text-gray-700 dark:text-gray-300 font-semibold mb-1">Participants
                       </div>';
@@ -4355,8 +4350,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
 
                   // Score distribution histogram
                   if (distribution && distribution.histogram && distribution.histogram.length > 0) {
-                  html += '<div
-                    class="bg-white dark:bg-brand-dark-gray/40 border border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg p-4">
+                  html += '<div class="bg-white dark:bg-brand-dark-gray/40 border border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg p-4">
                     ';
                     html += '<h4 class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white mb-3">Score
                       Distribution</h4>';
@@ -4423,8 +4417,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                         html += '</div>';
 
                       // Uncertain & Correct (Lucky guess)
-                      html += '<div
-                        class="bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-500 rounded-lg p-4">';
+                      html += '<div class="bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-500 rounded-lg p-4">';
                         html += '<div class="flex items-center gap-2 mb-2">';
                           html += '<span class="text-2xl">🤔</span>';
                           html += '<div class="text-sm font-semibold text-yellow-700 dark:text-yellow-300">Imposter
@@ -4503,8 +4496,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
 
                       // Actionable Insights
                       if (interp.actionable && interp.actionable.length > 0) {
-                      html += '<div
-                        class="mt-3 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30 rounded text-sm text-amber-800 dark:text-amber-200">
+                      html += '<div class="mt-3 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30 rounded text-sm text-amber-800 dark:text-amber-200">
                         ';
                         html += '<p class="font-semibold text-xs uppercase tracking-wide mb-1">Recommendation:</p>';
                         html += '<ul class="list-disc list-inside space-y-1">';
@@ -6400,36 +6392,36 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                   var bgColor = isCorrect ? 'bg-green-50/50 dark:bg-green-900/20' : 'bg-white
                                   dark:bg-brand-dark-gray/30';
 
-                                  card.className = 'relative rounded-xl border ' + borderColor + ' ' + bgColor + '
-                                  overflow-hidden transition-all hover:shadow-sm';
+                                  card.className = `relative rounded-xl border ${borderColor} ${bgColor} overflow-hidden
+                                  transition-all hover:shadow-sm`;
 
                                   var cardHtml = '<div class="flex items-start gap-2.5 p-3">';
 
                                     // Letter badge (student view style - smaller 32px)
                                     var badgeBg = isCorrect ? 'bg-green-500 dark:bg-green-600' : 'bg-gray-600
                                     dark:bg-gray-500';
-                                    cardHtml += '<div
-                                      class="flex-shrink-0 w-8 h-8 ' + badgeBg + ' rounded-lg flex items-center justify-center">
-                                      ';
-                                      cardHtml += '<span class="text-white text-base font-bold">' + letter + '</span>';
-                                      cardHtml += '</div>';
+                                    cardHtml += `<div
+                                      class="flex-shrink-0 w-8 h-8 ${badgeBg} rounded-lg flex items-center justify-center">
+                                      `;
+                                      cardHtml += `<span class="text-white text-base font-bold">${letter}</span>`;
+                                      cardHtml += `</div>`;
 
                                     // Answer content
                                     cardHtml += '<div class="flex-1 min-w-0">';
 
                                       if (answerText) {
-                                      cardHtml += '<p
+                                      cardHtml += `<p
                                         class="text-[1.125rem] font-medium text-brand-dark-gray dark:text-brand-white break-words leading-relaxed">
-                                        ' + escapeHtml(answerText) + '</p>';
+                                        ${escapeHtml(answerText)}</p>`;
                                       } else if (!imageURL) {
                                       cardHtml += '<p class="text-sm font-medium text-gray-400 dark:text-gray-500">(No
                                         content)</p>';
                                       }
 
                                       if (imageURL) {
-                                      cardHtml += '<div class="mt-1.5"><img src="' + escapeHtml(imageURL) + '"
+                                      cardHtml += `<div class="mt-1.5"><img src="${escapeHtml(imageURL)}"
                                           class="max-w-full max-h-24 rounded-lg border border-gray-200 dark:border-gray-700"
-                                          alt="Answer ' + letter + ' image" referrerpolicy="no-referrer" /></div>';
+                                          alt="Answer ${letter} image" referrerpolicy="no-referrer" /></div>`;
                                       }
 
                                       // Student names with confidence (compact, below answer text)
@@ -6447,9 +6439,8 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                         var emoji = style.emoji || '';
                                         displayText = emoji + ' ' + displayText;
                                         }
-                                        cardHtml += '<span
-                                          class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[11px] font-medium ' + badgeClass + '">'
-                                          + escapeHtml(displayText) + '</span>';
+                                        cardHtml += `<span
+                                          class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[11px] font-medium ${badgeClass}">${escapeHtml(displayText)}</span>`;
                                         });
                                         cardHtml += '</div>';
                                       }
@@ -6522,8 +6513,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                           Certainty vs. accuracy snapshot</p>
                                       </div>';
                                       html += '</div>';
-                                    html += '<div
-                                      class="text-xs px-2 py-1 rounded-md bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-200 font-semibold">
+                                    html += '<div class="text-xs px-2 py-1 rounded-md bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-200 font-semibold">
                                       ' + escapeHtml(statusLabel) + '</div>';
                                     html += '</div>';
 
@@ -6590,8 +6580,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                         html += '</div>';
                                       }
 
-                                      html += '<div
-                                        class="flex items-center justify-between text-[11px] text-brand-dark-gray/60 dark:text-brand-white/60 mt-auto">
+                                      html += '<div class="flex items-center justify-between text-[11px] text-brand-dark-gray/60 dark:text-brand-white/60 mt-auto">
                                         ';
                                         html += '<span>' + count + ' students</span>';
                                         html += '<span>live</span>';
@@ -6684,8 +6673,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                   var isLocked = needsUnlockAttention(student);
                                   var isBlocked = isBlockedStatus(student);
 
-                                  html += '<div
-                                    class="flex items-center justify-between gap-3 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-700">
+                                  html += '<div class="flex items-center justify-between gap-3 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-700">
                                     ';
                                     html += '<div class="flex flex-col min-w-0">';
                                       html += '<span class="text-xs font-bold truncate text-gray-900 dark:text-white">'
@@ -8052,11 +8040,9 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                   class="material-symbols-outlined text-sm text-brand-dark-gray/40 dark:text-brand-white/40 cursor-move">drag_indicator</span>';
                                                 }
                                                 html += '<div class="flex-1 min-w-0">';
-                                                  html += '<div
-                                                    class="text-xs font-semibold text-brand-dark-gray/80 dark:text-brand-white/80">
+                                                  html += '<div class="text-xs font-semibold text-brand-dark-gray/80 dark:text-brand-white/80">
                                                     Q' + (index + 1) + '</div>';
-                                                  html += '<div
-                                                    class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 truncate mt-1">
+                                                  html += '<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 truncate mt-1">
                                                     ' + escapeHtml(q.questionText || 'No text') + '</div>';
                                                   html += '</div>
                                               </div>';
@@ -8135,8 +8121,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                 dark:border-brand-dark-gray/40');
 
                                                 html += '<div class="' + optClass + '">';
-                                                  html += '<div
-                                                    class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold ' + (isCorrect ? 'bg-green-500 text-white' : 'bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white') + '">
+                                                  html += '<div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold ' + (isCorrect ? 'bg-green-500 text-white' : 'bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white') + '">
                                                     ' + letter + '</div>';
                                                   html += '<div class="flex-1">';
                                                     if (opt.text) {
@@ -9232,8 +9217,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                               class="' + (isSelected ? 'text-primary dark:text-brand-white' : 'text-brand-dark-gray dark:text-brand-white') + ' text-sm font-medium leading-normal">
                                                               Question ' + (index + 1) + '</p>';
 
-                                                            html += '<div
-                                                              class="absolute right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            html += '<div class="absolute right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                               ';
                                                               html += '<button
                                                                 class="duplicate-question-btn p-1 rounded-full hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10"
@@ -9298,8 +9282,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                             var question = questions[selectedQuestionIndex];
 
                                                             var html = '<div class="max-w-4xl mx-auto">';
-                                                              html += '<div
-                                                                class="flex flex-wrap justify-between gap-3 mb-6">';
+                                                              html += '<div class="flex flex-wrap justify-between gap-3 mb-6">';
                                                                 html += '<div class="flex min-w-72 flex-col gap-1">';
                                                                   html += '<p
                                                                     class="text-brand-dark-gray dark:text-brand-white tracking-light text-[32px] font-bold leading-tight">
@@ -9310,8 +9293,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                   html += '</div>
                                                               </div>';
 
-                                                              html += '<div
-                                                                class="bg-brand-white dark:bg-brand-dark-gray/20 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/30 p-6 shadow-sm mb-6">
+                                                              html += '<div class="bg-brand-white dark:bg-brand-dark-gray/20 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/30 p-6 shadow-sm mb-6">
                                                                 ';
                                                                 html += '<label class="flex flex-col w-full">';
                                                                   html += '<p
@@ -9321,8 +9303,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                     class="form-input flex w-full min-w-0 flex-1 resize-y overflow-hidden rounded-lg text-brand-dark-gray dark:text-brand-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 focus:border-primary min-h-36 placeholder:text-brand-dark-gray/50 dark:placeholder:text-brand-white/50 p-[15px] text-base font-normal leading-normal"
                                                                     placeholder="Type your question here...">' + escapeHtml(question.questionText || '') + '</textarea>';
                                                                   html += '</label>';
-                                                                html += '<div
-                                                                  class="grid w-full max-w-xs items-center gap-1.5 mt-4">
+                                                                html += '<div class="grid w-full max-w-xs items-center gap-1.5 mt-4">
                                                                   ';
                                                                   html += '<label for="question-image-input"
                                                                     class="text-sm text-gray-400 font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Question
@@ -9341,15 +9322,12 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                 'UPLOADING';
 
                                                                 if (questionImagePreview || isUploading) {
-                                                                html += '<div
-                                                                  class="mt-4 flex flex-wrap items-center gap-3 bg-primary/5 dark:bg-primary/10 p-3 rounded-lg">
+                                                                html += '<div class="mt-4 flex flex-wrap items-center gap-3 bg-primary/5 dark:bg-primary/10 p-3 rounded-lg">
                                                                   ';
                                                                   if (isUploading) {
-                                                                  html += '<div
-                                                                    class="flex items-center gap-2 text-primary dark:text-brand-white">
+                                                                  html += '<div class="flex items-center gap-2 text-primary dark:text-brand-white">
                                                                     ';
-                                                                    html += '<div
-                                                                      class="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent">
+                                                                    html += '<div class="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent">
                                                                     </div>';
                                                                     html += '<span class="text-sm font-medium">Uploading
                                                                       image...</span>';
@@ -9365,8 +9343,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                   html += '</div>';
                                                                 }
 
-                                                                html += '<div
-                                                                  class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">';
+                                                                html += '<div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">';
                                                                   html += '<div>';
                                                                     html += '<label
                                                                       class="text-brand-dark-gray dark:text-brand-white text-sm font-medium leading-normal block pb-2"
@@ -9576,15 +9553,12 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                   var isAnswerUploading = answer.image === 'UPLOADING';
 
                                                                   if (answerPreview || isAnswerUploading) {
-                                                                  html += '<div
-                                                                    class="mt-2 flex items-center gap-3 bg-primary/5 dark:bg-primary/10 p-2 rounded-lg">
+                                                                  html += '<div class="mt-2 flex items-center gap-3 bg-primary/5 dark:bg-primary/10 p-2 rounded-lg">
                                                                     ';
                                                                     if (isAnswerUploading) {
-                                                                    html += '<div
-                                                                      class="flex items-center gap-2 text-primary dark:text-brand-white">
+                                                                    html += '<div class="flex items-center gap-2 text-primary dark:text-brand-white">
                                                                       ';
-                                                                      html += '<div
-                                                                        class="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent">
+                                                                      html += '<div class="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent">
                                                                       </div>';
                                                                       html += '<span
                                                                         class="text-xs font-medium">Uploading...</span>';
@@ -12271,7 +12245,8 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                       <strong>Participation:</strong> '
                                                                                       +
                                                                                       overview.interpretation.participation.message
-                                                                                      + '</div>';
+                                                                                      + '
+                                                                                    </div>';
                                                                                     }
                                                                                     if
                                                                                     (overview.interpretation.meanScore)
@@ -12280,7 +12255,8 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                       <strong>Class
                                                                                         Performance:</strong> ' +
                                                                                       overview.interpretation.meanScore.message
-                                                                                      + '</div>';
+                                                                                      + '
+                                                                                    </div>';
                                                                                     }
                                                                                     if (overview.interpretation.stdDev)
                                                                                     {
@@ -12362,7 +12338,8 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                     '<td class="px-4 py-3 text-center">
                                                                                       <button
                                                                                         class="px-3 py-1 text-xs font-semibold rounded-lg bg-veritas-gold/10 text-veritas-gold hover:bg-veritas-gold/20 transition-colors">View
-                                                                                        Details</button></td>';
+                                                                                        Details</button>
+                                                                                    </td>';
 
                                                                                     tbody.appendChild(row);
                                                                                     });
@@ -12422,8 +12399,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                     </div>';
 
                                                                                     // Psychometric metrics
-                                                                                    html += '<div
-                                                                                      class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                                                                    html += '<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                                                                                       ' +
                                                                                       '<div
                                                                                         class="bg-slate-50 dark:bg-brand-dark-gray/40 rounded-lg p-3">
@@ -12490,8 +12466,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                     if (item.distractorAnalysis &&
                                                                                     item.distractorAnalysis.length > 0)
                                                                                     {
-                                                                                    html += '<div
-                                                                                      class="border-t border-slate-200 dark:border-brand-dark-gray/40 pt-4">
+                                                                                    html += '<div class="border-t border-slate-200 dark:border-brand-dark-gray/40 pt-4">
                                                                                       <h5
                                                                                         class="text-sm font-semibold text-brand-dark-gray dark:text-white mb-3">
                                                                                         Answer Choice Analysis</h5>' +
@@ -12511,8 +12486,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                         dark:border-brand-dark-gray/60';
                                                                                         var icon = isCorrect ? '✓' : '';
 
-                                                                                        html += '<div
-                                                                                          class="flex items-center gap-3 p-3 rounded-lg border ' + bgClass + '">
+                                                                                        html += '<div class="flex items-center gap-3 p-3 rounded-lg border ' + bgClass + '">
                                                                                           ' +
                                                                                           '<div
                                                                                             class="flex-shrink-0 w-8 h-8 rounded-full bg-white dark:bg-brand-dark-gray flex items-center justify-center font-bold text-sm">
@@ -13876,8 +13850,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                                       '<input
                                                                                                         type="checkbox"
                                                                                                         class="wizard-meta-cb h-3.5 w-3.5 rounded"
-                                                                                                        data-q-index="' + qIndex + '" ' + (q.metacognitionEnabled ? '
-                                                                                                        checked' : '' )
+                                                                                                        data-q-index="' + qIndex + '" ' + (q.metacognitionEnabled ? 'checked' : '')
                                                                                                         + '>'
                                                                                                         + '<span>Confidence</span></label>'
                                                                                                         + '<button type="button" class="p-1.5 rounded text-red-500 hover:bg-red-50 transition-colors" onclick="removeWizardQuestion('
@@ -13886,13 +13859,8 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                                         + '<span class="material-symbols-outlined text-lg">delete</span></button>'
                                                                                                         + '</div></div>'
                                                                                                         ; // Compact
-                                                                                                        Question Body
-                                                                                                        var
-                                                                                                        bodyHtml='<div class="question-card-body p-4 space-y-3">'
-                                                                                                        + // Question
-                                                                                                        Row: Text +
-                                                                                                        Image
-                                                                                                        Upload '<div class="flex gap-3">'
+                                                                                                        var bodyHtml = '<div class="question-card-body p-4 space-y-3">'
+                                                                                                        + '<div class="flex gap-3">'
                                                                                                         + '<div class="flex-1">'
                                                                                                         + '<textarea class="wizard-q-text w-full rounded-lg border border-brand-light-gray px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary overflow-hidden min-h-[60px]" style="resize:none;height:auto;" placeholder="Enter question text..." data-q-index="'
                                                                                                         + qIndex + '">'
@@ -14422,13 +14390,11 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                                         text.substring(0,
                                                                                                         80) + '...';
 
-                                                                                                        html += '<div
-                                                                                                          class="bg-slate-50 rounded-lg p-3 border border-brand-light-gray hover:border-primary hover:bg-primary/5 cursor-pointer transition-all group"
+                                                                                                        html += '<div class="bg-slate-50 rounded-lg p-3 border border-brand-light-gray hover:border-primary hover:bg-primary/5 cursor-pointer transition-all group"
                                                                                                           data-edit-question="' + i + '"
                                                                                                           title="Click to edit this question">
                                                                                                           ';
-                                                                                                          html += '<div
-                                                                                                            class="flex items-start gap-2 mb-2">
+                                                                                                          html += '<div class="flex items-start gap-2 mb-2">
                                                                                                             ';
                                                                                                             html +=
                                                                                                             '<span
@@ -14446,8 +14412,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                                             html +=
                                                                                                             '<span
                                                                                                               class="material-symbols-outlined text-xs text-slate-400 ml-auto opacity-0 group-hover:opacity-100 transition-opacity">edit</span>';
-                                                                                                            html += '
-                                                                                                          </div>';
+                                                                                                            html += '</div>';
 
                                                                                                           // Show answer
                                                                                                           choices
@@ -14455,8 +14420,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                                           &&
                                                                                                           q.options.length
                                                                                                           > 0) {
-                                                                                                          html += '<div
-                                                                                                            class="ml-8 flex flex-wrap gap-2">
+                                                                                                          html += '<div class="ml-8 flex flex-wrap gap-2">
                                                                                                             ';
                                                                                                             q.options.forEach(function
                                                                                                             (opt, j) {
@@ -14497,18 +14461,15 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                                               escapeHtml(optText);
                                                                                                               if
                                                                                                               (isCorrect)
-                                                                                                              html += '
-                                                                                                              <span
+                                                                                                              html += '<span
                                                                                                                 class="material-symbols-outlined text-xs">check</span>';
                                                                                                               html +=
                                                                                                               '</span>';
                                                                                                             }
                                                                                                             });
-                                                                                                            html += '
-                                                                                                          </div>';
+                                                                                                            html += '</div>';
                                                                                                           }
-                                                                                                          html += '
-                                                                                                        </div>';
+                                                                                                          html += '</div>';
                                                                                                         });
 
                                                                                                         html += '</div>
@@ -14520,18 +14481,17 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                                       if
                                                                                                       (wizardState.mode
                                                                                                       === 'secure') {
-                                                                                                      html += '<div
-                                                                                                        class="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                                                                                                      html += '<div class="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200">
                                                                                                         ';
                                                                                                         html += '<h5
                                                                                                           class="text-sm font-bold text-amber-800 mb-2 flex items-center gap-2">
                                                                                                           <span
                                                                                                             class="material-symbols-outlined text-base">lock</span>Secure
                                                                                                           Assessment
-                                                                                                          Settings</h5>
+                                                                                                          Settings
+                                                                                                        </h5>
                                                                                                         ';
-                                                                                                        html += '<div
-                                                                                                          class="text-sm text-amber-700 space-y-1">
+                                                                                                        html += '<div class="text-sm text-amber-700 space-y-1">
                                                                                                           ';
                                                                                                           html += '<p>
                                                                                                             <strong>Time
@@ -14540,7 +14500,8 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                                             (wizardState.timeLimitMinutes
                                                                                                             || 'Not
                                                                                                             set') + '
-                                                                                                            minutes</p>
+                                                                                                            minutes
+                                                                                                          </p>
                                                                                                           ';
                                                                                                           if
                                                                                                           (wizardState.accessCode)
@@ -14550,7 +14511,8 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                                               Code:</strong>
                                                                                                             ' +
                                                                                                             escapeHtml(wizardState.accessCode)
-                                                                                                            + '</p>';
+                                                                                                            + '
+                                                                                                          </p>';
                                                                                                           }
                                                                                                           html += '<p>
                                                                                                             <strong>Calculator:</strong>
@@ -14559,9 +14521,9 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                                             ? 'Enabled'
                                                                                                             :
                                                                                                             'Disabled')
-                                                                                                            + '</p>';
-                                                                                                          html += '
-                                                                                                        </div>
+                                                                                                            + '
+                                                                                                          </p>';
+                                                                                                          html += '</div>
                                                                                                       </div>';
                                                                                                       }
 

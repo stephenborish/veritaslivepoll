@@ -375,7 +375,7 @@
       const max = Math.max(...data);
       const range = max - min || 1;
 
-      // Create SVG if it doesn't exist
+      // Create SVG if it does not exist
       let svg = container.querySelector('svg');
       if (!svg) {
         svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -1774,7 +1774,7 @@
           confirmBtn.focus();
         }
 
-        // Now that focus is inside the modal, it's safe to hide the background
+        // Now that focus is inside the modal, it is safe to hide the background
         toggleBackground(true);
 
         return new Promise(function (resolve) {
@@ -6653,7 +6653,7 @@
       CURRENT_POLL_DATA.correctAnswer = data.correctAnswer;
 
       // FIX: Update pollSessionType from server data to ensure calculator toggle works correctly
-      // This fixes the bug where calculator button does nothing because pollSessionType wasn't updated
+      // This fixes the bug where calculator button does nothing because pollSessionType was not updated
       if (data.sessionType) {
         pollSessionType = normalizeSessionTypeClient(data.sessionType);
         CURRENT_POLL_DATA.sessionType = data.sessionType;
@@ -6897,7 +6897,7 @@
       currentStudentStatusData = data.studentStatusList;
 
       // FIX TASK A: Re-apply Firebase realtime overrides immediately after server update
-      // This ensures that "LOCKED" status from Firebase (which is faster) isn't overwritten by "ACTIVE" from stale server poll
+      // This ensures that "LOCKED" status from Firebase (which is faster) is not overwritten by "ACTIVE" from stale server poll
       if (typeof updateRealtimeUI === 'function') {
         updateRealtimeUI();
       }
@@ -8453,7 +8453,7 @@
      * Starts the countdown
      */
     function startTimer() {
-      if (isRunning || totalSeconds <= 0) return; // Don't start if already running or at 0
+      if (isRunning || totalSeconds <= 0) return; // Do not start if already running or at 0
 
       toggleButtons(true);
       updateTimerStatus('Timer running…', 'info');
@@ -8522,13 +8522,22 @@
         if (PREVIEW_MODE) {
           previewOnlyNotice('auto-pause the poll when the timer expires');
         } else {
-          google.script.run
-            .withSuccessHandler(function (data) {
+          firebase.functions().httpsCallable('setLiveSessionState')({
+            pollId: CURRENT_POLL_DATA.pollId,
+            status: 'PAUSED',
+            questionIndex: CURRENT_POLL_DATA.questionIndex || 0,
+            metadata: {
+              reason: 'TIMER_EXPIRED'
+            }
+          }).then(function (result) {
+            var data = result.data;
+            if (data && data.success) {
               isPaused = true;
               updateLiveView(data);
-            })
-            .withFailureHandler(handleError)
-            .pausePollForTimerExpiry();
+            } else {
+              handleError(data.error || 'Failed to pause poll on timer expiry');
+            }
+          }).catch(handleError);
         }
       }
     }
@@ -8538,12 +8547,12 @@
      * @param {number} secondsToAdd - The number of seconds to add (can be negative)
      */
     function editTime(secondsToAdd) {
-      if (isRunning) return; // Don't edit while running
+      if (isRunning) return; // Do not edit while running
 
       totalSeconds += secondsToAdd;
 
       if (totalSeconds < 0) {
-        totalSeconds = 0; // Don't allow time to go below zero
+        totalSeconds = 0; // Do not allow time to go below zero
       }
 
       // Update legacy variables
@@ -8680,9 +8689,10 @@
         // Add the base URL for the bridge to build full links
         payload.baseUrl = baseUrl;
 
-        // Call the GAS mail bridge for actual sending
-        google.script.run
-          .withSuccessHandler(function (response) {
+        // FIREBASE MIGRATION: Send emails via Cloud Function (Simulated)
+        return firebase.functions().httpsCallable('sendEmail')(payload)
+          .then(function (result) {
+            var response = result.data;
             setButtonLoading(btn, false);
             if (viewLinksBtn) {
               if (restoreViewLinks) {
@@ -8692,7 +8702,7 @@
             }
 
             if (response.success) {
-              veritasAlert('Emails sent successfully to ' + response.sentCount + ' students.', { title: 'Emails Sent' });
+              veritasAlert('Emails processed (SIMULATED) for ' + response.sentCount + ' students.\n(Note: See Cloud Logging for details)', { title: 'Emails Processed' });
             } else {
               var msg = 'Sent: ' + (response.sentCount || 0) + ', Failed: ' + (response.failedCount || 0) + '.';
               if (response.failures && response.failures.length > 0) {
@@ -8713,12 +8723,7 @@
                 showToast('info', 'Fallback', 'Opening link list for manual distribution.', 4000);
               }
             }
-          })
-          .withFailureHandler(function (error) {
-            setButtonLoading(btn, false);
-            handleError(error);
-          })
-          .sendEmailBridge(payload);
+          });
       }).catch(function (error) {
         setButtonLoading(btn, false);
         handleError(error);
@@ -10726,7 +10731,7 @@
         return URL.createObjectURL(imageData);
       }
       if (typeof imageData === 'string' && imageData) {
-        // Return the URL, unless it's the special UPLOADING marker
+        // Return the URL, unless it is the special UPLOADING marker
         if (imageData === 'UPLOADING') {
           return '';
         }
@@ -11106,28 +11111,34 @@
 
           function doUpload() {
             attempts++;
-            google.script.run
-              .withSuccessHandler(function (response) {
-                if (response && response.success) {
-                  // Server now returns fileId instead of url
-                  resolve(response.fileId);
-                } else {
-                  reject(new Error(response.error || 'Upload failed'));
-                }
+            // FIREBASE MIGRATION: Upload to Firebase Storage
+            var storageRef = firebase.storage().ref();
+            var timestamp = Date.now();
+            var safeName = (file.name || 'image').replace(/[^a-zA-Z0-9.-]/g, '_');
+            var path = 'poll-images/uploads/' + timestamp + '-' + safeName;
+            var imageRef = storageRef.child(path);
+
+            imageRef.putString(dataUrl, 'data_url')
+              .then(function (snapshot) {
+                return snapshot.ref.getDownloadURL();
               })
-              .withFailureHandler(function (error) {
-                // Check for retryable errors (NetworkError, 429, etc.)
-                var msg = (error.message || error || '').toString();
-                var isRetryable = msg.includes('NetworkError') || msg.includes('429') || msg.includes('Exceeded memory limit') || msg.includes('Service unavailable');
+              .then(function (url) {
+                console.log('[Firebase Storage] Upload success:', url);
+                resolve(url);
+              })
+              .catch(function (error) {
+                console.error('[Firebase Storage] Upload failed:', error);
+                // Check for retryable errors
+                var msg = (error.message || '').toString();
+                var isRetryable = msg.includes('retry') || msg.includes('network');
 
                 if (isRetryable && attempts < maxAttempts) {
-                  console.warn('Upload attempt ' + attempts + ' failed. Retrying in ' + (attempts * 2000) + 'ms...', error);
-                  setTimeout(doUpload, attempts * 2000); // Exponential-ish backoff: 2s, 4s
+                  console.warn('Upload attempt ' + attempts + ' failed. Retrying...', error);
+                  setTimeout(doUpload, attempts * 2000);
                 } else {
-                  reject(new Error('Server error: ' + (msg || error)));
+                  reject(new Error(error.message || 'Image upload failed'));
                 }
-              })
-              .uploadImageToDrive(dataUrl, file.name);
+              });
           }
 
           doUpload();
@@ -11446,7 +11457,7 @@
       var nextBtn = document.getElementById('header-next-btn');
       if (!nextBtn) return;
 
-      // Only pulse if it's not the last question
+      // Only pulse if it is not the last question
       var isLastQuestion = CURRENT_POLL_DATA.questionIndex >= CURRENT_POLL_DATA.totalQuestions - 1;
 
       if (allHaveResponded && !isLastQuestion) {
@@ -12422,7 +12433,7 @@
         return;
       }
 
-      // Skip this poll if we're in backoff period
+      // Skip this poll if we are in backoff period
       if (missionControlBackoffMs > 0) {
         var remaining = missionControlBackoffMs - 1000;
         if (remaining <= 0) {
@@ -12446,7 +12457,7 @@
         .withFailureHandler(function (error) {
           var errorMsg = error && error.message ? error.message : String(error);
 
-          // Check if it's a 429 rate limit error
+          // Check if it is a 429 rate limit error
           if (errorMsg.includes('429') || errorMsg.includes('Rate limit') || errorMsg.includes('quota')) {
             missionControlPollFailures++;
             // Exponential backoff: 5s, 10s, 20s, 40s (max)
@@ -12458,7 +12469,7 @@
               showToast('warning', 'Slow down', 'Reducing update frequency to prevent rate limits', 3000);
             }
           } else {
-            // For other errors, show the error but don't stop polling
+            // For other errors, show the error but do not stop polling
             console.error('Mission control poll error:', error);
             if (missionControlPollFailures < 3) {
               // Only show error alert if it persists

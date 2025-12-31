@@ -754,3 +754,37 @@ exports.confirmFullscreen = onCall({ cors: true }, async (request) => {
   }
 });
 
+/**
+ * Simulated Email Sending (Migration Stub).
+ * Replace this with SendGrid/SMTP logic when ready.
+ */
+exports.sendEmail = onCall({ cors: true }, async (request) => {
+  const { recipientEmail, subject, body, students } = request.data;
+
+  // Batch Mode
+  if (students && Array.isArray(students)) {
+    logger.info(`[Email Simulation] Processing batch of ${students.length} emails`);
+    let sentCount = 0;
+    students.forEach((s) => {
+      if (s.email) {
+        logger.info(`[Email Simulation] To: ${s.email}, Subject: ${s.subject || subject}`);
+        sentCount++;
+      }
+    });
+    return { success: true, sentCount: sentCount, simulated: true };
+  }
+
+  // Single Mode
+  if (!recipientEmail || !subject || !body) {
+    throw new HttpsError("invalid-argument", "Missing email fields");
+  }
+
+  logger.info(`[Email Simulation] To: ${recipientEmail}, Subject: ${subject}`);
+  logger.info(`[Email Simulation] Body length: ${body.length}`);
+
+  // In a real implementation:
+  // await sendGrid.send({ to: recipientEmail, subject, html: body });
+
+  return { success: true, simulated: true };
+});
+

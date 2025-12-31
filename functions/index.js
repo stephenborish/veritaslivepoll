@@ -3,8 +3,8 @@
  * Migrated from Google Apps Script to run essentially "at the edge".
  */
 
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const { onValueWritten } = require("firebase-functions/v2/database");
+const {onCall, HttpsError} = require("firebase-functions/v2/https");
+const {onValueWritten} = require("firebase-functions/v2/database");
 const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
 
@@ -23,7 +23,7 @@ const analyticsEngine = require("./analytics_engine");
  *   questionIndex: 1
  * });
  */
-exports.setLiveSessionState = onCall({ cors: true }, async (request) => {
+exports.setLiveSessionState = onCall({cors: true}, async (request) => {
   // 1. Auth Check (Phase 1: trust caller with ID, Todo: Auth context)
   // const uid = request.auth.uid;
 
@@ -33,8 +33,8 @@ exports.setLiveSessionState = onCall({ cors: true }, async (request) => {
 
   if (!pollId) {
     throw new HttpsError(
-      "invalid-argument",
-      "The function must be called with a pollId.",
+        "invalid-argument",
+        "The function must be called with a pollId.",
     );
   }
 
@@ -72,7 +72,7 @@ exports.setLiveSessionState = onCall({ cors: true }, async (request) => {
 
   await sessionRef.set(payload);
 
-  return { success: true, timestamp: Date.now() };
+  return {success: true, timestamp: Date.now()};
 });
 
 /**
@@ -84,69 +84,69 @@ exports.setLiveSessionState = onCall({ cors: true }, async (request) => {
  * 2. Atomic: Server updates student list.
  */
 exports.onAnswerSubmitted = onValueWritten(
-  {
-    ref: "/answers/{pollId}/{studentEmailKey}",
-  },
-  async (event) => {
-    const data = event.data.after.val(); // The answer object
-    const pollId = event.params.pollId;
-    const studentEmailKey = event.params.studentEmailKey;
+    {
+      ref: "/answers/{pollId}/{studentEmailKey}",
+    },
+    async (event) => {
+      const data = event.data.after.val(); // The answer object
+      const pollId = event.params.pollId;
+      const studentEmailKey = event.params.studentEmailKey;
 
-    // Ignore deletions
-    if (!data) return;
+      // Ignore deletions
+      if (!data) return;
 
-    logger.info(`Answer: Poll ${pollId} from ${studentEmailKey}`, data);
+      logger.info(`Answer: Poll ${pollId} from ${studentEmailKey}`, data);
 
-    // 1. Fetch Correct Answer from Secure Key Store
-    let isCorrect = null;
-    if (data.questionIndex !== undefined) {
-      const keyPath = `sessions/${pollId}/answers_key/${data.questionIndex}`;
-      const keyRef = admin.database().ref(keyPath);
-      const keySnap = await keyRef.once("value");
-      const correctVal = keySnap.val();
+      // 1. Fetch Correct Answer from Secure Key Store
+      let isCorrect = null;
+      if (data.questionIndex !== undefined) {
+        const keyPath = `sessions/${pollId}/answers_key/${data.questionIndex}`;
+        const keyRef = admin.database().ref(keyPath);
+        const keySnap = await keyRef.once("value");
+        const correctVal = keySnap.val();
 
-      if (correctVal !== null && data.answer) {
+        if (correctVal !== null && data.answer) {
         // Simple string comparison for now.
         // TODO: Enhance for multi-select arrays if needed.
-        const ansStr = String(data.answer).trim().toLowerCase();
-        const keyStr = String(correctVal).trim().toLowerCase();
-        isCorrect = (ansStr === keyStr);
+          const ansStr = String(data.answer).trim().toLowerCase();
+          const keyStr = String(correctVal).trim().toLowerCase();
+          isCorrect = (ansStr === keyStr);
+        }
       }
-    }
 
-    // 2. Update Teacher Dashboard View
-    // Ideally, the 'answers' node should rely on the *studentKey*, not email.
-    // For this migration, we assume client sends studentKey.
+      // 2. Update Teacher Dashboard View
+      // Ideally, the 'answers' node should rely on the *studentKey*, not email.
+      // For this migration, we assume client sends studentKey.
 
-    const studentStatusPath =
+      const studentStatusPath =
       `sessions/${pollId}/students/${studentEmailKey}`;
-    const studentStatusRef = admin.database().ref(studentStatusPath);
+      const studentStatusRef = admin.database().ref(studentStatusPath);
 
-    // Check current status to avoid overwriting LOCKED state?
-    // For now, simple set to FINISHED is consistent with legacy behavior.
-    // We update status AND payload the correctness result if available
-    const updatePayload = {
-      status: "FINISHED",
-      lastAnswerTimestamp: admin.database.ServerValue.TIMESTAMP,
-    };
+      // Check current status to avoid overwriting LOCKED state?
+      // For now, simple set to FINISHED is consistent with legacy behavior.
+      // We update status AND payload the correctness result if available
+      const updatePayload = {
+        status: "FINISHED",
+        lastAnswerTimestamp: admin.database.ServerValue.TIMESTAMP,
+      };
 
-    if (isCorrect !== null) {
-      updatePayload.lastAnswerCorrect = isCorrect;
-    }
+      if (isCorrect !== null) {
+        updatePayload.lastAnswerCorrect = isCorrect;
+      }
 
-    await studentStatusRef.update(updatePayload);
-    logger.info(
-      `Student ${studentEmailKey} marked FINISHED (Correct: ${isCorrect})`,
-    );
-  });
+      await studentStatusRef.update(updatePayload);
+      logger.info(
+          `Student ${studentEmailKey} marked FINISHED (Correct: ${isCorrect})`,
+      );
+    });
 /**
  * Finalize Session (The "End Poll" Signal).
  * 1. Reads all answers for the poll.
  * 2. Writes a permanent history record.
  * 3. Clears the live session state.
  */
-exports.finalizeSession = onCall({ cors: true }, async (request) => {
-  const { pollId } = request.data;
+exports.finalizeSession = onCall({cors: true}, async (request) => {
+  const {pollId} = request.data;
   if (!pollId) {
     throw new HttpsError("invalid-argument", "Missing pollId");
   }
@@ -195,15 +195,15 @@ exports.finalizeSession = onCall({ cors: true }, async (request) => {
   });
 
   logger.info(`Session Finalized: ${pollId} -> ${sessionId}`);
-  return { success: true, sessionId: sessionId };
+  return {success: true, sessionId: sessionId};
 });
 
 /**
  * Get Comprehensive Analytics (The "Analytics Hub" Signal).
  * Consolidates multiple legacy GAS endpoints into one powerful engine.
  */
-exports.getAnalytics = onCall({ cors: true }, async (request) => {
-  const { className, pollId, studentEmail } = request.data;
+exports.getAnalytics = onCall({cors: true}, async (request) => {
+  const {className, pollId, studentEmail} = request.data;
   const db = admin.database();
 
   logger.info(`Analytics Request: class=${className}, ` +
@@ -229,15 +229,15 @@ exports.getAnalytics = onCall({ cors: true }, async (request) => {
     const pollHistory = historyData[pollId] || {};
     // For post-poll analysis, we usually look at the latest session
     const sessions = Object.values(pollHistory)
-      .sort((a, b) => b.timestamp - a.timestamp);
+        .sort((a, b) => b.timestamp - a.timestamp);
     const latestSession = sessions[0];
 
     if (!latestSession) {
-      return { success: false, error: "No history found for this poll" };
+      return {success: false, error: "No history found for this poll"};
     }
 
     const itemAnalysis = analyticsEngine.computeItemAnalysis(
-      latestSession, latestSession.answers || {});
+        latestSession, latestSession.answers || {});
 
     return {
       success: true,
@@ -264,8 +264,8 @@ exports.getAnalytics = onCall({ cors: true }, async (request) => {
     });
 
     const insights = analyticsEngine.computeStudentInsights(
-      allSessions, student ? [student] : []);
-    return { success: true, studentEmail, insights: insights[0] };
+        allSessions, student ? [student] : []);
+    return {success: true, studentEmail, insights: insights[0]};
   }
 
   // Default: Dashboard / Overview Analytics
@@ -280,8 +280,8 @@ exports.getAnalytics = onCall({ cors: true }, async (request) => {
  * Manage Proctoring Status (Teacher Actions).
  * Handles UNLOCK, BLOCK, UNBLOCK with atomic transactions.
  */
-exports.manageProctoring = onCall({ cors: true }, async (request) => {
-  const { pollId, studentEmail, action, expectedLockVersion } = request.data;
+exports.manageProctoring = onCall({cors: true}, async (request) => {
+  const {pollId, studentEmail, action, expectedLockVersion} = request.data;
   // TODO: Auth check for teacher role
 
   if (!pollId || !studentEmail || !action) {
@@ -318,7 +318,7 @@ exports.manageProctoring = onCall({ cors: true }, async (request) => {
   });
 
   if (result.committed) {
-    return { success: true, status: result.snapshot.val().status };
+    return {success: true, status: result.snapshot.val().status};
   } else {
     return {
       success: false,
@@ -332,8 +332,8 @@ exports.manageProctoring = onCall({ cors: true }, async (request) => {
  * Report Student Violation (Student Signal).
  * Implements the "Poison Pill" logic and increments lockVersion.
  */
-exports.reportStudentViolation = onCall({ cors: true }, async (request) => {
-  const { pollId, studentEmail, reason } = request.data;
+exports.reportStudentViolation = onCall({cors: true}, async (request) => {
+  const {pollId, studentEmail, reason} = request.data;
 
   if (!pollId || !studentEmail) {
     throw new HttpsError("invalid-argument", "Missing required parameters");
@@ -381,8 +381,8 @@ exports.reportStudentViolation = onCall({ cors: true }, async (request) => {
  * Create a new poll
  * Replaces google.script.run.createNewPoll
  */
-exports.createPoll = onCall({ cors: true }, async (request) => {
-  const { pollName, className, questions, metadata } = request.data;
+exports.createPoll = onCall({cors: true}, async (request) => {
+  const {pollName, className, questions, metadata} = request.data;
 
   if (!pollName || !className || !questions) {
     throw new HttpsError("invalid-argument", "Missing required fields");
@@ -424,8 +424,8 @@ exports.createPoll = onCall({ cors: true }, async (request) => {
  * Update an existing poll
  * Replaces google.script.run.updatePoll
  */
-exports.updatePoll = onCall({ cors: true }, async (request) => {
-  const { pollId, pollName, className, questions, metadata } = request.data;
+exports.updatePoll = onCall({cors: true}, async (request) => {
+  const {pollId, pollName, className, questions, metadata} = request.data;
 
   if (!pollId) {
     throw new HttpsError("invalid-argument", "Missing pollId");
@@ -487,8 +487,8 @@ exports.updatePoll = onCall({ cors: true }, async (request) => {
  * Replaces google.script.run.saveRoster, bulkAddStudentsToRoster,
  * renameClass, deleteClassRecord
  */
-exports.manageRoster = onCall({ cors: true }, async (request) => {
-  const { action, className, newClassName, students } = request.data;
+exports.manageRoster = onCall({cors: true}, async (request) => {
+  const {action, className, newClassName, students, pollId} = request.data;
 
   if (!action || !className) {
     throw new HttpsError("invalid-argument", "Missing required fields");
@@ -522,17 +522,17 @@ exports.manageRoster = onCall({ cors: true }, async (request) => {
       const existingSnapshot = await rosterRef.once("value");
       const existingRoster = existingSnapshot.val() || [];
       const existingEmails = new Set(
-        existingRoster.map((s) => s.email.toLowerCase()),
+          existingRoster.map((s) => s.email.toLowerCase()),
       );
 
       const newStudents = students.filter(
-        (s) => !existingEmails.has(s.email.toLowerCase()),
+          (s) => !existingEmails.has(s.email.toLowerCase()),
       );
       const updatedRoster = [...existingRoster, ...newStudents];
 
       await rosterRef.set(updatedRoster);
       logger.info(
-        `Roster bulk add: ${className} (+${newStudents.length} students)`,
+          `Roster bulk add: ${className} (+${newStudents.length} students)`,
       );
 
       return {
@@ -560,8 +560,8 @@ exports.manageRoster = onCall({ cors: true }, async (request) => {
       const newSnapshot = await newRosterRef.once("value");
       if (newSnapshot.exists()) {
         throw new HttpsError(
-          "already-exists",
-          "A class with that name already exists",
+            "already-exists",
+            "A class with that name already exists",
         );
       }
 
@@ -624,35 +624,35 @@ exports.manageRoster = onCall({ cors: true }, async (request) => {
       const existingTokens = existingTokensSnapshot.val() || {};
 
       const links = await Promise.all(
-        roster.map(async (student) => {
-          const studentEmail = student.email.toLowerCase();
-          let token = existingTokens[studentEmail.replace(/\./g, "_")];
+          roster.map(async (student) => {
+            const studentEmail = student.email.toLowerCase();
+            let token = existingTokens[studentEmail.replace(/\./g, "_")];
 
-          if (!token) {
+            if (!token) {
             // Generate new token if not exists
-            token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-            const expiryDate = new Date();
-            expiryDate.setDate(expiryDate.getDate() + 30); // 30 days expiry
+              token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+              const expiryDate = new Date();
+              expiryDate.setDate(expiryDate.getDate() + 30); // 30 days expiry
 
-            await tokensRef.child(token).set({
+              await tokensRef.child(token).set({
+                email: student.email,
+                className: className,
+                created: Date.now(),
+                expires: expiryDate.getTime(),
+              });
+
+              await tokensLinksIndexRef.child(studentEmail.replace(/\./g, "_")).set(token);
+            }
+
+            // In a real environment, we might call a URL shortener here.
+            // For now, we return the structured link data.
+            return {
+              name: student.name,
               email: student.email,
-              className: className,
-              created: Date.now(),
-              expires: expiryDate.getTime(),
-            });
-
-            await tokensLinksIndexRef.child(studentEmail.replace(/\./g, "_")).set(token);
-          }
-
-          // In a real environment, we might call a URL shortener here.
-          // For now, we return the structured link data.
-          return {
-            name: student.name,
-            email: student.email,
-            token: token,
-            hasActiveLink: true,
-          };
-        })
+              token: token,
+              hasActiveLink: true,
+            };
+          }),
       );
 
       return {
@@ -675,12 +675,12 @@ exports.manageRoster = onCall({ cors: true }, async (request) => {
       // Prepare email data and return to client to use a mail bridge
       // This ensures token logic is in CF, while GAS only handles the actual 'send'
       const res = await exports.manageRoster.run({
-        data: { action: "GET_LINKS", className: className },
+        data: {action: "GET_LINKS", className: className},
       });
       const studentLinks = res.links;
 
       const pollSnapshot = await db.ref(`polls/${pollId}`).once("value");
-      const pollData = pollSnapshot.val() || { pollName: "Veritas Poll" };
+      const pollData = pollSnapshot.val() || {pollName: "Veritas Poll"};
 
       const emailDate = new Date().toLocaleDateString("en-US", {
         month: "long",
@@ -689,9 +689,9 @@ exports.manageRoster = onCall({ cors: true }, async (request) => {
       });
 
       const isSecure = (pollData.sessionType || "").toUpperCase().includes("SECURE");
-      const subject = isSecure
-        ? `Your VERITAS Secure Assessment Link – ${emailDate}`
-        : `Your VERITAS Live Poll Link – ${emailDate}`;
+      const subject = isSecure ?
+        `Your VERITAS Secure Assessment Link – ${emailDate}` :
+        `Your VERITAS Live Poll Link – ${emailDate}`;
 
       return {
         success: true,
@@ -710,8 +710,8 @@ exports.manageRoster = onCall({ cors: true }, async (request) => {
  * Resets student status from 'AWAITING_FULLSCREEN' to 'ACTIVE'
  * if lockVersion matches.
  */
-exports.confirmFullscreen = onCall({ cors: true }, async (request) => {
-  const { pollId, studentEmail, lockVersion } = request.data;
+exports.confirmFullscreen = onCall({cors: true}, async (request) => {
+  const {pollId, studentEmail, lockVersion} = request.data;
 
   if (!pollId || !studentEmail || lockVersion === undefined) {
     throw new HttpsError("invalid-argument", "Missing required parameters");
@@ -745,11 +745,11 @@ exports.confirmFullscreen = onCall({ cors: true }, async (request) => {
       timestamp: admin.database.ServerValue.TIMESTAMP,
     });
 
-    return { success: true };
+    return {success: true};
   } else {
     return {
       success: false,
-      reason: result.snapshot.exists() ? "invalid_state_or_version" : "student_not_found"
+      reason: result.snapshot.exists() ? "invalid_state_or_version" : "student_not_found",
     };
   }
 });
@@ -758,8 +758,8 @@ exports.confirmFullscreen = onCall({ cors: true }, async (request) => {
  * Simulated Email Sending (Migration Stub).
  * Replace this with SendGrid/SMTP logic when ready.
  */
-exports.sendEmail = onCall({ cors: true }, async (request) => {
-  const { recipientEmail, subject, body, students } = request.data;
+exports.sendEmail = onCall({cors: true}, async (request) => {
+  const {recipientEmail, subject, body, students} = request.data;
 
   // Batch Mode
   if (students && Array.isArray(students)) {
@@ -771,7 +771,7 @@ exports.sendEmail = onCall({ cors: true }, async (request) => {
         sentCount++;
       }
     });
-    return { success: true, sentCount: sentCount, simulated: true };
+    return {success: true, sentCount: sentCount, simulated: true};
   }
 
   // Single Mode
@@ -785,6 +785,6 @@ exports.sendEmail = onCall({ cors: true }, async (request) => {
   // In a real implementation:
   // await sendGrid.send({ to: recipientEmail, subject, html: body });
 
-  return { success: true, simulated: true };
+  return {success: true, simulated: true};
 });
 

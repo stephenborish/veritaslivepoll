@@ -1,0 +1,219 @@
+<style>
+    /* Login Screen Styles */
+    #login-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 10000;
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Inter', sans-serif;
+    }
+
+    .login-card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        border-radius: 24px;
+        padding: 48px;
+        width: 100%;
+        max-width: 420px;
+        text-align: center;
+        animation: loginSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes loginSlideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .login-logo {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 24px;
+        background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 30px rgba(251, 191, 36, 0.3);
+    }
+
+    .login-logo span {
+        font-size: 32px;
+        color: white;
+    }
+
+    .login-title {
+        color: white;
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 8px;
+        letter-spacing: -0.02em;
+    }
+
+    .login-subtitle {
+        color: #94a3b8;
+        font-size: 15px;
+        margin-bottom: 32px;
+        line-height: 1.5;
+    }
+
+    .login-btn {
+        width: 100%;
+        background: white;
+        color: #0f172a;
+        border: none;
+        padding: 14px;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    .login-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        background: #f8fafc;
+    }
+
+    .login-btn:active {
+        transform: translateY(0);
+    }
+
+    .login-btn-icon {
+        width: 20px;
+        height: 20px;
+    }
+
+    .login-error {
+        margin-top: 16px;
+        padding: 12px;
+        background: rgba(239, 68, 68, 0.15);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        border-radius: 8px;
+        color: #fca5a5;
+        font-size: 13px;
+        display: none;
+        animation: shake 0.4s ease-in-out;
+    }
+
+    @keyframes shake {
+
+        0%,
+        100% {
+            transform: translateX(0);
+        }
+
+        25% {
+            transform: translateX(-4px);
+        }
+
+        75% {
+            transform: translateX(4px);
+        }
+    }
+
+    .login-footer {
+        margin-top: 32px;
+        color: #64748b;
+        font-size: 12px;
+    }
+</style>
+
+<div id="login-overlay" style="display: none;">
+    <div class="login-card">
+        <div class="login-logo">
+            <span class="material-symbols-outlined">school</span>
+        </div>
+        <h1 class="login-title">Veritas Live</h1>
+        <p class="login-subtitle">Sign in to access your classroom polls and assessments.</p>
+
+        <button id="google-login-btn" class="login-btn">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="login-btn-icon"
+                alt="Google">
+            Sign in with Google
+        </button>
+
+        <div id="login-error" class="login-error"></div>
+
+        <div class="login-footer">
+            &copy; 2024 Veritas Education. Secure & Private.
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        // Expose LoginManager globally
+        window.LoginManager = {
+            show: function () {
+                var el = document.getElementById('login-overlay');
+                if (el) el.style.display = 'flex';
+            },
+            hide: function () {
+                var el = document.getElementById('login-overlay');
+                if (el) el.style.display = 'none';
+            },
+            setError: function (msg) {
+                var el = document.getElementById('login-error');
+                if (el) {
+                    el.textContent = msg;
+                    el.style.display = 'block';
+                }
+            },
+            init: function (onSuccess) {
+                var btn = document.getElementById('google-login-btn');
+                if (btn) {
+                    btn.addEventListener('click', function () {
+                        var provider = new firebase.auth.GoogleAuthProvider();
+                        // Force account selection
+                        provider.setCustomParameters({
+                            prompt: 'select_account'
+                        });
+
+                        firebase.auth().signInWithPopup(provider)
+                            .then(function (result) {
+                                var user = result.user;
+                                console.log('[Auth] Signed in as:', user.email);
+
+                                // Persist session
+                                sessionStorage.setItem('veritas_session_token', user.uid); // Using UID as token for now
+                                sessionStorage.setItem('veritas_student_email', user.email);
+
+                                // Update Global State
+                                window.SESSION_TOKEN = user.uid;
+                                window.STUDENT_EMAIL = user.email;
+
+                                LoginManager.hide();
+                                if (onSuccess) onSuccess(user);
+                            })
+                            .catch(function (error) {
+                                console.error('[Auth] Login failed:', error);
+                                LoginManager.setError(error.message);
+                            });
+                    });
+                }
+            }
+        };
+    })();
+</script>

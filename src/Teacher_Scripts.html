@@ -969,11 +969,11 @@ let effectiveDuration = (duration !== null && duration !== undefined)
           window.expandImage = function (imgElement) {
           // ... logic skipped for brevity, defined globally is fine
           var imgSrc = imgElement.src;
-          var modalHtml = '<div
+          var modalHtml = `<div
             style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:pointer;"
-            onclick="this.remove()">';
-            modalHtml += '<img src="' + imgSrc + '" style="max-width:90%;max-height:90%;" />';
-            modalHtml += '</div>';
+            onclick="this.remove()">`;
+            modalHtml += `<img src="${imgSrc}" style="max-width:90%;max-height:90%;" />`;
+            modalHtml += `</div>`;
           document.body.insertAdjacentHTML('beforeend', modalHtml);
           };
 
@@ -3000,8 +3000,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                 var sessionType = normalizeSessionTypeClient(poll.sessionType);
                 var info = getSessionTypeInfo(sessionType);
                 var html = '<div class="flex flex-col gap-1">';
-                  html += '<span
-                    class="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold rounded-full ' + info.badgeClass + '">';
+                  html += '<span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold rounded-full ' + info.badgeClass + '">';
                     html += '<span class="material-symbols-outlined text-sm">' + info.icon + '</span>' + info.label +
                     '</span>';
                   if (sessionType === 'SECURE_ASSESSMENT') {
@@ -4156,9 +4155,9 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                   </div>`;
                   }
 
-                  var imageHtml = question.questionImageURL ? '<div class="mt-3"><img
-                      src="' + escapeHtml(question.questionImageURL) + '" class="max-h-48 rounded-lg object-contain"
-                      alt="Question image" /></div>' : '';
+                  var imageHtml = question.questionImageURL ? `<div class="mt-3"><img
+                      src="${escapeHtml(question.questionImageURL)}" class="max-h-48 rounded-lg object-contain"
+                      alt="Question image" /></div>` : '';
                   var questionHtml = '<div>
                     <h3 class="font-serif text-lg text-brand-dark-gray dark:text-brand-white">Question ' + (index + 1) +
                       '</h3>
@@ -4285,7 +4284,8 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                           html += '</ul>';
                         }
 
-                        html += '</div>
+                        html += '
+                      </div>
                     </div>';
                     });
 
@@ -4300,8 +4300,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                   var html = '<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">';
 
                     // Mean
-                    html += '<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/30 rounded-lg p-4">
-                      ';
+                    html += '<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/30 rounded-lg p-4">';
                       html += '<div class="text-sm text-blue-700 dark:text-blue-300 font-semibold mb-1">Mean Score</div>
                       ';
                       html += '<div class="text-3xl font-bold text-blue-900 dark:text-blue-100">' + overview.mean + '
@@ -4313,8 +4312,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                       html += '</div>';
 
                     // Median
-                    html += '<div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/30 rounded-lg p-4">
-                      ';
+                    html += '<div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/30 rounded-lg p-4">';
                       html += '<div class="text-sm text-green-700 dark:text-green-300 font-semibold mb-1">Median Score
                       </div>';
                       html += '<div class="text-3xl font-bold text-green-900 dark:text-green-100">' + overview.median +
@@ -4322,8 +4320,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                       html += '</div>';
 
                     // Std Dev
-                    html += '<div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700/30 rounded-lg p-4">
-                      ';
+                    html += '<div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700/30 rounded-lg p-4">';
                       html += '<div class="text-sm text-purple-700 dark:text-purple-300 font-semibold mb-1">Std.
                         Deviation</div>';
                       html += '<div class="text-3xl font-bold text-purple-900 dark:text-purple-100">' + overview.stdDev
@@ -4335,8 +4332,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                       html += '</div>';
 
                     // Participation
-                    html += '<div class="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700/30 rounded-lg p-4">
-                      ';
+                    html += '<div class="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700/30 rounded-lg p-4">';
                       html += '<div class="text-sm text-gray-700 dark:text-gray-300 font-semibold mb-1">Participants
                       </div>';
                       html += '<div class="text-3xl font-bold text-gray-900 dark:text-gray-100">' +
@@ -4350,8 +4346,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
 
                   // Score distribution histogram
                   if (distribution && distribution.histogram && distribution.histogram.length > 0) {
-                  html += '<div class="bg-white dark:bg-brand-dark-gray/40 border border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg p-4">
-                    ';
+                  html += '<div class="bg-white dark:bg-brand-dark-gray/40 border border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg p-4">';
                     html += '<h4 class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white mb-3">Score
                       Distribution</h4>';
                     html += '<div class="flex items-end gap-2 h-48">';
@@ -4496,8 +4491,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
 
                       // Actionable Insights
                       if (interp.actionable && interp.actionable.length > 0) {
-                      html += '<div class="mt-3 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30 rounded text-sm text-amber-800 dark:text-amber-200">
-                        ';
+                      html += '<div class="mt-3 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30 rounded text-sm text-amber-800 dark:text-amber-200">';
                         html += '<p class="font-semibold text-xs uppercase tracking-wide mb-1">Recommendation:</p>';
                         html += '<ul class="list-disc list-inside space-y-1">';
                           interp.actionable.forEach(function (insight) {
@@ -4527,15 +4521,13 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                 escapeHtml(dist.option.substring(0, 50)) + (dist.option.length > 50 ? '...' : '') +
                                 '</span>';
                               if (dist.isCorrect) {
-                              html += '<span
-                                class="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-300">Correct</span>';
+                              html += '<span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-300">Correct</span>';
                               }
                               html += '</div>';
                             html += '<div class="flex items-center gap-3">';
                               html += '<span class="text-brand-dark-gray/60 dark:text-brand-white/60">' + dist.totalPct
                                 + '%</span>';
-                              html += '<span
-                                class="text-xs text-' + qualityColor + '-600 dark:text-' + qualityColor + '-400">' +
+                              html += '<span class="text-xs text-' + qualityColor + '-600 dark:text-' + qualityColor + '-400">' +
                                 dist.quality + '</span>';
                               html += '</div>';
                             html += '</div>';
@@ -5031,9 +5023,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                           flagText + '</span>';
                         });
 
-                        html += '<tr
-                          class="border-t border-brand-light-gray dark:border-brand-dark-gray/40 hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/30 transition-colors">
-                          ';
+                        html += '<tr class="border-t border-brand-light-gray dark:border-brand-dark-gray/40 hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/30 transition-colors">';
                           html += '<td class="px-4 py-3 text-sm font-medium text-brand-dark-gray dark:text-brand-white">
                             ' + escapeHtml(formatStudentName(student)) + '</td>';
                           html += '<td class="px-4 py-3 text-center"><span
@@ -6503,8 +6493,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
 
                                   var html = '<div class="flex items-start justify-between gap-3 mb-2">';
                                     html += '<div class="flex items-start gap-2">';
-                                      html += '<span
-                                        class="material-symbols-outlined text-purple-600 dark:text-purple-300 text-xl">psychology</span>';
+                                      html += '<span class="material-symbols-outlined text-purple-600 dark:text-purple-300 text-xl">psychology</span>';
                                       html += '<div>
                                         <h4
                                           class="text-brand-dark-gray dark:text-brand-white font-semibold text-sm leading-tight">
@@ -6513,21 +6502,17 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                           Certainty vs. accuracy snapshot</p>
                                       </div>';
                                       html += '</div>';
-                                    html += '<div class="text-xs px-2 py-1 rounded-md bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-200 font-semibold">
-                                      ' + escapeHtml(statusLabel) + '</div>';
+                                    html += '<div class="text-xs px-2 py-1 rounded-md bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-200 font-semibold">' + escapeHtml(statusLabel) + '</div>';
                                     html += '</div>';
 
                                   // Quick stats chips
                                   html += '<div class="flex flex-wrap gap-2 mb-3 text-xs font-semibold">';
-                                    html += '<span
-                                      class="px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200">✓
-                                      Correct: ' + (metacognition.correctCount || 0) + '</span>';
-                                    html += '<span
-                                      class="px-2 py-1 rounded-md bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-200">✗
-                                      Incorrect: ' + (metacognition.incorrectCount || 0) + '</span>';
-                                    html += '<span
-                                      class="px-2 py-1 rounded-md bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-200">⊘
-                                      Unanswered: ' + (metacognition.unansweredCount || 0) + '</span>';
+                                    html += '<span class="px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200">✓
+                                      Correct:' + (metacognition.correctCount || 0) + '</span>';
+                                    html += '<span class="px-2 py-1 rounded-md bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-200">✗
+                                      Incorrect:' + (metacognition.incorrectCount || 0) + '</span>';
+                                    html += '<span class="px-2 py-1 rounded-md bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-200">⊘
+                                      Unanswered:' + (metacognition.unansweredCount || 0) + '</span>';
                                     html += '</div>';
 
                                   html += '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">';
@@ -6573,15 +6558,13 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                       if (categoryStudents.length > 0) {
                                       html += '<div class="flex flex-wrap gap-1 mt-1 mb-2">';
                                         categoryStudents.forEach(function (s) {
-                                        html += '<span
-                                          class="px-1.5 py-0.5 rounded bg-white/50 dark:bg-black/20 text-[10px] font-medium border border-black/5 truncate max-w-full">'
+                                        html += '<span class="px-1.5 py-0.5 rounded bg-white/50 dark:bg-black/20 text-[10px] font-medium border border-black/5 truncate max-w-full">'
                                           + escapeHtml(formatStudentName(s)) + '</span>';
                                         });
                                         html += '</div>';
                                       }
 
-                                      html += '<div class="flex items-center justify-between text-[11px] text-brand-dark-gray/60 dark:text-brand-white/60 mt-auto">
-                                        ';
+                                      html += '<div class="flex items-center justify-between text-[11px] text-brand-dark-gray/60 dark:text-brand-white/60 mt-auto">';
                                         html += '<span>' + count + ' students</span>';
                                         html += '<span>live</span>';
                                         html += '</div>';
@@ -6592,16 +6575,14 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                   if (flagged.length > 0) {
                                   html += '<div class="rounded-lg border border-rose-500/40 bg-rose-500/10 p-2 mt-2">';
                                     html += '<div class="flex items-center gap-1 mb-1">';
-                                      html += '<span
-                                        class="material-symbols-outlined text-sm text-rose-700 dark:text-rose-200">report</span>';
+                                      html += '<span class="material-symbols-outlined text-sm text-rose-700 dark:text-rose-200">report</span>';
                                       html += '<span class="text-xs font-semibold text-rose-700 dark:text-rose-200">' +
                                         flagged.length + ' confidently wrong</span>';
                                       html += '</div>';
                                     html += '<div class="flex flex-wrap gap-1">';
                                       flagged.forEach(function (student) {
                                       var display = escapeHtml(student.name || student.email || 'Student');
-                                      html += '<span
-                                        class="px-1.5 py-0.5 rounded bg-white/70 text-xs font-medium text-rose-700 dark:bg-rose-900/40 dark:text-rose-100">'
+                                      html += '<span class="px-1.5 py-0.5 rounded bg-white/70 text-xs font-medium text-rose-700 dark:bg-rose-900/40 dark:text-rose-100">'
                                         + display + '</span>';
                                       });
                                       html += '</div>';
@@ -6673,8 +6654,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                   var isLocked = needsUnlockAttention(student);
                                   var isBlocked = isBlockedStatus(student);
 
-                                  html += '<div class="flex items-center justify-between gap-3 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-700">
-                                    ';
+                                  html += '<div class="flex items-center justify-between gap-3 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-700">';
                                     html += '<div class="flex flex-col min-w-0">';
                                       html += '<span class="text-xs font-bold truncate text-gray-900 dark:text-white">'
                                         + escapeHtml(formatStudentName(student)) + '</span>';
@@ -6683,15 +6663,13 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                       html += '</div>';
 
                                     if (isLocked) {
-                                    html += '<button
-                                      class="quick-approve-btn flex items-center justify-center h-8 w-8 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-900 transition-colors"
+                                    html += '<button class="quick-approve-btn flex items-center justify-center h-8 w-8 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-900 transition-colors"
                                       data-email="' + student.email + '" data-poll-id="' + CURRENT_POLL_DATA.pollId + '"
                                       data-lock-version="' + (student.lockVersion || 0) + '" title="Approve re-entry">';
                                       html += '<span class="material-symbols-outlined text-base">lock_open</span>';
                                       html += '</button>';
                                     } else if (isBlocked) {
-                                    html += '<button
-                                      class="quick-unblock-btn flex items-center justify-center h-8 w-8 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-900 transition-colors"
+                                    html += '<button class="quick-unblock-btn flex items-center justify-center h-8 w-8 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-900 transition-colors"
                                       data-email="' + student.email + '" title="Unblock Student">';
                                       html += '<span class="material-symbols-outlined text-base">person_check</span>';
                                       html += '</button>';
@@ -6812,8 +6790,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                   lockedStudents.forEach(function (student) {
                                   var name = formatStudentName(student);
                                   var lockVersion = student.lockVersion || 0;
-                                  html += '<button
-                                    class="locked-student-unlock-btn flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-colors" ';
+                                  html += '<button class="locked-student-unlock-btn flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-colors"';
         html += ' data-email="' + escapeHtml(student.email) + '" ';
         html += ' data-lock-version="' + lockVersion + '">';
                                     html += '<span class="material-symbols-outlined text-base">lock_open</span>';
@@ -7777,37 +7754,25 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                     <tr
                                                       class="bg-brand-light-gray dark:bg-brand-dark-gray/50 border-b-2 border-brand-light-gray dark:border-brand-dark-gray/40">
                                                       ';
-                                                      html += '<th
-                                                        class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">
+                                                      html += '<th class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">
                                                         Student Name</th>';
-                                                      html += '<th
-                                                        class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">
+                                                      html += '<th class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">
                                                         Email</th>';
-                                                      html += '<th
-                                                        class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">
+                                                      html += '<th class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">
                                                         Link</th>';
-                                                      html += '<th
-                                                        class="px-4 py-3 text-center text-sm font-semibold text-brand-dark-gray dark:text-brand-white">
+                                                      html += '<th class="px-4 py-3 text-center text-sm font-semibold text-brand-dark-gray dark:text-brand-white">
                                                         Actions</th>';
                                                       html += '</tr>
                                                   </thead>
                                                   <tbody>';
                                                     roster.forEach(function (student) {
-                                                    html += '<tr
-                                                      class="border-b border-brand-light-gray/50 dark:border-brand-dark-gray/20">
+                                                    html += '<tr class="border-b border-brand-light-gray/50 dark:border-brand-dark-gray/20">';
+                                                      html += '<td class="px-4 py-3 text-sm text-brand-dark-gray dark:text-brand-white">' + escapeHtml(student.name || 'Student') + '</td>';
+                                                      html += '<td class="px-4 py-3 text-sm text-brand-dark-gray dark:text-brand-white">' + escapeHtml(student.email || 'student@example.com') + '</td>
                                                       ';
-                                                      html += '<td
-                                                        class="px-4 py-3 text-sm text-brand-dark-gray dark:text-brand-white">
-                                                        ' + escapeHtml(student.name || 'Student') + '</td>';
-                                                      html += '<td
-                                                        class="px-4 py-3 text-sm text-brand-dark-gray dark:text-brand-white">
-                                                        ' + escapeHtml(student.email || 'student@example.com') + '</td>
-                                                      ';
-                                                      html += '<td
-                                                        class="px-4 py-3 text-xs text-brand-dark-gray/70 dark:text-brand-white/70 italic">
+                                                      html += '<td class="px-4 py-3 text-xs text-brand-dark-gray/70 dark:text-brand-white/70 italic">
                                                         Preview links unavailable</td>';
-                                                      html += '<td
-                                                        class="px-4 py-3 text-center text-xs text-brand-dark-gray/60 dark:text-brand-white/60">
+                                                      html += '<td class="px-4 py-3 text-center text-xs text-brand-dark-gray/60 dark:text-brand-white/60">
                                                         —</td>';
                                                       html += '</tr>';
                                                     });
@@ -7855,17 +7820,13 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                     <tr
                                                       class="bg-brand-light-gray dark:bg-brand-dark-gray/50 border-b-2 border-brand-light-gray dark:border-brand-dark-gray/40">
                                                       ';
-                                                      html += '<th
-                                                        class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">
+                                                      html += '<th class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">
                                                         Student Name</th>';
-                                                      html += '<th
-                                                        class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">
+                                                      html += '<th class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">
                                                         Email</th>';
-                                                      html += '<th
-                                                        class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">
+                                                      html += '<th class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">
                                                         Link</th>';
-                                                      html += '<th
-                                                        class="px-4 py-3 text-center text-sm font-semibold text-brand-dark-gray dark:text-brand-white">
+                                                      html += '<th class="px-4 py-3 text-center text-sm font-semibold text-brand-dark-gray dark:text-brand-white">
                                                         Actions</th>';
                                                       html += '</tr>
                                                   </thead>
@@ -7873,22 +7834,14 @@ let effectiveDuration = (duration !== null && duration !== undefined)
 
                                                     response.links.forEach(function (link) {
                                                     var fullUrl = baseUrl + '?token=' + link.token;
-                                                    html += '<tr
-                                                      class="border-b border-brand-light-gray/50 dark:border-brand-dark-gray/20 hover:bg-brand-light-gray/30 dark:hover:bg-brand-dark-gray/10">
-                                                      ';
-                                                      html += '<td
-                                                        class="px-4 py-3 text-sm text-brand-dark-gray dark:text-brand-white">
-                                                        ' + escapeHtml(link.name) + '</td>';
-                                                      html += '<td
-                                                        class="px-4 py-3 text-sm text-brand-dark-gray dark:text-brand-white">
-                                                        ' + escapeHtml(link.email) + '</td>';
-                                                      html += '<td
-                                                        class="px-4 py-3 text-xs font-mono text-brand-dark-gray/70 dark:text-brand-white/70 max-w-[200px] truncate"
+                                                    html += '<tr class="border-b border-brand-light-gray/50 dark:border-brand-dark-gray/20 hover:bg-brand-light-gray/30 dark:hover:bg-brand-dark-gray/10">';
+                                                      html += '<td class="px-4 py-3 text-sm text-brand-dark-gray dark:text-brand-white">' + escapeHtml(link.name) + '</td>';
+                                                      html += '<td class="px-4 py-3 text-sm text-brand-dark-gray dark:text-brand-white">' + escapeHtml(link.email) + '</td>';
+                                                      html += '<td class="px-4 py-3 text-xs font-mono text-brand-dark-gray/70 dark:text-brand-white/70 max-w-[200px] truncate"
                                                         title="' + escapeHtml(fullUrl) + '">' + escapeHtml(fullUrl) + '
                                                       </td>';
                                                       html += '<td class="px-4 py-3 text-center">';
-                                                        html += '<button
-                                                          class="copy-link-btn px-3 py-1.5 text-xs font-semibold rounded-md bg-primary text-brand-white hover:bg-primary/90 transition-colors"
+                                                        html += '<button class="copy-link-btn px-3 py-1.5 text-xs font-semibold rounded-md bg-primary text-brand-white hover:bg-primary/90 transition-colors"
                                                           data-url="' + escapeHtml(fullUrl) + '">Copy</button>';
                                                         html += '</td>
                                                     </tr>';
@@ -8036,14 +7989,12 @@ let effectiveDuration = (duration !== null && duration !== undefined)
 
                                               var html = '<div class="flex items-start gap-2">';
                                                 if (isPreviewReorderMode) {
-                                                html += '<span
-                                                  class="material-symbols-outlined text-sm text-brand-dark-gray/40 dark:text-brand-white/40 cursor-move">drag_indicator</span>';
+                                                html += '<span class="material-symbols-outlined text-sm text-brand-dark-gray/40 dark:text-brand-white/40 cursor-move">drag_indicator</span>';
                                                 }
                                                 html += '<div class="flex-1 min-w-0">';
                                                   html += '<div class="text-xs font-semibold text-brand-dark-gray/80 dark:text-brand-white/80">
                                                     Q' + (index + 1) + '</div>';
-                                                  html += '<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 truncate mt-1">
-                                                    ' + escapeHtml(q.questionText || 'No text') + '</div>';
+                                                  html += '<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 truncate mt-1">' + escapeHtml(q.questionText || 'No text') + '</div>';
                                                   html += '</div>
                                               </div>';
 
@@ -8080,14 +8031,11 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                               // Question header
                                               html += '<div class="mb-6">';
                                                 html += '<div class="flex items-center gap-2 mb-2">';
-                                                  html += '<span
-                                                    class="text-sm font-semibold text-brand-dark-gray/60 dark:text-brand-white/60">Question
-                                                    ' + (currentPreviewQuestionIndex + 1) + ' of ' +
+                                                  html += '<span class="text-sm font-semibold text-brand-dark-gray/60 dark:text-brand-white/60">Question' + (currentPreviewQuestionIndex + 1) + ' of ' +
                                                     currentPreviewPoll.questions.length + '</span>';
                                                   if (q.timerSeconds) {
-                                                  html += '<span
-                                                    class="text-sm text-brand-dark-gray/50 dark:text-brand-white/50">•
-                                                    Timer: ' + q.timerSeconds + 's</span>';
+                                                  html += '<span class="text-sm text-brand-dark-gray/50 dark:text-brand-white/50">•
+                                                    Timer:' + q.timerSeconds + 's</span>';
                                                   }
                                                   html += '</div>';
                                                 html += '<h3
@@ -8097,32 +8045,32 @@ let effectiveDuration = (duration !== null && duration !== undefined)
 
                                               // Question image
                                               if (q.questionImageURL) {
-                                              html += '<div class="mb-6">';
-                                                html += '<img src="' + escapeHtml(q.questionImageURL) + '"
+                                              html += `<div class="mb-6">`;
+                                                html += `<img src="${escapeHtml(q.questionImageURL)}"
                                                   alt="Question image"
                                                   class="max-w-full max-h-96 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40"
-                                                  referrerpolicy="no-referrer" onerror="this.style.display=\'none\';">';
-                                                html += '</div>';
+                                                  referrerpolicy="no-referrer" onerror="this.style.display='none';">`;
+                                                html += `</div>`;
                                               }
 
                                               // Answer options
                                               if (q.options && q.options.length > 0) {
-                                              html += '<div class="space-y-3">';
-                                                html += '<h4
+                                              html += `<div class="space-y-3">`;
+                                                html += `<h4
                                                   class="text-lg font-semibold text-brand-dark-gray dark:text-brand-white mb-3">
-                                                  Answer Options</h4>';
+                                                  Answer Options</h4>`;
                                                 q.options.forEach(function (opt, optIndex) {
                                                 var letter = String.fromCharCode(65 + optIndex);
                                                 var isCorrect = q.correctAnswer === letter;
-                                                var optClass = 'flex items-start gap-3 p-4 rounded-lg border-2
-                                                transition-colors ' + (isCorrect ? 'bg-green-50 dark:bg-green-900/20
+                                                var optClass = `flex items-start gap-3 p-4 rounded-lg border-2
+                                                transition-colors ${isCorrect ? 'bg-green-50 dark:bg-green-900/20
                                                 border-green-500 dark:border-green-600' : 'bg-brand-light-gray/30
                                                 dark:bg-brand-dark-gray/20 border-brand-light-gray
-                                                dark:border-brand-dark-gray/40');
+                                                dark:border-brand-dark-gray/40'}`;
 
-                                                html += '<div class="' + optClass + '">';
-                                                  html += '<div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold ' + (isCorrect ? 'bg-green-500 text-white' : 'bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white') + '">
-                                                    ' + letter + '</div>';
+                                                html += `<div class="${optClass}">`;
+                                                  html += `<div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold ${isCorrect ? 'bg-green-500 text-white' : 'bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white'}">
+                                                    ${letter}</div>`;
                                                   html += '<div class="flex-1">';
                                                     if (opt.text) {
                                                     html += '<p class="text-brand-dark-gray dark:text-brand-white">' +
@@ -8137,8 +8085,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                     }
                                                     html += '</div>';
                                                   if (isCorrect) {
-                                                  html += '<span
-                                                    class="material-symbols-outlined text-green-600 dark:text-green-400">check_circle</span>';
+                                                  html += `<span class="material-symbols-outlined text-green-600 dark:text-green-400">check_circle</span>`;
                                                   }
                                                   html += '</div>';
                                                 });
@@ -9213,24 +9160,18 @@ let effectiveDuration = (duration !== null && duration !== undefined)
 
                                                             var html = '<span
                                                               class="material-symbols-outlined ' + (isSelected ? 'text-brand-dark-gray dark:text-brand-white' : 'text-brand-dark-gray/50 dark:text-brand-white/50') + '">drag_indicator</span>';
-                                                            html += '<p
-                                                              class="' + (isSelected ? 'text-primary dark:text-brand-white' : 'text-brand-dark-gray dark:text-brand-white') + ' text-sm font-medium leading-normal">
-                                                              Question ' + (index + 1) + '</p>';
+                                                            html += '<p class="' + (isSelected ? 'text-primary dark:text-brand-white' : 'text-brand-dark-gray dark:text-brand-white') + ' text-sm font-medium leading-normal">
+                                                              Question' + (index + 1) + '</p>';
 
-                                                            html += '<div class="absolute right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                              ';
-                                                              html += '<button
-                                                                class="duplicate-question-btn p-1 rounded-full hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10"
+                                                            html += '<div class="absolute right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">';
+                                                              html += '<button class="duplicate-question-btn p-1 rounded-full hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10"
                                                                 data-index="' + index + '" title="Duplicate question">';
-                                                                html += '<span
-                                                                  class="material-symbols-outlined text-brand-dark-gray dark:text-brand-white text-base">content_copy</span>';
+                                                                html += '<span class="material-symbols-outlined text-brand-dark-gray dark:text-brand-white text-base">content_copy</span>';
                                                                 html += '</button>';
                                                               if (questions.length > 1) {
-                                                              html += '<button
-                                                                class="delete-question-btn p-1 rounded-full hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10"
+                                                              html += '<button class="delete-question-btn p-1 rounded-full hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10"
                                                                 data-index="' + index + '" title="Delete question">';
-                                                                html += '<span
-                                                                  class="material-symbols-outlined text-brand-dark-gray dark:text-brand-white text-base">close</span>';
+                                                                html += '<span class="material-symbols-outlined text-brand-dark-gray dark:text-brand-white text-base">close</span>';
                                                                 html += '</button>';
                                                               }
                                                               html += '</div>';
@@ -9284,27 +9225,22 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                             var html = '<div class="max-w-4xl mx-auto">';
                                                               html += '<div class="flex flex-wrap justify-between gap-3 mb-6">';
                                                                 html += '<div class="flex min-w-72 flex-col gap-1">';
-                                                                  html += '<p
-                                                                    class="text-brand-dark-gray dark:text-brand-white tracking-light text-[32px] font-bold leading-tight">
-                                                                    Question ' + (selectedQuestionIndex + 1) + '</p>';
-                                                                  html += '<p
-                                                                    class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm font-normal leading-normal">
+                                                                  html += '<p class="text-brand-dark-gray dark:text-brand-white tracking-light text-[32px] font-bold leading-tight">
+                                                                    Question' + (selectedQuestionIndex + 1) + '</p>';
+                                                                  html += '<p class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm font-normal leading-normal">
                                                                     Edit the question and answer choices below.</p>';
                                                                   html += '</div>
                                                               </div>';
 
-                                                              html += '<div class="bg-brand-white dark:bg-brand-dark-gray/20 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/30 p-6 shadow-sm mb-6">
-                                                                ';
+                                                              html += '<div class="bg-brand-white dark:bg-brand-dark-gray/20 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/30 p-6 shadow-sm mb-6">';
                                                                 html += '<label class="flex flex-col w-full">';
-                                                                  html += '<p
-                                                                    class="text-brand-dark-gray dark:text-brand-white text-base font-medium leading-normal pb-2">
+                                                                  html += '<p class="text-brand-dark-gray dark:text-brand-white text-base font-medium leading-normal pb-2">
                                                                     Question Text</p>';
                                                                   html += '<textarea id="question-text-input"
                                                                     class="form-input flex w-full min-w-0 flex-1 resize-y overflow-hidden rounded-lg text-brand-dark-gray dark:text-brand-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 focus:border-primary min-h-36 placeholder:text-brand-dark-gray/50 dark:placeholder:text-brand-white/50 p-[15px] text-base font-normal leading-normal"
                                                                     placeholder="Type your question here...">' + escapeHtml(question.questionText || '') + '</textarea>';
                                                                   html += '</label>';
-                                                                html += '<div class="grid w-full max-w-xs items-center gap-1.5 mt-4">
-                                                                  ';
+                                                                html += '<div class="grid w-full max-w-xs items-center gap-1.5 mt-4">';
                                                                   html += '<label for="question-image-input"
                                                                     class="text-sm text-gray-400 font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Question
                                                                     Image</label>';
@@ -9322,31 +9258,28 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                 'UPLOADING';
 
                                                                 if (questionImagePreview || isUploading) {
-                                                                html += '<div class="mt-4 flex flex-wrap items-center gap-3 bg-primary/5 dark:bg-primary/10 p-3 rounded-lg">
-                                                                  ';
+                                                                html += '<div class="mt-4 flex flex-wrap items-center gap-3 bg-primary/5 dark:bg-primary/10 p-3 rounded-lg">';
                                                                   if (isUploading) {
-                                                                  html += '<div class="flex items-center gap-2 text-primary dark:text-brand-white">
-                                                                    ';
+                                                                  html += '<div class="flex items-center gap-2 text-primary dark:text-brand-white">';
                                                                     html += '<div class="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent">
                                                                     </div>';
                                                                     html += '<span class="text-sm font-medium">Uploading
                                                                       image...</span>';
                                                                     html += '</div>';
                                                                   } else if (questionImagePreview) {
-                                                                  html += '<img src="' + questionImagePreview + '"
+                                                                  html += `<img src="${questionImagePreview}"
                                                                     class="rounded-lg max-w-xs h-auto"
-                                                                    referrerpolicy="no-referrer">';
-                                                                  html += '<button type="button"
+                                                                    referrerpolicy="no-referrer">`;
+                                                                  html += `<button type="button"
                                                                     class="remove-question-image-btn h-9 px-4 rounded-lg bg-red-600/10 text-red-600 dark:text-red-300 dark:bg-red-500/20 text-sm font-semibold hover:bg-red-600/20 dark:hover:bg-red-500/30 transition-colors">Remove
-                                                                    Image</button>';
+                                                                    Image</button>`;
                                                                   }
                                                                   html += '</div>';
                                                                 }
 
                                                                 html += '<div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">';
                                                                   html += '<div>';
-                                                                    html += '<label
-                                                                      class="text-brand-dark-gray dark:text-brand-white text-sm font-medium leading-normal block pb-2"
+                                                                    html += '<label class="text-brand-dark-gray dark:text-brand-white text-sm font-medium leading-normal block pb-2"
                                                                       for="question-topic-input">Topic/Standard
                                                                       Tag</label>';
                                                                     html += '<input id="question-topic-input"
@@ -9354,15 +9287,13 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                       class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                                                                       placeholder="e.g., Cell Division, Algebra, etc."
                                                                       value="' + escapeHtml(question.topicTag || question.topic || '') + '">';
-                                                                    html += '<p
-                                                                      class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-1">
+                                                                    html += '<p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-1">
                                                                       Used for topic-level analytics.</p>';
                                                                     html += '</div>';
 
                                                                   // NEW FEATURE: Difficulty Level Selector
                                                                   html += '<div>';
-                                                                    html += '<label
-                                                                      class="text-brand-dark-gray dark:text-brand-white text-sm font-medium leading-normal block pb-2"
+                                                                    html += '<label class="text-brand-dark-gray dark:text-brand-white text-sm font-medium leading-normal block pb-2"
                                                                       for="question-difficulty-select">Difficulty
                                                                       Level</label>';
                                                                     html += '<select id="question-difficulty-select"
@@ -9534,11 +9465,9 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                         ; html +='</label>' ; if
                                                                         (questions[selectedQuestionIndex].answers.length>
                                                                         2) {
-                                                                        html += '<button
-                                                                          class="delete-answer-btn p-2 rounded-lg hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10 transition-colors"
+                                                                        html += '<button class="delete-answer-btn p-2 rounded-lg hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10 transition-colors"
                                                                           title="Remove this answer">';
-                                                                          html += '<span
-                                                                            class="material-symbols-outlined text-brand-dark-gray/60 dark:text-brand-white/60">delete</span>';
+                                                                          html += '<span class="material-symbols-outlined text-brand-dark-gray/60 dark:text-brand-white/60">delete</span>';
                                                                           html += '</button>';
                                                                         } else {
                                                                         html += '<div class="w-10"></div>';
@@ -9553,23 +9482,20 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                   var isAnswerUploading = answer.image === 'UPLOADING';
 
                                                                   if (answerPreview || isAnswerUploading) {
-                                                                  html += '<div class="mt-2 flex items-center gap-3 bg-primary/5 dark:bg-primary/10 p-2 rounded-lg">
-                                                                    ';
+                                                                  html += '<div class="mt-2 flex items-center gap-3 bg-primary/5 dark:bg-primary/10 p-2 rounded-lg">';
                                                                     if (isAnswerUploading) {
-                                                                    html += '<div class="flex items-center gap-2 text-primary dark:text-brand-white">
-                                                                      ';
+                                                                    html += '<div class="flex items-center gap-2 text-primary dark:text-brand-white">';
                                                                       html += '<div class="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent">
                                                                       </div>';
-                                                                      html += '<span
-                                                                        class="text-xs font-medium">Uploading...</span>';
+                                                                      html += '<span class="text-xs font-medium">Uploading...</span>';
                                                                       html += '</div>';
                                                                     } else if (answerPreview) {
-                                                                    html += '<img src="' + answerPreview + '"
+                                                                    html += `<img src="${answerPreview}"
                                                                       class="rounded-md max-w-[160px] h-auto"
-                                                                      referrerpolicy="no-referrer">';
-                                                                    html += '<button type="button"
+                                                                      referrerpolicy="no-referrer">`;
+                                                                    html += `<button type="button"
                                                                       class="remove-answer-image-btn h-8 px-3 rounded-md bg-red-600/10 text-red-600 dark:text-red-300 dark:bg-red-500/20 text-xs font-semibold hover:bg-red-600/20 dark:hover:bg-red-500/30 transition-colors"
-                                                                      data-index="' + index + '">Remove</button>';
+                                                                      data-index="${index}">Remove</button>`;
                                                                     }
                                                                     html += '</div>';
                                                                   }
@@ -12390,17 +12316,14 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                         var flagLabel =
                                                                                         flag.replace(/-/g, '
                                                                                         ').toUpperCase();
-                                                                                        html += '<span
-                                                                                          class="px-2 py-1 text-xs font-semibold rounded bg-red-100 text-red-800">⚠
-                                                                                          ' + flagLabel + '</span>';
+                                                                                        html += '<span class="px-2 py-1 text-xs font-semibold rounded bg-red-100 text-red-800">⚠' + flagLabel + '</span>';
                                                                                         });
 
                                                                                         html += '</div>
                                                                                     </div>';
 
                                                                                     // Psychometric metrics
-                                                                                    html += '<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                                                                                      ' +
+                                                                                    html += '<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">' +
                                                                                       '<div
                                                                                         class="bg-slate-50 dark:bg-brand-dark-gray/40 rounded-lg p-3">
                                                                                         <p
@@ -12486,8 +12409,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                         dark:border-brand-dark-gray/60';
                                                                                         var icon = isCorrect ? '✓' : '';
 
-                                                                                        html += '<div class="flex items-center gap-3 p-3 rounded-lg border ' + bgClass + '">
-                                                                                          ' +
+                                                                                        html += '<div class="flex items-center gap-3 p-3 rounded-lg border ' + bgClass + '">' +
                                                                                           '<div
                                                                                             class="flex-shrink-0 w-8 h-8 rounded-full bg-white dark:bg-brand-dark-gray flex items-center justify-center font-bold text-sm">
                                                                                             ' + dist.optionLetter + '
@@ -13850,7 +13772,8 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                                       '<input
                                                                                                         type="checkbox"
                                                                                                         class="wizard-meta-cb h-3.5 w-3.5 rounded"
-                                                                                                        data-q-index="' + qIndex + '" ' + (q.metacognitionEnabled ? 'checked' : '')
+                                                                                                        data-q-index="' + qIndex + '" ' + (q.metacognitionEnabled ? '
+                                                                                                        checked' : '' )
                                                                                                         + '>'
                                                                                                         + '<span>Confidence</span></label>'
                                                                                                         + '<button type="button" class="p-1.5 rounded text-red-500 hover:bg-red-50 transition-colors" onclick="removeWizardQuestion('
@@ -13858,8 +13781,8 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                                         + ')" title="Remove">'
                                                                                                         + '<span class="material-symbols-outlined text-lg">delete</span></button>'
                                                                                                         + '</div></div>'
-                                                                                                        ; // Compact
-                                                                                                        var bodyHtml = '<div class="question-card-body p-4 space-y-3">'
+                                                                                                        ; // Compact var
+                                                                                                        bodyHtml='<div class="question-card-body p-4 space-y-3">'
                                                                                                         + '<div class="flex gap-3">'
                                                                                                         + '<div class="flex-1">'
                                                                                                         + '<textarea class="wizard-q-text w-full rounded-lg border border-brand-light-gray px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary overflow-hidden min-h-[60px]" style="resize:none;height:auto;" placeholder="Enter question text..." data-q-index="'
@@ -14370,9 +14293,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                                       var html = '<div
                                                                                                         class="space-y-4">
                                                                                                         ';
-                                                                                                        html += '<p
-                                                                                                          class="text-sm text-brand-dark-gray/60 mb-3">
-                                                                                                          ' +
+                                                                                                        html += '<p class="text-sm text-brand-dark-gray/60 mb-3">' +
                                                                                                           wizardState.questions.length
                                                                                                           + '
                                                                                                           question(s)
@@ -14394,8 +14315,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                                           data-edit-question="' + i + '"
                                                                                                           title="Click to edit this question">
                                                                                                           ';
-                                                                                                          html += '<div class="flex items-start gap-2 mb-2">
-                                                                                                            ';
+                                                                                                          html += '<div class="flex items-start gap-2 mb-2">';
                                                                                                             html +=
                                                                                                             '<span
                                                                                                               class="h-6 w-6 rounded bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">'
@@ -14412,7 +14332,8 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                                             html +=
                                                                                                             '<span
                                                                                                               class="material-symbols-outlined text-xs text-slate-400 ml-auto opacity-0 group-hover:opacity-100 transition-opacity">edit</span>';
-                                                                                                            html += '</div>';
+                                                                                                            html += '
+                                                                                                          </div>';
 
                                                                                                           // Show answer
                                                                                                           choices
@@ -14420,8 +14341,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                                           &&
                                                                                                           q.options.length
                                                                                                           > 0) {
-                                                                                                          html += '<div class="ml-8 flex flex-wrap gap-2">
-                                                                                                            ';
+                                                                                                          html += '<div class="ml-8 flex flex-wrap gap-2">';
                                                                                                             q.options.forEach(function
                                                                                                             (opt, j) {
                                                                                                             if (opt.text
@@ -14461,15 +14381,18 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                                               escapeHtml(optText);
                                                                                                               if
                                                                                                               (isCorrect)
-                                                                                                              html += '<span
+                                                                                                              html +=
+                                                                                                              '<span
                                                                                                                 class="material-symbols-outlined text-xs">check</span>';
                                                                                                               html +=
                                                                                                               '</span>';
                                                                                                             }
                                                                                                             });
-                                                                                                            html += '</div>';
+                                                                                                            html += '
+                                                                                                          </div>';
                                                                                                           }
-                                                                                                          html += '</div>';
+                                                                                                          html += '
+                                                                                                        </div>';
                                                                                                         });
 
                                                                                                         html += '</div>
@@ -14481,8 +14404,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                                       if
                                                                                                       (wizardState.mode
                                                                                                       === 'secure') {
-                                                                                                      html += '<div class="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200">
-                                                                                                        ';
+                                                                                                      html += '<div class="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200">';
                                                                                                         html += '<h5
                                                                                                           class="text-sm font-bold text-amber-800 mb-2 flex items-center gap-2">
                                                                                                           <span
@@ -14491,8 +14413,7 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                                           Settings
                                                                                                         </h5>
                                                                                                         ';
-                                                                                                        html += '<div class="text-sm text-amber-700 space-y-1">
-                                                                                                          ';
+                                                                                                        html += '<div class="text-sm text-amber-700 space-y-1">';
                                                                                                           html += '<p>
                                                                                                             <strong>Time
                                                                                                               Limit:</strong>
@@ -14523,7 +14444,8 @@ let effectiveDuration = (duration !== null && duration !== undefined)
                                                                                                             'Disabled')
                                                                                                             + '
                                                                                                           </p>';
-                                                                                                          html += '</div>
+                                                                                                          html += '
+                                                                                                        </div>
                                                                                                       </div>';
                                                                                                       }
 

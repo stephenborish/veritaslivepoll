@@ -1,4 +1,3 @@
-<script>
 (function () {
 // --- FIREBASE INITIALIZATION ---
 // Must run before any data access
@@ -1651,10 +1650,24 @@ window.showToast = showToast;
           if (index <= 0) { focusable[focusable.length - 1].focus(); event.preventDefault(); } } else { if
             (index===focusable.length - 1) { focusable[0].focus(); event.preventDefault(); } } } else if
             (event.key==='Enter' && currentConfig && currentConfig.mode==='prompt' ) { if
-        messageEl.innerHTML = options.html;
-      } else {
-        messageEl.textContent = options.message || '';
-      }
+            (document.activeElement===inputField) { event.preventDefault(); handleConfirm(); } } } function
+            enforceFocus(event) { if (!active) return; if (!dialog.contains(event.target)) { event.stopPropagation();
+            focusFirst(); } } function closeModal(result) { active=false; root.classList.remove('is-active');
+            root.setAttribute('aria-hidden', 'true' ); document.body.classList.remove('veritas-modal-open');
+            root.removeEventListener('keydown', trapKey, true); document.removeEventListener('focus', enforceFocus,
+            true); toggleBackground(false); setPending(false); if (previousFocus && typeof
+            previousFocus.focus==='function' ) { setTimeout(function () { previousFocus.focus(); }, 0); } if (resolveFn)
+            { resolveFn(result); } currentConfig=null; resolveFn=null; } function handleConfirm() { if (!active) return;
+            setPending(true); var mode=currentConfig ? currentConfig.mode : 'alert' ; var result; if (mode==='prompt' )
+            { result=inputField.value; } else if (mode==='confirm' ) { result=true; } closeModal(result); } function
+            handleCancel() { if (!active) return; var mode=currentConfig ? currentConfig.mode : 'alert' ; if
+            (mode==='alert' ) { closeModal(undefined); return; } if (mode==='confirm' ) { closeModal(false); } else if
+            (mode==='prompt' ) { closeModal(null); } } function openModal(mode, options) { options=options || {};
+            currentConfig=Object.assign({}, options, { mode: mode }); allowEscape=options.allowEscape !==false;
+            titleEl.textContent=options.title || (mode==='confirm' ? 'Please Confirm' : (mode==='prompt'
+            ? 'Enter Response' : 'Notice' ));
+      messageEl.textContent = options.message || '';
+    }
     if (options.subtext) {
       subtextEl.style.display = 'block';
       subtextEl.textContent = options.subtext;
@@ -15601,4 +15614,3 @@ function setDashboardSidebarVisibility(visible) {
                                                                         startMigration;
 
                                                                         })();
-                                                                        </script>

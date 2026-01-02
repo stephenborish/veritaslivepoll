@@ -1,8085 +1,4 @@
-<!DOCTYPE html>
-<html class="light" lang="en">
 
-<head>
-  <!-- =============================================================================
-     VERITAS LIVE POLL - SHARED HEAD ELEMENTS
-     =============================================================================
-     Purpose: Common <head> elements for all pages
-     Used by: TeacherView.html, StudentView.html
-     Phase: 3A - Shared Components
-     ============================================================================= -->
-
-<base target="_top">
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<!-- Google Fonts -->
-<link href="https://fonts.googleapis.com" rel="preconnect"/>
-<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-
-<!-- Material Symbols -->
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
-
-  <title>Veritas Live Poll - Teacher Dashboard</title>
-
-  <!-- =============================================================================
-     VERITAS LIVE POLL - SHARED TAILWIND CONFIGURATION
-     =============================================================================
-     Purpose: Centralized Tailwind CSS configuration for design system consistency
-     Used by: TeacherView.html, StudentView.html
-     Phase: 3A - Shared Components
-     ============================================================================= -->
-
-<!-- Tailwind CSS CDN with Plugins -->
-<script src="https://cdn.tailwindcss.com/3.3.5"></script>
-
-<!-- Tailwind Configuration -->
-<script>
-  tailwind.config = {
-    darkMode: "class",
-    theme: {
-      extend: {
-        colors: {
-          // Veritas Brand Colors (Primary Design System)
-          "veritas-navy": "#12385d",
-          "veritas-gold": "#c5a05a",
-          primary: "#12385d",
-
-          // Supporting Brand Colors
-          "brand-white": "#ffffff",
-          "brand-light-gray": "#d9e0e7",
-          "brand-dark-gray": "#242424",
-          "background-light": "#f7f8fa",
-          "background-dark": "#0f1723",
-
-          // Semantic Colors
-          "success-green": "#1b5e20",
-          "success-bg": "#e8f5ec",
-          "error-red": "#c62828",
-          "text-primary": "#111111",
-          "text-secondary": "#4b5563",
-          "text-muted": "#6b7280"
-        },
-        fontFamily: {
-          display: ["Inter", "sans-serif"],
-          serif: ["Noto Serif", "serif"]
-        },
-        borderRadius: {
-          DEFAULT: "0.25rem",
-          lg: "0.5rem",
-          xl: "0.75rem",
-          "2xl": "1rem",
-          full: "9999px"
-        },
-        spacing: {
-          '18': '4.5rem',
-          '88': '22rem',
-          '128': '32rem'
-        },
-        animation: {
-          // Teacher animations
-          'fade-up': 'fadeUp 0.4s ease-out forwards',
-          'pulse-glow': 'pulseGlow 3s ease-in-out infinite',
-
-          // Student animations
-          'fade-in': 'fadeIn 0.6s ease-out forwards',
-          'spin-slow': 'spin 3s linear infinite',
-          'pulse-dot': 'pulseDot 1.2s ease-in-out infinite'
-        },
-        keyframes: {
-          fadeUp: {
-            '0%': { opacity: '0', transform: 'translateY(20px)' },
-            '100%': { opacity: '1', transform: 'translateY(0)' }
-          },
-          pulseGlow: {
-            '0%, 100%': { boxShadow: '0 0 0 0 rgba(197, 160, 90, 0.4)' },
-            '50%': { boxShadow: '0 0 20px 4px rgba(197, 160, 90, 0.4)' }
-          },
-          fadeIn: {
-            'from': { opacity: '0', transform: 'translateY(10px)' },
-            'to': { opacity: '1', transform: 'translateY(0)' }
-          },
-          pulseDot: {
-            '0%, 80%, 100%': { opacity: '0.25', transform: 'scale(0.85)' },
-            '40%': { opacity: '1', transform: 'scale(1)' }
-          }
-        }
-      }
-    }
-  };
-</script>
-  <script>
-(function (global) {
-  'use strict';
-
-  function clampSeconds(value) {
-    var seconds = Number(value);
-    if (!isFinite(seconds)) {
-      seconds = 0;
-    }
-    return Math.max(0, Math.floor(seconds));
-  }
-
-  function formatClock(seconds) {
-    var total = clampSeconds(seconds);
-    var minutes = Math.floor(total / 60);
-    var remaining = total % 60;
-    var m = minutes < 10 ? '0' + minutes : String(minutes);
-    var s = remaining < 10 ? '0' + remaining : String(remaining);
-    return m + ':' + s;
-  }
-
-  function createCountdown(options) {
-    options = options || {};
-    var onTick = typeof options.onTick === 'function' ? options.onTick : function () {};
-    var onExpire = typeof options.onExpire === 'function' ? options.onExpire : function () {};
-    var intervalId = null;
-    var remaining = 0;
-    var running = false;
-
-    function clearTimer() {
-      if (intervalId) {
-        clearInterval(intervalId);
-        intervalId = null;
-      }
-      running = false;
-    }
-
-    function notifyTick() {
-      onTick(remaining);
-    }
-
-    function tickOnce() {
-      if (!running) return;
-      remaining = Math.max(0, remaining - 1);
-      notifyTick();
-      if (remaining <= 0) {
-        clearTimer();
-        onExpire();
-      }
-    }
-
-    return {
-      start: function (seconds) {
-        remaining = clampSeconds(seconds);
-        clearTimer();
-        if (remaining === 0) {
-          notifyTick();
-          onExpire();
-          return;
-        }
-        running = true;
-        notifyTick();
-        intervalId = setInterval(tickOnce, 1000);
-      },
-      pause: function () {
-        if (!running) return;
-        clearTimer();
-      },
-      stop: function () {
-        clearTimer();
-      },
-      add: function (deltaSeconds) {
-        var next = clampSeconds(remaining + Number(deltaSeconds));
-        remaining = next;
-        notifyTick();
-        if (remaining === 0 && running) {
-          clearTimer();
-          onExpire();
-        }
-      },
-      set: function (seconds) {
-        remaining = clampSeconds(seconds);
-        notifyTick();
-        if (remaining === 0 && running) {
-          clearTimer();
-          onExpire();
-        }
-      },
-      getRemaining: function () {
-        return remaining;
-      },
-      isRunning: function () {
-        return running;
-      }
-    };
-  }
-
-  function createHeartbeat(options) {
-    options = options || {};
-    var onBeat = typeof options.onBeat === 'function' ? options.onBeat : function () {};
-    var intervalMs = Math.max(500, Number(options.intervalMs) || 3000);
-    var timerId = null;
-
-    function scheduleNext() {
-      timerId = setTimeout(function () {
-        timerId = null;
-        onBeat();
-        scheduleNext();
-      }, intervalMs);
-    }
-
-    return {
-      start: function (fireImmediately) {
-        if (timerId) return;
-        if (fireImmediately) {
-          onBeat();
-        }
-        scheduleNext();
-      },
-      stop: function () {
-        if (timerId) {
-          clearTimeout(timerId);
-          timerId = null;
-        }
-      },
-      isRunning: function () {
-        return timerId !== null;
-      },
-      pulse: function () {
-        onBeat();
-      },
-      updateInterval: function (nextInterval) {
-        intervalMs = Math.max(500, Number(nextInterval) || intervalMs);
-        if (timerId) {
-          clearTimeout(timerId);
-          timerId = null;
-          scheduleNext();
-        }
-      }
-    };
-  }
-
-  function createFullscreenManager(doc, options) {
-    var documentRef = doc || document;
-    options = options || {};
-    var onChange = typeof options.onChange === 'function' ? options.onChange : function () {};
-    var targetElement = options.element || documentRef.documentElement;
-
-    function isFullscreen() {
-      return !!(documentRef.fullscreenElement || documentRef.webkitFullscreenElement || documentRef.msFullscreenElement);
-    }
-
-    function request() {
-      if (!targetElement) {
-        return Promise.reject(new Error('No element available for fullscreen'));
-      }
-      var req = targetElement.requestFullscreen || targetElement.webkitRequestFullscreen || targetElement.msRequestFullscreen;
-      if (!req) {
-        return Promise.reject(new Error('Fullscreen API unavailable'));
-      }
-      return req.call(targetElement);
-    }
-
-    function exit() {
-      var exitFn = documentRef.exitFullscreen || documentRef.webkitExitFullscreen || documentRef.msExitFullscreen;
-      if (exitFn) {
-        return exitFn.call(documentRef);
-      }
-      return Promise.resolve();
-    }
-
-    function handleChange() {
-      onChange({
-        isFullscreen: isFullscreen(),
-        hidden: documentRef.hidden
-      });
-    }
-
-    documentRef.addEventListener('fullscreenchange', handleChange);
-    documentRef.addEventListener('webkitfullscreenchange', handleChange);
-    documentRef.addEventListener('visibilitychange', handleChange);
-
-    return {
-      request: request,
-      exit: exit,
-      isFullscreen: isFullscreen,
-      dispose: function () {
-        documentRef.removeEventListener('fullscreenchange', handleChange);
-        documentRef.removeEventListener('webkitfullscreenchange', handleChange);
-        documentRef.removeEventListener('visibilitychange', handleChange);
-      }
-    };
-  }
-
-  global.SecureAssessmentShared = {
-    formatClock: formatClock,
-    createCountdown: createCountdown,
-    createHeartbeat: createHeartbeat,
-    createFullscreenManager: createFullscreenManager
-  };
-})(this);
-</script>
-
-
-  <!-- Firebase SDKs (compat) -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-functions-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
-
-  <script>
-    var FIREBASE_CONFIG = {"apiKey":"AIzaSyAv0bCe5KIuQx_sou8toBy5DG2PYaB_pBM","authDomain":"classroomproctor.firebaseapp.com","databaseURL":"https://classroomproctor-default-rtdb.firebaseio.com","projectId":"classroomproctor","storageBucket":"classroomproctor.firebasestorage.app","messagingSenderId":"600627073908","appId":"1:600627073908:web:935970f5849b28f6ad5221"};
-    var Veritas = Veritas || {};
-    Veritas.Config = Veritas.Config || {};
-    Veritas.Config.DEBUG_FIREBASE = false;
-  </script>
-
-  <!-- Google Charts -->
-  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-
-  <!-- =============================================================================
-     VERITAS LIVE POLL - SHARED CSS CUSTOM PROPERTIES
-     =============================================================================
-     Purpose: Centralized CSS variables for design system consistency
-     Used by: TeacherView.html, StudentView.html
-     Phase: 3A - Shared Components
-     ============================================================================= -->
-
-<style>
-  /* Veritas Design System - CSS Custom Properties */
-  :root {
-    /* Brand Colors */
-    --veritas-navy: #12385d;
-    --veritas-gold: #c5a05a;
-    --brand-white: #ffffff;
-    --brand-light-gray: #d9e0e7;
-    --brand-dark-gray: #242424;
-
-    /* Background Colors */
-    --bg-light: #f7f8fa;
-    --bg-dark: #0f1723;
-    --bg-card: #ffffff;
-    --bg-elevated: #f8fafc;
-    --bg-glass: rgba(255, 255, 255, 0.7);
-    --bg-glass-dark: rgba(15, 23, 42, 0.7);
-
-    /* Text Colors */
-    --text-primary: #111111;
-    --text-secondary: #4b5563;
-    --text-muted: #6b7280;
-    --text-on-navy: #ffffff;
-
-    /* Semantic Colors */
-    --success-green: #1b5e20;
-    --success-light: #2e7d32;
-    --success-bg: #e8f5ec;
-    --success-bg-light: #ecfdf5;
-    --error-red: #c62828;
-
-    /* Opacity Modifiers */
-    --navy-06: rgba(18, 56, 93, 0.06);
-    --navy-10: rgba(18, 56, 93, 0.1);
-    --navy-12: rgba(18, 56, 93, 0.12);
-    --navy-14: rgba(18, 56, 93, 0.14);
-    --gold-08: rgba(197, 160, 90, 0.08);
-
-    /* Spacing Scale (following 8px baseline) */
-    --space-xs: 4px;
-    --space-sm: 8px;
-    --space-md: 16px;
-    --space-lg: 24px;
-    --space-xl: 32px;
-    --space-2xl: 48px;
-
-    /* Border Radius */
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 14px;
-    --radius-xl: 16px;
-    --radius-2xl: 24px;
-    --radius-full: 9999px;
-
-    /* Depth & Glassmorphism */
-    --glass-blur: blur(12px);
-    --glass-border: rgba(255, 255, 255, 0.2);
-    --glass-border-dark: rgba(255, 255, 255, 0.1);
-    --shadow-glass: 0 8px 32px 0 rgba(18, 56, 93, 0.1);
-    --shadow-premium: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-
-    /* Interactive Glows */
-    --glow-navy: 0 0 15px rgba(18, 56, 93, 0.3);
-    --glow-gold: 0 0 15px rgba(197, 160, 90, 0.3);
-
-    /* Enhanced Semantic Colors (WCAG AA Compliant) */
-    --primary: #12385d;
-    --primary-hover: #0f2d4a;
-    --primary-light: #1a4a7a;
-    --secondary: #c5a05a;
-    --secondary-hover: #b08f4d;
-
-    /* Status Colors with Better Contrast */
-    --success: #16a34a;
-    --success-bg: #dcfce7;
-    --success-border: #86efac;
-    --warning: #f59e0b;
-    --warning-bg: #fef3c7;
-    --warning-border: #fcd34d;
-    --error: #dc2626;
-    --error-bg: #fee2e2;
-    --error-border: #fca5a5;
-    --info: #3b82f6;
-    --info-bg: #dbeafe;
-    --info-border: #93c5fd;
-
-    /* Interactive States */
-    --focus-ring: 0 0 0 3px rgba(18, 56, 93, 0.2);
-    --hover-lift: 0 4px 12px rgba(0, 0, 0, 0.1);
-    --active-press: 0 2px 4px rgba(0, 0, 0, 0.1);
-
-    /* Typography Scale */
-    --text-xs: 0.75rem;
-    /* 12px */
-    --text-sm: 0.875rem;
-    /* 14px */
-    --text-base: 1rem;
-    /* 16px */
-    --text-lg: 1.125rem;
-    /* 18px */
-    --text-xl: 1.25rem;
-    /* 20px */
-    --text-2xl: 1.5rem;
-    /* 24px */
-    --text-3xl: 1.875rem;
-    /* 30px */
-    --text-4xl: 2.25rem;
-    /* 36px */
-
-    /* Line Heights */
-    --leading-tight: 1.25;
-    --leading-normal: 1.5;
-    --leading-relaxed: 1.75;
-
-    /* Animation Timings */
-    --duration-fast: 150ms;
-    --duration-normal: 200ms;
-    --duration-slow: 300ms;
-    --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
-    --ease-in-out: cubic-bezier(0.4, 0, 0.6, 1);
-  }
-</style>
-  <style type="text/tailwindcss">
-  @layer utilities {
-      .correct-answer-bg {
-        background-image: repeating-linear-gradient(
-          45deg,
-          rgba(217, 224, 231, 0.7),
-          rgba(217, 224, 231, 0.7) 10px,
-          rgba(217, 224, 231, 1) 10px,
-          rgba(217, 224, 231, 1) 20px
-        );
-      }
-      .dark .correct-answer-bg {
-        background-image: repeating-linear-gradient(
-          45deg,
-          rgba(0, 46, 109, 0.2),
-          rgba(0, 46, 109, 0.2) 10px,
-          rgba(0, 46, 109, 0.3) 10px,
-          rgba(0, 46, 109, 0.3) 20px
-        );
-      }
-    }
-  </style>
-<style>
-  /* Veritas Design System - CSS Custom Properties */
-  :root {
-    /* Brand Colors */
-    --veritas-navy: #12385d;
-    --veritas-gold: #c5a05a;
-    --brand-white: #ffffff;
-    --brand-light-gray: #d9e0e7;
-    --brand-dark-gray: #242424;
-
-    /* Background Colors */
-    --bg-light: #f7f8fa;
-    --bg-dark: #0f1723;
-    --bg-card: #ffffff;
-    --bg-elevated: #f8fafc;
-
-    /* Text Colors */
-    --text-primary: #111111;
-    --text-secondary: #4b5563;
-    --text-muted: #6b7280;
-    --text-on-navy: #ffffff;
-
-    /* Semantic Colors */
-    --success-green: #1b5e20;
-    --success-light: #2e7d32;
-    --success-bg: #e8f5ec;
-    --success-bg-light: #ecfdf5;
-    --error-red: #c62828;
-
-    /* Opacity Modifiers */
-    --navy-06: rgba(18, 56, 93, 0.06);
-    --navy-10: rgba(18, 56, 93, 0.1);
-    --navy-12: rgba(18, 56, 93, 0.12);
-    --navy-14: rgba(18, 56, 93, 0.14);
-    --gold-08: rgba(197, 160, 90, 0.08);
-
-    /* Spacing Scale (following 8px baseline) */
-    --space-xs: 4px;
-    --space-sm: 8px;
-    --space-md: 16px;
-    --space-lg: 24px;
-    --space-xl: 32px;
-    --space-2xl: 48px;
-
-    /* Border Radius */
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 14px;
-    --radius-xl: 16px;
-    --radius-full: 9999px;
-
-    /* View Transitions Names */
-    --vt-header: header-main;
-    --vt-sidebar: sidebar-main;
-    --vt-content: content-main;
-
-    /* Animation Timing */
-    --transition-smooth: 400ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-fast: 200ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-bounce: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-
-  .motion-safe-transition {
-    transition: all var(--transition-smooth);
-  }
-
-  .motion-pulse {
-    animation: motion-pulse 2s infinite ease-in-out;
-  }
-
-  .motion-slide-up {
-    animation: motion-slide-up var(--transition-smooth) forwards;
-  }
-
-  .motion-slide-in-right {
-    animation: motion-slide-in-right var(--transition-smooth) forwards;
-  }
-
-  .motion-fade-in {
-    animation: motion-fade-in var(--transition-fast) forwards;
-  }
-
-  @keyframes motion-pulse {
-
-    0%,
-    100% {
-      transform: scale(1);
-      opacity: 0.8;
-    }
-
-    50% {
-      transform: scale(1.15);
-      opacity: 1;
-    }
-  }
-
-  @keyframes motion-slide-up {
-    from {
-      transform: translateY(12px);
-      opacity: 0;
-    }
-
-    to {
-      transform: translateY(0);
-      opacity: 1;
-    }
-  }
-
-  @keyframes motion-slide-in-right {
-    from {
-      transform: translateX(20px);
-      opacity: 0;
-    }
-
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-
-  @keyframes motion-fade-in {
-    from {
-      opacity: 0;
-    }
-
-    to {
-      opacity: 1;
-    }
-  }
-
-  /* View Transition Assignments */
-  #header-default,
-  #header-live {
-    view-transition-name: var(--vt-header);
-  }
-
-  #dashboard-sidebar {
-    view-transition-name: var(--vt-sidebar);
-  }
-
-  main {
-    view-transition-name: var(--vt-content);
-  }
-
-  /* Glassmorphism Utilities */
-  .glass-card {
-    background: var(--bg-glass);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--glass-border);
-    box-shadow: var(--shadow-glass);
-  }
-
-  .dark .glass-card {
-    background: var(--bg-glass-dark);
-    border-color: var(--glass-border-dark);
-  }
-
-  .premium-shadow {
-    box-shadow: var(--shadow-premium);
-  }
-
-  .premium-glow-navy:hover {
-    box-shadow: var(--glow-navy);
-  }
-
-  .premium-glow-gold:hover {
-    box-shadow: var(--glow-gold);
-  }
-
-  .teacher-question-image {
-    position: relative;
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    background: var(--navy-06);
-    border: 1px solid var(--navy-12);
-  }
-
-  /* ========================================
-     PREMIUM BUTTON INTERACTIONS
-     ======================================== */
-  .btn-primary,
-  .btn-secondary,
-  .btn-success {
-    position: relative;
-    overflow: hidden;
-    transition: all var(--duration-normal) var(--ease-out);
-  }
-
-  .btn-primary::before,
-  .btn-secondary::before,
-  .btn-success::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.3);
-    transform: translate(-50%, -50%);
-    transition: width 0.6s, height 0.6s;
-    pointer-events: none;
-  }
-
-  .btn-primary:active::before,
-  .btn-secondary:active::before,
-  .btn-success:active::before {
-    width: 300px;
-    height: 300px;
-  }
-
-  .btn-primary:hover:not(:disabled),
-  .btn-secondary:hover:not(:disabled),
-  .btn-success:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: var(--hover-lift);
-  }
-
-  .btn-primary:active:not(:disabled),
-  .btn-secondary:active:not(:disabled),
-  .btn-success:active:not(:disabled) {
-    transform: translateY(0);
-    box-shadow: var(--active-press);
-  }
-
-  .btn-primary:focus-visible,
-  .btn-secondary:focus-visible,
-  .btn-success:focus-visible {
-    outline: none;
-    box-shadow: var(--focus-ring);
-  }
-
-  /* ========================================
-     LOADING SKELETONS
-     ======================================== */
-  .skeleton {
-    background: linear-gradient(90deg,
-        #f0f0f0 25%,
-        #e0e0e0 50%,
-        #f0f0f0 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
-    border-radius: var(--radius-sm);
-  }
-
-  .dark .skeleton {
-    background: linear-gradient(90deg,
-        #2a2a2a 25%,
-        #1a1a1a 50%,
-        #2a2a2a 75%);
-    background-size: 200% 100%;
-  }
-
-  @keyframes shimmer {
-    0% {
-      background-position: 200% 0;
-    }
-
-    100% {
-      background-position: -200% 0;
-    }
-  }
-
-  .skeleton-card {
-    padding: 1.5rem;
-    border: 1px solid var(--brand-light-gray);
-    border-radius: var(--radius-lg);
-  }
-
-  .skeleton-header {
-    height: 24px;
-    width: 60%;
-    margin-bottom: 1rem;
-  }
-
-  .skeleton-line {
-    height: 16px;
-    width: 100%;
-    margin-bottom: 0.75rem;
-  }
-
-  .skeleton-line.short {
-    width: 70%;
-  }
-
-  /* ========================================
-     ENHANCED TOAST NOTIFICATIONS
-     ======================================== */
-  .toast-container {
-    position: fixed;
-    top: 1rem;
-    right: 1rem;
-    z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    max-width: 400px;
-  }
-
-  .toast {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
-    padding: 1rem;
-    border-radius: var(--radius-lg);
-    background: white;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    border-left: 4px solid;
-    min-width: 300px;
-  }
-
-  .toast-success {
-    border-left-color: var(--success);
-    background: var(--success-bg);
-  }
-
-  .toast-error {
-    border-left-color: var(--error);
-    background: var(--error-bg);
-  }
-
-  .toast-warning {
-    border-left-color: var(--warning);
-    background: var(--warning-bg);
-  }
-
-  .toast-info {
-    border-left-color: var(--info);
-    background: var(--info-bg);
-  }
-
-  .toast-icon {
-    font-size: 24px;
-    flex-shrink: 0;
-  }
-
-  .toast-success .toast-icon {
-    color: var(--success);
-  }
-
-  .toast-error .toast-icon {
-    color: var(--error);
-  }
-
-  .toast-warning .toast-icon {
-    color: var(--warning);
-  }
-
-  .toast-info .toast-icon {
-    color: var(--info);
-  }
-
-  .toast-content {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .toast-title {
-    font-weight: 600;
-    font-size: var(--text-sm);
-    margin-bottom: 0.25rem;
-    color: var(--text-primary);
-  }
-
-  .toast-message {
-    font-size: var(--text-sm);
-    color: var(--text-secondary);
-    line-height: var(--leading-normal);
-  }
-
-  .toast-close {
-    flex-shrink: 0;
-    padding: 0.25rem;
-    border-radius: var(--radius-sm);
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    color: var(--text-muted);
-    transition: all var(--duration-fast) var(--ease-out);
-  }
-
-  .toast-close:hover {
-    background: rgba(0, 0, 0, 0.05);
-    color: var(--text-primary);
-  }
-
-  @keyframes slide-in {
-    from {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-
-  @keyframes slide-out {
-    from {
-      transform: translateX(0);
-      opacity: 1;
-    }
-
-    to {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-  }
-
-  .animate-slide-in {
-    animation: slide-in var(--duration-normal) var(--ease-out);
-  }
-
-  .animate-slide-out {
-    animation: slide-out var(--duration-normal) var(--ease-out);
-  }
-
-  /* ========================================
-     EMPTY STATES
-     ======================================== */
-  .empty-state {
-    text-align: center;
-    padding: 4rem 2rem;
-    max-width: 400px;
-    margin: 0 auto;
-  }
-
-  .empty-state-icon {
-    width: 80px;
-    height: 80px;
-    margin: 0 auto 1.5rem;
-    border-radius: 50%;
-    background: var(--navy-06);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .empty-state-icon .material-symbols-outlined {
-    font-size: 40px;
-    color: var(--primary);
-  }
-
-  .empty-state h3 {
-    font-size: var(--text-2xl);
-    font-weight: 700;
-    color: var(--text-primary);
-    margin-bottom: 0.5rem;
-  }
-
-  .empty-state p {
-    font-size: var(--text-base);
-    color: var(--text-secondary);
-    line-height: var(--leading-relaxed);
-    margin-bottom: 1.5rem;
-  }
-
-  /* ========================================
-     PROGRESS INDICATORS
-     ======================================== */
-  .progress-tracker {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 1rem;
-  }
-
-  .progress-step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    flex: 1;
-  }
-
-  .step-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    font-size: var(--text-sm);
-    background: var(--brand-light-gray);
-    color: var(--text-muted);
-    transition: all var(--duration-normal) var(--ease-out);
-  }
-
-  .progress-step.completed .step-icon {
-    background: var(--success);
-    color: white;
-  }
-
-  .progress-step.active .step-icon {
-    background: var(--primary);
-    color: white;
-    box-shadow: 0 0 0 4px rgba(18, 56, 93, 0.1);
-  }
-
-  .step-icon.spinner {
-    border: 2px solid var(--brand-light-gray);
-    border-top-color: var(--primary);
-    animation: spin 0.8s linear infinite;
-  }
-
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
-  .progress-step span {
-    font-size: var(--text-xs);
-    color: var(--text-muted);
-    font-weight: 500;
-  }
-
-  .progress-step.active span {
-    color: var(--primary);
-    font-weight: 600;
-  }
-
-  .progress-step.completed span {
-    color: var(--success);
-  }
-
-  /* ========================================
-     MOBILE TOUCH TARGET OPTIMIZATION
-     ======================================== */
-  /* Ensure minimum 44x44px touch targets for accessibility */
-  button,
-  .btn,
-  .icon-btn,
-  input[type="checkbox"],
-  input[type="radio"],
-  a.clickable,
-  [role="button"] {
-    min-width: 44px;
-    min-height: 44px;
-  }
-
-  /* Larger tap areas for mobile devices */
-  @media (max-width: 768px) {
-
-    .btn,
-    button {
-      padding: 12px 24px;
-      font-size: 16px;
-      /* Prevents iOS zoom on focus */
-    }
-
-    input,
-    select,
-    textarea {
-      font-size: 16px;
-      /* Prevents iOS zoom */
-    }
-
-    /* Increase spacing for easier tapping */
-    .btn+.btn {
-      margin-left: 12px;
-    }
-
-    /* Mobile-friendly navigation */
-    .mobile-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: white;
-      border-top: 1px solid var(--brand-light-gray);
-      display: flex;
-      justify-content: space-around;
-      padding: 8px 0;
-      z-index: 1000;
-      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-    }
-
-    .nav-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      padding: 8px 16px;
-      border: none;
-      background: transparent;
-      color: var(--text-muted);
-      cursor: pointer;
-      transition: color var(--duration-fast) var(--ease-out);
-      min-width: 64px;
-    }
-
-    .nav-item.active {
-      color: var(--primary);
-    }
-
-    .nav-item .material-symbols-outlined {
-      font-size: 24px;
-    }
-
-    .nav-item span:last-child {
-      font-size: 11px;
-      font-weight: 500;
-    }
-
-    /* Add padding to main content to account for bottom nav */
-    body.has-mobile-nav main {
-      padding-bottom: 80px;
-    }
-  }
-
-  /* ========================================
-     IMPROVED ERROR HANDLING
-     ======================================== */
-  .error-message {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 16px;
-    border-radius: var(--radius-lg);
-    background: var(--error-bg);
-    border-left: 4px solid var(--error);
-    margin: 16px 0;
-  }
-
-  .error-message .material-symbols-outlined {
-    color: var(--error);
-    font-size: 24px;
-    flex-shrink: 0;
-  }
-
-  .error-content {
-    flex: 1;
-  }
-
-  .error-title {
-    font-weight: 600;
-    color: var(--error);
-    margin-bottom: 4px;
-  }
-
-  .error-description {
-    font-size: var(--text-sm);
-    color: var(--text-secondary);
-    line-height: var(--leading-normal);
-  }
-
-  .error-actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 12px;
-  }
-
-  .error-action-btn {
-    padding: 8px 16px;
-    border-radius: var(--radius-sm);
-    font-size: var(--text-sm);
-    font-weight: 500;
-    cursor: pointer;
-    transition: all var(--duration-fast) var(--ease-out);
-  }
-
-  .error-action-primary {
-    background: var(--error);
-    color: white;
-    border: none;
-  }
-
-  .error-action-primary:hover {
-    background: var(--error-red);
-  }
-
-  .error-action-secondary {
-    background: transparent;
-    color: var(--error);
-    border: 1px solid var(--error);
-  }
-
-  .error-action-secondary:hover {
-    background: var(--error-bg);
-  }
-
-  /* Warning variant */
-  .warning-message {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 16px;
-    border-radius: var(--radius-lg);
-    background: var(--warning-bg);
-    border-left: 4px solid var(--warning);
-    margin: 16px 0;
-  }
-
-  .warning-message .material-symbols-outlined {
-    color: var(--warning);
-    font-size: 24px;
-    flex-shrink: 0;
-  }
-
-  .warning-title {
-    font-weight: 600;
-    color: var(--warning);
-    margin-bottom: 4px;
-  }
-
-  /* Info variant */
-  .info-message {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 16px;
-    border-radius: var(--radius-lg);
-    background: var(--info-bg);
-    border-left: 4px solid var(--info);
-    margin: 16px 0;
-  }
-
-  .info-message .material-symbols-outlined {
-    color: var(--info);
-    font-size: 24px;
-    flex-shrink: 0;
-  }
-
-  .info-title {
-    font-weight: 600;
-    color: var(--info);
-    margin-bottom: 4px;
-  }
-
-  .teacher-question-image-el {
-    width: 100%;
-    max-height: 360px;
-    object-fit: contain;
-    display: block;
-    background: var(--bg-card);
-  }
-
-  .teacher-question-image-zoom {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(18, 24, 40, 0.45);
-    color: var(--brand-white);
-    opacity: 0;
-    transition: opacity 180ms ease;
-    border: none;
-    cursor: pointer;
-  }
-
-  .teacher-question-image:hover .teacher-question-image-zoom,
-  .teacher-question-image-zoom:focus-visible {
-    opacity: 1;
-  }
-
-  .teacher-question-image-zoom:focus-visible {
-    outline: 3px solid rgba(18, 56, 93, 0.45);
-    outline-offset: 2px;
-  }
-
-  /* Student-view-style question layout */
-  .question-layout-grid {
-    display: block;
-    /* Change from grid to block for float wrapping */
-    width: 100%;
-    position: relative;
-    overflow: hidden;
-    /* Clearfix behavior */
-  }
-
-  .question-layout-grid.no-image {
-    display: block;
-  }
-
-  .question-text-area {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .question-stem-text {
-    font-family: "Noto Serif", serif;
-    font-size: 1.125rem;
-    /* Standardized to 18px */
-    line-height: 1.6;
-    font-weight: 400;
-    color: #000000;
-    margin: 0;
-    text-align: left;
-    word-wrap: break-word;
-  }
-
-  .dark .question-stem-text {
-    color: #ffffff;
-  }
-
-  .question-image-area {
-    float: right;
-    /* Standard wrap behavior */
-    margin-left: 24px;
-    margin-bottom: 12px;
-    max-width: min(320px, 40%);
-    /* Capped width for wrap */
-    display: flex;
-    justify-content: flex-end;
-  }
-
-  .question-image-frame {
-    width: 100%;
-    max-height: min(420px, 50vh);
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 10px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-  }
-
-  .question-image-clickable {
-    max-height: 100%;
-    width: 100%;
-    object-fit: contain;
-    border-radius: 8px;
-    cursor: zoom-in;
-    transition: transform 0.2s ease;
-  }
-
-  .question-image-clickable:hover {
-    transform: scale(1.02);
-  }
-
-  .dark .question-image-frame {
-    background: rgba(36, 36, 36, 0.55);
-    border-color: rgba(255, 255, 255, 0.18);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-  }
-
-  .teacher-result-card {
-    position: relative;
-    overflow: hidden;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--navy-14);
-    background: var(--bg-card);
-    box-shadow: 0 1px 4px rgba(18, 56, 93, 0.06);
-    margin-bottom: 10px;
-  }
-
-  .teacher-result-card:last-child {
-    margin-bottom: 0;
-  }
-
-  .teacher-result-progress {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 0%;
-    background: rgba(18, 56, 93, 0.12);
-    transition: width 220ms ease;
-  }
-
-  .teacher-result-progress.is-correct {
-    background: rgba(46, 125, 50, 0.2);
-  }
-
-  .teacher-result-content-row {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    align-items: stretch;
-    gap: 12px;
-    padding: 12px 16px;
-  }
-
-  .teacher-result-leading {
-    display: flex;
-    align-items: center;
-  }
-
-  .teacher-result-letter {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    background: var(--navy-12);
-    color: var(--veritas-navy);
-    font-weight: 700;
-    font-size: 0.95rem;
-  }
-
-  .teacher-result-body {
-    flex: 1;
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-    min-width: 0;
-  }
-
-  .teacher-result-image-wrap {
-    width: 80px;
-    max-width: 80px;
-    flex-shrink: 0;
-  }
-
-  .teacher-result-image {
-    width: 100%;
-    max-height: 80px;
-    object-fit: contain;
-    border-radius: 6px;
-    border: 1px solid rgba(18, 56, 93, 0.18);
-    background: var(--bg-elevated);
-  }
-
-  .teacher-result-text {
-    color: var(--veritas-navy);
-    font-size: 0.9rem;
-    line-height: 1.5;
-  }
-
-  .teacher-result-text--empty {
-    font-style: italic;
-    color: var(--text-muted);
-  }
-
-  .teacher-result-percentage {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    justify-content: center;
-    gap: 2px;
-    min-width: 70px;
-    color: var(--veritas-navy);
-    font-weight: 700;
-  }
-
-  .teacher-result-percentage span:first-child {
-    font-size: 0.95rem;
-  }
-
-  .teacher-result-count {
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-  }
-
-  .teacher-result-students {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 8px 16px 10px;
-    border-top: 1px solid var(--navy-12);
-    background: var(--navy-06);
-  }
-
-  .teacher-result-student {
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 3px 8px;
-    border-radius: var(--radius-full);
-    background: rgba(18, 56, 93, 0.15);
-    color: var(--veritas-navy);
-  }
-
-  .teacher-result-card.is-correct {
-    border-color: rgba(46, 125, 50, 0.4);
-    background: var(--success-bg);
-  }
-
-  .teacher-result-card.is-correct .teacher-result-letter {
-    background: rgba(46, 125, 50, 0.22);
-    color: var(--success-green);
-  }
-
-  .teacher-result-card.is-correct .teacher-result-text {
-    color: var(--success-green);
-  }
-
-  .teacher-result-card.is-correct .teacher-result-count {
-    color: var(--success-light);
-  }
-
-  .teacher-result-card.is-correct .teacher-result-students {
-    border-color: rgba(46, 125, 50, 0.28);
-    background: rgba(46, 125, 50, 0.16);
-  }
-
-  .teacher-result-card.is-correct .teacher-result-student {
-    background: rgba(46, 125, 50, 0.2);
-    color: var(--success-green);
-  }
-
-  /* Live view layout guards to prevent clipping at the bottom of the dashboard */
-  #live-view,
-  .live-view-shell,
-  .live-view-grid {
-    min-height: 0;
-  }
-
-  .live-view-grid>* {
-    min-height: 0;
-  }
-
-  .dark .teacher-question-image {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.18);
-  }
-
-  .dark .teacher-question-image-el {
-    background: transparent;
-  }
-
-  .dark .teacher-question-image-zoom {
-    background: rgba(15, 23, 42, 0.65);
-  }
-
-  .dark .teacher-result-card {
-    background: rgba(15, 23, 35, 0.78);
-    border-color: rgba(148, 163, 184, 0.28);
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.4);
-  }
-
-  .dark .teacher-result-progress {
-    background: rgba(59, 130, 246, 0.28);
-  }
-
-  .dark .teacher-result-letter {
-    background: rgba(148, 163, 184, 0.25);
-    color: #e2e8f0;
-  }
-
-  .dark .teacher-result-text {
-    color: #f8fafc;
-  }
-
-  .dark .teacher-result-count {
-    color: #cbd5f5;
-  }
-
-  .dark .teacher-result-students {
-    border-color: rgba(148, 163, 184, 0.25);
-    background: rgba(148, 163, 184, 0.16);
-  }
-
-  .dark .teacher-result-student {
-    background: rgba(148, 163, 184, 0.3);
-    color: #f8fafc;
-  }
-
-  .dark .teacher-result-card.is-correct {
-    background: rgba(34, 197, 94, 0.22);
-    border-color: rgba(34, 197, 94, 0.45);
-  }
-
-  .dark .teacher-result-card.is-correct .teacher-result-letter {
-    background: rgba(34, 197, 94, 0.32);
-    color: #ecfdf5;
-  }
-
-  .dark .teacher-result-card.is-correct .teacher-result-text {
-    color: #ecfdf5;
-  }
-
-  .dark .teacher-result-card.is-correct .teacher-result-count {
-    color: #bbf7d0;
-  }
-
-  .dark .teacher-result-card.is-correct .teacher-result-students {
-    border-color: rgba(34, 197, 94, 0.45);
-    background: rgba(34, 197, 94, 0.3);
-  }
-
-  .dark .teacher-result-card.is-correct .teacher-result-student {
-    background: rgba(34, 197, 94, 0.4);
-    color: #052e16;
-  }
-
-  @media (max-width: 768px) {
-    .teacher-result-content-row {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-
-    .teacher-result-percentage {
-      flex-direction: row;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .teacher-result-image-wrap {
-      width: 100%;
-      max-width: 100%;
-    }
-
-    .teacher-result-image {
-      max-height: 220px;
-    }
-  }
-
-  .veritas-modal-root {
-    position: fixed;
-    inset: 0;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-  }
-
-  .veritas-modal-root.is-active {
-    display: flex;
-  }
-
-  .veritas-modal-backdrop {
-    position: absolute;
-    inset: 0;
-    background: rgba(9, 17, 34, 0.55);
-    backdrop-filter: blur(3px);
-  }
-
-  .veritas-modal-dialog {
-    position: relative;
-    z-index: 1;
-    width: min(520px, 92vw);
-    border-radius: 16px;
-    background: #ffffff;
-    border-top: 4px solid #c5a05a;
-    box-shadow: 0 24px 48px rgba(9, 17, 34, 0.25);
-    padding: 28px;
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-    animation: veritas-modal-in 220ms ease;
-  }
-
-  .veritas-modal-header h2 {
-    margin: 0;
-    font-size: 1.25rem;
-    color: #12385d;
-    font-weight: 700;
-  }
-
-  .veritas-modal-body {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    color: #1c1c1c;
-    font-size: 0.98rem;
-    line-height: 1.55;
-  }
-
-  .veritas-modal-subtext {
-    color: #4b5563;
-    font-size: 0.85rem;
-  }
-
-  .veritas-modal-input {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .veritas-modal-input input {
-    border-radius: 10px;
-    border: 1px solid rgba(18, 56, 93, 0.28);
-    padding: 10px 12px;
-    font-size: 0.95rem;
-    transition: border-color 160ms ease, box-shadow 160ms ease;
-  }
-
-  .veritas-modal-input input:focus-visible {
-    outline: none;
-    border-color: #12385d;
-    box-shadow: 0 0 0 3px rgba(18, 56, 93, 0.2);
-  }
-
-  .veritas-modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-
-  .veritas-modal-button {
-    border: none;
-    border-radius: 999px;
-    padding: 10px 22px;
-    font-weight: 600;
-    font-size: 0.95rem;
-    cursor: pointer;
-    transition: transform 140ms ease, box-shadow 140ms ease, background-color 140ms ease, color 140ms ease;
-  }
-
-  .veritas-modal-button.primary {
-    background: #12385d;
-    color: #ffffff;
-    box-shadow: 0 8px 20px rgba(18, 56, 93, 0.25);
-  }
-
-  .veritas-modal-button.primary:hover:not([disabled]) {
-    background: #0f2d4a;
-    transform: translateY(-1px);
-  }
-
-  .veritas-modal-button.secondary {
-    background: transparent;
-    color: #12385d;
-    border: 1px solid rgba(18, 56, 93, 0.3);
-  }
-
-  .veritas-modal-button.secondary:hover:not([disabled]) {
-    background: rgba(18, 56, 93, 0.08);
-  }
-
-  .veritas-modal-button.destructive {
-    background: #c62828;
-    color: #ffffff;
-    box-shadow: 0 8px 18px rgba(198, 40, 40, 0.25);
-  }
-
-  .veritas-modal-button.destructive:hover:not([disabled]) {
-    background: #a61b1b;
-  }
-
-  .veritas-modal-button[disabled] {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-  }
-
-  .veritas-modal-spinner {
-    width: 18px;
-    height: 18px;
-    border-radius: 999px;
-    border: 2px solid rgba(255, 255, 255, 0.6);
-    border-top-color: transparent;
-    animation: veritas-spin 0.7s linear infinite;
-    display: none;
-    margin-left: 10px;
-  }
-
-  .veritas-modal-button.loading .veritas-modal-spinner {
-    display: inline-block;
-  }
-
-  .veritas-modal-button.loading span {
-    opacity: 0.75;
-  }
-
-  .dark .veritas-modal-dialog {
-    background: rgba(15, 23, 35, 0.96);
-    color: #e2e8f0;
-    border-top-color: #c5a05a;
-    box-shadow: 0 24px 48px rgba(2, 6, 23, 0.55);
-  }
-
-  .dark .veritas-modal-header h2 {
-    color: #f8fafc;
-  }
-
-  .dark .veritas-modal-body {
-    color: #f1f5f9;
-  }
-
-  .dark .veritas-modal-subtext {
-    color: #cbd5f5;
-  }
-
-  .dark .veritas-modal-input input {
-    background: rgba(15, 23, 42, 0.7);
-    border-color: rgba(148, 163, 184, 0.4);
-    color: #f8fafc;
-  }
-
-  .dark .veritas-modal-input input:focus-visible {
-    border-color: #93c5fd;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35);
-  }
-
-  .dark .veritas-modal-button.secondary {
-    color: #e2e8f0;
-    border-color: rgba(148, 163, 184, 0.4);
-  }
-
-  .dark .veritas-modal-button.secondary:hover:not([disabled]) {
-    background: rgba(148, 163, 184, 0.16);
-  }
-
-  .dark .veritas-modal-button.primary {
-    background: #234776;
-  }
-
-  .dark .veritas-modal-button.primary:hover:not([disabled]) {
-    background: #1a3456;
-  }
-
-  .dark .veritas-modal-backdrop {
-    background: rgba(2, 6, 23, 0.7);
-    backdrop-filter: blur(4px);
-  }
-
-  body.veritas-modal-open {
-    overflow: hidden;
-  }
-
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
-  @keyframes veritas-modal-in {
-    from {
-      opacity: 0;
-      transform: translateY(16px) scale(0.98);
-    }
-
-    to {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-  }
-
-  @keyframes veritas-spin {
-    from {
-      transform: rotate(0deg);
-    }
-
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
-  @media (max-width: 480px) {
-    .veritas-modal-dialog {
-      width: min(92vw, 360px);
-      padding: 22px;
-      gap: 16px;
-    }
-
-    .veritas-modal-actions {
-      width: 100%;
-      justify-content: stretch;
-    }
-
-    .veritas-modal-button {
-      flex: 1;
-    }
-  }
-
-  /* New Dashboard Styles */
-  .sidebar-nav-btn {
-    background: transparent;
-    color: rgba(255, 255, 255, 0.72);
-    transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
-  }
-
-  .sidebar-nav-btn .material-symbols-outlined {
-    transition: transform 160ms ease, color 160ms ease;
-  }
-
-  .sidebar-nav-btn:hover {
-    background: rgba(255, 255, 255, 0.12);
-    color: #ffffff;
-  }
-
-  .sidebar-nav-btn:hover .material-symbols-outlined {
-    transform: translateX(2px);
-  }
-
-  .sidebar-nav-btn.is-active,
-  .sidebar-nav-btn[aria-current="page"] {
-    background: rgba(255, 255, 255, 0.18);
-    color: #ffffff;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
-  }
-
-  .sidebar-nav-btn.is-active .material-symbols-outlined,
-  .sidebar-nav-btn[aria-current="page"] .material-symbols-outlined {
-    color: #ffffff;
-    transform: translateX(2px);
-  }
-
-  .question-nav-item.dragging {
-    opacity: 0.55;
-  }
-
-  .question-nav-item.drop-before::before,
-  .question-nav-item.drop-after::after {
-    content: '';
-    position: absolute;
-    left: 12px;
-    right: 12px;
-    height: 2px;
-    background: var(--veritas-gold);
-    border-radius: 9999px;
-  }
-
-  .question-nav-item.drop-before::before {
-    top: -4px;
-  }
-
-  .question-nav-item.drop-after::after {
-    bottom: -4px;
-  }
-
-  .dashboard-card {
-    background: white;
-    border-radius: 16px;
-    padding: 28px;
-    box-shadow: 0 2px 8px rgba(18, 56, 93, 0.08);
-    transition: all 200ms ease;
-    animation: fadeUp 0.4s ease-out forwards;
-    opacity: 0;
-  }
-
-  .dashboard-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(18, 56, 93, 0.12);
-  }
-
-  /* Enhanced Poll Card Design */
-  .poll-card {
-    position: relative;
-    background-color: white;
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 2px 8px rgba(18, 56, 93, 0.08);
-    transition: all 200ms ease;
-    overflow: hidden;
-    /* To contain the gradient border */
-  }
-
-  .poll-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(to right, var(--veritas-navy), var(--veritas-gold));
-    opacity: 0.8;
-    transition: opacity 200ms ease;
-  }
-
-  .poll-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 28px rgba(18, 56, 93, 0.15);
-  }
-
-  .poll-card:hover::before {
-    opacity: 1;
-  }
-
-  .dark .poll-card {
-    background-color: rgba(15, 23, 35, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  }
-
-  .dark .poll-card:hover {
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
-  }
-
-  .dashboard-card.primary-cta {
-    background: linear-gradient(135deg, #12385d 0%, #0f2d4a 100%);
-    color: white;
-    border-top: 4px solid #c5a05a;
-  }
-
-  .dashboard-card-title {
-    font-size: 20px;
-    font-weight: 600;
-    color: #12385d;
-    margin-bottom: 8px;
-  }
-
-  .dashboard-card.primary-cta .dashboard-card-title {
-    color: white;
-  }
-
-  .dashboard-card-subtitle {
-    font-size: 14px;
-    color: #6b7280;
-    margin-bottom: 20px;
-  }
-
-  .dashboard-card.primary-cta .dashboard-card-subtitle {
-    color: rgba(255, 255, 255, 0.8);
-  }
-
-  .dashboard-cta-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 24px;
-    border-radius: 9999px;
-    font-weight: 600;
-    font-size: 15px;
-    transition: all 140ms ease;
-    cursor: pointer;
-    border: none;
-  }
-
-  .dashboard-cta-button:hover {
-    transform: translateY(-1px);
-  }
-
-  .dashboard-cta-button.primary {
-    background: #c5a05a;
-    color: white;
-    box-shadow: 0 4px 12px rgba(197, 160, 90, 0.3);
-  }
-
-  .dashboard-cta-button.primary:hover {
-    background: #b8954f;
-    box-shadow: 0 6px 16px rgba(197, 160, 90, 0.4);
-  }
-
-  .dashboard-cta-button.secondary {
-    background: rgba(255, 255, 255, 0.15);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-  }
-
-  .dashboard-cta-button.secondary:hover {
-    background: rgba(255, 255, 255, 0.25);
-  }
-
-  .dashboard-list-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 0;
-    border-bottom: 1px solid rgba(18, 56, 93, 0.08);
-    transition: all 140ms ease;
-  }
-
-  .dashboard-list-item:last-child {
-    border-bottom: none;
-  }
-
-  .dashboard-list-item:hover {
-    padding-left: 8px;
-  }
-
-  .dashboard-stat-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 12px;
-    border-radius: 9999px;
-    font-size: 13px;
-    font-weight: 600;
-  }
-
-  .dashboard-stat-badge.success {
-    background: rgba(34, 197, 94, 0.15);
-    color: #16a34a;
-  }
-
-  .dashboard-stat-badge.warning {
-    background: rgba(245, 158, 11, 0.15);
-    color: #d97706;
-  }
-
-  .dashboard-stat-badge.neutral {
-    background: rgba(18, 56, 93, 0.1);
-    color: #12385d;
-  }
-
-  .dashboard-quick-tool {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    padding: 20px;
-    background: rgba(18, 56, 93, 0.04);
-    border-radius: 12px;
-    transition: all 180ms ease;
-    cursor: pointer;
-    text-decoration: none;
-    color: #12385d;
-  }
-
-  .dashboard-quick-tool:hover {
-    background: rgba(18, 56, 93, 0.08);
-    transform: translateY(-2px);
-  }
-
-  .dashboard-quick-tool .icon {
-    font-size: 32px;
-    transition: transform 180ms ease;
-  }
-
-  .dashboard-quick-tool:hover .icon {
-    transform: rotate(15deg);
-  }
-
-  .dashboard-icon-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    background: rgba(18, 56, 93, 0.06);
-    color: #12385d;
-    transition: all 160ms ease;
-    cursor: pointer;
-    border: none;
-  }
-
-  .dashboard-icon-btn:hover {
-    background: rgba(18, 56, 93, 0.12);
-    transform: scale(1.05);
-  }
-
-  .dashboard-status-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    border-radius: 9999px;
-    font-size: 13px;
-    font-weight: 600;
-    background: rgba(148, 163, 184, 0.15);
-    color: #475569;
-  }
-
-  .dashboard-status-chip.active {
-    background: rgba(34, 197, 94, 0.15);
-    color: #16a34a;
-  }
-
-  .dashboard-status-chip .dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: currentColor;
-  }
-
-  .dashboard-status-chip.active .dot {
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-
-  @keyframes pulse {
-
-    0%,
-    100% {
-      opacity: 1;
-    }
-
-    50% {
-      opacity: 0.5;
-    }
-  }
-
-  .activity-chart-placeholder {
-    width: 100%;
-    height: 180px;
-    background: linear-gradient(to top, rgba(197, 160, 90, 0.1), rgba(18, 56, 93, 0.05));
-    border-radius: 8px;
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-around;
-    padding: 20px;
-    gap: 8px;
-  }
-
-  .activity-bar {
-    flex: 1;
-    background: linear-gradient(to top, #c5a05a, #12385d);
-    border-radius: 4px 4px 0 0;
-    min-height: 20px;
-    transition: all 300ms ease;
-  }
-
-  .activity-bar:hover {
-    filter: brightness(1.2);
-    transform: scaleY(1.05);
-  }
-
-  @keyframes fadeUp {
-    from {
-      opacity: 0;
-      transform: translateY(18px);
-    }
-
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  @keyframes pulseGlow {
-
-    0%,
-    100% {
-      box-shadow: 0 0 0 0 rgba(197, 160, 90, 0.35);
-    }
-
-    50% {
-      box-shadow: 0 0 18px 3px rgba(197, 160, 90, 0.45);
-    }
-  }
-
-
-  /* Stagger animation delays */
-  .dashboard-card:nth-child(1) {
-    animation-delay: 0ms;
-  }
-
-  .dashboard-card:nth-child(2) {
-    animation-delay: 100ms;
-  }
-
-  .dashboard-card:nth-child(3) {
-    animation-delay: 200ms;
-  }
-
-  .dashboard-card:nth-child(4) {
-    animation-delay: 300ms;
-  }
-
-  @media (max-width: 768px) {
-    .dashboard-card {
-      padding: 20px;
-    }
-  }
-
-  /* Timer animations */
-  @keyframes timer-flash {
-
-    0%,
-    100% {
-      color: inherit;
-    }
-
-    50% {
-      color: #0ea5e9;
-    }
-
-    /* sky-500 */
-  }
-
-  .timer-finished {
-    animation: timer-flash 0.5s 2;
-  }
-
-  /* Ensure tabular numbers for timer display */
-  #timer-display {
-    font-feature-settings: 'tnum';
-    font-variant-numeric: tabular-nums;
-  }
-
-  /* Slow pulse animation for violations */
-  @keyframes pulse-slow {
-
-    0%,
-    100% {
-      opacity: 1;
-    }
-
-    50% {
-      opacity: 0.95;
-    }
-  }
-
-  .animate-pulse-slow {
-    animation: pulse-slow 2s ease-in-out infinite;
-  }
-
-  /* ENHANCED TIMER VISUAL FEEDBACK SYSTEM */
-  /* Timer state classes - applied dynamically based on time remaining */
-  .timer-warning {
-    background: rgba(245, 158, 11, 0.25) !important;
-    border-color: rgba(245, 158, 11, 0.4) !important;
-  }
-
-  .timer-warning #timer-display,
-  .timer-warning #timer-display-compact {
-    color: #fbbf24 !important;
-    /* amber-400 */
-  }
-
-  .timer-critical {
-    background: rgba(239, 68, 68, 0.25) !important;
-    border-color: rgba(239, 68, 68, 0.5) !important;
-    animation: timer-pulse-critical 1s ease-in-out infinite;
-  }
-
-  .timer-critical #timer-display,
-  .timer-critical #timer-display-compact {
-    color: #f87171 !important;
-    /* red-400 */
-  }
-
-  @keyframes timer-pulse-critical {
-
-    0%,
-    100% {
-      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
-    }
-
-    50% {
-      box-shadow: 0 0 20px 4px rgba(239, 68, 68, 0.6);
-    }
-  }
-
-  /* Next Question button pulse when ready */
-  .pulse-ready {
-    animation: pulse-glow-gold 2s ease-in-out infinite;
-  }
-
-  /* Green state for timer */
-  .timer-safe {
-    background: rgba(16, 185, 129, 0.15) !important;
-    border-color: rgba(16, 185, 129, 0.3) !important;
-  }
-
-  .timer-safe #timer-display,
-  .timer-safe #timer-display-compact {
-    color: #6ee7b7 !important;
-    /* emerald-300 */
-  }
-
-  @keyframes pulse-glow-gold {
-
-    0%,
-    100% {
-      box-shadow: 0 4px 12px rgba(197, 160, 90, 0.4);
-    }
-
-    50% {
-      box-shadow: 0 8px 24px rgba(197, 160, 90, 0.7), 0 0 40px rgba(197, 160, 90, 0.3);
-    }
-  }
-
-  /* Student tile animations for attention */
-  .student-needs-attention {
-    animation: border-pulse 2s ease-in-out infinite;
-  }
-
-  @keyframes border-pulse {
-
-    0%,
-    100% {
-      border-color: rgba(239, 68, 68, 0.5);
-    }
-
-    50% {
-      border-color: rgba(239, 68, 68, 1);
-      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
-    }
-  }
-
-  /* Celebration animation for all-responded */
-  @keyframes celebrate-bounce {
-
-    0%,
-    100% {
-      transform: scale(1);
-    }
-
-    25% {
-      transform: scale(1.05);
-    }
-
-    50% {
-      transform: scale(0.95);
-    }
-
-    75% {
-      transform: scale(1.02);
-    }
-  }
-
-  .celebrate {
-    animation: celebrate-bounce 0.6s ease-out;
-  }
-
-  /* ========================================
-       🎨 ENHANCED DESIGN SYSTEM v2.0
-       Optimized for Live Classroom Scenarios
-       ======================================== */
-
-  /* === FLOATING ACTION BUTTON (FAB) SYSTEM === */
-  .fab-container {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    z-index: 1000;
-    display: flex;
-    flex-direction: column-reverse;
-    align-items: flex-end;
-    gap: 12px;
-  }
-
-  .fab-main {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--veritas-navy), #0f2d4a);
-    color: white;
-    border: none;
-    box-shadow: 0 8px 24px rgba(18, 56, 93, 0.35),
-      0 0 0 0 rgba(197, 160, 90, 0.4);
-    cursor: pointer;
-    transition: all 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-  }
-
-  .fab-main:hover {
-    transform: scale(1.08) rotate(5deg);
-    box-shadow: 0 12px 32px rgba(18, 56, 93, 0.45),
-      0 0 40px rgba(197, 160, 90, 0.3);
-  }
-
-  .fab-main:active {
-    transform: scale(0.95);
-  }
-
-  .fab-main .material-symbols-outlined {
-    font-size: 28px;
-    transition: transform 280ms ease;
-  }
-
-  .fab-main.is-open .material-symbols-outlined {
-    transform: rotate(45deg);
-  }
-
-  .fab-menu {
-    display: flex;
-    flex-direction: column-reverse;
-    gap: 12px;
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(20px);
-    transition: all 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-
-  .fab-menu.is-open {
-    opacity: 1;
-    pointer-events: all;
-    transform: translateY(0);
-  }
-
-  .fab-action {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    animation: fab-slide-in 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
-  }
-
-  .fab-action:nth-child(1) {
-    animation-delay: 50ms;
-  }
-
-  .fab-action:nth-child(2) {
-    animation-delay: 100ms;
-  }
-
-  .fab-action:nth-child(3) {
-    animation-delay: 150ms;
-  }
-
-  .fab-action:nth-child(4) {
-    animation-delay: 200ms;
-  }
-
-  @keyframes fab-slide-in {
-    from {
-      opacity: 0;
-      transform: translateX(20px) scale(0.8);
-    }
-
-    to {
-      opacity: 1;
-      transform: translateX(0) scale(1);
-    }
-  }
-
-  .fab-label {
-    background: rgba(18, 56, 93, 0.95);
-    color: white;
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    white-space: nowrap;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    opacity: 0;
-    transition: opacity 200ms ease;
-  }
-
-  .fab-action:hover .fab-label {
-    opacity: 1;
-  }
-
-  .fab-button {
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    border: none;
-    cursor: pointer;
-    transition: all 200ms ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-  }
-
-  .fab-button:hover {
-    transform: scale(1.1);
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
-  }
-
-  .fab-button.fab-primary {
-    background: linear-gradient(135deg, #c5a05a, #b8954f);
-    color: white;
-  }
-
-  .fab-button.fab-success {
-    background: linear-gradient(135deg, #10b981, #059669);
-    color: white;
-  }
-
-  .fab-button.fab-info {
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
-    color: white;
-  }
-
-  .fab-button.fab-danger {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    color: white;
-  }
-
-  /* === TOAST NOTIFICATION SYSTEM === */
-  .toast-container {
-    position: fixed;
-    top: 80px;
-    right: 24px;
-    z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    max-width: 420px;
-  }
-
-  .toast {
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    padding: 16px 20px;
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15),
-      0 2px 8px rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(10px);
-    animation: toast-slide-in 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
-    border-left: 4px solid currentColor;
-    position: relative;
-    overflow: hidden;
-  }
-
-  @keyframes toast-slide-in {
-    from {
-      opacity: 0;
-      transform: translateX(100%) scale(0.9);
-    }
-
-    to {
-      opacity: 1;
-      transform: translateX(0) scale(1);
-    }
-  }
-
-  .toast.toast-out {
-    animation: toast-slide-out 280ms ease-out both;
-  }
-
-  @keyframes toast-slide-out {
-    to {
-      opacity: 0;
-      transform: translateX(100%) scale(0.9);
-    }
-  }
-
-  .toast-success {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(5, 150, 105, 0.95));
-    color: white;
-  }
-
-  .toast-error {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(220, 38, 38, 0.95));
-    color: white;
-  }
-
-  .toast-warning {
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(217, 119, 6, 0.95));
-    color: white;
-  }
-
-  .toast-info {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.95), rgba(37, 99, 235, 0.95));
-    color: white;
-  }
-
-  .toast-icon {
-    flex-shrink: 0;
-    font-size: 24px;
-    animation: toast-icon-pop 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-
-  @keyframes toast-icon-pop {
-    0% {
-      transform: scale(0);
-    }
-
-    50% {
-      transform: scale(1.2);
-    }
-
-    100% {
-      transform: scale(1);
-    }
-  }
-
-  .toast-content {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .toast-title {
-    font-weight: 700;
-    font-size: 0.95rem;
-    margin-bottom: 4px;
-  }
-
-  .toast-message {
-    font-size: 0.85rem;
-    opacity: 0.95;
-    line-height: 1.4;
-  }
-
-  .toast-close {
-    flex-shrink: 0;
-    background: none;
-    border: none;
-    color: currentColor;
-    cursor: pointer;
-    padding: 4px;
-    opacity: 0.7;
-    transition: opacity 150ms ease;
-    border-radius: 4px;
-  }
-
-  .toast-close:hover {
-    opacity: 1;
-    background: rgba(255, 255, 255, 0.1);
-  }
-
-  .toast-progress {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: rgba(255, 255, 255, 0.3);
-    transform-origin: left;
-    animation: toast-progress 5s linear;
-  }
-
-  @keyframes toast-progress {
-    from {
-      transform: scaleX(1);
-    }
-
-    to {
-      transform: scaleX(0);
-    }
-  }
-
-  /* === PROGRESS RING ANIMATIONS === */
-  .progress-ring-container {
-    position: relative;
-    width: 52px;
-    height: 52px;
-  }
-
-  .progress-ring {
-    transform: rotate(-90deg);
-    width: 100%;
-    height: 100%;
-  }
-
-  .progress-ring-circle-bg {
-    fill: none;
-    stroke: rgba(18, 56, 93, 0.1);
-    stroke-width: 4;
-  }
-
-  .dark .progress-ring-circle-bg {
-    stroke: rgba(255, 255, 255, 0.08);
-  }
-
-  .progress-ring-circle {
-    fill: none;
-    stroke: var(--veritas-navy);
-    stroke-width: 4;
-    stroke-linecap: round;
-    transition: stroke-dashoffset 500ms cubic-bezier(0.4, 0, 0.2, 1),
-      stroke 300ms ease;
-  }
-
-  .dark .progress-ring-circle {
-    stroke: rgba(59, 130, 246, 0.85);
-  }
-
-  .progress-ring-circle.ring-success {
-    stroke: #10b981;
-  }
-
-  .progress-ring-circle.ring-warning {
-    stroke: #f59e0b;
-  }
-
-  .progress-ring-circle.ring-danger {
-    stroke: #ef4444;
-  }
-
-  .progress-ring-text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 0.875rem;
-    font-weight: 700;
-    color: var(--veritas-navy);
-  }
-
-  .dark .progress-ring-text {
-    color: white;
-  }
-
-  /* === SPARKLINE TREND VISUALIZATION === */
-  .sparkline-container {
-    width: 100%;
-    height: 28px;
-    margin-top: 8px;
-  }
-
-  .sparkline {
-    width: 100%;
-    height: 100%;
-  }
-
-  .sparkline-line {
-    fill: none;
-    stroke: var(--veritas-gold);
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    opacity: 0.7;
-  }
-
-  .sparkline-area {
-    fill: url(#sparkline-gradient);
-    opacity: 0.3;
-  }
-
-  .sparkline-dot {
-    fill: var(--veritas-gold);
-    r: 3;
-    opacity: 0;
-    transition: opacity 200ms ease;
-  }
-
-  .sparkline-container:hover .sparkline-dot {
-    opacity: 1;
-  }
-
-  /* === ENHANCED HUD CARDS WITH PROGRESS === */
-  .hud-card-enhanced {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-
-  .hud-card-progress {
-    flex-shrink: 0;
-  }
-
-  .hud-card-info {
-    flex: 1;
-    min-width: 0;
-  }
-
-  /* === AMBIENT STATE INDICATORS === */
-  .ambient-state-overlay {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 5;
-    transition: background-color 600ms ease;
-  }
-
-  .ambient-state-overlay.state-normal {
-    background: transparent;
-  }
-
-  .ambient-state-overlay.state-all-responded {
-    background: radial-gradient(circle at top,
-        rgba(16, 185, 129, 0.08) 0%,
-        transparent 60%);
-    animation: ambient-pulse-success 3s ease-in-out infinite;
-  }
-
-  .ambient-state-overlay.state-time-critical {
-    background: radial-gradient(circle at top,
-        rgba(245, 158, 11, 0.08) 0%,
-        transparent 60%);
-    animation: ambient-pulse-warning 2s ease-in-out infinite;
-  }
-
-  .ambient-state-overlay.state-lockouts {
-    background: radial-gradient(circle at top,
-        rgba(239, 68, 68, 0.08) 0%,
-        transparent 60%);
-    animation: ambient-pulse-danger 1.5s ease-in-out infinite;
-  }
-
-  @keyframes ambient-pulse-success {
-
-    0%,
-    100% {
-      opacity: 0.5;
-    }
-
-    50% {
-      opacity: 1;
-    }
-  }
-
-  @keyframes ambient-pulse-warning {
-
-    0%,
-    100% {
-      opacity: 0.6;
-    }
-
-    50% {
-      opacity: 1;
-    }
-  }
-
-  @keyframes ambient-pulse-danger {
-
-    0%,
-    100% {
-      opacity: 0.7;
-    }
-
-    50% {
-      opacity: 1;
-    }
-  }
-
-  /* === KEYBOARD SHORTCUT HINTS === */
-  .kbd-hint {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2px 6px;
-    border-radius: 4px;
-    background: rgba(18, 56, 93, 0.1);
-    border: 1px solid rgba(18, 56, 93, 0.2);
-    font-size: 0.7rem;
-    font-weight: 600;
-    font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
-    color: var(--veritas-navy);
-    margin-left: 6px;
-    opacity: 0;
-    transition: opacity 200ms ease;
-  }
-
-  .dark .kbd-hint {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
-    color: white;
-  }
-
-  button:hover .kbd-hint,
-  button:focus .kbd-hint {
-    opacity: 0.7;
-  }
-
-  /* === GESTURE HINT SYSTEM === */
-  .gesture-hint {
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    margin-bottom: 8px;
-    padding: 6px 12px;
-    background: rgba(18, 56, 93, 0.95);
-    color: white;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    white-space: nowrap;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 200ms ease, transform 200ms ease;
-    z-index: 1000;
-  }
-
-  .gesture-hint::after {
-    content: '';
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    border: 5px solid transparent;
-    border-top-color: rgba(18, 56, 93, 0.95);
-  }
-
-  *:hover>.gesture-hint,
-  *:focus>.gesture-hint {
-    opacity: 1;
-    transform: translateX(-50%) translateY(-4px);
-  }
-
-  /* === LIVE DASHBOARD: MOBILE LAYOUT === */
-  .live-mobile-nav {
-    display: flex;
-    gap: 8px;
-    padding: 10px 16px;
-    background: linear-gradient(180deg, rgba(18, 56, 93, 0.12), rgba(18, 56, 93, 0));
-    border-bottom: 1px solid rgba(18, 56, 93, 0.12);
-    position: sticky;
-    top: 0;
-    z-index: 15;
-  }
-
-  .dark .live-mobile-nav {
-    background: linear-gradient(180deg, rgba(15, 23, 35, 0.92), rgba(15, 23, 35, 0.7));
-    border-color: rgba(255, 255, 255, 0.1);
-  }
-
-  .live-mobile-tab {
-    flex: 1;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 12px;
-    border-radius: 12px;
-    background: rgba(18, 56, 93, 0.05);
-    color: var(--veritas-navy);
-    font-weight: 700;
-    font-size: 0.9rem;
-    border: 1px solid transparent;
-    transition: all 180ms ease;
-  }
-
-  .dark .live-mobile-tab {
-    background: rgba(255, 255, 255, 0.05);
-    color: white;
-  }
-
-  .live-mobile-tab.is-active {
-    background: white;
-    color: var(--veritas-navy);
-    border-color: rgba(18, 56, 93, 0.12);
-    box-shadow: 0 10px 24px rgba(18, 56, 93, 0.08);
-  }
-
-  .dark .live-mobile-tab.is-active {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.2);
-  }
-
-  .live-mobile-tab-chip {
-    margin-left: auto;
-    padding: 4px 8px;
-    border-radius: 999px;
-    background: rgba(18, 56, 93, 0.08);
-    font-size: 0.8rem;
-    font-weight: 800;
-    color: var(--veritas-navy);
-  }
-
-  .dark .live-mobile-tab-chip {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-  }
-
-  .live-mobile-panel {
-    min-height: 0;
-  }
-
-  @media (max-width: 1024px) {
-    .live-mobile-panel {
-      display: none;
-    }
-
-    .live-mobile-panel.is-active {
-      display: flex;
-    }
-  }
-
-  @media (min-width: 1025px) {
-    .live-mobile-panel {
-      display: flex !important;
-    }
-
-    .live-mobile-nav {
-      display: none;
-    }
-  }
-
-  .live-mobile-actions {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    padding: 12px 16px 14px;
-    background: rgba(255, 255, 255, 0.96);
-    backdrop-filter: blur(12px);
-    box-shadow: 0 -8px 28px rgba(18, 56, 93, 0.15);
-    border-top: 1px solid rgba(18, 56, 93, 0.08);
-    z-index: 50;
-    display: none;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .dark .live-mobile-actions {
-    background: rgba(15, 23, 35, 0.94);
-    border-color: rgba(255, 255, 255, 0.08);
-  }
-
-  .live-mobile-actions__row {
-    display: flex;
-    gap: 12px;
-    align-items: stretch;
-    flex-wrap: wrap;
-  }
-
-  .live-mobile-timer {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    flex: 1;
-  }
-
-  .live-mobile-metrics {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    min-width: 160px;
-  }
-
-  .live-mobile-metric {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 12px;
-    border-radius: 12px;
-    background: rgba(18, 56, 93, 0.05);
-    color: var(--veritas-navy);
-    border: 1px solid rgba(18, 56, 93, 0.08);
-  }
-
-  .dark .live-mobile-metric {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.1);
-    color: white;
-  }
-
-  .live-mobile-metric-label {
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-weight: 700;
-  }
-
-  .live-mobile-metric-value {
-    font-weight: 900;
-    font-size: 1rem;
-  }
-
-  .live-mobile-timebox {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
-    align-items: center;
-  }
-
-  .live-mobile-timebox input {
-    text-align: center;
-    border-radius: 10px;
-    border: 1px solid rgba(18, 56, 93, 0.12);
-    padding: 10px 8px;
-    font-weight: 800;
-    color: var(--veritas-navy);
-    background: white;
-  }
-
-  .dark .live-mobile-timebox input {
-    border-color: rgba(255, 255, 255, 0.14);
-    background: rgba(255, 255, 255, 0.05);
-    color: white;
-  }
-
-  .live-mobile-timebox button {
-    border-radius: 10px;
-    border: 1px solid rgba(18, 56, 93, 0.12);
-    padding: 10px 6px;
-    font-weight: 800;
-    color: var(--veritas-navy);
-    background: rgba(18, 56, 93, 0.04);
-    transition: all 150ms ease;
-  }
-
-  .live-mobile-timebox button:active {
-    transform: translateY(1px);
-  }
-
-  .dark .live-mobile-timebox button {
-    color: white;
-    border-color: rgba(255, 255, 255, 0.12);
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  .live-mobile-pill {
-    width: 100%;
-    border-radius: 12px;
-    padding: 10px 12px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    font-weight: 800;
-    border: 1px solid transparent;
-  }
-
-  .live-mobile-pill-primary {
-    background: linear-gradient(135deg, #0f2d4a, var(--veritas-navy));
-    color: white;
-    box-shadow: 0 8px 18px rgba(18, 56, 93, 0.3);
-  }
-
-  .live-mobile-pill-muted {
-    background: rgba(18, 56, 93, 0.06);
-    color: var(--veritas-navy);
-    border-color: rgba(18, 56, 93, 0.16);
-  }
-
-  .live-mobile-pill-warning {
-    background: rgba(245, 158, 11, 0.12);
-    border-color: rgba(245, 158, 11, 0.28);
-    color: #b45309;
-    font-weight: 800;
-  }
-
-  .dark .live-mobile-pill-muted {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.12);
-    color: white;
-  }
-
-  .dark .live-mobile-pill-warning {
-    background: rgba(245, 158, 11, 0.2);
-    border-color: rgba(245, 158, 11, 0.28);
-    color: #fcd34d;
-  }
-
-  .live-mobile-actions__buttons {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .live-mobile-action {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 12px 10px;
-    border-radius: 12px;
-    font-weight: 800;
-    font-size: 0.95rem;
-    border: 1px solid transparent;
-    transition: all 160ms ease;
-  }
-
-  .live-mobile-action-primary {
-    background: linear-gradient(135deg, var(--veritas-gold), #b58a42);
-    color: white;
-    box-shadow: 0 8px 18px rgba(197, 160, 90, 0.3);
-  }
-
-  .live-mobile-action-info {
-    background: rgba(59, 130, 246, 0.12);
-    border-color: rgba(59, 130, 246, 0.28);
-    color: #1d4ed8;
-  }
-
-  .live-mobile-action-danger {
-    background: rgba(239, 68, 68, 0.12);
-    border-color: rgba(239, 68, 68, 0.28);
-    color: #b91c1c;
-  }
-
-  .live-mobile-action-ghost {
-    background: rgba(18, 56, 93, 0.05);
-    border-color: rgba(18, 56, 93, 0.12);
-    color: var(--veritas-navy);
-  }
-
-  .dark .live-mobile-action-ghost {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.12);
-    color: white;
-  }
-
-  .live-mobile-action:disabled,
-  .live-mobile-pill:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-  }
-
-  @media (max-width: 640px) {
-    .live-mobile-actions__buttons {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .live-mobile-actions__buttons button:nth-child(3) {
-      grid-column: span 2 / span 2;
-    }
-  }
-
-
-  /* === RESPONSIVE ENHANCEMENTS === */
-  @media (max-width: 1024px) {
-    .fab-container {
-      bottom: 16px;
-      right: 16px;
-    }
-
-    .fab-main {
-      width: 56px;
-      height: 56px;
-    }
-
-    .fab-button {
-      width: 48px;
-      height: 48px;
-    }
-
-    .toast-container {
-      right: 16px;
-      left: 16px;
-      max-width: none;
-    }
-  }
-
-  @media (max-width: 768px) {
-    .fab-container {
-      bottom: 12px;
-      right: 12px;
-    }
-
-    .fab-label {
-      display: none;
-    }
-
-    .toast-container {
-      top: 72px;
-    }
-
-    .progress-ring-container {
-      width: 44px;
-      height: 44px;
-    }
-  }
-
-  /* === UTILITY ANIMATIONS === */
-  @keyframes shimmer {
-    0% {
-      background-position: -200% 0;
-    }
-
-    100% {
-      background-position: 200% 0;
-    }
-  }
-
-  .shimmer {
-    background: linear-gradient(90deg,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.3) 50%,
-        rgba(255, 255, 255, 0) 100%);
-    background-size: 200% 100%;
-    animation: shimmer 2s infinite;
-  }
-
-  @keyframes bounce-subtle {
-
-    0%,
-    100% {
-      transform: translateY(0);
-    }
-
-    50% {
-      transform: translateY(-4px);
-    }
-  }
-
-  .bounce-subtle {
-    animation: bounce-subtle 2s ease-in-out infinite;
-  }
-
-  /* ========================================
-       🎨 PHASE 3: ACTIVITY FEED & ENHANCEMENTS
-       ======================================== */
-
-  /* === ACTIVITY FEED SYSTEM === */
-  .activity-feed {
-    position: fixed;
-    bottom: 100px;
-    right: 24px;
-    width: 320px;
-    max-height: 400px;
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(18, 56, 93, 0.2);
-    border: 1px solid rgba(18, 56, 93, 0.1);
-    display: flex;
-    flex-direction: column;
-    z-index: 999;
-    opacity: 0;
-    transform: translateY(20px);
-    pointer-events: none;
-    transition: all 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-
-  .dark .activity-feed {
-    background: rgba(15, 23, 35, 0.95);
-    border-color: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-  }
-
-  .activity-feed.is-open {
-    opacity: 1;
-    transform: translateY(0);
-    pointer-events: all;
-  }
-
-  .activity-feed-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 20px;
-    border-bottom: 1px solid rgba(18, 56, 93, 0.1);
-  }
-
-  .dark .activity-feed-header {
-    border-color: rgba(255, 255, 255, 0.1);
-  }
-
-  .activity-feed-title {
-    font-weight: 700;
-    font-size: 0.95rem;
-    color: var(--veritas-navy);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .dark .activity-feed-title {
-    color: white;
-  }
-
-  .activity-feed-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 20px;
-    height: 20px;
-    padding: 0 6px;
-    border-radius: 10px;
-    background: var(--veritas-gold);
-    color: white;
-    font-size: 0.7rem;
-    font-weight: 700;
-  }
-
-  .activity-feed-close {
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 6px;
-    transition: all 150ms ease;
-  }
-
-  .activity-feed-close:hover {
-    background: rgba(18, 56, 93, 0.1);
-    color: var(--veritas-navy);
-  }
-
-  .dark .activity-feed-close:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-  }
-
-  .activity-feed-list {
-    flex: 1;
-    overflow-y: auto;
-    padding: 12px 0;
-  }
-
-  .activity-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 12px 20px;
-    border-left: 3px solid transparent;
-    transition: all 150ms ease;
-    animation: activity-slide-in 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-
-  @keyframes activity-slide-in {
-    from {
-      opacity: 0;
-      transform: translateX(20px);
-    }
-
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-
-  .activity-item:hover {
-    background: rgba(18, 56, 93, 0.04);
-    border-left-color: var(--veritas-gold);
-  }
-
-  .dark .activity-item:hover {
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  .activity-icon {
-    flex-shrink: 0;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-  }
-
-  .activity-icon.success {
-    background: rgba(16, 185, 129, 0.15);
-    color: #10b981;
-  }
-
-  .activity-icon.warning {
-    background: rgba(245, 158, 11, 0.15);
-    color: #f59e0b;
-  }
-
-  .activity-icon.error {
-    background: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
-  }
-
-  .activity-icon.info {
-    background: rgba(59, 130, 246, 0.15);
-    color: #3b82f6;
-  }
-
-  .activity-content {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .activity-message {
-    font-size: 0.875rem;
-    color: var(--text-primary);
-    line-height: 1.4;
-    margin-bottom: 2px;
-  }
-
-  .dark .activity-message {
-    color: rgba(255, 255, 255, 0.9);
-  }
-
-  .activity-time {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-  }
-
-  .activity-feed-empty {
-    padding: 40px 20px;
-    text-align: center;
-    color: var(--text-secondary);
-  }
-
-  .activity-feed-empty .material-symbols-outlined {
-    font-size: 48px;
-    opacity: 0.3;
-    margin-bottom: 8px;
-  }
-
-  /* === ENHANCED STUDENT STATUS TILES === */
-  .student-tile {
-    position: relative;
-    padding: 12px 16px;
-    border-radius: 12px;
-    border: 2px solid transparent;
-    background: white;
-    transition: all 200ms ease;
-    cursor: pointer;
-  }
-
-  .dark .student-tile {
-    background: rgba(15, 23, 35, 0.5);
-  }
-
-  .student-tile:hover {
-    border-color: var(--veritas-gold);
-    transform: translateX(4px);
-    box-shadow: 0 4px 12px rgba(18, 56, 93, 0.15);
-  }
-
-  .student-tile.status-correct {
-    border-left: 4px solid #10b981;
-    background: linear-gradient(to right, rgba(16, 185, 129, 0.08), transparent);
-  }
-
-  .student-tile.status-incorrect {
-    border-left: 4px solid #ef4444;
-    background: linear-gradient(to right, rgba(239, 68, 68, 0.08), transparent);
-  }
-
-  .student-tile.status-locked {
-    border-left: 4px solid #f59e0b;
-    background: linear-gradient(to right, rgba(245, 158, 11, 0.08), transparent);
-    animation: pulse-gentle 2s ease-in-out infinite;
-  }
-
-  @keyframes pulse-gentle {
-
-    0%,
-    100% {
-      opacity: 1;
-    }
-
-    50% {
-      opacity: 0.85;
-    }
-  }
-
-  .student-tile.status-waiting {
-    border-left: 4px solid #94a3b8;
-    background: linear-gradient(to right, rgba(148, 163, 184, 0.08), transparent);
-  }
-
-  .student-tile-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 6px;
-  }
-
-  .student-name {
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: var(--text-primary);
-  }
-
-  .dark .student-name {
-    color: rgba(255, 255, 255, 0.95);
-  }
-
-  .student-status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.7rem;
-    font-weight: 600;
-  }
-
-  .student-status-badge.correct {
-    background: rgba(16, 185, 129, 0.15);
-    color: #10b981;
-  }
-
-  .student-status-badge.incorrect {
-    background: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
-  }
-
-  .student-status-badge.locked {
-    background: rgba(245, 158, 11, 0.15);
-    color: #f59e0b;
-  }
-
-  .student-status-badge.waiting {
-    background: rgba(148, 163, 184, 0.15);
-    color: #64748b;
-  }
-
-  .student-details {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-  }
-
-  .student-answer {
-    font-weight: 600;
-  }
-
-  .student-tile-actions {
-    display: flex;
-    gap: 6px;
-    margin-top: 8px;
-    opacity: 0;
-    transition: opacity 200ms ease;
-  }
-
-  .student-tile:hover .student-tile-actions {
-    opacity: 1;
-  }
-
-  .student-action-btn {
-    flex: 1;
-    padding: 6px 12px;
-    border-radius: 6px;
-    border: 1px solid rgba(18, 56, 93, 0.2);
-    background: white;
-    color: var(--veritas-navy);
-    font-size: 0.75rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 150ms ease;
-  }
-
-  .dark .student-action-btn {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.1);
-    color: white;
-  }
-
-  .student-action-btn:hover {
-    background: var(--veritas-navy);
-    color: white;
-    border-color: var(--veritas-navy);
-  }
-
-  .dark .student-action-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-  }
-
-  /* === ENHANCED MODAL DESIGNS === */
-  .modal-section {
-    margin-bottom: 24px;
-  }
-
-  .modal-section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 0;
-    cursor: pointer;
-    user-select: none;
-    transition: all 150ms ease;
-  }
-
-  .modal-section-header:hover {
-    color: var(--veritas-gold);
-  }
-
-  .modal-section-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: 600;
-    font-size: 0.95rem;
-  }
-
-  .modal-section-toggle {
-    transition: transform 200ms ease;
-  }
-
-  .modal-section.is-collapsed .modal-section-toggle {
-    transform: rotate(-90deg);
-  }
-
-  .modal-section-content {
-    max-height: 1000px;
-    overflow: hidden;
-    transition: max-height 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .modal-section.is-collapsed .modal-section-content {
-    max-height: 0;
-  }
-
-  /* === RESPONSIVE ADJUSTMENTS === */
-  @media (max-width: 1024px) {
-    .activity-feed {
-      width: 280px;
-      bottom: 80px;
-      right: 16px;
-    }
-  }
-
-  @media (max-width: 768px) {
-    .activity-feed {
-      width: calc(100vw - 32px);
-      right: 16px;
-      left: 16px;
-      bottom: 70px;
-    }
-  }
-
-  /* Session HUD cards for quick-glance metrics */
-  .session-hud-surface {
-    background: linear-gradient(135deg, rgba(18, 56, 93, 0.04), rgba(197, 160, 90, 0.08));
-  }
-
-  .dark .session-hud-surface {
-    background: linear-gradient(135deg, rgba(15, 23, 42, 0.7), rgba(56, 189, 248, 0.12));
-  }
-
-  .session-hud-grid {
-    display: grid;
-    gap: 16px;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  }
-
-  .hud-card {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 8px;
-    padding: 18px;
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.85);
-    border: 1px solid rgba(18, 56, 93, 0.08);
-    box-shadow: 0 10px 30px -18px rgba(18, 56, 93, 0.45);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .dark .hud-card {
-    background: rgba(15, 23, 35, 0.85);
-    border-color: rgba(255, 255, 255, 0.05);
-    box-shadow: 0 10px 35px -22px rgba(15, 23, 35, 0.9);
-  }
-
-  .hud-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 18px 40px -18px rgba(18, 56, 93, 0.4);
-  }
-
-  .hud-card-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: rgba(17, 24, 39, 0.55);
-  }
-
-  .dark .hud-card-label {
-    color: rgba(255, 255, 255, 0.55);
-  }
-
-  .hud-card-value {
-    font-size: 1.85rem;
-    font-weight: 800;
-    color: var(--veritas-navy);
-    letter-spacing: -0.02em;
-  }
-
-  .dark .hud-card-value {
-    color: rgba(255, 255, 255, 0.92);
-  }
-
-  .hud-card-caption {
-    font-size: 0.85rem;
-    color: rgba(55, 65, 81, 0.75);
-  }
-
-  .dark .hud-card-caption {
-    color: rgba(226, 232, 240, 0.65);
-  }
-
-  .hud-trend {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-
-  .hud-trend-up {
-    color: #15803d;
-  }
-
-  .hud-trend-down {
-    color: #b91c1c;
-  }
-
-  .hud-trend-steady {
-    color: rgba(55, 65, 81, 0.75);
-  }
-
-  .dark .hud-trend-steady {
-    color: rgba(226, 232, 240, 0.7);
-  }
-
-  .hud-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    border-radius: 999px;
-    font-size: 0.7rem;
-    padding: 4px 10px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-
-  .hud-chip[data-variant="ready"] {
-    background: rgba(59, 130, 246, 0.12);
-    color: #2563eb;
-  }
-
-  .hud-chip[data-variant="running"] {
-    background: rgba(16, 185, 129, 0.12);
-    color: #059669;
-  }
-
-  .hud-chip[data-variant="critical"] {
-    background: rgba(248, 113, 113, 0.18);
-    color: #dc2626;
-    animation: timer-pulse-critical 1s ease-in-out infinite;
-  }
-
-  .hud-chip[data-variant="paused"] {
-    background: rgba(148, 163, 184, 0.16);
-    color: rgba(30, 41, 59, 0.8);
-  }
-
-  .hud-chip[data-variant="complete"] {
-    background: rgba(34, 197, 94, 0.18);
-    color: #15803d;
-  }
-
-  @media (max-width: 768px) {
-    .session-hud-grid {
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    }
-
-    .hud-card {
-      padding: 16px;
-    }
-
-    .hud-card-value {
-      font-size: 1.55rem;
-    }
-  }
-
-
-  /* View Toggle Button States */
-  #view-cards-btn.active {
-    background: #12385d !important;
-    color: white !important;
-  }
-
-  #view-table-btn.active {
-    background: #12385d !important;
-    color: white !important;
-  }
-
-  /* Toast Action Button */
-  .toast-action-btn {
-    margin-top: 8px;
-    display: inline-block;
-    padding: 6px 12px;
-    background-color: rgba(255, 255, 255, 0.9);
-    color: #12385d;
-    /* Veritas Navy */
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    border-radius: 6px;
-    border: none;
-    cursor: pointer;
-    transition: background-color 0.2s, transform 0.1s;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  .toast-action-btn:hover {
-    background-color: #ffffff;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
-  }
-
-  .toast-action-btn:active {
-    transform: translateY(0);
-  }
-
-  /* Live view spacing adjustments */
-  .live-view-shell {
-    padding-top: 0;
-    min-height: calc(100vh - 4rem);
-    height: auto;
-  }
-
-  .live-view-grid {
-    gap: 1rem !important;
-    height: 100%;
-    align-items: flex-start;
-  }
-
-  /* P0-6 & P0-7 FIX: Consistent question card layout */
-  .live-question-card {
-    margin-top: 0;
-    margin-bottom: 0;
-    padding-top: 16px;
-    padding-bottom: 16px;
-    /* Prevent margin collapse and ensure consistent position */
-  }
-
-  .live-question-card .question-stem-text {
-    margin-top: 0;
-    margin-bottom: 0;
-    white-space: pre-wrap;
-    /* P0-5: Preserve newlines like student view */
-  }
-
-  /* P0-6 FIX: Prevent flex growth in left column that causes variable gap */
-  .live-view-grid>div:first-child {
-    /* Left column should not use flex-1 growth on the answer section */
-    /* This ensures question card always appears at consistent distance from header */
-  }
-
-  .live-student-panel {
-    box-shadow: 0 8px 20px rgba(18, 56, 93, 0.06);
-  }
-
-  /* Student Grid Layout - Compact Mode */
-  #student-status-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-    gap: 0.5rem;
-    padding-top: 2px;
-  }
-
-  .student-tile {
-    min-height: 48px;
-    border: 1px solid #e2e8f0;
-    background: #ffffff;
-    border-radius: 10px;
-    padding: 8px 10px;
-    box-shadow: 0 4px 12px rgba(18, 56, 93, 0.04);
-    transition: all 150ms ease;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: default;
-  }
-
-  .student-tile:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 16px rgba(18, 56, 93, 0.08);
-    border-color: #cbd5e1;
-  }
-
-  .dark .student-tile {
-    background: rgba(18, 56, 93, 0.35);
-    border-color: rgba(255, 255, 255, 0.08);
-    box-shadow: none;
-  }
-
-  .student-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 8px;
-    border-radius: 999px;
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.01em;
-  }
-
-  .student-name {
-    font-size: 13px;
-    font-weight: 700;
-    line-height: 1.25;
-    color: #0f172a;
-  }
-
-  .dark .student-name {
-    color: #f8fafc;
-  }
-
-  .student-sub {
-    font-size: 12px;
-    color: #475569;
-    line-height: 1.2;
-  }
-
-  .dark .student-sub {
-    color: #e2e8f0;
-    opacity: 0.75;
-  }
-
-  .student-badges {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .student-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 4px 8px;
-    border-radius: 10px;
-    font-size: 11px;
-    font-weight: 600;
-    border: 1px solid #e2e8f0;
-    color: #0f172a;
-    background: #f8fafc;
-  }
-
-  .dark .student-badge {
-    border-color: rgba(255, 255, 255, 0.08);
-    color: #e2e8f0;
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  .student-actions {
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-  }
-
-  .student-action-btn {
-    height: 26px;
-    width: 26px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    background: #fff;
-    color: #0f172a;
-    transition: background-color 120ms ease, border-color 120ms ease;
-  }
-
-  .student-action-btn:hover {
-    background: #eef2ff;
-    border-color: #c7d2fe;
-  }
-
-  .dark .student-action-btn {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.1);
-    color: #e2e8f0;
-  }
-
-  .student-tile.locked {
-    border-color: #f87171;
-    background: #fef2f2;
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
-  }
-
-  .student-tile.submitted.correct {
-    border-color: #34d399;
-    background: #ecfdf5;
-  }
-
-  .student-tile.submitted.incorrect {
-    border-color: #fb7185;
-    background: #fff1f2;
-  }
-
-  /* Popover Enhancement */
-  #locked-students-popover {
-    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
-    transform-origin: top center;
-  }
-
-  #locked-students-popover:not(.hidden) {
-    animation: popover-entrance 200ms ease-out;
-  }
-
-  @keyframes popover-entrance {
-    from {
-      opacity: 0;
-      transform: translate(-50%, -10px) scale(0.95);
-    }
-
-    to {
-      opacity: 1;
-      transform: translate(-50%, 0) scale(1);
-    }
-  }
-
-  .student-top {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .student-status-icon {
-    height: 34px;
-    width: 34px;
-    border-radius: 10px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    font-weight: 700;
-  }
-
-  .student-status-icon .material-symbols-outlined {
-    font-size: 20px;
-    font-variation-settings: 'FILL' 0, 'wght' 600, 'GRAD' 0, 'opsz' 20;
-    line-height: 1;
-  }
-
-  .student-status-icon.waiting {
-    background: #eef2ff;
-    color: #334155;
-    border: 1px solid #e2e8f0;
-  }
-
-  .student-status-icon.correct {
-    background: #ecfdf3;
-    color: #059669;
-    border: 1px solid #bbf7d0;
-  }
-
-  .student-status-icon.incorrect {
-    background: #fef3c7;
-    color: #b45309;
-    border: 1px solid #fde68a;
-  }
-
-  .student-status-icon.locked {
-    background: #fee2e2;
-    color: #b91c1c;
-    border: 1px solid #fecaca;
-  }
-
-  .student-status-icon.blocked {
-    background: #fff1f2;
-    color: #be123c;
-    border: 1px solid #fecdd3;
-  }
-
-  .student-status-icon.fullscreen {
-    background: #e0f2fe;
-    color: #0369a1;
-    border: 1px solid #bae6fd;
-  }
-
-  .badge-violation {
-    background: #fef2f2;
-    border-color: #fecdd3;
-    color: #b91c1c;
-  }
-
-  .dark .badge-violation {
-    background: rgba(248, 113, 113, 0.12);
-    border-color: rgba(248, 113, 113, 0.3);
-    color: #fecdd3;
-  }
-
-  .student-name {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .student-top {
-    align-items: center;
-  }
-
-  /* Confidence pulse card */
-  #live-metacognition-card {
-    box-shadow: 0 8px 20px rgba(18, 56, 93, 0.06);
-  }
-
-  .confidence-row {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 10px;
-    border-radius: 12px;
-    border: 1px solid rgba(15, 23, 42, 0.06);
-    background: #f8fafc;
-  }
-
-  .dark .confidence-row {
-    border-color: rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.03);
-  }
-
-  .confidence-bar-track {
-    height: 8px;
-    border-radius: 999px;
-    background: rgba(15, 23, 42, 0.06);
-    overflow: hidden;
-  }
-
-  .confidence-bar-fill {
-    height: 100%;
-    border-radius: 999px;
-    transition: width 180ms ease;
-  }
-
-  /* Gentle pulse animation for locked students */
-  @keyframes pulse-gentle {
-
-    0%,
-    100% {
-      opacity: 1;
-    }
-
-    50% {
-      opacity: 0.85;
-    }
-  }
-
-  .animate-pulse-gentle {
-    animation: pulse-gentle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-
-  /* ===========================
-       POLL WIZARD STYLES
-       =========================== */
-
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
-  }
-
-  .modal-overlay.hidden {
-    display: none;
-  }
-
-  .modal-content-wizard {
-    width: 90%;
-    max-width: 900px;
-    max-height: 90vh;
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  .wizard-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem 2rem;
-    border-bottom: 1px solid #e5e7eb;
-    background: linear-gradient(135deg, #12385d 0%, #1e4976 100%);
-  }
-
-  .wizard-main-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: white;
-    margin: 0;
-  }
-
-  .modal-close-btn {
-    background: transparent;
-    border: none;
-    color: white;
-    cursor: pointer;
-    padding: 0.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: background 0.2s;
-  }
-
-  .modal-close-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-  }
-
-  /* Progress Indicator */
-  .wizard-progress {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1.5rem 2rem;
-    background: #f9fafb;
-    border-bottom: 1px solid #e5e7eb;
-  }
-
-  .progress-step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    flex: 1;
-    opacity: 0.5;
-    transition: opacity 0.3s;
-  }
-
-  .progress-step.active {
-    opacity: 1;
-  }
-
-  .progress-step.completed .progress-circle {
-    background: #10b981;
-    border-color: #10b981;
-    color: white;
-  }
-
-  .progress-circle {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: 2px solid #d1d5db;
-    background: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 1rem;
-    color: #6b7280;
-    transition: all 0.3s;
-  }
-
-  .progress-step.active .progress-circle {
-    border-color: #12385d;
-    color: #12385d;
-    background: #dbeafe;
-    box-shadow: 0 0 0 4px rgba(18, 56, 93, 0.1);
-  }
-
-  /* Progress labels in the wizard modal (light background) */
-  .wizard-progress .progress-label {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #6b7280;
-  }
-
-  .wizard-progress .progress-step.active .progress-label {
-    color: #12385d;
-    font-weight: 600;
-  }
-
-  /* Header progress labels use Tailwind classes (text-white/80 etc.) - no override needed */
-
-  .progress-connector {
-    flex: 1;
-    height: 2px;
-    background: #d1d5db;
-    margin: 0 0.5rem;
-    position: relative;
-    top: -12px;
-  }
-
-  /* Wizard Body */
-  .wizard-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 2rem;
-  }
-
-  .wizard-step {
-    display: none;
-    animation: slideIn 0.3s ease-out;
-  }
-
-  .wizard-step.active {
-    display: block;
-  }
-
-  @keyframes slideIn {
-    from {
-      opacity: 0;
-      transform: translateX(20px);
-    }
-
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-
-  .step-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #1f2937;
-    margin: 0 0 0.5rem 0;
-  }
-
-  .step-description {
-    font-size: 1rem;
-    color: #6b7280;
-    margin: 0 0 2rem 0;
-  }
-
-  /* Mode Selection Cards */
-  .mode-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1.5rem;
-  }
-
-  .mode-card {
-    background: white;
-    border: 2px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 2rem;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.3s;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-  }
-
-  .mode-card:hover {
-    border-color: #12385d;
-    box-shadow: 0 8px 24px rgba(18, 56, 93, 0.15);
-    transform: translateY(-4px);
-  }
-
-  .mode-card.selected {
-    border-color: #12385d;
-    background: linear-gradient(135deg, #dbeafe 0%, #e0f2fe 100%);
-    box-shadow: 0 0 0 4px rgba(18, 56, 93, 0.1);
-  }
-
-  .mode-icon {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #12385d 0%, #1e4976 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 1rem;
-  }
-
-  .mode-icon .material-symbols-outlined {
-    font-size: 3rem;
-    color: white;
-  }
-
-  .mode-title {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #1f2937;
-    margin: 0;
-  }
-
-  .mode-description {
-    font-size: 0.95rem;
-    color: #6b7280;
-    line-height: 1.6;
-    margin: 0;
-  }
-
-  .mode-features {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    justify-content: center;
-    margin-top: 1rem;
-  }
-
-  .mode-badge {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    background: #f3f4f6;
-    color: #4b5563;
-    font-size: 0.75rem;
-    font-weight: 600;
-    border-radius: 9999px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .mode-card.selected .mode-badge {
-    background: #12385d;
-    color: white;
-  }
-
-  /* Form Styles */
-  .config-section {
-    margin-top: 2rem;
-    padding-top: 2rem;
-    border-top: 1px solid #e5e7eb;
-  }
-
-  .form-group {
-    margin-bottom: 1.5rem;
-  }
-
-  .form-label {
-    display: block;
-    font-weight: 600;
-    color: #374151;
-    margin-bottom: 0.5rem;
-    font-size: 0.95rem;
-  }
-
-  .form-label.required::after {
-    content: ' *';
-    color: #ef4444;
-  }
-
-  .form-sublabel {
-    display: block;
-    font-weight: 500;
-    color: #6b7280;
-    margin-bottom: 0.4rem;
-    font-size: 0.875rem;
-  }
-
-  .form-input,
-  .form-select,
-  .form-textarea {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 1rem;
-    color: #1f2937;
-    background: white;
-    transition: border-color 0.2s, box-shadow 0.2s;
-  }
-
-  .form-input:focus,
-  .form-select:focus,
-  .form-textarea:focus {
-    outline: none;
-    border-color: #12385d;
-    box-shadow: 0 0 0 3px rgba(18, 56, 93, 0.1);
-  }
-
-  .form-textarea {
-    resize: vertical;
-    min-height: 80px;
-    font-family: inherit;
-  }
-
-  .form-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-  }
-
-  .field-hint {
-    display: block;
-    font-size: 0.875rem;
-    color: #6b7280;
-    margin-top: 0.4rem;
-  }
-
-  .field-error {
-    display: block;
-    font-size: 0.875rem;
-    color: #ef4444;
-    margin-top: 0.4rem;
-    font-weight: 500;
-  }
-
-  .form-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    cursor: pointer;
-    padding: 0.5rem 0;
-  }
-
-  .form-checkbox input[type="checkbox"],
-  .form-checkbox input[type="radio"] {
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-  }
-
-  .checkbox-label {
-    font-size: 0.95rem;
-    color: #374151;
-    cursor: pointer;
-  }
-
-  .checkbox-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    padding: 1rem;
-    background: #f9fafb;
-    border-radius: 8px;
-  }
-
-  /* Questions Builder */
-  .questions-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .question-card {
-    background: white;
-    border: 2px solid #e5e7eb;
-    border-radius: 12px;
-    overflow: hidden;
-    transition: box-shadow 0.2s;
-  }
-
-  .question-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  }
-
-  .question-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.5rem;
-    background: #f9fafb;
-    border-bottom: 1px solid #e5e7eb;
-  }
-
-  .question-number {
-    font-weight: 700;
-    color: #12385d;
-    font-size: 1rem;
-  }
-
-  .question-card-body {
-    padding: 1.5rem;
-  }
-
-  .btn-add-question {
-    width: 100%;
-    padding: 1rem;
-    background: #f3f4f6;
-    border: 2px dashed #d1d5db;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-    font-weight: 600;
-    color: #6b7280;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .btn-add-question:hover {
-    background: #e5e7eb;
-    border-color: #12385d;
-    color: #12385d;
-  }
-
-  .btn-icon,
-  .btn-icon-danger {
-    background: transparent;
-    border: none;
-    padding: 0.5rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 6px;
-    transition: background 0.2s;
-  }
-
-  .btn-icon:hover {
-    background: #f3f4f6;
-  }
-
-  .btn-icon-danger {
-    color: #ef4444;
-  }
-
-  .btn-icon-danger:hover {
-    background: #fee2e2;
-  }
-
-  /* Review Section */
-  .review-section {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-  }
-
-  .review-card {
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 1.5rem;
-  }
-
-  .review-heading {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: #1f2937;
-    margin: 0 0 1rem 0;
-  }
-
-  .review-details {
-    display: grid;
-    grid-template-columns: 140px 1fr;
-    gap: 0.75rem 1rem;
-    margin: 0;
-  }
-
-  .review-details dt {
-    font-weight: 600;
-    color: #6b7280;
-  }
-
-  .review-details dd {
-    margin: 0;
-    color: #1f2937;
-  }
-
-  .review-questions {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .review-question-item {
-    padding: 0.75rem 1rem;
-    background: white;
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
-  }
-
-  .review-question-title {
-    font-weight: 600;
-    color: #1f2937;
-    margin-bottom: 0.5rem;
-  }
-
-  .review-question-meta {
-    font-size: 0.875rem;
-    color: #6b7280;
-  }
-
-  .review-actions {
-    display: flex;
-    gap: 1rem;
-    margin-top: 2rem;
-    padding-top: 2rem;
-    border-top: 1px solid #e5e7eb;
-  }
-
-  /* Wizard Footer */
-  .wizard-footer {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1.5rem 2rem;
-    border-top: 1px solid #e5e7eb;
-    background: #f9fafb;
-  }
-
-  .footer-spacer {
-    flex: 1;
-  }
-
-  .btn-primary,
-  .btn-secondary {
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    transition: all 0.2s;
-    border: none;
-  }
-
-  .btn-primary {
-    background: #12385d;
-    color: white;
-  }
-
-  .btn-primary:hover:not(:disabled) {
-    background: #0f2d4a;
-    box-shadow: 0 4px 12px rgba(18, 56, 93, 0.3);
-  }
-
-  .btn-primary:disabled {
-    background: #d1d5db;
-    color: #9ca3af;
-    cursor: not-allowed;
-  }
-
-  .btn-secondary {
-    background: white;
-    color: #374151;
-    border: 1px solid #d1d5db;
-  }
-
-  .btn-secondary:hover:not(:disabled) {
-    background: #f9fafb;
-    border-color: #9ca3af;
-  }
-
-  .btn-secondary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  /* Responsive Adjustments */
-  @media (max-width: 768px) {
-    .modal-content-wizard {
-      width: 95%;
-      max-height: 95vh;
-    }
-
-    .wizard-progress {
-      padding: 1rem;
-    }
-
-    /* Only hide wizard modal progress labels on small screens */
-    .wizard-progress .progress-label {
-      display: none;
-    }
-
-    .wizard-body {
-      padding: 1.5rem;
-    }
-
-    .mode-cards {
-      grid-template-columns: 1fr;
-    }
-
-    .form-row {
-      grid-template-columns: 1fr;
-    }
-
-    .wizard-footer {
-      flex-wrap: wrap;
-    }
-  }
-
-  /* =============================================================================
-     MOBILE LIVE SESSION LAYOUT FIXES
-     ============================================================================= */
-
-  /* Mobile: Make live session header more compact */
-  @media (max-width: 640px) {
-
-    /* Reduce header height and make it single-line */
-    #header-live {
-      height: auto;
-      min-height: 48px;
-      padding: 8px 12px;
-    }
-
-    #header-live .flex.w-full {
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    /* Compact poll context */
-    #header-live .min-w-0.flex.flex-col {
-      flex: 0 1 auto;
-      min-width: 0;
-    }
-
-    #header-poll-name {
-      font-size: 12px !important;
-      max-width: 120px;
-    }
-
-    /* Make timer controls more compact on mobile */
-    #timer-main-container {
-      padding: 4px !important;
-      gap: 4px !important;
-    }
-
-    #timer-display {
-      width: 50px !important;
-      font-size: 14px !important;
-      padding: 0 !important;
-    }
-
-    #timer-main-container button {
-      width: 28px !important;
-      height: 28px !important;
-    }
-
-    #timer-main-container .material-symbols-outlined {
-      font-size: 18px !important;
-    }
-
-    /* Hide less essential buttons on very small screens */
-    #reset-btn,
-    #header-next-btn {
-      display: none !important;
-    }
-
-    /* Compact reveal button */
-    #header-end-show-btn {
-      padding: 6px 10px !important;
-      font-size: 12px !important;
-      height: auto !important;
-    }
-
-    #header-end-show-btn .material-symbols-outlined {
-      font-size: 16px !important;
-    }
-
-    /* More actions button */
-    #live-more-actions-btn {
-      width: 32px !important;
-      height: 32px !important;
-    }
-  }
-
-  /* Mobile: Live status bar compactness */
-  @media (max-width: 640px) {
-    #live-status-bar {
-      padding: 6px 12px !important;
-      gap: 8px !important;
-      height: auto !important;
-      min-height: 36px;
-      flex-wrap: wrap;
-    }
-
-    #live-status-bar .material-symbols-outlined {
-      font-size: 14px !important;
-    }
-
-    #live-status-bar .font-bold {
-      font-size: 13px !important;
-    }
-
-    #live-status-bar .text-sm {
-      font-size: 11px !important;
-    }
-
-    /* Hide sparklines on mobile */
-    #live-status-bar [id*="sparkline"],
-    #live-status-bar .sparkline-container {
-      display: none !important;
-    }
-  }
-
-  /* Mobile: Main content area adjustments */
-  @media (max-width: 768px) {
-    .live-view-shell {
-      padding: 8px !important;
-      padding-bottom: 80px !important;
-      /* Space for FAB */
-    }
-
-    .live-view-grid {
-      gap: 8px !important;
-    }
-
-    /* Question card compact mode */
-    .live-question-card {
-      padding: 12px !important;
-    }
-
-    .live-question-card .question-stem-text {
-      font-size: 15px !important;
-      line-height: 1.4 !important;
-    }
-
-    /* Answer choices on mobile */
-    #results-bars {
-      gap: 6px !important;
-    }
-
-    #results-bars .answer-choice-btn,
-    #results-bars button {
-      padding: 10px 12px !important;
-      font-size: 14px !important;
-      min-height: 44px !important;
-    }
-
-    /* Student panel - collapse by default on very small screens */
-    #live-sidebar {
-      max-height: 200px;
-      overflow-y: auto;
-    }
-
-    .live-student-panel {
-      max-height: 180px;
-    }
-
-    #student-status-grid {
-      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
-      gap: 4px !important;
-    }
-
-    .student-tile {
-      padding: 6px 8px !important;
-      min-height: 40px !important;
-    }
-
-    .student-name {
-      font-size: 11px !important;
-    }
-
-    .student-sub {
-      font-size: 10px !important;
-    }
-  }
-
-  /* Very small screens (iPhone SE etc) */
-  @media (max-width: 375px) {
-    #header-live {
-      padding: 6px 8px;
-    }
-
-    #header-poll-name {
-      max-width: 80px;
-      font-size: 11px !important;
-    }
-
-    #timer-display {
-      width: 44px !important;
-      font-size: 12px !important;
-    }
-
-    .live-question-card .question-stem-text {
-      font-size: 14px !important;
-    }
-
-    #results-bars button {
-      padding: 8px 10px !important;
-      font-size: 13px !important;
-    }
-
-    /* Collapse sidebar completely on very small screens */
-    #live-sidebar {
-      max-height: 150px;
-    }
-  }
-
-  /* Fix for answer bars overflow on mobile */
-  @media (max-width: 640px) {
-
-    .answer-choice-container,
-    .answer-bar-wrapper {
-      overflow-x: hidden;
-    }
-
-    .answer-bar-wrapper .answer-text,
-    #results-bars .answer-text {
-      white-space: normal !important;
-      word-break: break-word;
-    }
-  }
-
-  /* Ensure FAB doesn't overlap content on mobile */
-  @media (max-width: 640px) {
-    .fab-container {
-      bottom: 12px !important;
-      right: 12px !important;
-    }
-
-    .fab-button {
-      width: 48px !important;
-      height: 48px !important;
-    }
-
-    .fab-action {
-      margin-bottom: 8px !important;
-    }
-  }
-</style>
-</style>
-</head>
-
-<body class="font-display bg-background-light dark:bg-background-dark text-brand-dark-gray dark:text-brand-white">
-</head>
-
-<body class="light">
-  <!-- 🎯 Ambient State Overlay - Provides visual feedback for system states -->
-<div id="ambient-state-overlay" class="ambient-state-overlay state-normal"></div>
-
-<!-- 🔔 Toast Notification Container - For elegant, non-intrusive alerts -->
-<div id="toast-container" class="toast-container"></div>
-
-<div class="flex h-screen w-full flex-col">
-  <!-- Header - Default State -->
-  <header id="header-default"
-    class="flex flex-wrap items-center gap-4 border-b border-solid border-veritas-navy/80 bg-veritas-navy px-6 py-4 shadow-md">
-    <div class="flex items-center gap-3">
-      <button id="dashboard-sidebar-toggle" type="button"
-        class="flex h-10 w-10 items-center justify-center rounded-full bg-brand-white/10 text-brand-white transition-colors hover:bg-brand-white/20 focus:outline-none focus:ring-2 focus:ring-brand-white/60"
-        aria-label="Hide navigation" aria-expanded="true">
-        <span class="material-symbols-outlined text-2xl">menu_open</span>
-      </button>
-      <div class="flex items-center gap-4 cursor-pointer hover:opacity-80 transition-opacity" onclick="showDashboard()"
-        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showDashboard();}" role="button"
-        tabindex="0">
-        <img alt="Malvern Prep Logo" class="h-12 w-auto"
-          src="https://raw.githubusercontent.com/stephenborish/veritasassets/f0a824864d7d66637a13b822bff99fa6830e6123/mplogo.png" />
-        <div class="flex flex-col">
-          <h1 class="text-brand-white text-xl font-bold tracking-wide uppercase" style="letter-spacing: 0.15em;">Veritas
-          </h1>
-          <p class="text-brand-white/70 text-xs tracking-wide">Teacher Dashboard</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Wizard Progress Steps in Header (shown only during wizard) -->
-    <div id="header-wizard-progress" class="hidden items-center gap-1 ml-4">
-      <div class="progress-step active flex items-center gap-1" data-step="1">
-        <div
-          class="progress-circle h-6 w-6 rounded-full bg-white/20 text-white text-xs font-bold flex items-center justify-center">
-          1</div>
-        <span class="progress-label text-white/80 text-xs font-medium hidden md:inline">Mode</span>
-      </div>
-      <div class="progress-connector w-4 h-0.5 bg-white/30"></div>
-
-      <div class="progress-step flex items-center gap-1" data-step="2">
-        <div
-          class="progress-circle h-6 w-6 rounded-full bg-white/20 text-white/70 text-xs font-bold flex items-center justify-center">
-          2</div>
-        <span class="progress-label text-white/60 text-xs font-medium hidden md:inline">Configure</span>
-      </div>
-      <div class="progress-connector w-4 h-0.5 bg-white/30"></div>
-
-      <div class="progress-step flex items-center gap-1" data-step="3">
-        <div
-          class="progress-circle h-6 w-6 rounded-full bg-white/20 text-white/70 text-xs font-bold flex items-center justify-center">
-          3</div>
-        <span class="progress-label text-white/60 text-xs font-medium hidden md:inline">Questions</span>
-      </div>
-      <div class="progress-connector w-4 h-0.5 bg-white/30"></div>
-
-      <div class="progress-step flex items-center gap-1" data-step="4">
-        <div
-          class="progress-circle h-6 w-6 rounded-full bg-white/20 text-white/70 text-xs font-bold flex items-center justify-center">
-          4</div>
-        <span class="progress-label text-white/60 text-xs font-medium hidden md:inline">Review</span>
-      </div>
-    </div>
-
-
-    <div id="header-session-controls" class="flex flex-1 flex-wrap items-center justify-center gap-3 text-sm">
-      <div class="min-w-[220px]">
-        <label for="poll-select" class="sr-only">Select Poll to Start Session</label>
-        <select id="poll-select"
-          class="w-full rounded-lg border border-brand-white/30 bg-brand-white/10 px-3 py-2 text-sm text-brand-white placeholder-brand-white/70 focus:border-brand-white focus:outline-none focus:ring-2 focus:ring-veritas-gold/60">
-          <option value="">-- Choose a poll --</option>
-        </select>
-      </div>
-      <div class="flex flex-col gap-2">
-        <div class="flex flex-wrap items-center gap-2">
-          <button id="start-poll-btn" type="button"
-            class="flex items-center gap-2 h-10 px-5 rounded-lg bg-veritas-gold text-white text-sm font-semibold hover:bg-veritas-gold/90 transition-colors shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
-            disabled>
-            <span class="material-symbols-outlined text-lg">play_circle</span>
-            <span>Start Session</span>
-          </button>
-          <button id="send-link-btn" type="button"
-            class="flex items-center gap-2 h-10 px-5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled>
-            <span class="material-symbols-outlined text-lg">mail</span>
-            <span>Send Links</span>
-          </button>
-          <button id="view-links-btn" type="button"
-            class="flex items-center gap-2 h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled>
-            <span class="material-symbols-outlined text-lg">visibility</span>
-            <span>View Links</span>
-          </button>
-        </div>
-        <div id="secure-session-meta"
-          class="hidden flex flex-row items-center gap-6 text-xs text-brand-white/90 bg-white/10 rounded-lg px-3 py-1.5 border border-white/20"
-          aria-live="polite" aria-hidden="true">
-          <!-- Content dynamically populated by updateSecureSessionMeta() -->
-        </div>
-        <!-- Student Emulator Controls (Dev/Testing) -->
-        <div id="emulator-controls"
-          class="hidden flex flex-row items-center gap-3 text-xs text-brand-white/90 bg-amber-600/20 rounded-lg px-3 py-1.5 border border-amber-500/30">
-          <span class="material-symbols-outlined text-amber-400 text-base">science</span>
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" id="emulator-enabled"
-              class="w-4 h-4 rounded border-white/30 bg-white/10 text-amber-500 focus:ring-amber-500/50">
-            <span class="text-amber-200 font-medium">Emulate Students</span>
-          </label>
-          <div id="emulator-options" class="hidden flex items-center gap-2 ml-2 pl-2 border-l border-amber-500/30">
-            <label class="flex items-center gap-1">
-              <span class="text-white/70">Count:</span>
-              <input type="number" id="emulator-student-count" value="5" min="1" max="50"
-                class="w-14 h-6 rounded border border-white/30 bg-white/10 px-2 text-xs text-white focus:ring-amber-500/50">
-            </label>
-            <label class="flex items-center gap-1">
-              <input type="checkbox" id="emulator-concurrent"
-                class="w-3.5 h-3.5 rounded border-white/30 bg-white/10 text-amber-500">
-              <span class="text-white/70">Concurrent</span>
-            </label>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="ml-auto flex items-center gap-3">
-      <div id="loader" class="loader" style="display: block;">
-        <div class="h-6 w-6 animate-spin rounded-full border-2 border-brand-white/80 border-t-transparent"></div>
-      </div>
-    </div>
-  </header>
-
-  <!-- Header - Live Poll State (COMPACT REDESIGN - Mobile Optimized) -->
-  <header id="header-live" class="shrink-0 bg-veritas-navy shadow-md border-b border-veritas-gold/30 z-20"
-    style="display: none;">
-    <div class="flex w-full items-center justify-between px-2 sm:px-4 py-2 gap-2 sm:gap-4 min-h-[48px] sm:h-16">
-
-      <!-- Left: Poll Context (More compact on mobile) -->
-      <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink">
-        <button id="dashboard-sidebar-toggle-live" type="button"
-          class="flex-shrink-0 h-7 w-7 sm:h-8 sm:w-8 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
-          aria-label="Toggle navigation">
-          <span class="material-symbols-outlined text-lg sm:text-xl">menu</span>
-        </button>
-        <div class="min-w-0 flex flex-col justify-center">
-          <h1 id="header-poll-name"
-            class="text-white font-bold text-xs sm:text-sm md:text-base truncate leading-tight max-w-[100px] sm:max-w-none">
-            Poll Name
-          </h1>
-          <div class="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs text-white/70">
-            <span id="live-question-info"
-              class="font-mono tracking-wider uppercase bg-white/10 px-1 sm:px-1.5 py-0.5 rounded">Q1 / 10</span>
-            <span id="question-dots" class="hidden md:flex gap-1"></span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Right: Timer & Primary Actions (Compact on mobile) -->
-      <div class="flex items-center gap-1 sm:gap-3 flex-shrink-0">
-        <!-- Timer Control (Compact on mobile) -->
-        <div id="timer-main-container"
-          class="flex items-center gap-0.5 sm:gap-2 bg-black/20 rounded-lg p-0.5 sm:p-1 border border-white/10 transition-colors">
-          <button id="subtract-10s-btn" type="button"
-            class="hidden md:flex w-7 h-7 sm:w-8 sm:h-8 items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-            title="-10s">
-            <span class="material-symbols-outlined text-base sm:text-lg">remove</span>
-          </button>
-          <input type="text" id="timer-display"
-            class="w-12 sm:w-16 md:w-20 bg-transparent text-center text-sm sm:text-lg md:text-xl font-bold text-white tabular-nums focus:outline-none focus:ring-1 focus:ring-veritas-gold rounded px-0.5 sm:px-1 cursor-pointer hover:bg-white/5"
-            value="00:00" title="Click to edit time">
-          <button id="add-10s-btn" type="button"
-            class="hidden md:flex w-7 h-7 sm:w-8 sm:h-8 items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-            title="+10s">
-            <span class="material-symbols-outlined text-base sm:text-lg">add</span>
-          </button>
-
-          <div class="w-px h-4 sm:h-5 bg-white/20 mx-0.5 sm:mx-1"></div>
-
-          <button id="start-btn" type="button"
-            class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm transition-colors"
-            title="Start (Space)">
-            <span class="material-symbols-outlined text-lg sm:text-xl">play_arrow</span>
-          </button>
-          <button id="pause-btn" type="button"
-            class="hidden w-7 h-7 sm:w-8 sm:h-8 items-center justify-center rounded bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition-colors"
-            title="Pause (Space)">
-            <span class="material-symbols-outlined text-lg sm:text-xl">pause</span>
-          </button>
-          <button id="reset-btn" type="button"
-            class="hidden sm:flex w-7 h-7 sm:w-8 sm:h-8 items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-            title="Reset (R)">
-            <span class="material-symbols-outlined text-base sm:text-lg">refresh</span>
-          </button>
-        </div>
-
-        <div class="hidden sm:block w-px h-6 bg-white/10 mx-1"></div>
-        <button id="header-next-btn" type="button"
-          class="hidden md:flex items-center gap-2 h-8 sm:h-9 px-3 sm:px-4 rounded bg-white text-veritas-navy font-bold text-xs sm:text-sm shadow hover:bg-gray-100 transition-all"
-          title="Next Question (→)">
-          <span>Next</span>
-          <span class="material-symbols-outlined text-sm sm:text-base">arrow_forward</span>
-        </button>
-        <button id="header-end-show-btn" type="button"
-          class="flex items-center gap-1 sm:gap-2 h-7 sm:h-9 px-2 sm:px-4 rounded bg-veritas-gold text-white font-bold text-xs sm:text-sm shadow hover:bg-veritas-gold/90 transition-all"
-          title="End & Reveal (E)">
-          <span class="material-symbols-outlined text-sm sm:text-base">visibility</span>
-          <span class="hidden sm:inline">Reveal</span>
-        </button>
-
-        <!-- More Actions Dropdown Trigger -->
-        <div class="relative">
-          <button id="live-more-actions-btn"
-            class="h-7 w-7 sm:h-9 sm:w-9 flex items-center justify-center rounded text-white hover:bg-white/10 transition-colors"
-            aria-label="More actions" aria-haspopup="true">
-            <span class="material-symbols-outlined text-lg sm:text-xl">more_vert</span>
-          </button>
-          <!-- Dropdown Menu -->
-          <div id="live-more-menu"
-            class="hidden absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-50 origin-top-right ring-1 ring-black ring-opacity-5 focus:outline-none"
-            role="menu">
-            <button id="header-edit-poll-btn"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">edit</span> Edit Poll
-            </button>
-            <div class="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
-            <button id="header-back-btn"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">arrow_back</span> Previous Question
-            </button>
-            <button id="header-reset-question-btn"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">replay</span> Reset Question
-            </button>
-            <div class="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
-            <button id="add-30s-btn-preset"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">av_timer</span> Add 30 Seconds
-            </button>
-            <button id="add-60s-btn-preset"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">av_timer</span> Add 1 Minute
-            </button>
-            <div class="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
-            <button id="header-send-link-btn"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">mail</span> Send Links
-            </button>
-            <button id="header-view-links-btn"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">link</span> View Links
-            </button>
-            <div class="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
-            <button id="header-stop-btn"
-              class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">stop_circle</span> End Session
-            </button>
-          </div>
-        </div>
-
-        <div class="w-px h-6 bg-white/10 mx-1"></div>
-        <button id="header-calc-toggle" type="button"
-          class="flex items-center gap-2 h-9 px-3 rounded bg-white/10 text-white text-sm font-semibold hover:bg-white/15 transition-colors"
-          aria-pressed="false" aria-live="polite" data-role="calculator-toggle">
-          <span class="material-symbols-outlined text-base">calculate</span>
-          <span class="hidden sm:inline">Calculator</span>
-          <span id="header-calc-state" class="text-xs uppercase tracking-wide opacity-80">Off</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Hidden legacy buttons to prevent JS errors -->
-    <button id="header-start-btn" class="hidden"></button>
-  </header>
-
-  <div class="flex flex-grow overflow-hidden min-h-0">
-    <!-- Left Navigation Sidebar -->
-    <aside id="dashboard-sidebar"
-      class="hidden lg:flex h-full w-64 flex-shrink-0 flex-col border-r border-veritas-navy/25 bg-veritas-navy p-4 text-brand-white shadow-lg">
-      <div class="mb-4 px-1">
-        <p class="text-xs font-semibold uppercase tracking-[0.32em] text-brand-white/60">Navigation</p>
-      </div>
-      <nav class="flex flex-1 flex-col gap-2">
-        <button id="nav-polls-list" data-section-target="dashboard"
-          class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg font-semibold transition-colors text-left"
-          aria-current="page">
-          <span class="material-symbols-outlined">monitoring</span>
-          <span>Live Dashboard</span>
-        </button>
-        <button id="nav-create-poll"
-          class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors font-semibold">
-          <span class="material-symbols-outlined">add_circle</span>
-          <span>Create New Poll</span>
-        </button>
-        <button id="nav-rosters" data-section-target="roster"
-          class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left">
-          <span class="material-symbols-outlined">group</span>
-          <span>Classes &amp; Rosters</span>
-        </button>
-        <button id="nav-archived" data-section-target="archived"
-          class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left">
-          <span class="material-symbols-outlined">inventory_2</span>
-          <span>Archived Polls</span>
-        </button>
-        <button id="nav-analytics" data-section-target="analytics"
-          class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left">
-          <span class="material-symbols-outlined">analytics</span>
-          <span>Analytics Hub</span>
-        </button>
-        <button id="nav-migration" onclick="openMigrationModal()"
-          class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left mt-auto text-brand-white/70 hover:text-brand-white hover:bg-white/10">
-          <span class="material-symbols-outlined">cloud_upload</span>
-          <span>Import Data</span>
-        </button>
-      </nav>
-      <div class="mt-6 rounded-lg border border-brand-white/10 bg-brand-white/5 px-3 py-3 text-xs text-brand-white/70">
-        <p class="font-semibold uppercase tracking-[0.18em] text-brand-white/60">Tip</p>
-        <p class="mt-1 leading-relaxed">Use the controls in the top bar to quickly start a live session from any poll.
-        </p>
-      </div>
-    </aside>
-
-    <!-- Main Content Area -->
-    <main class="flex-1 min-h-0 overflow-y-auto pb-6">
-      <!-- Dashboard View (Default) - Redesigned -->
-      <div id="dashboard" class="p-8 max-w-7xl mx-auto">
-        <!-- Poll Library & Session Management (Combined) -->
-        <div class="dashboard-card glass-card premium-shadow p-8 rounded-2xl">
-          <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
-            <div>
-              <h2 class="text-2xl font-bold text-veritas-navy mb-1">Poll Library & Session Management</h2>
-              <p class="text-gray-600 text-sm">Use the session controls in the header to start a live session, or
-                create, edit, and manage your polls below.</p>
-            </div>
-          </div>
-
-          <!-- Poll Library Controls -->
-          <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
-            <h3 class="text-lg font-semibold text-veritas-navy">Your Polls</h3>
-            <div class="flex flex-wrap items-center gap-3">
-              <label class="flex items-center gap-2 text-sm text-gray-600">
-                <span class="hidden sm:inline">Sort by</span>
-                <select id="poll-sort-select"
-                  class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-veritas-gold">
-                  <option value="updated_desc">Latest activity</option>
-                  <option value="updated_asc">Oldest activity</option>
-                  <option value="name_asc">Name A → Z</option>
-                  <option value="class_asc">Class A → Z</option>
-                </select>
-              </label>
-              <label class="flex items-center gap-2 text-sm text-gray-600">
-                <span class="hidden sm:inline">Class</span>
-                <select id="poll-filter-select"
-                  class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-veritas-gold">
-                  <option value="all">All classes</option>
-                </select>
-              </label>
-              <div id="poll-search-container" class="relative w-full sm:w-64">
-                <span
-                  class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-gray-400 z-10">search</span>
-                <input id="poll-search-input" type="text" placeholder="Search polls, questions..."
-                  class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-8 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-veritas-gold shadow-sm"
-                  aria-label="Search polls" autocomplete="off" />
-                <button type="button"
-                  class="absolute inset-y-0 right-0 flex items-center px-2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                  data-combobox-toggle>
-                  <span class="material-symbols-outlined text-lg">unfold_more</span>
-                </button>
-                <button id="poll-search-clear-btn" type="button"
-                  class="hidden absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                  aria-label="Clear search">
-                  <span class="material-symbols-outlined text-base leading-none">close</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- ENHANCED: Toggle between Table and Card View -->
-          <div class="mb-4 flex items-center justify-end gap-2">
-            <span class="text-xs text-gray-500 font-medium">View:</span>
-            <button id="view-cards-btn"
-              class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-veritas-navy/10 text-veritas-navy transition-colors"
-              title="Card view">
-              <span class="material-symbols-outlined text-base align-middle">grid_view</span>
-            </button>
-            <button id="view-table-btn"
-              class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
-              title="Table view">
-              <span class="material-symbols-outlined text-base align-middle">table_rows</span>
-            </button>
-          </div>
-
-          <!-- Card View (Default, More Visual) -->
-          <div id="polls-card-view" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            <!-- Poll cards will be dynamically inserted here -->
-          </div>
-
-          <!-- Table View (Optional, More Compact) -->
-          <div id="polls-table-view" class="overflow-hidden rounded-lg border border-gray-200 hidden">
-            <table class="min-w-full divide-y divide-gray-200 text-sm">
-              <thead class="bg-gray-50 text-gray-600">
-                <tr>
-                  <th class="px-4 py-3 text-left font-semibold">Poll</th>
-                  <th class="px-4 py-3 text-left font-semibold">Class</th>
-                  <th class="px-4 py-3 text-left font-semibold">Questions</th>
-                  <th class="px-4 py-3 text-left font-semibold">Mode</th>
-                  <th class="px-4 py-3 text-left font-semibold">Last Edited</th>
-                  <th class="px-4 py-3 text-right font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="polls-table-body" class="divide-y divide-gray-100 bg-white"></tbody>
-            </table>
-          </div>
-
-          <!-- Enhanced Empty State -->
-          <div id="polls-empty-state"
-            class="hidden text-center p-12 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-2xl">
-            <div class="max-w-lg mx-auto">
-              <div class="inline-block p-4 bg-veritas-navy/10 rounded-full mb-4">
-                <span class="material-symbols-outlined text-5xl text-veritas-navy dark:text-veritas-gold">school</span>
-              </div>
-              <h3 class="text-2xl font-bold text-veritas-navy dark:text-white mb-2">Welcome to Your Poll Library</h3>
-              <p class="text-gray-600 dark:text-gray-400 mb-6">This is where your polls will live. Create your first
-                interactive poll to engage your students and gather real-time feedback.</p>
-              <button onclick="openPollCreator()" class="dashboard-cta-button primary">
-                <span class="material-symbols-outlined">add_circle</span>
-                <span>Create Your First Poll</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Individual Timed Session Monitoring View -->
-      <div id="individual-timed-view" class="p-6" style="display: none;">
-        <div
-          class="bg-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm">
-          <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
-            <div>
-              <h2 id="individual-session-poll-name"
-                class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">Individual Timed Session</h2>
-              <p id="individual-session-meta" class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm">
-                Monitoring student progress in real-time.</p>
-            </div>
-            <div class="flex items-center gap-2">
-              <button id="secure-view-links-btn"
-                class="h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors flex items-center gap-2">
-                <span class="material-symbols-outlined text-lg">link</span>
-                <span>View Links</span>
-              </button>
-              <button id="view-book-report-btn"
-                class="h-10 px-5 rounded-lg bg-veritas-gold text-white text-sm font-bold hover:bg-veritas-gold/90 transition-colors flex items-center gap-2">
-                <span class="material-symbols-outlined text-lg">menu_book</span>
-                <span>Book View</span>
-              </button>
-              <button id="end-individual-session-btn"
-                class="h-10 px-5 rounded-lg bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors">End
-                Session</button>
-            </div>
-          </div>
-          <div id="mission-control-summary" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-            <div class="p-4 rounded-xl border border-brand-light-gray/70 bg-slate-50 dark:bg-brand-dark-gray/20">
-              <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Not Started</p>
-              <p id="summary-not-started" class="text-3xl font-bold text-slate-900 dark:text-white">0</p>
-            </div>
-            <div class="p-4 rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/30">
-              <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">In
-                Progress</p>
-              <p id="summary-in-progress" class="text-3xl font-bold text-emerald-800 dark:text-emerald-100">0</p>
-            </div>
-            <div class="p-4 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20">
-              <p class="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-200">Locked /
-                Paused</p>
-              <p id="summary-locked" class="text-3xl font-bold text-amber-800 dark:text-amber-100">0</p>
-            </div>
-            <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800/40">
-              <p class="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Submitted</p>
-              <p id="summary-completed" class="text-3xl font-bold text-slate-900 dark:text-white">0</p>
-            </div>
-          </div>
-          <div class="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] mb-6">
-            <div class="p-4 rounded-xl border border-brand-light-gray/70 bg-white dark:bg-brand-dark-gray/20 shadow-sm">
-              <div class="flex flex-col gap-3">
-                <div class="flex flex-wrap items-center gap-3">
-                  <span
-                    class="text-sm font-semibold text-brand-dark-gray dark:text-white uppercase tracking-wide">Extend
-                    time</span>
-                  <div class="flex items-center gap-2">
-                    <input id="bulk-time-input" type="number" min="1" step="1" value="5"
-                      class="w-20 rounded-lg border border-slate-200 bg-white/90 px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-veritas-gold"
-                      aria-label="Minutes to extend" />
-                    <span class="text-xs text-slate-500">minutes</span>
-                  </div>
-                </div>
-                <div class="flex flex-wrap items-center gap-3">
-                  <button id="bulk-time-all-btn" type="button"
-                    class="inline-flex items-center gap-2 rounded-full bg-veritas-navy text-white px-4 py-2 text-sm font-semibold shadow hover:bg-veritas-navy/90 transition-colors">
-                    <span class="material-symbols-outlined text-base">schedule_add</span>
-                    <span>Add to entire class</span>
-                  </button>
-                  <button id="bulk-time-selected-btn" type="button"
-                    class="inline-flex items-center gap-2 rounded-full bg-emerald-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-emerald-700 transition-colors disabled:opacity-60"
-                    disabled>
-                    <span class="material-symbols-outlined text-base">group_add</span>
-                    <span id="bulk-selected-label">Add to selected</span>
-                  </button>
-                  <button id="bulk-selection-clear" type="button"
-                    class="text-xs font-semibold text-slate-500 underline hidden">Clear selection</button>
-                </div>
-                <p class="text-xs text-slate-500">Selecting student cards enables targeted adjustments. <span
-                    id="bulk-selection-count">0</span> students selected.</p>
-              </div>
-            </div>
-            <div
-              class="p-4 rounded-xl border border-brand-light-gray/70 bg-slate-50 dark:bg-brand-dark-gray/20 shadow-sm">
-              <h4 class="text-sm font-semibold text-brand-dark-gray dark:text-white mb-2 flex items-center gap-2">
-                <span class="material-symbols-outlined text-base text-veritas-navy">visibility_lock</span>
-                Re-entry monitoring
-              </h4>
-              <p class="text-xs text-slate-500 leading-relaxed">Locked students will surface an "Approve re-entry"
-                action on their tile so you can clear violations without leaving Mission Control.</p>
-            </div>
-          </div>
-          <div id="individual-session-students-grid"
-            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            <!-- Student cards will be dynamically inserted here -->
-          </div>
-        </div>
-      </div>
-
-      <!-- Live Poll View (REDESIGNED FOR OPTIMAL TEACHER WORKFLOW) -->
-      <div id="live-view" class="flex flex-col h-full min-h-0 overflow-hidden p-0" style="display: none;">
-
-        <!-- 🚨 Proctoring notifications now use lightweight toasts. Legacy banners removed for a calmer experience. -->
-
-        <!-- New Status Bar (Replaces Session HUD) -->
-        <div id="live-status-bar"
-          class="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex items-center gap-4 sm:gap-6 overflow-x-auto text-sm shadow-sm z-10 h-12">
-          <!-- Responses Metric -->
-          <div class="flex items-center gap-2 whitespace-nowrap">
-            <span class="material-symbols-outlined text-veritas-navy dark:text-gray-400 text-lg">group</span>
-            <span class="font-bold text-gray-900 dark:text-white text-base" id="hud-response-count">0 / 0</span>
-            <span class="text-gray-500 text-xs uppercase tracking-wide font-semibold">Responded</span>
-          </div>
-
-          <div class="w-px h-4 bg-gray-300 dark:bg-gray-700"></div>
-
-          <!-- Accuracy Metric -->
-          <div class="flex items-center gap-2 whitespace-nowrap">
-            <span class="material-symbols-outlined text-emerald-600 text-lg">check_circle</span>
-            <span class="font-bold text-gray-900 dark:text-white text-base" id="hud-accuracy-value">--%</span>
-            <span class="text-gray-500 text-xs uppercase tracking-wide font-semibold">Accuracy</span>
-          </div>
-
-          <div class="w-px h-4 bg-gray-300 dark:bg-gray-700"></div>
-
-          <!-- Locked Metric -->
-          <div class="flex items-center gap-2 whitespace-nowrap">
-            <span class="material-symbols-outlined text-amber-500 text-lg">lock_person</span>
-            <span class="font-bold text-gray-900 dark:text-white text-base" id="hud-lockouts-value">0</span>
-            <span class="text-gray-500 text-xs uppercase tracking-wide font-semibold">Locked</span>
-            <button id="hud-focus-lockouts-btn"
-              class="flex items-center gap-1 px-2 py-1 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold transition-colors ml-1"
-              disabled>
-              <span class="material-symbols-outlined text-sm">open_in_new</span>
-              <span>VIEW</span>
-            </button>
-            <!-- Locked Students Popover -->
-            <div id="locked-students-popover"
-              class="hidden absolute top-14 left-1/2 -translate-x-1/2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl z-50 p-4">
-              <div class="flex items-center justify-between mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">
-                <span class="font-bold text-gray-900 dark:text-white text-sm">Locked Students</span>
-                <button onclick="document.getElementById('locked-students-popover').classList.add('hidden')"
-                  class="text-gray-400 hover:text-gray-600"><span
-                    class="material-symbols-outlined text-sm">close</span></button>
-              </div>
-              <div id="locked-popover-list" class="flex flex-col gap-2 max-h-60 overflow-y-auto">
-                <!-- Populated via JS -->
-              </div>
-            </div>
-          </div>
-
-          <!-- Spacer -->
-          <div class="flex-1"></div>
-
-          <!-- Status Message / Timer Pace (Simplified) -->
-          <div class="flex items-center gap-2 text-xs text-gray-500 whitespace-nowrap hidden sm:flex">
-            <span id="timer-status-message" class="italic hidden">Ready</span>
-            <span id="hud-pace-value"
-              class="font-mono font-semibold bg-gray-100 dark:bg-gray-800 px-1.5 rounded hidden">--:--</span>
-          </div>
-
-          <!-- Hidden placeholders for legacy JS compatibility -->
-          <div id="hud-response-ring" class="hidden"></div>
-          <div id="hud-response-percent" class="hidden"></div>
-          <div id="hud-response-caption" class="hidden"></div>
-          <div id="hud-accuracy-ring" class="hidden"></div>
-          <div id="hud-accuracy-percent" class="hidden"></div>
-          <div id="hud-accuracy-caption" class="hidden"></div>
-          <div id="hud-lockouts-caption" class="hidden"></div>
-          <div id="hud-pace-caption" class="hidden"></div>
-          <div id="hud-pace-chip" class="hidden"></div>
-        </div>
-
-        <!-- Mobile Nav Controls (phone/tablet) -->
-        <div id="live-mobile-nav" class="live-mobile-nav" style="display: none;" role="tablist"
-          aria-label="Live dashboard sections">
-          <button class="live-mobile-tab is-active" data-panel="question" role="tab" aria-selected="true">
-            <span class="material-symbols-outlined text-base">quiz</span>
-            <span>Question</span>
-            <span id="mobile-response-chip" class="live-mobile-tab-chip">0 / 0</span>
-          </button>
-          <button class="live-mobile-tab" data-panel="students" role="tab" aria-selected="false">
-            <span class="material-symbols-outlined text-base">group</span>
-            <span>Students</span>
-            <span id="mobile-lock-chip" class="live-mobile-tab-chip">0</span>
-          </button>
-        </div>
-
-        <!-- Main Content Wrapper (Scrollable) -->
-        <div class="flex-1 min-h-0 overflow-y-auto bg-gray-50 dark:bg-gray-800 px-4 pb-32 lg:pb-10 live-view-shell">
-
-          <div class="flex flex-col lg:flex-row gap-4 h-full min-h-0 live-view-grid">
-            <!-- LEFT COLUMN: Question + Answer Choices (Adaptive Width) -->
-            <section id="live-question-panel" class="live-mobile-panel flex-1 min-w-0 flex flex-col gap-4"
-              data-mobile-panel="question">
-
-              <!-- Question Display Area -->
-              <div
-                class="bg-white dark:bg-brand-dark-gray/30 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm shrink-0 live-question-card">
-                <!-- Hidden elements for JS compatibility -->
-                <!-- P0-5 FIX: Apply whitespace-pre-wrap to compact version too -->
-                <h2 id="live-question-text-compact" class="hidden whitespace-pre-wrap"></h2>
-                <span id="live-question-info" class="hidden">Q1 / 10</span>
-                <span id="response-count-header" class="hidden">0 / 0 answered</span>
-
-                <!-- Student-view-style layout: text on left, image on right -->
-                <div id="question-layout-container" class="question-layout-grid">
-                  <div class="question-text-area">
-                    <h2 id="live-question-text" class="question-stem-text whitespace-pre-wrap">Question text will appear
-                      here...</h2>
-                  </div>
-                  <div id="question-image-container" class="question-image-area" style="display: none;">
-                    <div class="question-image-frame">
-                      <img id="live-question-image" alt="Question" src="" class="question-image-clickable">
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Answer Choices (Student View Style) -->
-              <!-- P0-6 FIX: Remove flex-1 from answer section to prevent variable gap under question card -->
-              <!-- flex-1 causes the section to grow/shrink, creating dynamic spacing above it -->
-              <div class="flex flex-col min-h-0 flex-shrink">
-                <div class="overflow-y-auto">
-                  <div id="results-bars" class="flex flex-col gap-2" aria-live="polite">
-                    <!-- Answer choices will be populated dynamically in student-view style -->
-                  </div>
-
-                  <!-- Results Reveal Strip -->
-                  <div id="results-reveal-strip" class="mt-4 hidden">
-                    <div
-                      class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-green-600/20 bg-green-600/5 px-4 py-2.5">
-                      <div class="min-w-[200px]">
-                        <p class="text-sm font-semibold text-green-700 dark:text-green-400">Answer revealed to students
-                        </p>
-                        <p id="results-strip-status" class="text-xs text-green-700/70">Students can now see the correct
-                          answer.</p>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <button id="hide-results-btn"
-                          class="flex items-center gap-2 rounded-lg bg-gray-200 text-gray-700 px-3 py-1.5 text-sm font-semibold hover:bg-gray-300 transition-colors"
-                          type="button">
-                          <span class="material-symbols-outlined text-base">visibility_off</span>
-                          <span>Hide</span>
-                        </button>
-                        <button id="strip-next-btn"
-                          class="flex items-center gap-2 rounded-lg bg-veritas-navy text-white px-3 py-1.5 text-sm font-semibold hover:bg-veritas-navy/90 transition-colors"
-                          type="button">
-                          <span>Next</span>
-                          <span class="material-symbols-outlined text-base">arrow_forward</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <!-- RIGHT COLUMN: STUDENTS + CONFIDENCE PULSE (Fixed Width) -->
-            <section id="live-students-panel"
-              class="live-mobile-panel w-full lg:w-96 flex-none flex flex-col gap-4 h-full overflow-hidden min-h-0 transition-all duration-300 ease-in-out"
-              data-mobile-panel="students">
-
-              <!-- STUDENTS PANEL -->
-              <div id="live-sidebar"
-                class="flex-1 flex flex-col bg-white dark:bg-brand-dark-gray/30 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden min-h-0 live-student-panel">
-
-                <!-- Student Header with Status Summary -->
-                <div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 px-4 py-2.5">
-                  <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-brand-dark-gray dark:text-brand-white text-base font-bold">Students</h3>
-                    <div class="flex items-center gap-1.5">
-                      <button id="filter-locked-only-btn"
-                        class="h-6 w-6 flex items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200 transition-colors"
-                        title="Show locked only">
-                        <span class="material-symbols-outlined text-sm">lock</span>
-                      </button>
-                      <button id="filter-all-btn"
-                        class="h-6 w-6 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-400 hover:bg-gray-200 transition-colors"
-                        title="Show all">
-                        <span class="material-symbols-outlined text-sm">group</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Status Pills (Always Visible) -->
-                  <div class="flex flex-wrap gap-1">
-                    <div
-                      class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-xs font-semibold text-green-700 dark:text-green-400">
-                      <span>✓ <span id="correct-count">0</span></span>
-                    </div>
-                    <div
-                      class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-xs font-semibold text-red-700 dark:text-red-400">
-                      <span>🔒 <span id="locked-count">0</span></span>
-                    </div>
-                    <div
-                      class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-xs font-semibold text-amber-700 dark:text-amber-400">
-                      <span>⚠ <span id="blocked-count">0</span></span>
-                    </div>
-                    <div
-                      class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-900/30 text-xs font-semibold text-gray-700 dark:text-gray-400">
-                      <span>⏳ <span id="waiting-count">0</span></span>
-                    </div>
-                  </div>
-
-                  <!-- Hidden elements for compatibility -->
-                  <div class="hidden">
-                    <div id="student-search-container">
-                      <input type="text" id="student-search-input" />
-                    </div>
-                    <select id="student-sort-select">
-                      <option value="name">Name</option>
-                      <option value="status">Status</option>
-                      <option value="answer">Answer</option>
-                    </select>
-                    <button id="student-sort-direction-btn"></button>
-                  </div>
-                </div>
-
-
-                <!-- Student Grid (Scrollable, Compact Tiles) -->
-                <div id="student-status-grid" class="flex-1 overflow-y-auto px-3 py-2" aria-live="polite">
-                  <!-- Students will be populated with full names, inline status, hover actions -->
-                </div>
-
-              </div>
-
-              <!-- CONFIDENCE PULSE PANEL -->
-              <div id="confidence-pulse-container" class="shrink-0">
-                <!-- Confidence pulse will be rendered here dynamically -->
-              </div>
-            </section>
-            <!-- END STUDENTS PANEL -->
-
-          </div>
-          <!-- END RIGHT COLUMN -->
-
-        </div> <!-- Closes the new .flex.gap-6 -->
-      </div> <!-- Closes the new .flex-1.overflow-y-auto -->
-
-      <!-- Sticky Mobile Action Bar -->
-      <div id="live-mobile-actions" class="live-mobile-actions" style="display: none;" aria-live="polite">
-        <div class="live-mobile-actions__row">
-          <div class="live-mobile-timer" id="timer-compact-container">
-            <button id="mobile-start-btn" type="button" class="live-mobile-pill live-mobile-pill-primary">
-              <span class="material-symbols-outlined text-base">play_arrow</span>
-              <span id="mobile-timer-label">Start</span>
-            </button>
-            <button id="mobile-pause-btn" type="button" class="live-mobile-pill live-mobile-pill-muted hidden">
-              <span class="material-symbols-outlined text-base">pause</span>
-              <span>Pause</span>
-            </button>
-            <div class="live-mobile-timebox">
-              <button id="subtract-10s-btn-mobile" type="button" aria-label="Subtract 10 seconds">-10s</button>
-              <input id="timer-display-compact" type="text" aria-label="Timer" readonly />
-              <button id="add-10s-btn-mobile" type="button" aria-label="Add 10 seconds">+10s</button>
-            </div>
-          </div>
-          <div class="live-mobile-metrics">
-            <div class="live-mobile-metric">
-              <span class="live-mobile-metric-label">Accuracy</span>
-              <span id="mobile-accuracy-chip" class="live-mobile-metric-value">--%</span>
-            </div>
-            <button id="mobile-locks-btn" type="button" class="live-mobile-pill live-mobile-pill-warning" disabled>
-              <span class="material-symbols-outlined text-base">lock_person</span>
-              <span id="mobile-locks-label">Locked</span>
-            </button>
-          </div>
-        </div>
-        <div class="live-mobile-actions__buttons">
-          <button id="mobile-resume-btn" type="button" class="live-mobile-action live-mobile-action-ghost hidden">
-            <span class="material-symbols-outlined text-base">play_circle</span>
-            <span>Resume</span>
-          </button>
-          <button id="mobile-reveal-btn" type="button" class="live-mobile-action live-mobile-action-primary">
-            <span class="material-symbols-outlined text-base">visibility</span>
-            <span>Reveal</span>
-          </button>
-          <button id="mobile-next-btn" type="button" class="live-mobile-action live-mobile-action-info">
-            <span class="material-symbols-outlined text-base">arrow_forward</span>
-            <span>Next</span>
-          </button>
-          <button id="mobile-reset-btn" type="button" class="live-mobile-action live-mobile-action-ghost">
-            <span class="material-symbols-outlined text-base">replay</span>
-            <span>Reset</span>
-          </button>
-          <button id="mobile-stop-btn" type="button" class="live-mobile-action live-mobile-action-danger">
-            <span class="material-symbols-outlined text-base">stop_circle</span>
-            <span>End</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Hidden elements for compatibility -->
-      <div class="hidden">
-        <div id="live-session-overview">
-          <p id="live-overview-responses">0 / 0</p>
-          <div id="live-overview-response-progress" style="width: 0%;"></div>
-          <p id="live-overview-response-caption">0%</p>
-          <p id="live-overview-accuracy">0%</p>
-          <p id="live-overview-accuracy-caption"></p>
-          <p id="live-overview-lockouts">0</p>
-          <p id="live-overview-lockouts-caption"></p>
-          <p id="live-overview-waiting">0</p>
-          <p id="live-overview-waiting-caption"></p>
-          <button id="focus-lockouts-btn" type="button" disabled></button>
-        </div>
-        <div id="response-count">0 / 0</div>
-        <div id="violations-alert-panel"></div>
-        <div id="violations-summary"></div>
-        <div id="violations-quick-list"></div>
-        <button id="dismiss-violations-alert"></button>
-        <button id="toggle-exited-panel-btn"></button>
-        <div id="exited-students-list"></div>
-        <button id="toggle-sidebar-btn"></button>
-        <span id="sidebar-toggle-icon"></span>
-        <span id="sidebar-toggle-label"></span>
-      </div>
-
-  </div>
-
-  <!-- ⚡ Floating Action Button (FAB) Cluster - Primary Actions for Live Session -->
-  <div id="fab-container" class="fab-container" style="display: none;">
-    <!-- FAB Menu Items -->
-    <div id="fab-menu" class="fab-menu">
-      <!-- Activity Feed Toggle -->
-      <div class="fab-action">
-        <span class="fab-label">Activity Feed</span>
-        <button id="fab-activity-btn" class="fab-button fab-info" title="View recent activity"
-          aria-label="Toggle activity feed">
-          <span class="material-symbols-outlined">notifications</span>
-        </button>
-      </div>
-
-      <!-- Next Question Action -->
-      <div class="fab-action">
-        <span class="fab-label">Next Question →</span>
-        <button id="fab-next-btn" class="fab-button fab-primary" title="Advance to next question"
-          aria-label="Next question">
-          <span class="material-symbols-outlined">arrow_forward</span>
-        </button>
-      </div>
-
-      <!-- Show Results Action -->
-      <div class="fab-action">
-        <span class="fab-label">Show Results</span>
-        <button id="fab-show-results-btn" class="fab-button fab-success" title="Reveal answer to students"
-          aria-label="Show results">
-          <span class="material-symbols-outlined">visibility</span>
-        </button>
-      </div>
-
-      <!-- Reset Question Action -->
-      <div class="fab-action">
-        <span class="fab-label">Reset Question</span>
-        <button id="fab-reset-btn" class="fab-button fab-info" title="Reset current question"
-          aria-label="Reset question">
-          <span class="material-symbols-outlined">replay</span>
-        </button>
-      </div>
-
-      <!-- Stop Session Action -->
-      <div class="fab-action">
-        <span class="fab-label">End Session</span>
-        <button id="fab-stop-btn" class="fab-button fab-danger" title="End the entire session"
-          aria-label="Stop session">
-          <span class="material-symbols-outlined">stop</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- FAB Main Toggle Button -->
-    <button id="fab-main-toggle" class="fab-main" aria-label="Quick actions menu" aria-expanded="false">
-      <span class="material-symbols-outlined">bolt</span>
-    </button>
-  </div>
-
-  <!-- 📊 Real-Time Activity Feed - Shows recent student actions -->
-  <div id="activity-feed" class="activity-feed">
-    <div class="activity-feed-header">
-      <div class="activity-feed-title">
-        <span class="material-symbols-outlined">notifications</span>
-        <span>Recent Activity</span>
-        <span id="activity-feed-count" class="activity-feed-badge">0</span>
-      </div>
-      <button id="activity-feed-close" class="activity-feed-close" aria-label="Close activity feed">
-        <span class="material-symbols-outlined">close</span>
-      </button>
-    </div>
-    <div id="activity-feed-list" class="activity-feed-list">
-      <!-- Activity items will be dynamically inserted here -->
-      <div class="activity-feed-empty">
-        <span class="material-symbols-outlined">inbox</span>
-        <p>No recent activity</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- End of Live Poll View Redesign -->
-  <!-- Roster Manager View -->
-  <div id="roster-manager" class="p-6 grid grid-cols-1 lg:grid-cols-4 gap-6" style="display: none;">
-    <div
-      class="lg:col-span-1 bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-5 shadow-sm flex flex-col">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-bold text-brand-dark-gray dark:text-brand-white">Classes</h2>
-        <button id="add-class-btn"
-          class="flex items-center justify-center h-9 w-9 rounded-full bg-primary text-brand-white hover:bg-primary/90 transition-colors"
-          title="Add class">
-          <span class="material-symbols-outlined text-base">add</span>
-        </button>
-      </div>
-      <div id="roster-class-list" class="flex-1 overflow-y-auto space-y-2">
-        <!-- Classes will render here -->
-      </div>
-    </div>
-    <div
-      class="lg:col-span-3 bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm">
-      <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div>
-          <h2 id="roster-class-title" class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">Select a
-            class</h2>
-          <p class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm">Manage student names and emails for
-            rostered classes.</p>
-        </div>
-        <div class="flex items-center gap-2">
-          <button id="rename-class-btn"
-            class="hidden h-9 px-4 rounded-lg bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-sm font-semibold hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors">Rename</button>
-          <button id="delete-class-btn"
-            class="hidden h-9 px-4 rounded-lg bg-red-600/10 text-red-600 dark:text-red-300 dark:bg-red-500/20 text-sm font-semibold hover:bg-red-600/20 dark:hover:bg-red-500/30 transition-colors">Delete</button>
-        </div>
-      </div>
-      <div id="roster-empty-state"
-        class="border border-dashed border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg p-10 text-center text-brand-dark-gray/60 dark:text-brand-white/60">
-        <p>Choose a class on the left to view its roster.</p>
-      </div>
-      <div id="roster-table-wrapper" class="hidden flex flex-col gap-4">
-        <div class="overflow-x-auto border border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg">
-          <table class="min-w-full divide-y divide-brand-light-gray dark:divide-brand-dark-gray text-sm">
-            <thead class="bg-brand-light-gray/50 dark:bg-brand-dark-gray/40 text-brand-dark-gray dark:text-brand-white">
-              <tr>
-                <th class="px-4 py-2 text-left font-semibold w-1/2">Student Name</th>
-                <th class="px-4 py-2 text-left font-semibold w-1/2">Email</th>
-                <th class="px-4 py-2 text-center font-semibold w-16">Remove</th>
-              </tr>
-            </thead>
-            <tbody id="roster-table-body" class="divide-y divide-brand-light-gray/70 dark:divide-brand-dark-gray/50">
-            </tbody>
-          </table>
-        </div>
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div class="flex items-center gap-3">
-            <button id="add-student-row-btn"
-              class="h-10 px-4 rounded-lg bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-sm font-semibold hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors">+
-              Add Student</button>
-            <button id="bulk-add-students-btn"
-              class="h-10 px-4 rounded-lg bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-sm font-semibold hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors">Bulk
-              Add Students</button>
-            <span id="roster-status" class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60"></span>
-          </div>
-          <button id="save-roster-btn"
-            class="h-10 px-5 rounded-lg bg-primary text-brand-white text-sm font-bold hover:bg-primary/90 transition-colors">Save
-            Roster</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Archived Polls View -->
-  <div id="archived-view" class="p-6 grid grid-cols-1 lg:grid-cols-4 gap-6" style="display: none;">
-    <div
-      class="lg:col-span-1 bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-5 shadow-sm flex flex-col">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-bold text-brand-dark-gray dark:text-brand-white">Archived Polls</h2>
-        <button id="refresh-archived-btn"
-          class="flex items-center justify-center h-9 w-9 rounded-full bg-primary text-brand-white hover:bg-primary/90 transition-colors"
-          title="Refresh">
-          <span class="material-symbols-outlined text-base">refresh</span>
-        </button>
-      </div>
-      <label
-        class="block text-xs font-semibold uppercase tracking-wide text-brand-dark-gray/60 dark:text-brand-white/60 mb-2">Class
-        Filter</label>
-      <select id="archived-class-filter"
-        class="mb-4 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
-        <option value="all">All classes</option>
-      </select>
-      <div id="archived-list" class="flex-1 overflow-y-auto space-y-2">
-        <!-- Archived polls list -->
-      </div>
-    </div>
-    <div
-      class="lg:col-span-3 bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm">
-      <div id="archived-empty-state"
-        class="border border-dashed border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg p-10 text-center text-brand-dark-gray/60 dark:text-brand-white/60">
-        <p>Select an archived poll to review student performance.</p>
-      </div>
-      <div id="archived-detail" class="hidden flex flex-col gap-6">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 id="archived-poll-title" class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white"></h2>
-            <p id="archived-poll-meta" class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm"></p>
-          </div>
-          <div class="flex items-center gap-4">
-            <div class="text-right text-sm text-brand-dark-gray/60 dark:text-brand-white/60">
-              <p><span class="font-semibold text-brand-dark-gray dark:text-brand-white">Questions:</span> <span
-                  id="archived-question-count"></span></p>
-              <p><span class="font-semibold text-brand-dark-gray dark:text-brand-white">Responses:</span> <span
-                  id="archived-response-count"></span></p>
-            </div>
-            <button id="view-analytics-btn"
-              class="h-12 px-6 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-brand-white text-sm font-semibold hover:from-blue-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2">
-              <span class="material-symbols-outlined text-lg">analytics</span>
-              <span>View Analytics</span>
-            </button>
-          </div>
-        </div>
-        <div id="archived-questions-container" class="space-y-4">
-          <!-- Question breakdowns will render here -->
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Analytics Hub View -->
-  <div id="analytics-view" class="p-6 flex flex-col gap-6" style="display: none;">
-    <!-- Filter Bar -->
-    <div
-      class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-4 shadow-sm">
-      <div class="flex flex-wrap items-center gap-3 mb-3">
-        <select id="analytics-class-filter"
-          class="rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
-          <option value="all">All Classes</option>
-        </select>
-        <div class="flex items-center gap-2">
-          <label class="text-xs font-semibold text-brand-dark-gray/60 dark:text-brand-white/60">From:</label>
-          <input type="date" id="analytics-date-from"
-            class="rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
-        </div>
-        <div class="flex items-center gap-2">
-          <label class="text-xs font-semibold text-brand-dark-gray/60 dark:text-brand-white/60">To:</label>
-          <input type="date" id="analytics-date-to"
-            class="rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
-        </div>
-        <button id="analytics-apply-filters-btn"
-          class="px-4 py-2 rounded-lg bg-primary text-brand-white hover:bg-primary/90 transition-colors text-sm font-semibold">
-          Apply Filters
-        </button>
-        <button id="analytics-clear-filters-btn"
-          class="px-4 py-2 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/50 transition-colors text-sm">
-          Clear
-        </button>
-        <button id="analytics-refresh-btn"
-          class="flex items-center justify-center h-9 w-9 rounded-full bg-primary text-brand-white hover:bg-primary/90 transition-colors"
-          title="Refresh">
-          <span class="material-symbols-outlined text-base">refresh</span>
-        </button>
-        <button id="analytics-export-btn"
-          class="ml-auto flex items-center gap-2 px-4 py-2 rounded-lg bg-veritas-gold text-brand-white hover:bg-veritas-gold/90 transition-colors text-sm font-semibold"
-          title="Export Data">
-          <span class="material-symbols-outlined text-base">download</span>
-          <span>Export</span>
-        </button>
-      </div>
-      <div class="flex flex-wrap items-center gap-2">
-        <span class="text-xs font-semibold text-brand-dark-gray/60 dark:text-brand-white/60">Quick Filters:</span>
-        <button
-          class="analytics-date-preset px-3 py-1 rounded-md bg-brand-light-gray/30 dark:bg-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray dark:hover:bg-brand-dark-gray transition-colors text-xs font-semibold"
-          data-days="7">
-          Last 7 Days
-        </button>
-        <button
-          class="analytics-date-preset px-3 py-1 rounded-md bg-brand-light-gray/30 dark:bg-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray dark:hover:bg-brand-dark-gray transition-colors text-xs font-semibold"
-          data-days="30">
-          Last 30 Days
-        </button>
-        <button
-          class="analytics-date-preset px-3 py-1 rounded-md bg-brand-light-gray/30 dark:bg-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray dark:hover:bg-brand-dark-gray transition-colors text-xs font-semibold"
-          data-days="90">
-          Last 90 Days
-        </button>
-        <button
-          class="analytics-date-preset px-3 py-1 rounded-md bg-brand-light-gray/30 dark:bg-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray dark:hover:bg-brand-dark-gray transition-colors text-xs font-semibold"
-          data-preset="thisMonth">
-          This Month
-        </button>
-        <button
-          class="analytics-date-preset px-3 py-1 rounded-md bg-brand-light-gray/30 dark:bg-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray dark:hover:bg-brand-dark-gray transition-colors text-xs font-semibold"
-          data-preset="lastMonth">
-          Last Month
-        </button>
-        <button
-          class="analytics-date-preset px-3 py-1 rounded-md bg-brand-light-gray/30 dark:bg-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray dark:hover:bg-brand-dark-gray transition-colors text-xs font-semibold"
-          data-preset="all">
-          All Time
-        </button>
-      </div>
-    </div>
-
-    <!-- Tab Navigation -->
-    <div
-      class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 shadow-sm overflow-hidden">
-      <div class="flex border-b border-brand-light-gray dark:border-brand-dark-gray/40">
-        <button id="analytics-tab-overview"
-          class="flex-1 px-6 py-3 font-semibold text-sm transition-colors analytics-tab bg-primary text-brand-white">
-          Overview
-        </button>
-        <button id="analytics-tab-items"
-          class="flex-1 px-6 py-3 font-semibold text-sm transition-colors analytics-tab text-brand-dark-gray/70 dark:text-brand-white/70 hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/30">
-          Item Analysis
-        </button>
-        <button id="analytics-tab-students"
-          class="flex-1 px-6 py-3 font-semibold text-sm transition-colors analytics-tab text-brand-dark-gray/70 dark:text-brand-white/70 hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/30">
-          Student Trends
-        </button>
-      </div>
-
-      <!-- Overview Tab Content -->
-      <div id="analytics-content-overview" class="p-6 analytics-tab-content">
-        <div id="analytics-overview-loading" class="text-center py-12">
-          <div class="flex flex-row gap-2 justify-center mb-4">
-            <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce"></div>
-            <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.3s]"></div>
-            <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.5s]"></div>
-          </div>
-          <p class="text-brand-dark-gray/60 dark:text-brand-white/60">Loading analytics...</p>
-        </div>
-        <div id="analytics-overview-content" class="hidden">
-          <!-- KPI Cards -->
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div id="analytics-kpi-container"></div>
-          </div>
-
-          <!-- Topic Heat Strip -->
-          <div class="bg-background-light dark:bg-brand-dark-gray/40 rounded-xl p-5 mb-6">
-            <h3 class="text-lg font-bold text-brand-dark-gray dark:text-brand-white mb-4">Topic Mastery Over Time
-            </h3>
-            <div id="analytics-topic-heat" class="overflow-x-auto">
-              <p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No topic data available</p>
-            </div>
-          </div>
-
-          <!-- Item Quality Scatter -->
-          <div class="bg-background-light dark:bg-brand-dark-gray/40 rounded-xl p-5">
-            <h3 class="text-lg font-bold text-brand-dark-gray dark:text-brand-white mb-4">Item Quality Map</h3>
-            <div id="analytics-item-scatter" style="height: 300px;">
-              <p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No item data available</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Item Analysis Tab Content -->
-      <div id="analytics-content-items" class="p-6 analytics-tab-content hidden">
-        <div id="analytics-items-loading" class="text-center py-12">
-          <div class="flex flex-row gap-2 justify-center mb-4">
-            <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce"></div>
-            <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.3s]"></div>
-            <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.5s]"></div>
-          </div>
-          <p class="text-brand-dark-gray/60 dark:text-brand-white/60">Loading item analysis...</p>
-        </div>
-        <div id="analytics-items-content" class="hidden">
-          <!-- Item Table -->
-          <div class="overflow-x-auto">
-            <table id="analytics-items-table" class="min-w-full text-sm">
-              <thead
-                class="sticky top-0 bg-brand-light-gray dark:bg-brand-dark-gray text-xs uppercase tracking-wide text-brand-dark-gray/80 dark:text-brand-white/70">
-                <tr>
-                  <th
-                    class="py-3 px-4 text-left cursor-pointer hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/80"
-                    data-sort="qNum">Q#</th>
-                  <th
-                    class="py-3 px-4 text-left cursor-pointer hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/80"
-                    data-sort="topic">Topic</th>
-                  <th
-                    class="py-3 px-4 text-left cursor-pointer hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/80"
-                    data-sort="correctPct">Correct%</th>
-                  <th
-                    class="py-3 px-4 text-left cursor-pointer hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/80"
-                    data-sort="rbis">Disc</th>
-                  <th class="py-3 px-4 text-left">Choices</th>
-                  <th
-                    class="py-3 px-4 text-left cursor-pointer hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/80"
-                    data-sort="medianTimeSec">Time(s)</th>
-                  <th class="py-3 px-4 text-left">Flags</th>
-                </tr>
-              </thead>
-              <tbody id="analytics-items-tbody"
-                class="divide-y divide-brand-light-gray/70 dark:divide-brand-dark-gray/40">
-                <!-- Items will be rendered here -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Student Trends Tab Content -->
-      <div id="analytics-content-students" class="p-6 analytics-tab-content hidden">
-        <div id="analytics-students-loading" class="text-center py-12">
-          <div class="flex flex-row gap-2 justify-center mb-4">
-            <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce"></div>
-            <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.3s]"></div>
-            <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.5s]"></div>
-          </div>
-          <p class="text-brand-dark-gray/60 dark:text-brand-white/60">Loading student data...</p>
-        </div>
-        <div id="analytics-students-content" class="hidden">
-          <!-- STUDENT INSIGHTS PANEL (2025) -->
-          <div id="student-insights-panel" class="mb-6">
-            <h2 class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white mb-4">Student Insights</h2>
-
-            <!-- Insight Cards Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <!-- Struggling Students -->
-              <div
-                class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/50 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
-                onclick="filterStudentsByFlag('struggling')">
-                <div class="flex items-center gap-3 mb-2">
-                  <span class="material-symbols-outlined text-red-600 dark:text-red-400 text-2xl">trending_down</span>
-                  <h3 class="font-bold text-red-800 dark:text-red-300 text-sm">Struggling</h3>
-                </div>
-                <p class="text-3xl font-black text-red-700 dark:text-red-400" id="struggling-count">0</p>
-                <p class="text-xs text-red-600/70 dark:text-red-400/70 mt-1">Accuracy < 50%</p>
-              </div>
-
-              <!-- Non-Responders -->
-              <div
-                class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700/50 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
-                onclick="filterStudentsByFlag('non-responder')">
-                <div class="flex items-center gap-3 mb-2">
-                  <span
-                    class="material-symbols-outlined text-orange-600 dark:text-orange-400 text-2xl">person_off</span>
-                  <h3 class="font-bold text-orange-800 dark:text-orange-300 text-sm">Non-Responders</h3>
-                </div>
-                <p class="text-3xl font-black text-orange-700 dark:text-orange-400" id="non-responder-count">0</p>
-                <p class="text-xs text-orange-600/70 dark:text-orange-400/70 mt-1">Participation < 50%</p>
-              </div>
-
-              <!-- Rule Violators -->
-              <div
-                class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700/50 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
-                onclick="filterStudentsByFlag('rule-violator')">
-                <div class="flex items-center gap-3 mb-2">
-                  <span class="material-symbols-outlined text-yellow-600 dark:text-yellow-400 text-2xl">warning</span>
-                  <h3 class="font-bold text-yellow-800 dark:text-yellow-300 text-sm">Rule Violators</h3>
-                </div>
-                <p class="text-3xl font-black text-yellow-700 dark:text-yellow-400" id="rule-violator-count">0</p>
-                <p class="text-xs text-yellow-600/70 dark:text-yellow-400/70 mt-1">2+ violations</p>
-              </div>
-
-              <!-- High Performers -->
-              <div
-                class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/50 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
-                onclick="filterStudentsByFlag('high-performer')">
-                <div class="flex items-center gap-3 mb-2">
-                  <span class="material-symbols-outlined text-green-600 dark:text-green-400 text-2xl">trending_up</span>
-                  <h3 class="font-bold text-green-800 dark:text-green-300 text-sm">High Performers</h3>
-                </div>
-                <p class="text-3xl font-black text-green-700 dark:text-green-400" id="high-performer-count">0</p>
-                <p class="text-xs text-green-600/70 dark:text-green-400/70 mt-1">Accuracy ≥ 85%</p>
-              </div>
-            </div>
-
-            <!-- Student List with Filtering -->
-            <div
-              class="bg-white dark:bg-brand-dark-gray/30 border border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg overflow-hidden">
-              <div
-                class="bg-brand-light-gray/50 dark:bg-brand-dark-gray/50 px-4 py-3 flex items-center justify-between">
-                <h3 class="font-bold text-brand-dark-gray dark:text-brand-white">All Students</h3>
-                <div class="flex items-center gap-2">
-                  <button id="clear-student-filter-btn"
-                    class="hidden px-3 py-1 bg-brand-dark-gray/10 hover:bg-brand-dark-gray/20 dark:bg-brand-white/10 dark:hover:bg-brand-white/20 rounded text-xs font-semibold transition-colors"
-                    onclick="clearStudentFilter()">
-                    Clear Filter
-                  </button>
-                  <span id="student-insights-filter-badge"
-                    class="hidden px-2 py-1 bg-primary/20 text-primary text-xs font-bold rounded"></span>
-                </div>
-              </div>
-              <div id="student-insights-table-container" class="overflow-x-auto max-h-96 overflow-y-auto">
-                <table class="w-full">
-                  <thead class="bg-brand-light-gray/30 dark:bg-brand-dark-gray/30 sticky top-0">
-                    <tr>
-                      <th
-                        class="px-4 py-2 text-left text-xs font-bold text-brand-dark-gray/70 dark:text-brand-white/70 cursor-pointer hover:bg-brand-light-gray/50 dark:hover:bg-brand-dark-gray/50"
-                        onclick="sortStudentsBy('name')">
-                        Student <span class="material-symbols-outlined text-xs">unfold_more</span>
-                      </th>
-                      <th
-                        class="px-4 py-2 text-center text-xs font-bold text-brand-dark-gray/70 dark:text-brand-white/70 cursor-pointer hover:bg-brand-light-gray/50 dark:hover:bg-brand-dark-gray/50"
-                        onclick="sortStudentsBy('accuracy')">
-                        Accuracy <span class="material-symbols-outlined text-xs">unfold_more</span>
-                      </th>
-                      <th
-                        class="px-4 py-2 text-center text-xs font-bold text-brand-dark-gray/70 dark:text-brand-white/70 cursor-pointer hover:bg-brand-light-gray/50 dark:hover:bg-brand-dark-gray/50"
-                        onclick="sortStudentsBy('participation')">
-                        Participation <span class="material-symbols-outlined text-xs">unfold_more</span>
-                      </th>
-                      <th
-                        class="px-4 py-2 text-center text-xs font-bold text-brand-dark-gray/70 dark:text-brand-white/70 cursor-pointer hover:bg-brand-light-gray/50 dark:hover:bg-brand-dark-gray/50"
-                        onclick="sortStudentsBy('violations')">
-                        Violations <span class="material-symbols-outlined text-xs">unfold_more</span>
-                      </th>
-                      <th
-                        class="px-4 py-2 text-left text-xs font-bold text-brand-dark-gray/70 dark:text-brand-white/70">
-                        Flags
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody id="student-insights-table-body">
-                    <!-- Populated by JS -->
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <!-- Student Search -->
-          <div id="analytics-student-search-container" class="relative mb-6">
-            <input type="text" id="analytics-student-search" placeholder="Search for a student..."
-              class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 pl-4 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-sm"
-              autocomplete="off" />
-            <button type="button"
-              class="absolute inset-y-0 right-0 flex items-center px-2 text-gray-400 hover:text-gray-600 focus:outline-none"
-              data-combobox-toggle>
-              <span class="material-symbols-outlined text-lg">unfold_more</span>
-            </button>
-          </div>
-
-          <!-- Student Detail -->
-          <div id="analytics-student-detail" class="hidden">
-            <div id="analytics-student-summary"
-              class="bg-background-light dark:bg-brand-dark-gray/40 rounded-xl p-5 mb-6">
-              <!-- Student summary card -->
-            </div>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div class="bg-background-light dark:bg-brand-dark-gray/40 rounded-xl p-5">
-                <h3 class="text-lg font-bold text-brand-dark-gray dark:text-brand-white mb-4">Consistency Trend</h3>
-                <div id="analytics-student-sparkline"></div>
-              </div>
-              <div class="bg-background-light dark:bg-brand-dark-gray/40 rounded-xl p-5">
-                <h3 class="text-lg font-bold text-brand-dark-gray dark:text-brand-white mb-4">Topic Mastery</h3>
-                <div id="analytics-student-topics"></div>
-              </div>
-            </div>
-          </div>
-
-          <div id="analytics-student-empty" class="text-center py-12 text-brand-dark-gray/60 dark:text-brand-white/60">
-            <p>Search for a student to view their analytics</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Poll Creation Wizard View - Compact Design -->
-  <div id="create-poll-view" class="hidden h-full flex flex-col bg-white dark:bg-brand-dark-gray">
-
-    <!-- Compact Header with Inline Progress -->
-    <div
-      class="wizard-header bg-gradient-to-r from-primary to-primary/90 px-4 py-3 flex items-center justify-between gap-4">
-      <div class="flex items-center gap-3 shrink-0">
-        <h2 id="wizard-title" class="text-lg font-bold text-white">Create Poll</h2>
-      </div>
-
-      <!-- Inline Progress Steps (hidden - now in main header) -->
-      <div class="wizard-progress hidden items-center gap-1 flex-1 justify-center max-w-xl">
-        <div class="progress-step active flex items-center gap-1.5" data-step="1">
-          <div
-            class="progress-circle h-7 w-7 rounded-full bg-white/20 text-white text-xs font-bold flex items-center justify-center">
-            1</div>
-          <span class="progress-label text-white/80 text-xs font-medium hidden sm:inline">Mode</span>
-        </div>
-        <div class="progress-connector w-6 h-0.5 bg-white/30"></div>
-
-        <div class="progress-step flex items-center gap-1.5" data-step="2">
-          <div
-            class="progress-circle h-7 w-7 rounded-full bg-white/20 text-white/70 text-xs font-bold flex items-center justify-center">
-            2</div>
-          <span class="progress-label text-white/60 text-xs font-medium hidden sm:inline">Configure</span>
-        </div>
-        <div class="progress-connector w-6 h-0.5 bg-white/30"></div>
-
-        <div class="progress-step flex items-center gap-1.5" data-step="3">
-          <div
-            class="progress-circle h-7 w-7 rounded-full bg-white/20 text-white/70 text-xs font-bold flex items-center justify-center">
-            3</div>
-          <span class="progress-label text-white/60 text-xs font-medium hidden sm:inline">Questions</span>
-        </div>
-        <div class="progress-connector w-6 h-0.5 bg-white/30"></div>
-
-        <div class="progress-step flex items-center gap-1.5" data-step="4">
-          <div
-            class="progress-circle h-7 w-7 rounded-full bg-white/20 text-white/70 text-xs font-bold flex items-center justify-center">
-            4</div>
-          <span class="progress-label text-white/60 text-xs font-medium hidden sm:inline">Review</span>
-        </div>
-      </div>
-
-      <button type="button" onclick="closePollWizard()"
-        class="shrink-0 h-8 w-8 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-        title="Close">
-        <span class="material-symbols-outlined text-xl">close</span>
-      </button>
-    </div>
-
-    <!-- Wizard Body - More Compact -->
-    <div class="wizard-body flex-1 overflow-y-auto px-4 py-4 bg-slate-50 dark:bg-black/10">
-
-      <!-- STEP 1: MODE SELECTION -->
-      <div id="wizard-step-1" class="wizard-step active max-w-4xl mx-auto">
-        <div class="text-center mb-10">
-          <h3 class="text-3xl font-bold text-brand-dark-gray dark:text-white mb-3">Choose Your Poll Mode</h3>
-          <p class="text-lg text-brand-dark-gray/60 dark:text-brand-white/60">Select the type of assessment
-            experience for your students</p>
-        </div>
-
-        <div class="mode-cards grid grid-cols-1 md:grid-cols-2 gap-8">
-          <button type="button"
-            class="mode-card group relative overflow-hidden text-left p-8 rounded-2xl border-2 border-brand-light-gray hover:border-blue-500 hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
-            data-mode="live" onclick="selectPollMode('live')">
-            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <span class="material-symbols-outlined text-9xl text-blue-500">groups</span>
-            </div>
-            <div class="relative z-10">
-              <div
-                class="h-14 w-14 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 transition-transform">
-                <span class="material-symbols-outlined text-3xl">groups</span>
-              </div>
-              <h4 class="text-xl font-bold text-brand-dark-gray dark:text-white mb-2">Live Poll</h4>
-              <p class="text-brand-dark-gray/70 dark:text-brand-white/70 mb-6 leading-relaxed">Synchronous,
-                teacher-paced questions for real-time class engagement and instant feedback.</p>
-              <div class="flex flex-wrap gap-2">
-                <span
-                  class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider">Real-time</span>
-                <span
-                  class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider">Interactive</span>
-              </div>
-            </div>
-          </button>
-
-          <button type="button"
-            class="mode-card group relative overflow-hidden text-left p-8 rounded-2xl border-2 border-brand-light-gray hover:border-amber-500 hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
-            data-mode="secure" onclick="selectPollMode('secure')">
-            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <span class="material-symbols-outlined text-9xl text-amber-500">lock</span>
-            </div>
-            <div class="relative z-10">
-              <div
-                class="h-14 w-14 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 transition-transform">
-                <span class="material-symbols-outlined text-3xl">lock</span>
-              </div>
-              <h4 class="text-xl font-bold text-brand-dark-gray dark:text-white mb-2">Secure Assessment</h4>
-              <p class="text-brand-dark-gray/70 dark:text-brand-white/70 mb-6 leading-relaxed">Asynchronous, timed
-                exam with secure proctoring features and mission control monitoring.</p>
-              <div class="flex flex-wrap gap-2">
-                <span
-                  class="px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-bold uppercase tracking-wider">Timed</span>
-                <span
-                  class="px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-bold uppercase tracking-wider">Proctored</span>
-              </div>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      <!-- STEP 2: CONFIGURATION -->
-      <div id="wizard-step-2" class="wizard-step hidden max-w-3xl mx-auto">
-        <h3 class="text-2xl font-bold text-brand-dark-gray dark:text-white mb-6">Configure Your <span
-            id="config-mode-label" class="text-blue-600">Poll</span></h3>
-
-        <div
-          class="bg-slate-50 dark:bg-white/5 rounded-xl p-6 border border-brand-light-gray dark:border-brand-dark-gray/40 space-y-6">
-          <!-- Poll Name -->
-          <div class="form-group">
-            <label for="wizard-poll-name" class="block text-sm font-bold text-brand-dark-gray dark:text-white mb-2">Poll
-              Name <span class="text-red-500">*</span></label>
-            <input type="text" id="wizard-poll-name"
-              class="w-full rounded-lg border border-brand-light-gray bg-white px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-shadow"
-              placeholder="e.g., Chapter 5 Review" maxlength="100">
-          </div>
-
-          <!-- Class Selection -->
-          <div class="form-group">
-            <label for="wizard-class-select"
-              class="block text-sm font-bold text-brand-dark-gray dark:text-white mb-2">Class <span
-                class="text-red-500">*</span></label>
-            <div class="relative">
-              <select id="wizard-class-select"
-                class="w-full rounded-lg border border-brand-light-gray bg-white px-4 py-3 text-base appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-shadow">
-                <option value="">-- Select a class --</option>
-              </select>
-              <div
-                class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-brand-dark-gray/50">
-                <span class="material-symbols-outlined">expand_more</span>
-              </div>
-            </div>
-            <p class="text-xs text-brand-dark-gray/50 mt-2 flex items-center gap-1">
-              <span class="material-symbols-outlined text-sm">info</span>
-              Classes populate from your dashboard rosters.
-            </p>
-          </div>
-
-          <!-- Secure Config -->
-          <div id="secure-config-section"
-            class="config-section hidden pt-6 mt-6 border-t border-brand-light-gray dark:border-brand-dark-gray/20">
-            <h4 class="text-sm font-bold uppercase tracking-wider text-amber-600 mb-4 flex items-center gap-2">
-              <span class="material-symbols-outlined text-lg">shield_lock</span> Secure Settings
-            </h4>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div class="form-group">
-                <label for="wizard-time-limit"
-                  class="block text-sm font-bold text-brand-dark-gray dark:text-white mb-2">Time Limit (minutes)
-                  <span class="text-red-500">*</span></label>
-                <input type="number" id="wizard-time-limit"
-                  class="w-full rounded-lg border border-brand-light-gray bg-white px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-shadow"
-                  min="1" placeholder="45">
-              </div>
-              <!-- Add Access Code Field (missing in original) -->
-              <div class="form-group">
-                <label for="wizard-access-code"
-                  class="block text-sm font-bold text-brand-dark-gray dark:text-white mb-2">Access Code
-                  (Optional)</label>
-                <input type="text" id="wizard-access-code"
-                  class="w-full rounded-lg border border-brand-light-gray bg-white px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-shadow"
-                  placeholder="e.g. EXAM2025">
-              </div>
-              <div class="form-group md:col-span-2">
-                <div
-                  class="flex items-start justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm">
-                  <div>
-                    <div class="flex items-center gap-2 font-semibold">
-                      <span class="material-symbols-outlined text-base">calculate</span>
-                      TI-84 Calculator
-                    </div>
-                    <p class="mt-1 text-amber-800/80">Allow students to use a secure, embedded calculator during
-                      this assessment.</p>
-                  </div>
-                  <label class="inline-flex items-center cursor-pointer select-none">
-                    <input id="wizard-calculator-toggle" type="checkbox" class="peer sr-only">
-                    <span
-                      class="h-6 w-11 rounded-full bg-amber-200 peer-checked:bg-amber-500 transition-colors relative">
-                      <span
-                        class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-all peer-checked:translate-x-5"></span>
-                    </span>
-                    <span class="ml-3 text-sm font-semibold text-amber-900 peer-checked:text-amber-800">Enable</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- STEP 3: QUESTIONS - Full Editor -->
-      <div id="wizard-step-3" class="wizard-step hidden">
-        <div class="max-w-5xl mx-auto">
-          <div class="flex items-center justify-between mb-6">
-            <div>
-              <h3 class="text-2xl font-bold text-brand-dark-gray dark:text-white">Build Your Questions</h3>
-              <p class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm mt-1">Add questions with multiple
-                choice answers</p>
-            </div>
-            <span
-              class="px-3 py-1.5 bg-green-50 text-green-700 text-xs font-bold rounded-full uppercase border border-green-200">
-              Full Editor
-            </span>
-          </div>
-
-          <!-- Questions Container - Populated by JS -->
-          <div id="wizard-questions-list" class="questions-list space-y-6"></div>
-
-          <button type="button"
-            class="btn-add-question w-full mt-6 py-5 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-brand-light-gray rounded-xl hover:border-primary hover:bg-primary/5 transition-all group bg-white"
-            onclick="addWizardQuestion()">
-            <div
-              class="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 group-hover:bg-primary/20 transition-all">
-              <span class="material-symbols-outlined text-2xl">add</span>
-            </div>
-            <span class="font-bold text-brand-dark-gray group-hover:text-primary transition-colors">Add New
-              Question</span>
-            <span class="text-xs text-brand-dark-gray/50">Click to add a multiple choice question</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- STEP 4: REVIEW -->
-      <div id="wizard-step-4" class="wizard-step hidden max-w-3xl mx-auto">
-        <h3 class="text-2xl font-bold text-brand-dark-gray dark:text-white mb-6">Review & Publish</h3>
-
-        <div class="review-section space-y-6">
-          <div class="review-card bg-white border border-brand-light-gray rounded-xl p-6 shadow-sm">
-            <h4
-              class="review-heading text-lg font-bold text-brand-dark-gray mb-4 border-b border-brand-light-gray pb-2">
-              Basic Information</h4>
-            <dl class="review-details grid grid-cols-[140px_1fr] gap-4 text-sm">
-              <dt class="font-semibold text-brand-dark-gray/60">Mode:</dt>
-              <dd id="review-mode" class="font-medium text-brand-dark-gray">-</dd>
-              <dt class="font-semibold text-brand-dark-gray/60">Name:</dt>
-              <dd id="review-name" class="font-medium text-brand-dark-gray">-</dd>
-              <dt class="font-semibold text-brand-dark-gray/60">Class:</dt>
-              <dd id="review-class" class="font-medium text-brand-dark-gray">-</dd>
-            </dl>
-          </div>
-
-          <div class="review-card bg-white border border-brand-light-gray rounded-xl p-6 shadow-sm">
-            <h4
-              class="review-heading text-lg font-bold text-brand-dark-gray mb-4 border-b border-brand-light-gray pb-2">
-              Questions</h4>
-            <div id="review-questions-summary" class="text-sm text-brand-dark-gray/80">
-              <!-- Populated via JS -->
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div
-      class="wizard-footer bg-white dark:bg-brand-dark-gray border-t border-brand-light-gray dark:border-brand-dark-gray/40 px-8 py-4 flex items-center justify-between">
-      <button type="button"
-        class="btn-secondary h-12 px-6 rounded-lg font-bold text-brand-dark-gray hover:bg-brand-light-gray/50 transition-colors disabled:opacity-50"
-        id="wizard-back-btn" onclick="wizardGoBack()" disabled>Back</button>
-      <div class="flex items-center gap-3">
-        <button type="button"
-          class="btn-secondary h-12 px-6 rounded-lg font-bold text-red-600 hover:bg-red-50 transition-colors"
-          onclick="closePollWizard()">Cancel</button>
-        <button type="button"
-          class="btn-primary h-12 px-8 rounded-lg bg-primary text-white font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
-          id="wizard-next-btn" onclick="wizardGoNext()">Next</button>
-        <button type="button"
-          class="btn-primary hidden h-12 px-8 rounded-lg bg-green-600 text-white font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 hover:bg-green-700 transition-all flex items-center gap-2"
-          id="wizard-publish-btn" onclick="publishWizardPoll()">
-          <span class="material-symbols-outlined">rocket_launch</span>
-          Publish Poll
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-</main>
-
-</div>
-</div>
-
-<!-- Student Manager Modal -->
-<div id="student-manager-modal" class="fixed inset-0 z-50 hidden">
-  <div class="absolute inset-0 bg-slate-900/60" data-student-manager-close="true"></div>
-  <div
-    class="relative w-full max-w-2xl mx-auto my-12 bg-white dark:bg-brand-dark-gray rounded-2xl shadow-2xl border border-brand-light-gray dark:border-brand-dark-gray/40">
-    <div class="flex items-start justify-between gap-4 p-6 border-b border-slate-100 dark:border-brand-dark-gray/60">
-      <div>
-        <p class="text-xs font-semibold tracking-[0.2em] uppercase text-slate-500">Student Manager</p>
-        <h3 id="student-manager-name" class="text-2xl font-bold text-brand-dark-gray dark:text-white">Student Name</h3>
-        <p id="student-manager-status" class="text-sm font-semibold text-slate-500">Status</p>
-      </div>
-      <button id="student-manager-close"
-        class="h-10 w-10 inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-brand-dark-gray/70 text-slate-600 dark:text-white hover:bg-slate-200">
-        <span class="material-symbols-outlined">close</span>
-      </button>
-    </div>
-    <div class="p-6 space-y-6">
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="p-3 rounded-xl bg-slate-50 dark:bg-brand-dark-gray/40">
-          <p class="text-xs font-semibold uppercase text-slate-500">Question</p>
-          <p id="student-manager-progress" class="text-xl font-bold text-brand-dark-gray dark:text-white">--</p>
-        </div>
-        <div class="p-3 rounded-xl bg-slate-50 dark:bg-brand-dark-gray/40">
-          <p class="text-xs font-semibold uppercase text-slate-500">Time Remaining</p>
-          <p id="student-manager-time" class="text-xl font-bold text-brand-dark-gray dark:text-white">--:--</p>
-        </div>
-        <div class="p-3 rounded-xl bg-slate-50 dark:bg-brand-dark-gray/40">
-          <p class="text-xs font-semibold uppercase text-slate-500">Extra Time</p>
-          <p id="student-manager-extra" class="text-xl font-bold text-brand-dark-gray dark:text-white">+0m</p>
-        </div>
-        <div class="p-3 rounded-xl bg-slate-50 dark:bg-brand-dark-gray/40">
-          <p class="text-xs font-semibold uppercase text-slate-500">Connection</p>
-          <div class="flex items-center gap-2">
-            <span id="student-manager-connection-dot" class="h-3 w-3 rounded-full bg-slate-300"></span>
-            <p id="student-manager-connection" class="text-sm font-semibold text-brand-dark-gray dark:text-white">
-              Unknown</p>
-          </div>
-        </div>
-      </div>
-      <div class="rounded-2xl border border-slate-200 dark:border-brand-dark-gray/60 p-4">
-        <p class="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-3">Time Controls</p>
-        <div class="flex flex-wrap items-center gap-2">
-          <button id="student-manager-add-5"
-            class="inline-flex items-center gap-2 rounded-full bg-emerald-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-emerald-700">
-            <span class="material-symbols-outlined text-base">add</span>
-            +5 min
-          </button>
-          <button id="student-manager-add-10"
-            class="inline-flex items-center gap-2 rounded-full bg-emerald-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-emerald-700">
-            <span class="material-symbols-outlined text-base">add</span>
-            +10 min
-          </button>
-          <button id="student-manager-pause"
-            class="inline-flex items-center gap-2 rounded-full bg-amber-500 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-amber-600">
-            <span class="material-symbols-outlined text-base">pause_circle</span>
-            Pause Timer
-          </button>
-        </div>
-      </div>
-      <div class="flex flex-wrap items-center gap-3">
-        <button id="student-manager-unlock"
-          class="inline-flex items-center gap-2 rounded-full bg-blue-600 text-white px-5 py-2 text-sm font-semibold shadow hover:bg-blue-700">
-          <span class="material-symbols-outlined text-base">lock_open</span>
-          Approve Unlock
-        </button>
-        <button id="student-manager-force-submit"
-          class="inline-flex items-center gap-2 rounded-full bg-red-600 text-white px-5 py-2 text-sm font-semibold shadow hover:bg-red-700">
-          <span class="material-symbols-outlined text-base">task</span>
-          Force Submit
-        </button>
-        <p id="student-manager-message" class="text-sm text-slate-500"></p>
-      </div>
-      <div id="student-manager-loading" class="hidden text-sm text-slate-500">Working...</div>
-    </div>
-  </div>
-</div>
-
-<!-- Book View Modal -->
-<div id="book-view-modal" class="fixed inset-0 z-50 hidden overflow-y-auto">
-  <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onclick="closeBookView()"></div>
-  <div
-    class="relative w-full max-w-[95vw] mx-auto my-8 bg-white dark:bg-brand-dark-gray rounded-2xl shadow-2xl border border-brand-light-gray dark:border-brand-dark-gray/40">
-    <!-- Header -->
-    <div
-      class="sticky top-0 z-10 flex items-start justify-between gap-4 p-6 border-b border-slate-200 dark:border-brand-dark-gray/60 bg-white dark:bg-brand-dark-gray">
-      <div>
-        <div class="flex items-center gap-3 mb-2">
-          <span class="material-symbols-outlined text-3xl text-veritas-gold">menu_book</span>
-          <h2 id="book-view-title" class="text-3xl font-bold text-brand-dark-gray dark:text-white">Assessment Book View
-          </h2>
-        </div>
-        <p id="book-view-subtitle" class="text-sm text-slate-500">Comprehensive student performance analysis</p>
-      </div>
-      <button onclick="closeBookView()"
-        class="h-10 w-10 inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-brand-dark-gray/70 text-slate-600 dark:text-white hover:bg-slate-200 transition-colors">
-        <span class="material-symbols-outlined">close</span>
-      </button>
-    </div>
-
-    <div id="book-view-loading" class="p-12 text-center">
-      <div class="flex flex-row gap-2 justify-center mb-4">
-        <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce"></div>
-        <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.3s]"></div>
-        <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.5s]"></div>
-      </div>
-      <p class="mt-4 text-slate-600 dark:text-slate-400">Loading book view data...</p>
-    </div>
-
-    <div id="book-view-content" class="hidden p-6 space-y-6">
-      <!-- Class Overview Section -->
-      <div class="bg-gradient-to-r from-veritas-navy to-veritas-navy/80 rounded-xl p-6 text-white shadow-lg">
-        <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined">analytics</span>
-          Class Overview
-        </h3>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-            <p class="text-sm opacity-80">Total Students</p>
-            <p id="book-class-total-students" class="text-3xl font-bold">0</p>
-          </div>
-          <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-            <p class="text-sm opacity-80">Class Average</p>
-            <p id="book-class-average" class="text-3xl font-bold">0%</p>
-          </div>
-          <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-            <p class="text-sm opacity-80">Median Score</p>
-            <p id="book-class-median" class="text-3xl font-bold">0</p>
-          </div>
-          <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-            <p class="text-sm opacity-80">Std. Deviation</p>
-            <p id="book-class-stddev" class="text-3xl font-bold">0.0</p>
-          </div>
-        </div>
-        <div id="book-class-interpretation" class="mt-4 p-3 bg-white/10 backdrop-blur-sm rounded-lg text-sm">
-          <!-- Interpretation messages will be inserted here -->
-        </div>
-      </div>
-
-      <!-- View Toggle -->
-      <div class="flex gap-3 border-b border-slate-200 dark:border-brand-dark-gray/40">
-        <button id="book-tab-students"
-          class="px-6 py-3 font-semibold text-sm transition-colors border-b-2 border-veritas-gold text-veritas-gold">
-          Student Roster
-        </button>
-        <button id="book-tab-questions"
-          class="px-6 py-3 font-semibold text-sm transition-colors border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-veritas-gold hover:border-veritas-gold/30">
-          Question Analysis
-        </button>
-        <button id="book-tab-matrix"
-          class="px-6 py-3 font-semibold text-sm transition-colors border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-veritas-gold hover:border-veritas-gold/30">
-          Response Matrix
-        </button>
-      </div>
-
-      <!-- Student Roster Tab -->
-      <div id="book-content-students" class="book-tab-content">
-        <div
-          class="bg-white dark:bg-brand-dark-gray/30 rounded-xl border border-slate-200 dark:border-brand-dark-gray/40 overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-slate-100 dark:bg-brand-dark-gray/50">
-                <tr>
-                  <th
-                    class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">
-                    Rank</th>
-                  <th
-                    class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">
-                    Student Name</th>
-                  <th
-                    class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">
-                    Score</th>
-                  <th
-                    class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">
-                    Percentage</th>
-                  <th
-                    class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">
-                    Percentile</th>
-                  <th
-                    class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">
-                    Actions</th>
-                </tr>
-              </thead>
-              <tbody id="book-students-table-body" class="divide-y divide-slate-200 dark:divide-brand-dark-gray/40">
-                <!-- Student rows will be inserted here -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Question Analysis Tab -->
-      <div id="book-content-questions" class="book-tab-content hidden">
-        <div class="space-y-4" id="book-questions-container">
-          <!-- Question analysis cards will be inserted here -->
-        </div>
-      </div>
-
-      <!-- Response Matrix Tab -->
-      <div id="book-content-matrix" class="book-tab-content hidden">
-        <div
-          class="bg-white dark:bg-brand-dark-gray/30 rounded-xl border border-slate-200 dark:border-brand-dark-gray/40 overflow-hidden">
-          <div class="p-4 bg-slate-100 dark:bg-brand-dark-gray/50">
-            <h3 class="text-lg font-bold text-brand-dark-gray dark:text-white">Complete Response Matrix</h3>
-            <p class="text-sm text-slate-600 dark:text-slate-400">Each cell shows student's answer with
-              correct/incorrect indicator</p>
-          </div>
-          <div class="overflow-x-auto p-4">
-            <table class="w-full text-xs">
-              <thead>
-                <tr id="book-matrix-header-row">
-                  <th
-                    class="sticky left-0 bg-slate-100 dark:bg-brand-dark-gray/50 px-3 py-2 text-left font-semibold border-r border-slate-300 dark:border-brand-dark-gray/60">
-                    Student</th>
-                  <!-- Question headers will be injected here -->
-                  <th class="bg-slate-100 dark:bg-brand-dark-gray/50 px-3 py-2 text-center font-semibold">Total</th>
-                </tr>
-              </thead>
-              <tbody id="book-matrix-table-body">
-                <!-- Matrix rows will be inserted here -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Individual Student Detail View (expandable) -->
-      <div id="book-student-detail" class="hidden fixed inset-0 z-50 overflow-y-auto">
-        <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onclick="closeStudentDetail()"></div>
-        <div
-          class="relative w-full max-w-5xl mx-auto my-8 bg-white dark:bg-brand-dark-gray rounded-2xl shadow-2xl border border-brand-light-gray dark:border-brand-dark-gray/40">
-          <div
-            class="sticky top-0 z-10 flex items-start justify-between gap-4 p-6 border-b border-slate-200 dark:border-brand-dark-gray/60 bg-white dark:bg-brand-dark-gray">
-            <div>
-              <h3 id="student-detail-name" class="text-2xl font-bold text-brand-dark-gray dark:text-white">Student Name
-              </h3>
-              <div class="flex items-center gap-4 mt-2 text-sm text-slate-600 dark:text-slate-400">
-                <span>Score: <strong id="student-detail-score">0/0</strong></span>
-                <span>Percentage: <strong id="student-detail-percentage">0%</strong></span>
-                <span>Rank: <strong id="student-detail-rank">0</strong></span>
-                <span>Percentile: <strong id="student-detail-percentile">0th</strong></span>
-              </div>
-            </div>
-            <button onclick="closeStudentDetail()"
-              class="h-10 w-10 inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-brand-dark-gray/70 text-slate-600 dark:text-white hover:bg-red-500 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-red-500"
-              title="Close" aria-label="Close student detail view">
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-          <div class="p-6 max-h-[70vh] overflow-y-auto">
-            <div id="student-detail-responses" class="space-y-4">
-              <!-- Question-by-question responses will be inserted here -->
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div id="book-view-error" class="hidden p-12 text-center">
-      <span class="material-symbols-outlined text-6xl text-red-500">error</span>
-      <p class="mt-4 text-lg font-semibold text-slate-800 dark:text-slate-200">Error Loading Data</p>
-      <p id="book-view-error-message" class="text-slate-600 dark:text-slate-400"></p>
-    </div>
-  </div>
-
-
-
-  <!-- Poll Creator Modal -->
-  <div id="poll-creator-modal"
-    class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-    <div
-      class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
-      <div class="sticky top-0 bg-primary px-6 py-4 border-b border-primary/20 z-10 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <img alt="Malvern Prep Logo" class="h-8 w-auto"
-            src="https://raw.githubusercontent.com/stephenborish/veritasassets/f0a824864d7d66637a13b822bff99fa6830e6123/mplogo.png" />
-          <input type="text" id="new-poll-name" placeholder="Chapter 5 Quiz"
-            class="bg-transparent text-brand-white text-xl font-bold border-none focus:ring-0 p-0 placeholder-brand-white/70 min-w-[300px]" />
-        </div>
-        <div class="flex items-center gap-2">
-          <span id="save-status" class="text-sm text-brand-white/80 mr-2">All changes saved</span>
-          <button id="close-modal-btn"
-            class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-brand-white/20 text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-brand-white/30 transition-colors">
-            <span class="truncate">Cancel</span>
-          </button>
-          <button id="save-poll-btn"
-            class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-brand-white text-primary text-sm font-bold leading-normal tracking-[0.015em] hover:bg-brand-light-gray transition-colors">
-            <span class="truncate">Publish Poll</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="flex flex-grow overflow-hidden">
-        <!-- Question Navigator Sidebar -->
-        <aside
-          class="w-64 flex-shrink-0 border-r border-solid border-brand-light-gray dark:border-brand-dark-gray/20 bg-brand-white dark:bg-background-dark overflow-y-auto">
-          <div class="flex h-full flex-col justify-between p-4">
-            <div class="mb-4">
-              <p
-                class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-dark-gray/60 dark:text-brand-white/60 mb-2">
-                Question Order</p>
-              <div class="flex items-start justify-between gap-2">
-                <p id="question-sort-help"
-                  class="flex-1 text-xs leading-relaxed text-brand-dark-gray/60 dark:text-brand-white/60">Drag questions
-                  to reorder them manually.</p>
-                <button id="question-sort-reset-btn" type="button"
-                  class="h-9 px-3 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 bg-brand-white dark:bg-brand-dark-gray/30 text-xs font-semibold text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray/40 dark:hover:bg-brand-dark-gray/50 transition-colors">Reset
-                  order</button>
-              </div>
-            </div>
-            <div id="question-navigator" class="flex flex-col gap-2">
-              <!-- Question items will be added dynamically -->
-            </div>
-            <button id="add-question-btn"
-              class="flex w-full items-center justify-center gap-2 rounded-lg h-10 px-4 bg-primary/20 dark:bg-primary/30 text-primary dark:text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/30 dark:hover:bg-primary/40 transition-colors mt-4">
-              <span class="truncate">+ Add Question</span>
-            </button>
-            <!-- NEW FEATURE: Import from Question Bank -->
-            <button id="import-from-bank-btn"
-              class="flex w-full items-center justify-center gap-2 rounded-lg h-10 px-4 bg-amber-500/20 dark:bg-amber-500/30 text-amber-700 dark:text-amber-200 text-sm font-semibold leading-normal tracking-[0.015em] hover:bg-amber-500/30 dark:hover:bg-amber-500/40 transition-colors mt-2">
-              <span class="material-symbols-outlined text-base">inventory_2</span>
-              <span class="truncate">Import from Bank</span>
-            </button>
-            <!-- AP BIOLOGY 2025 TOPIC TAGGER -->
-            <button id="ai-suggest-btn"
-              class="flex w-full items-center justify-center gap-2 rounded-lg h-10 px-4 bg-green-500/20 dark:bg-green-500/30 text-green-700 dark:text-green-200 text-sm font-semibold leading-normal tracking-[0.015em] hover:bg-green-500/30 dark:hover:bg-green-500/40 transition-colors mt-2">
-              <span class="material-symbols-outlined text-base">science</span>
-              <span class="truncate">🧬 AP Bio Topics</span>
-            </button>
-            <!-- NEW FEATURE: Stimulus/Passage for grouped questions -->
-            <button id="add-stimulus-btn"
-              class="flex w-full items-center justify-center gap-2 rounded-lg h-10 px-4 bg-emerald-500/20 dark:bg-emerald-500/30 text-emerald-700 dark:text-emerald-200 text-sm font-semibold leading-normal tracking-[0.015em] hover:bg-emerald-500/30 dark:hover:bg-emerald-500/40 transition-colors mt-2">
-              <span class="material-symbols-outlined text-base">article</span>
-              <span class="truncate">Add Stimulus/Passage</span>
-            </button>
-          </div>
-        </aside>
-
-        <!-- Editing Workspace -->
-        <main class="flex-1 p-8 overflow-y-auto">
-          <div class="form-group mb-6">
-            <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white"
-              for="class-select">Class</label>
-            <select id="class-select"
-              class="w-full max-w-md rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
-              <option value="">-- Select Class --</option>
-            </select>
-          </div>
-
-          <div
-            class="bg-brand-white dark:bg-brand-dark-gray/20 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm mb-6">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <p
-                  class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-dark-gray/60 dark:text-brand-white/60">
-                  Session Mode</p>
-                <h3 class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white mt-1">Choose how students will
-                  experience this activity</h3>
-                <p class="text-sm text-brand-dark-gray/70 dark:text-brand-white/70 mt-2">Use Live Poll for synchronous,
-                  teacher-paced checks. Secure Assessment enables timed, randomized, proctored exams.</p>
-              </div>
-              <div
-                class="inline-flex rounded-full border border-brand-light-gray dark:border-brand-dark-gray/50 overflow-hidden">
-                <button type="button" id="builder-mode-live" data-session-type="LIVE_POLL"
-                  class="builder-session-toggle px-4 py-2 text-sm font-semibold transition-colors focus:outline-none">Live
-                  Poll</button>
-                <button type="button" id="builder-mode-secure" data-session-type="SECURE_ASSESSMENT"
-                  class="builder-session-toggle px-4 py-2 text-sm font-semibold transition-colors focus:outline-none">Secure
-                  Assessment</button>
-              </div>
-            </div>
-
-            <div id="secure-assessment-settings" class="mt-5 hidden">
-              <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <div>
-                  <label for="secure-time-limit-input"
-                    class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Time Limit
-                    (minutes)</label>
-                  <input id="secure-time-limit-input" type="number" min="5" step="5" placeholder="60"
-                    class="mt-2 w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-                  <p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-2">Required for Secure
-                    Assessments. Each student receives a personal countdown.</p>
-                </div>
-                <div>
-                  <label for="secure-access-code-input"
-                    class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Access Code
-                    (optional)</label>
-                  <input id="secure-access-code-input" type="text" maxlength="24" placeholder="BIO101"
-                    class="mt-2 w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 uppercase tracking-[0.2em]" />
-                  <p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-2">Students must enter this code
-                    before the exam begins.</p>
-                </div>
-                <div>
-                  <label for="secure-available-input"
-                    class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Available From</label>
-                  <input id="secure-available-input" type="datetime-local"
-                    class="mt-2 w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-                  <p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-2">Students cannot start before
-                    this window opens.</p>
-                </div>
-                <div>
-                  <label for="secure-due-input"
-                    class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Due By</label>
-                  <input id="secure-due-input" type="datetime-local"
-                    class="mt-2 w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-                  <p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-2">Sessions end automatically
-                    after this deadline.</p>
-                </div>
-              </div>
-
-              <div
-                class="mt-5 flex items-start gap-3 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
-                <span class="material-symbols-outlined text-blue-600 dark:text-blue-300">shield_lock</span>
-                <div>
-                  <p class="text-sm font-semibold text-blue-900 dark:text-blue-200">Secure Assessment requirements</p>
-                  <p class="text-sm text-blue-900/80 dark:text-blue-100/70 mt-1">Students must stay in fullscreen, avoid
-                    tab switching, and will appear in Mission Control for live monitoring.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-
-          <div id="question-builder-workspace">
-            <!-- Question editing workspace will be populated dynamically -->
-          </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- NEW FEATURE: Question Bank Import Modal -->
-  <div id="question-bank-modal"
-    class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-    <div
-      class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-      <div class="sticky top-0 bg-amber-600 px-6 py-4 border-b border-amber-700 z-10 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <span class="material-symbols-outlined text-white text-2xl">inventory_2</span>
-          <div>
-            <h2 class="text-white text-xl font-bold">Question Bank</h2>
-            <p class="text-white/80 text-sm">Import questions from previous polls</p>
-          </div>
-        </div>
-        <button id="close-question-bank-btn"
-          class="h-10 px-4 rounded-lg bg-white/20 text-white text-sm font-bold hover:bg-white/30 transition-colors">
-          Close
-        </button>
-      </div>
-      <div class="p-6 flex-1 overflow-y-auto">
-        <div class="mb-4">
-          <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white">Filter by
-            Poll</label>
-          <select id="bank-poll-filter"
-            class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-white dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50">
-            <option value="">All Polls</option>
-          </select>
-        </div>
-        <div id="bank-questions-container" class="space-y-3 max-h-[50vh] overflow-y-auto">
-          <p class="text-center text-brand-dark-gray/60 dark:text-brand-white/60 py-8">Loading questions...</p>
-        </div>
-      </div>
-      <div
-        class="sticky bottom-0 bg-brand-white dark:bg-brand-dark-gray px-6 py-4 border-t border-brand-light-gray dark:border-brand-dark-gray/40 flex justify-between items-center">
-        <span id="bank-selected-count" class="text-sm text-brand-dark-gray/70 dark:text-brand-white/70">0 questions
-          selected</span>
-        <button id="import-selected-btn"
-          class="h-10 px-6 rounded-lg bg-amber-600 text-white text-sm font-bold hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled>
-          Import Selected
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- AP BIOLOGY 2025 TOPIC TAGGER -->
-  <div id="ai-suggestions-modal"
-    class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-    <div
-      class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-      <div
-        class="sticky top-0 bg-gradient-to-r from-green-700 to-emerald-600 px-6 py-4 border-b border-green-800 z-10 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <span class="material-symbols-outlined text-white text-2xl">science</span>
-          <div>
-            <h2 class="text-white text-xl font-bold">AP Biology 2025 Topic Tagger</h2>
-            <p class="text-white/80 text-sm">Align questions with the official AP Bio curriculum</p>
-          </div>
-        </div>
-        <button id="close-ai-modal-btn"
-          class="h-10 px-4 rounded-lg bg-white/20 text-white text-sm font-bold hover:bg-white/30 transition-colors">
-          Close
-        </button>
-      </div>
-      <div class="p-6 flex-1 overflow-y-auto">
-        <div
-          class="mb-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700/30">
-          <p class="text-sm font-medium text-green-900 dark:text-green-200 mb-2">Current Question:</p>
-          <p id="ai-current-question" class="text-sm text-green-800 dark:text-green-300 italic">"No question text
-            entered"</p>
-        </div>
-
-        <div class="mb-4">
-          <label class="block text-sm font-semibold mb-2 text-brand-dark-gray dark:text-brand-white">Select AP Bio
-            Unit</label>
-          <select id="apbio-unit-select"
-            class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-white dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/50">
-            <option value="">-- Select Unit --</option>
-            <option value="Unit 1">Unit 1: Chemistry of Life (8-11%)</option>
-            <option value="Unit 2">Unit 2: Cell Structure and Function (10-13%)</option>
-            <option value="Unit 3">Unit 3: Cellular Energetics (12-16%)</option>
-            <option value="Unit 4">Unit 4: Cell Communication and Cell Cycle (10-15%)</option>
-            <option value="Unit 5">Unit 5: Heredity (8-11%)</option>
-            <option value="Unit 6">Unit 6: Gene Expression and Regulation (12-16%)</option>
-            <option value="Unit 7">Unit 7: Natural Selection (13-20%)</option>
-            <option value="Unit 8">Unit 8: Ecology (10-15%)</option>
-          </select>
-        </div>
-
-        <div class="mb-4">
-          <label class="block text-sm font-semibold mb-2 text-brand-dark-gray dark:text-brand-white">Select
-            Topic</label>
-          <select id="apbio-topic-select"
-            class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-white dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/50"
-            disabled>
-            <option value="">-- Select Unit First --</option>
-          </select>
-        </div>
-
-        <div class="mb-4">
-          <label class="block text-sm font-semibold mb-2 text-brand-dark-gray dark:text-brand-white">Big Idea
-            Connection</label>
-          <div class="grid grid-cols-2 gap-2">
-            <label
-              class="flex items-center gap-2 p-3 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors">
-              <input type="checkbox" id="bigidea-evo"
-                class="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500">
-              <span class="text-sm text-brand-dark-gray dark:text-brand-white"><strong>EVO</strong> - Evolution</span>
-            </label>
-            <label
-              class="flex items-center gap-2 p-3 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors">
-              <input type="checkbox" id="bigidea-ene"
-                class="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500">
-              <span class="text-sm text-brand-dark-gray dark:text-brand-white"><strong>ENE</strong> - Energetics</span>
-            </label>
-            <label
-              class="flex items-center gap-2 p-3 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors">
-              <input type="checkbox" id="bigidea-ist"
-                class="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500">
-              <span class="text-sm text-brand-dark-gray dark:text-brand-white"><strong>IST</strong> - Information
-                Storage</span>
-            </label>
-            <label
-              class="flex items-center gap-2 p-3 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors">
-              <input type="checkbox" id="bigidea-syi"
-                class="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500">
-              <span class="text-sm text-brand-dark-gray dark:text-brand-white"><strong>SYI</strong> - Systems
-                Interactions</span>
-            </label>
-          </div>
-        </div>
-
-        <div id="apbio-preview"
-          class="p-4 bg-slate-50 dark:bg-slate-800/30 rounded-lg border border-slate-200 dark:border-slate-700/30 hidden">
-          <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Tag Preview
-          </p>
-          <p id="apbio-tag-preview" class="text-sm font-medium text-brand-dark-gray dark:text-brand-white"></p>
-        </div>
-      </div>
-      <div
-        class="sticky bottom-0 bg-brand-white dark:bg-brand-dark-gray px-6 py-4 border-t border-brand-light-gray dark:border-brand-dark-gray/40 flex justify-end gap-3">
-        <button id="cancel-apbio-btn"
-          class="h-10 px-6 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 text-brand-dark-gray dark:text-brand-white text-sm font-bold hover:bg-brand-light-gray/30 transition-colors">
-          Cancel
-        </button>
-        <button id="generate-ai-btn"
-          class="h-10 px-6 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 text-white text-sm font-bold hover:from-green-700 hover:to-emerald-700 transition-colors flex items-center gap-2">
-          <span class="material-symbols-outlined text-base">label</span>
-          Apply Topic Tag
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- NEW FEATURE: Stimulus/Passage Modal -->
-  <div id="stimulus-modal"
-    class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-    <div
-      class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-      <div
-        class="sticky top-0 bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-4 border-b border-emerald-700 z-10 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <span class="material-symbols-outlined text-white text-2xl">article</span>
-          <div>
-            <h2 class="text-white text-xl font-bold">Add Stimulus/Passage</h2>
-            <p class="text-white/80 text-sm">Create a shared passage for multiple questions</p>
-          </div>
-        </div>
-        <button id="close-stimulus-modal-btn"
-          class="h-10 px-4 rounded-lg bg-white/20 text-white text-sm font-bold hover:bg-white/30 transition-colors">
-          Close
-        </button>
-      </div>
-      <div class="p-6 flex-1 overflow-y-auto">
-        <div class="mb-4">
-          <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white">Stimulus
-            Title</label>
-          <input type="text" id="stimulus-title-input"
-            class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-white dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-            placeholder="e.g., Reading Passage 1, Experiment Data Table">
-        </div>
-        <div class="mb-4">
-          <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white">Passage
-            Content</label>
-          <textarea id="stimulus-content-input" rows="8"
-            class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-white dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-y"
-            placeholder="Enter the reading passage, experiment description, data table, or other stimulus material that students should reference when answering the following questions..."></textarea>
-        </div>
-        <div
-          class="mb-4 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-700/30">
-          <p class="text-xs text-emerald-800 dark:text-emerald-200"><span class="font-semibold">Tip:</span> After
-            creating a stimulus, add questions that reference it. The stimulus will be displayed above those questions
-            during the assessment.</p>
-        </div>
-        <div class="mb-4">
-          <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white">Number of Questions
-            to Create</label>
-          <input type="number" id="stimulus-question-count" min="1" max="10" value="2"
-            class="w-32 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-white dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
-        </div>
-      </div>
-      <div
-        class="sticky bottom-0 bg-brand-white dark:bg-brand-dark-gray px-6 py-4 border-t border-brand-light-gray dark:border-brand-dark-gray/40 flex justify-end gap-3">
-        <button id="cancel-stimulus-btn"
-          class="h-10 px-6 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 text-brand-dark-gray dark:text-brand-white text-sm font-bold hover:bg-brand-light-gray/30 transition-colors">
-          Cancel
-        </button>
-        <button id="create-stimulus-btn"
-          class="h-10 px-6 rounded-lg bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition-colors">
-          Create Stimulus & Questions
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Student Links Modal -->
-  <div id="student-links-modal"
-    class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-    <div
-      class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
-      <div class="sticky top-0 bg-primary px-6 py-4 border-b border-primary/70">
-        <h2 class="text-brand-white text-2xl font-bold">Student Personalized Links</h2>
-        <p class="text-brand-white/80 text-sm mt-1">Each student has a unique tracking link.</p>
-      </div>
-      <div class="p-6">
-        <div id="links-container" class="max-h-[60vh] overflow-y-auto"></div>
-        <div class="mt-6 pt-4 border-t border-primary/20">
-          <button id="close-links-modal-btn"
-            class="flex items-center justify-center gap-2 rounded-lg h-10 px-6 bg-primary text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90 transition-colors">
-            <span>Close</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Bulk Add Students Modal -->
-  <div id="bulk-add-students-modal"
-    class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-    <div
-      class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-      <div class="sticky top-0 bg-primary px-6 py-4 border-b border-primary/70">
-        <h2 class="text-brand-white text-2xl font-bold">Bulk Add Students</h2>
-        <p class="text-brand-white/80 text-sm mt-1">Add multiple students at once. Enter one student per line in format:
-          Name, Email</p>
-      </div>
-      <div class="p-6 flex-1 overflow-y-auto">
-        <div class="mb-4">
-          <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white">Student Data</label>
-          <textarea id="bulk-student-input"
-            class="w-full h-64 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono"
-            placeholder="John Smith, jsmith@school.edu&#10;Jane Doe, jdoe@school.edu&#10;Bob Johnson, bjohnson@school.edu"></textarea>
-          <p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-2">Format: Name, Email (one per line).
-            Duplicates will be skipped automatically.</p>
-        </div>
-      </div>
-      <div
-        class="sticky bottom-0 bg-brand-white dark:bg-brand-dark-gray px-6 py-4 border-t border-primary/20 flex justify-end gap-3">
-        <button id="cancel-bulk-add-btn"
-          class="h-10 px-5 rounded-lg bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white text-sm font-semibold hover:bg-brand-dark-gray/20 dark:hover:bg-brand-white/20 transition-colors">Cancel</button>
-        <button id="confirm-bulk-add-btn"
-          class="h-10 px-5 rounded-lg bg-primary text-brand-white text-sm font-bold hover:bg-primary/90 transition-colors">Add
-          Students</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Poll Preview Modal -->
-  <div id="poll-preview-modal"
-    class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-    <div
-      class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
-      <!-- Header -->
-      <div class="sticky top-0 bg-primary px-6 py-4 border-b border-primary/70">
-        <div class="flex items-center justify-between">
-          <div class="flex-1">
-            <h2 id="preview-poll-name" class="text-brand-white text-2xl font-bold">Poll Preview</h2>
-            <p id="preview-poll-meta" class="text-brand-white/80 text-sm mt-1">Class Name • 5 Questions</p>
-          </div>
-          <div class="flex items-center gap-2">
-            <button id="preview-open-links-btn"
-              class="flex items-center justify-center gap-2 h-10 px-5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors">
-              <span class="material-symbols-outlined text-lg">link</span>
-              <span>View Student Links</span>
-            </button>
-            <button id="close-preview-modal-btn"
-              class="flex items-center justify-center h-10 w-10 rounded-lg bg-brand-white/20 text-brand-white hover:bg-brand-white/30 transition-colors">
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Body -->
-      <div class="flex-1 overflow-hidden flex">
-        <!-- Left Sidebar - Question Navigation -->
-        <div
-          class="w-64 border-r border-brand-light-gray dark:border-brand-dark-gray/40 overflow-y-auto bg-gray-50 dark:bg-brand-dark-gray/20">
-          <div class="p-4">
-            <div class="flex items-center justify-between mb-3">
-              <h3 class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Questions</h3>
-              <button id="preview-reorder-btn"
-                class="text-xs px-2 py-1 rounded bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white hover:bg-brand-dark-gray/20 dark:hover:bg-brand-white/20 transition-colors">
-                <span class="material-symbols-outlined text-sm align-middle">swap_vert</span>
-              </button>
-            </div>
-            <div id="preview-questions-nav" class="space-y-2">
-              <!-- Question navigation items will be added here -->
-            </div>
-          </div>
-        </div>
-
-        <!-- Main Content - Question Display -->
-        <div class="flex-1 overflow-y-auto p-6">
-          <div id="preview-question-display">
-            <!-- Question content will be displayed here -->
-          </div>
-        </div>
-      </div>
-
-      <!-- Footer - Navigation Controls -->
-      <div
-        class="sticky bottom-0 bg-brand-white dark:bg-brand-dark-gray px-6 py-4 border-t border-brand-light-gray dark:border-brand-dark-gray/40 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <button id="preview-edit-question-btn"
-            class="h-10 px-4 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
-            <span class="material-symbols-outlined text-sm align-middle mr-1">edit</span>
-            Edit Question
-          </button>
-          <button id="preview-delete-question-btn"
-            class="h-10 px-4 rounded-lg bg-red-600/10 text-red-600 dark:bg-red-500/20 dark:text-red-300 text-sm font-semibold hover:bg-red-600/20 dark:hover:bg-red-500/30 transition-colors">
-            <span class="material-symbols-outlined text-sm align-middle mr-1">delete</span>
-            Delete
-          </button>
-        </div>
-        <div class="flex items-center gap-2">
-          <button id="preview-prev-question-btn"
-            class="h-10 px-4 rounded-lg bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white text-sm font-semibold hover:bg-brand-dark-gray/20 dark:hover:bg-brand-white/20 transition-colors">
-            <span class="material-symbols-outlined text-sm align-middle mr-1">arrow_back</span>
-            Previous
-          </button>
-          <span id="preview-question-counter" class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60 px-2">1 /
-            5</span>
-          <button id="preview-next-question-btn"
-            class="h-10 px-4 rounded-lg bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white text-sm font-semibold hover:bg-brand-dark-gray/20 dark:hover:bg-brand-white/20 transition-colors">
-            Next
-            <span class="material-symbols-outlined text-sm align-middle ml-1">arrow_forward</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Post-Poll Analytics Modal -->
-  <div id="post-poll-analytics-modal"
-    class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-    <div
-      class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col">
-      <!-- Header -->
-      <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 border-b border-white/20">
-        <div class="flex items-center justify-between">
-          <div class="flex-1">
-            <h2 id="analytics-poll-name" class="text-brand-white text-2xl font-bold">Psychometric Analysis</h2>
-            <p id="analytics-poll-meta" class="text-brand-white/90 text-sm mt-1">Professional Assessment Quality Report
-            </p>
-          </div>
-          <button id="close-analytics-modal-btn"
-            class="flex items-center justify-center h-10 w-10 rounded-lg bg-brand-white/20 text-brand-white hover:bg-brand-white/30 transition-colors">
-            <span class="material-symbols-outlined">close</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Body -->
-      <div class="flex-1 overflow-y-auto p-6">
-        <div id="analytics-content">
-          <!-- Loading state -->
-          <div id="analytics-loading" class="flex items-center justify-center py-12">
-            <div class="flex flex-col items-center gap-3">
-              <div class="flex flex-row gap-2 justify-center mb-1">
-                <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce"></div>
-                <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.3s]"></div>
-                <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.5s]"></div>
-              </div>
-              <p class="text-brand-dark-gray/60 dark:text-brand-white/60">Computing analytics...</p>
-            </div>
-          </div>
-
-          <!-- Content will be rendered here -->
-          <div id="analytics-report" class="hidden">
-            <!-- Action Items / Insights Section -->
-            <div id="analytics-actions-container" class="mb-6 empty:hidden"></div>
-
-            <!-- Class Overview Section -->
-            <div class="mb-6">
-              <h3 class="text-xl font-bold text-brand-dark-gray dark:text-brand-white mb-4 flex items-center gap-2">
-                <span class="material-symbols-outlined text-primary">bar_chart</span>
-                Class Overview
-              </h3>
-              <div id="class-overview-content"></div>
-            </div>
-
-            <!-- Metacognition Section -->
-            <div id="metacognition-section" class="mb-6 hidden">
-              <h3 class="text-xl font-bold text-brand-dark-gray dark:text-brand-white mb-4 flex items-center gap-2">
-                <span class="material-symbols-outlined text-purple-600">psychology</span>
-                Metacognition Analysis
-              </h3>
-              <div id="metacognition-content"></div>
-            </div>
-
-            <!-- Item Analysis Section -->
-            <div class="mb-6">
-              <h3 class="text-xl font-bold text-brand-dark-gray dark:text-brand-white mb-4 flex items-center gap-2">
-                <span class="material-symbols-outlined text-blue-600">assignment</span>
-                Item-by-Item Analysis
-              </h3>
-              <div id="item-analysis-content"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Footer -->
-      <div
-        class="sticky bottom-0 bg-brand-white dark:bg-brand-dark-gray px-6 py-4 border-t border-brand-light-gray dark:border-brand-dark-gray/40 flex items-center justify-between">
-        <div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">
-          <p>📊 Powered by professional psychometric analysis</p>
-        </div>
-        <button id="export-analytics-btn"
-          class="h-10 px-5 rounded-lg bg-veritas-gold text-brand-white text-sm font-semibold hover:bg-veritas-gold/90 transition-colors">
-          <span class="material-symbols-outlined text-sm align-middle mr-1">download</span>
-          Export Report
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Data Migration Modal -->
-  <div id="migration-modal"
-    class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-    <div
-      class="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-xl border border-gray-200 dark:border-gray-700">
-      <div class="mb-6 flex items-start justify-between">
-        <div>
-          <h3 class="text-xl font-bold text-gray-900 dark:text-white">Import Data from Sheets</h3>
-          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Upload the JSON export file from your legacy Google
-            Sheet.</p>
-        </div>
-        <button onclick="document.getElementById('migration-modal').classList.add('hidden')"
-          class="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-gray-700">
-          <span class="material-symbols-outlined">close</span>
-        </button>
-      </div>
-
-      <div class="space-y-4">
-        <div class="flex items-center justify-center w-full">
-          <label for="migration-file-input"
-            class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-gray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500">
-            <div class="flex flex-col items-center justify-center pt-5 pb-6">
-              <span class="material-symbols-outlined text-3xl text-gray-400 mb-2">upload_file</span>
-              <p class="mb-2 text-sm text-gray-500 dark:text-gray-400"><span class="font-semibold">Click to
-                  upload</span> veritas_full_export.json</p>
-            </div>
-            <input id="migration-file-input" type="file" class="hidden" accept=".json"
-              onchange="handleMigrationFileSelect(this)" />
-          </label>
-        </div>
-
-        <div id="migration-file-info"
-          class="hidden p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-sm flex items-center gap-2">
-          <span class="material-symbols-outlined text-base">description</span>
-          <span id="migration-filename" class="font-mono">filename.json</span>
-        </div>
-
-        <div id="migration-progress-container" class="hidden space-y-2">
-          <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400">
-            <span id="migration-status-text">Processing...</span>
-            <span id="migration-percent">0%</span>
-          </div>
-          <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-            <div id="migration-progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
-          </div>
-          <div id="migration-log"
-            class="h-24 overflow-y-auto bg-gray-900 text-green-400 font-mono text-xs p-2 rounded-lg">
-            <!-- Log output -->
-          </div>
-        </div>
-      </div>
-
-      <div class="mt-6 flex justify-end gap-3">
-        <button onclick="document.getElementById('migration-modal').classList.add('hidden')"
-          class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600 transition-colors">
-          Cancel
-        </button>
-        <button id="start-migration-btn" onclick="startMigration()" disabled
-          class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2">
-          <span class="material-symbols-outlined text-base">rocket_launch</span>
-          Start Import
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Poll Creation Wizard View -->
-  <style>
-    /* Login Screen Styles */
-    #login-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 10000;
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-family: 'Inter', sans-serif;
-    }
-
-    .login-card {
-        background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-        border-radius: 24px;
-        padding: 48px;
-        width: 100%;
-        max-width: 420px;
-        text-align: center;
-        animation: loginSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
-
-    @keyframes loginSlideUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .login-logo {
-        width: 64px;
-        height: 64px;
-        margin: 0 auto 24px;
-        background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
-        border-radius: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 0 30px rgba(251, 191, 36, 0.3);
-    }
-
-    .login-logo span {
-        font-size: 32px;
-        color: white;
-    }
-
-    .login-title {
-        color: white;
-        font-size: 24px;
-        font-weight: 700;
-        margin-bottom: 8px;
-        letter-spacing: -0.02em;
-    }
-
-    .login-subtitle {
-        color: #94a3b8;
-        font-size: 15px;
-        margin-bottom: 32px;
-        line-height: 1.5;
-    }
-
-    .login-btn {
-        width: 100%;
-        background: white;
-        color: #0f172a;
-        border: none;
-        padding: 14px;
-        border-radius: 12px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 12px;
-        transition: all 0.2s ease;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    }
-
-    .login-btn:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        background: #f8fafc;
-    }
-
-    .login-btn:active {
-        transform: translateY(0);
-    }
-
-    .login-btn-icon {
-        width: 20px;
-        height: 20px;
-    }
-
-    .login-error {
-        margin-top: 16px;
-        padding: 12px;
-        background: rgba(239, 68, 68, 0.15);
-        border: 1px solid rgba(239, 68, 68, 0.3);
-        border-radius: 8px;
-        color: #fca5a5;
-        font-size: 13px;
-        display: none;
-        animation: shake 0.4s ease-in-out;
-    }
-
-    @keyframes shake {
-
-        0%,
-        100% {
-            transform: translateX(0);
-        }
-
-        25% {
-            transform: translateX(-4px);
-        }
-
-        75% {
-            transform: translateX(4px);
-        }
-    }
-
-    .login-footer {
-        margin-top: 32px;
-        color: #64748b;
-        font-size: 12px;
-    }
-</style>
-
-<div id="login-overlay" style="display: none;">
-    <div class="login-card">
-        <div class="login-logo">
-            <span class="material-symbols-outlined">school</span>
-        </div>
-        <h1 class="login-title">Veritas Live</h1>
-        <p class="login-subtitle">Sign in to access your classroom polls and assessments.</p>
-
-        <button id="google-login-btn" class="login-btn">
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="login-btn-icon"
-                alt="Google">
-            Sign in with Google
-        </button>
-
-        <div id="login-error" class="login-error"></div>
-
-        <div class="login-footer">
-            &copy; 2024 Veritas Education. Secure & Private.
-        </div>
-    </div>
-</div>
-
-<script>
-    (function () {
-        // Expose LoginManager globally
-        window.LoginManager = {
-            show: function () {
-                var el = document.getElementById('login-overlay');
-                if (el) el.style.display = 'flex';
-            },
-            hide: function () {
-                var el = document.getElementById('login-overlay');
-                if (el) el.style.display = 'none';
-            },
-            setError: function (msg) {
-                var el = document.getElementById('login-error');
-                if (el) {
-                    el.textContent = msg;
-                    el.style.display = 'block';
-                }
-            },
-            init: function (onSuccess) {
-                var btn = document.getElementById('google-login-btn');
-                if (btn) {
-                    btn.addEventListener('click', function () {
-                        var provider = new firebase.auth.GoogleAuthProvider();
-                        // Force account selection
-                        provider.setCustomParameters({
-                            prompt: 'select_account'
-                        });
-
-                        firebase.auth().signInWithPopup(provider)
-                            .then(function (result) {
-                                var user = result.user;
-                                console.log('[Auth] Signed in as:', user.email);
-
-                                // Persist session
-                                sessionStorage.setItem('veritas_session_token', user.uid); // Using UID as token for now
-                                sessionStorage.setItem('veritas_student_email', user.email);
-
-                                // Update Global State
-                                window.SESSION_TOKEN = user.uid;
-                                window.STUDENT_EMAIL = user.email;
-
-                                LoginManager.hide();
-                                if (onSuccess) onSuccess(user);
-                            })
-                            .catch(function (error) {
-                                console.error('[Auth] Login failed:', error);
-                                LoginManager.setError(error.message);
-                            });
-                    });
-                }
-            }
-        };
-    })();
-</script>
-  <script>
-(function(global) {
-  'use strict';
-
-  // Deterministic Student Key Generation (SHA-256)
-  // This matches the user's requirement for a collision-resistant key.
-  // We use Web Crypto API which is available in modern browsers.
-
-  async function generateStudentHash(email, pollId) {
-    if (!email) return 'unknown_student';
-
-    // Normalize: lowercase, trim
-    const normalized = email.toLowerCase().trim();
-
-    // Namespace with pollId if provided (optional but good for isolation)
-    const data = pollId ? `${pollId}:${normalized}` : normalized;
-
-    const encoder = new TextEncoder();
-    const dataBuffer = encoder.encode(data);
-
-    try {
-      const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      // Convert to hex string
-      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      // Return first 16 chars as key (enough entropy for this context)
-      return hashHex.substring(0, 16);
-    } catch (e) {
-      console.warn('Web Crypto unavailable, falling back to simple hash', e);
-      // Fallback for very old browsers (unlikely in this context but safe)
-      var hash = 0;
-      for (var i = 0; i < data.length; i++) {
-        var char = data.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32bit integer
-      }
-      return 'fb_' + Math.abs(hash).toString(16);
-    }
-  }
-
-  // Export
-  global.VeritasShared = global.VeritasShared || {};
-  global.VeritasShared.generateStudentKey = generateStudentHash;
-
-  // ========================================================================
-  // VERITAS DEBUG HELPER
-  // Accessible from browser console: VeritasDebug.printFirebaseConfig()
-  // Safe no-op if Firebase is not available.
-  // ========================================================================
-  global.VeritasDebug = {
-    /**
-     * Print Firebase configuration details to console.
-     * Call from browser DevTools: VeritasDebug.printFirebaseConfig()
-     */
-    printFirebaseConfig: function() {
-      console.group('🔥 VeritasDebug: Firebase Configuration');
-
-      // Check FIREBASE_CONFIG
-      if (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG) {
-        console.log('✓ FIREBASE_CONFIG exists');
-        console.log('  databaseURL:', FIREBASE_CONFIG.databaseURL || '(not set)');
-        console.log('  projectId:', FIREBASE_CONFIG.projectId || '(not set)');
-        console.log('  Full config:', FIREBASE_CONFIG);
-      } else {
-        console.warn('✗ FIREBASE_CONFIG is NOT defined');
-      }
-
-      // Check firebase SDK
-      if (typeof firebase !== 'undefined') {
-        console.log('✓ firebase SDK is loaded');
-        console.log('  firebase.apps.length:', firebase.apps ? firebase.apps.length : 'n/a');
-        if (firebase.apps && firebase.apps.length > 0) {
-          console.log('  Default app name:', firebase.apps[0].name);
-          console.log('  Database URL:', firebase.apps[0].options.databaseURL || '(not set)');
-        }
-      } else {
-        console.warn('✗ firebase SDK is NOT loaded');
-      }
-
-      // Check firebaseDb reference (if exists in scope)
-      if (typeof firebaseDb !== 'undefined' && firebaseDb) {
-        console.log('✓ firebaseDb reference exists');
-      } else {
-        console.log('○ firebaseDb reference not in scope (normal before init)');
-      }
-
-      console.groupEnd();
-      return {
-        configExists: typeof FIREBASE_CONFIG !== 'undefined',
-        databaseURL: (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG) ? FIREBASE_CONFIG.databaseURL : null,
-        firebaseLoaded: typeof firebase !== 'undefined',
-        appsLength: (typeof firebase !== 'undefined' && firebase.apps) ? firebase.apps.length : 0
-      };
-    },
-
-    /**
-     * Print current page context for debugging
-     */
-    printContext: function() {
-      console.group('📋 VeritasDebug: Page Context');
-      console.log('Location:', window.location.href);
-      console.log('Page type:', document.title);
-
-      // Check for session token (student pages)
-      if (typeof SESSION_TOKEN !== 'undefined') {
-        console.log('SESSION_TOKEN:', SESSION_TOKEN ? '(present, length=' + SESSION_TOKEN.length + ')' : '(empty)');
-      }
-
-      // Check for poll data (teacher pages)
-      if (typeof CURRENT_POLL_DATA !== 'undefined') {
-        console.log('CURRENT_POLL_DATA:', CURRENT_POLL_DATA);
-      }
-
-      console.groupEnd();
-    }
-  };
-
-})(this);
-</script>
-
-  <script>
   (function () {
   // --- FIREBASE INITIALIZATION ---
   // Must run before any data access
@@ -8308,7 +227,8 @@
   ? duration
   : (TOAST_DURATIONS_MS[normalizedType] ?? TOAST_DURATIONS_MS.info);
 
-  // Auto-remove after duration if not sticky (<= 0) if (effectiveDuration> 0) {
+  // Auto-remove after duration if not sticky (<= 0)
+  if (effectiveDuration> 0) {
     setTimeout(() => {
     toast.classList.add('toast-out');
     setTimeout(() => toast.remove(), 300);
@@ -8455,10 +375,16 @@
 
     function renderSparkline(containerId, data, color) {
     const container = document.getElementById(containerId);
-    if (!container || !data || data.length < 2) return; const width=100; const height=28; const padding=2; // Calculate
-      min/max for scaling const min=Math.min(...data); const max=Math.max(...data); const range=max - min || 1; // Create
+    if (!container || !data || data.length < 2) return;
+    const width = 100;
+    const height = 28;
+    const padding = 2;
+    // Calculate min/max for scaling
+    const min = Math.min(...data);
+    const max = Math.max(...data);
+    const range = max - min || 1;
       SVG if it does not exist let svg=container.querySelector('svg'); if (!svg) {
-      svg=document.createElementNS('http://www.w3.org/2000/svg', 'svg' ); svg.setAttribute('class', 'sparkline' );
+  // svg=document.createElementNS('http://www.w3.org/2000/svg', 'svg' ); svg.setAttribute('class', 'sparkline' );
       svg.setAttribute('viewBox', `0 0 ${width} ${height}`); // Add gradient definition const
       defs=document.createElementNS('http://www.w3.org/2000/svg', 'defs' ); const
       gradient=document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient' ); gradient.setAttribute('id',
@@ -8726,18 +652,23 @@
           if (seconds < 10) return 'just now' ; if (seconds < 60) return seconds + 's ago' ; const
             minutes=Math.floor(seconds / 60); if (minutes < 60) return minutes + 'm ago' ; const hours=Math.floor(minutes
             / 60); if (hours < 24) return hours + 'h ago' ; const days=Math.floor(hours / 24); return days + 'd ago' ; }
-            // Hook into existing events to add activities function trackStudentResponse(studentName, isCorrect) { const
+            // Hook into existing events to add activities
+            function trackStudentResponse(studentName, isCorrect) { const
             type=isCorrect ? 'success' : 'info' ; const icon=isCorrect ? 'check_circle' : 'radio_button_unchecked' ; const
             message=`${studentName} answered ${isCorrect ? 'correctly' : '' }`; addActivityItem(type, icon, message); }
             function trackStudentLockout(studentName) { addActivityItem('warning', 'lock_person' , `${studentName} was
-            locked out`); } function trackStudentUnlock(studentName) { addActivityItem('success', 'lock_open' ,
-            `${studentName} was unlocked`); } function trackAllResponded() { addActivityItem('success', 'celebration'
-            , 'All students responded!' ); } function trackQuestionAdvance(questionNum) {
+            locked out`); }
+            function trackStudentUnlock(studentName) { addActivityItem('success', 'lock_open' ,
+            `${studentName} was unlocked`); }
+            function trackAllResponded() { addActivityItem('success', 'celebration'
+            , 'All students responded!' ); }
+            function trackQuestionAdvance(questionNum) {
             addActivityItem('info', 'arrow_forward' , `Advanced to Question ${questionNum}`); } //===Sound Effects
             System===var soundEffectsEnabled=false; // Disabled by default, can be enabled via settings var
             audioContext=null; function initializeAudioContext() { if (!audioContext && typeof AudioContext !=='undefined'
             ) { audioContext=new AudioContext(); } else if (!audioContext && typeof webkitAudioContext !=='undefined' ) {
-            audioContext=new webkitAudioContext(); } return audioContext; } function playSoundEffect(type) { if
+            audioContext=new webkitAudioContext(); }
+            return audioContext; } function playSoundEffect(type) { if
             (!soundEffectsEnabled) return; const ctx=initializeAudioContext(); if (!ctx) return; const
             oscillator=ctx.createOscillator(); const gainNode=ctx.createGain(); oscillator.connect(gainNode);
             gainNode.connect(ctx.destination); // Configure sound based on type switch (type) { case 'success' : // Happy
@@ -8754,11 +685,13 @@
             case 'notification' : // Single gentle tone oscillator.frequency.value=880; // A5 oscillator.type='sine' ;
             gainNode.gain.setValueAtTime(0.2, ctx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.01,
             ctx.currentTime + 0.15); oscillator.start(ctx.currentTime); oscillator.stop(ctx.currentTime + 0.15); break; }
-            } function playTone(ctx, frequency, startTime, duration, gain) { const osc=ctx.createOscillator(); const
+            }
+            function playTone(ctx, frequency, startTime, duration, gain) { const osc=ctx.createOscillator(); const
             g=ctx.createGain(); osc.connect(g); g.connect(ctx.destination); osc.frequency.value=frequency; osc.type='sine'
             ; g.gain.setValueAtTime(gain, ctx.currentTime + startTime); g.gain.exponentialRampToValueAtTime(0.01,
             ctx.currentTime + startTime + duration); osc.start(ctx.currentTime + startTime); osc.stop(ctx.currentTime +
-            startTime + duration); } function toggleSoundEffects() { soundEffectsEnabled=!soundEffectsEnabled;
+            startTime + duration); }
+            function toggleSoundEffects() { soundEffectsEnabled=!soundEffectsEnabled;
             showToast('info', 'Sound Effects' , soundEffectsEnabled ? 'Sound effects enabled' : 'Sound effects disabled' ,
             2000); } //===Keyboard Shortcuts System===var keyboardShortcutsEnabled=true; function
             initializeKeyboardShortcuts() { document.addEventListener('keydown', function (e) { if
@@ -8800,13 +733,14 @@
             (self.data.length> 0) {
             // self.isOpen = true;
             // self.renderOptions();
-            // Actually, let's just let the button toggle it or typing open it
+            // Actually,
+            let`s just let the button toggle it or typing open it
             }
             });
 
-            this.input.addEventListener('keydown', function (e) {
+            this.input.addEventListener(`keydown`, function (e) {
             if (!self.isOpen) {
-            if (e.key === 'ArrowDown') {
+            if (e.key === `ArrowDown`) {
             self.isOpen = true;
             self.renderOptions();
             e.preventDefault();
@@ -8815,28 +749,28 @@
             }
 
             switch (e.key) {
-            case 'ArrowDown':
+            case `ArrowDown`:
             e.preventDefault();
             self.activeIndex = (self.activeIndex + 1) % self.filteredData.length;
             self.updateActiveOption();
             self.scrollActiveIntoView();
             break;
-            case 'ArrowUp':
+            case `ArrowUp`:
             e.preventDefault();
             self.activeIndex = (self.activeIndex - 1 + self.filteredData.length) % self.filteredData.length;
             self.updateActiveOption();
             self.scrollActiveIntoView();
             break;
-            case 'Enter':
+            case `Enter`:
             e.preventDefault();
             if (self.activeIndex >= 0 && self.filteredData[self.activeIndex]) {
             self.selectItem(self.filteredData[self.activeIndex]);
             }
             break;
-            case 'Escape':
+            case `Escape`:
             self.close();
             break;
-            case 'Tab':
+            case `Tab`:
             self.close();
             break;
             }
@@ -8844,20 +778,20 @@
 
             // Button Event
             if (this.button) {
-            this.button.addEventListener('click', function (e) {
+            this.button.addEventListener(`click`, function (e) {
             e.stopPropagation(); // Prevent closing immediately
             self.toggle();
             });
             }
 
             // Option Click Events (Delegated)
-            this.optionsList.addEventListener('click', function (e) {
-            var li = e.target.closest('li');
+            this.optionsList.addEventListener(`click`, function (e) {
+            var li = e.target.closest(`li`);
             if (li) {
             var index = parseInt(li.dataset.index, 10);
             // Find item in filteredData based on index matching?
             // The filteredData indices might not match filtered array indices if we rely on dataset.index
-            // Let's store the actual filtered index in dataset
+            // Let`s store the actual filtered index in dataset
             var item = self.filteredData[index];
             if (item) {
             self.selectItem(item);
@@ -8912,8 +846,8 @@
             }
 
             if (this.filteredData.length === 0) {
-            this.optionsList.innerHTML = '<div class="relative cursor-default select-none py-2 px-4 text-gray-700">Nothing
-              found.</div>';
+            this.optionsList.innerHTML = `<div class="relative cursor-default select-none py-2 px-4 text-gray-700">Nothing
+              found.</div>`;
             } else {
             this.optionsList.innerHTML = this.filteredData.map(function (item, index) {
             // Map filtered index to dataset
@@ -9380,8 +1314,8 @@
             if (hasAppsScriptRuntime()) {
             return;
             }
-            console.warn('Apps Script runtime not detected after ' + RUNTIME_MAX_WAIT_MS + 'ms – showing cached preview
-            data.');
+            console.warn('Apps Script runtime not detected after ' + RUNTIME_MAX_WAIT_MS + `ms – showing cached preview
+            data.`);
             PREVIEW_MODE = true;
             previewBootstrapped = true;
             loadInitialData();
@@ -9460,8 +1394,8 @@
             root.setAttribute('aria-hidden', 'true');
             root.innerHTML = '' +
             '<div class="veritas-modal-backdrop"></div>' +
-            '<div class="veritas-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="veritas-modal-title"
-              aria-describedby="veritas-modal-message">' +
+            `<div class="veritas-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="veritas-modal-title"
+              aria-describedby="veritas-modal-message">` +
               '<div class="veritas-modal-header">' +
                 '<h2 id="veritas-modal-title">Notice</h2>' +
                 '</div>' +
@@ -9588,25 +1522,34 @@
             if (index <= 0) { focusable[focusable.length - 1].focus(); event.preventDefault(); } } else { if
               (index===focusable.length - 1) { focusable[0].focus(); event.preventDefault(); } } } else if
               (event.key==='Enter' && currentConfig && currentConfig.mode==='prompt' ) { if
-              (document.activeElement===inputField) { event.preventDefault(); handleConfirm(); } } } function
+              (document.activeElement===inputField) { event.preventDefault(); handleConfirm(); } } }
+              function
               enforceFocus(event) { if (!active) return; if (!dialog.contains(event.target)) { event.stopPropagation();
-              focusFirst(); } } function closeModal(result) { active=false; root.classList.remove('is-active');
+              focusFirst(); } }
+              function closeModal(result) { active=false; root.classList.remove('is-active');
               root.setAttribute('aria-hidden', 'true' ); document.body.classList.remove('veritas-modal-open');
               root.removeEventListener('keydown', trapKey, true); document.removeEventListener('focus', enforceFocus,
               true); toggleBackground(false); setPending(false); if (previousFocus && typeof
-              previousFocus.focus==='function' ) { setTimeout(function () { previousFocus.focus(); }, 0); } if (resolveFn)
-              { resolveFn(result); } currentConfig=null; resolveFn=null; } function handleConfirm() { if (!active) return;
+              previousFocus.focus==='function' ) { setTimeout(function () { previousFocus.focus(); }, 0); }
+              if (resolveFn)
+              { resolveFn(result); } currentConfig=null; resolveFn=null; }
+              function handleConfirm() { if (!active) return;
               setPending(true); var mode=currentConfig ? currentConfig.mode : 'alert' ; var result; if (mode==='prompt' )
-              { result=inputField.value; } else if (mode==='confirm' ) { result=true; } closeModal(result); } function
+              { result=inputField.value; } else if (mode==='confirm' ) { result=true; } closeModal(result); }
+              function
               handleCancel() { if (!active) return; var mode=currentConfig ? currentConfig.mode : 'alert' ; if
-              (mode==='alert' ) { closeModal(undefined); return; } if (mode==='confirm' ) { closeModal(false); } else if
-              (mode==='prompt' ) { closeModal(null); } } function openModal(mode, options) { options=options || {};
+              (mode==='alert' ) { closeModal(undefined); return; }
+              if (mode==='confirm' ) { closeModal(false); } else if
+              (mode==='prompt' ) { closeModal(null); } }
+              function openModal(mode, options) { options=options || {};
               currentConfig=Object.assign({}, options, { mode: mode }); allowEscape=options.allowEscape !==false;
               titleEl.textContent=options.title || (mode==='confirm' ? 'Please Confirm' : (mode==='prompt'
               ? 'Enter Response' : 'Notice' )); if (options.html) { messageEl.innerHTML=options.html; } else {
-              messageEl.textContent=options.message || '' ; } if (options.subtext) { subtextEl.style.display='block' ;
+              messageEl.textContent=options.message || '' ; }
+              if (options.subtext) { subtextEl.style.display='block' ;
               subtextEl.textContent=options.subtext; } else { subtextEl.style.display='none' ; subtextEl.textContent='' ;
-              } if (mode==='prompt' ) { inputWrap.style.display='flex' ; inputField.value=options.defaultValue || '' ; if
+              }
+              if (mode==='prompt' ) { inputWrap.style.display='flex' ; inputField.value=options.defaultValue || '' ; if
               (options.placeholder) { inputField.placeholder=options.placeholder; } else {
               inputField.removeAttribute('placeholder'); } } else { inputWrap.style.display='none' ; inputField.value='' ;
               inputField.removeAttribute('placeholder'); } confirmLabel.textContent=options.confirmText ||
@@ -9627,42 +1570,56 @@
               (options) { return openModal('alert', options).then(function () { return; }); }, confirm: function (options)
               { return openModal('confirm', options).then(function (result) { return result !==false; }); }, prompt:
               function (options) { return openModal('prompt', options).then(function (result) { return result; }); } }; }
-              // --- DOM Utilities --- function bindClick(id, handler) { var el=document.getElementById(id); if (!el) {
+              // --- DOM Utilities ---
+              function bindClick(id, handler) { var el=document.getElementById(id); if (!el) {
               console.warn('Missing click target:', id); return null; } el.addEventListener('click', handler); return el;
-              } function bindInput(id, eventName, handler) { var el=document.getElementById(id); if (!el) {
+              }
+              function bindInput(id, eventName, handler) { var el=document.getElementById(id); if (!el) {
               console.warn('Missing input target:', id); return null; } el.addEventListener(eventName, handler); return
-              el; } function bindChange(element, handler, debugId) { if (!element) { console.warn('Missing change
-              target:', debugId); return; } element.addEventListener('change', handler); } function
+              el; }
+              function bindChange(element, handler, debugId) { if (!element) { console.warn(`Missing change
+              target:`, debugId); return; } element.addEventListener('change', handler); }
+              function
               updateDashboardSidebarToggleState() { var iconName=dashboardSidebarVisible ? 'menu_open' : 'menu' ; var
               ariaLabel=dashboardSidebarVisible ? 'Hide navigation' : 'Show navigation' ;
               dashboardSidebarToggleButtons.forEach(function (btn) { if (!btn) return; var
               icon=btn.querySelector('.material-symbols-outlined'); if (icon) { icon.textContent=iconName; }
               btn.setAttribute('aria-label', ariaLabel); btn.setAttribute('aria-expanded', dashboardSidebarVisible
-              ? 'true' : 'false' ); }); } function setDashboardSidebarVisibility(visible) { if (!dashboardSidebar) return;
+              ? 'true' : 'false' ); }); }
+              function setDashboardSidebarVisibility(visible) { if (!dashboardSidebar) return;
               dashboardSidebarVisible=visible; if (visible) { dashboardSidebar.classList.remove('hidden');
               dashboardSidebar.classList.add('flex'); // Restore lg:flex if it was removed
               dashboardSidebar.classList.add('lg:flex'); dashboardSidebar.style.display='' ; } else {
               dashboardSidebar.classList.add('hidden'); dashboardSidebar.classList.remove('flex'); // CRITICAL FIX: Also
               remove lg:flex, otherwise it overrides hidden on large screens dashboardSidebar.classList.remove('lg:flex');
-              dashboardSidebar.style.display='' ; } updateDashboardSidebarToggleState(); } function
+              dashboardSidebar.style.display='' ; } updateDashboardSidebarToggleState(); }
+              function
               toggleDashboardSidebar(event) { if (event) { event.preventDefault(); }
-              setDashboardSidebarVisibility(!dashboardSidebarVisible); } function registerDashboardSidebarToggle(id) { var
-              btn=bindClick(id, toggleDashboardSidebar); if (btn) { dashboardSidebarToggleButtons.push(btn); } } function
+              setDashboardSidebarVisibility(!dashboardSidebarVisible); }
+              function registerDashboardSidebarToggle(id) { var
+              btn=bindClick(id, toggleDashboardSidebar); if (btn) { dashboardSidebarToggleButtons.push(btn); } }
+              function
               storeButtonDefaultHtml(button) { if (button && !button.dataset.defaultHtml) {
-              button.dataset.defaultHtml=button.innerHTML; } } function buttonSpinnerMarkup(text) {
+              button.dataset.defaultHtml=button.innerHTML; } }
+              function buttonSpinnerMarkup(text) {
               return '<span class="flex w-full items-center justify-center gap-2"><span class="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span><span>'
-              + escapeHtml(text || 'Loading...' ) + '</span></span>' ; } function setButtonLoading(button, isLoading,
-              label) { if (!button) { return; } if (isLoading) { storeButtonDefaultHtml(button); button.disabled=true;
+              + escapeHtml(text || 'Loading...' ) + '</span></span>' ; }
+              function setButtonLoading(button, isLoading,
+              label) { if (!button) { return; }
+              if (isLoading) { storeButtonDefaultHtml(button); button.disabled=true;
               button.setAttribute('aria-busy', 'true' ); button.setAttribute('aria-disabled', 'true' );
               button.innerHTML=buttonSpinnerMarkup(label); } else { if (button.dataset.defaultHtml) {
               button.innerHTML=button.dataset.defaultHtml; } button.disabled=false; button.removeAttribute('aria-busy');
-              button.removeAttribute('aria-disabled'); } } function bootstrapGoogleCharts() { if (googleChartsReady ||
-              googleChartsLoading) { return; } if (!(window.google && google.charts && typeof
+              button.removeAttribute('aria-disabled'); } }
+              function bootstrapGoogleCharts() { if (googleChartsReady ||
+              googleChartsLoading) { return; }
+              if (!(window.google && google.charts && typeof
               google.charts.load==='function' )) { return; } googleChartsLoading=true; google.charts.load('current',
               { 'packages' : ['corechart'] }); google.charts.setOnLoadCallback(function () { googleChartsReady=true;
               googleChartsLoading=false; if (googleChartsBootstrapTimer) { clearInterval(googleChartsBootstrapTimer);
-              googleChartsBootstrapTimer=null; } try { onGoogleChartsReady(); } catch (err) { console.error('Post-chart
-              bootstrap failed:', err); } }); } function onGoogleChartsReady() { // Activity pulse feature has been
+              googleChartsBootstrapTimer=null; } try { onGoogleChartsReady(); } catch (err) { console.error(`Post-chart
+              bootstrap failed:`, err); } }); }
+              function onGoogleChartsReady() { // Activity pulse feature has been
               removed from dashboard if (typeof renderAnalyticsByTab==='function' && typeof analyticsData !=='undefined'
               && analyticsData) { try { renderAnalyticsByTab(); } catch (err) { console.error('Analytics redraw failed:',
               err); } } } // --- Element Cache --- var pollSelect=document.getElementById('poll-select'); var
@@ -10399,9 +2356,11 @@
 
               function updateMobileLayoutVisibility() {
               var isMobileViewport = window.innerWidth <= 1024; if (liveMobileNav) {
-                liveMobileNav.style.display=(isMobileViewport && currentMainSection==='live' ) ? 'flex' : 'none' ; } if
+                liveMobileNav.style.display=(isMobileViewport && currentMainSection==='live' ) ? 'flex' : 'none' ; }
+                if
                 (liveMobileActions) { liveMobileActions.style.display=(isMobileViewport && currentMainSection==='live' )
-                ? 'flex' : 'none' ; } setActiveMobilePanelForViewport(activeMobilePanel || 'question' ); } function
+                ? 'flex' : 'none' ; } setActiveMobilePanelForViewport(activeMobilePanel || 'question' ); }
+                function
                 setActiveMobilePanelForViewport(panel) { activeMobilePanel=panel || 'question' ; var
                 panels=document.querySelectorAll('[data-mobile-panel]'); var isMobileViewport=window.innerWidth <=1024;
                 panels.forEach(function (panelEl) { var
@@ -10414,14 +2373,16 @@
                 clearInterval(pollInterval); pollInterval=null; } missionControlHeartbeat.stop(); if
                 (analyticsRefreshInterval) { clearInterval(analyticsRefreshInterval); analyticsRefreshInterval=null; }
                 pauseTimerCountdown(); stopVisualTimer(); timerRemainingSeconds=timerPresetSeconds; timerActive=false;
-                updateTimerDisplay(); updateTimerStatus('Timer idle.', 'info' ); } function showDashboard() {
+                updateTimerDisplay(); updateTimerStatus('Timer idle.', 'info' ); }
+                function showDashboard() {
                 clearLiveIntervals(); isLiveSession=false; CURRENT_POLL_DATA={}; // Clear Mission Control state to prevent
                 polling for non-existent polls currentMissionControlPollId=null; currentSecureSessionId=null;
                 missionControlPollFailures=0; missionControlBackoffMs=0; missionControlHeartbeat.stop();
                 headerDefault.style.display='flex' ; headerLive.style.display='none' ; setMainSection('dashboard'); //
                 Ensure sidebar is visible on dashboard setDashboardSidebarVisibility(true); // Load dashboard summary data
                 (non-blocking) setTimeout(function () { if (!dashboardSummary) { loadDashboardSummary(); } else {
-                renderDashboardSummary(); } }, 100); } function loadDashboardSummary() { if (PREVIEW_MODE &&
+                renderDashboardSummary(); } }, 100); }
+                function loadDashboardSummary() { if (PREVIEW_MODE &&
                 PREVIEW_PAYLOAD) { dashboardSummary=deepClone(PREVIEW_PAYLOAD.dashboardSummary || null);
                 renderDashboardSummary(); return; } // FIREBASE MIGRATION: Load Polls directly from RTDB // This replaces
                 google.script.run.getDashboardSummary() if (!firebase.apps.length)
@@ -10433,13 +2394,16 @@
                 (b.createdAt || 0) - (a.createdAt || 0); }); } // Construct equivalent dashboard summary object
                 dashboardSummary={ polls: pollsList, totalPolls: pollsList.length, // Legacy/Placeholder stats (can be
                 enriched later) activeSessions: 0, totalResponses: 0 }; console.log('[Firebase] Dashboard polls loaded:',
-                pollsList.length); renderDashboardSummary(); }, function (error) { console.error('[Firebase] Dashboard
-                Poll Load Error:', error); // Fallback or error state }); } function renderDashboardSummary() { // Recent
+                pollsList.length); renderDashboardSummary(); }, function (error) { console.error(`[Firebase] Dashboard
+                Poll Load Error:`, error); // Fallback or error state }); }
+                function renderDashboardSummary() { // Recent
                 sessions and activity pulse features have been removed // The dashboard now only shows the poll library
                 var polls=(dashboardSummary && dashboardSummary.polls) ? dashboardSummary.polls : [];
-                renderPollCards(polls); renderPollTable(polls); } function renderRecentSessions() { var
-                container=document.getElementById('recent-sessions-container'); if (!container) { console.warn('Recent
-                sessions container not found'); return; } if (!dashboardSummary || !dashboardSummary.recentSessions ||
+                renderPollCards(polls); renderPollTable(polls); }
+                function renderRecentSessions() { var
+                container=document.getElementById('recent-sessions-container'); if (!container) { console.warn(`Recent
+                sessions container not found`); return; }
+                if (!dashboardSummary || !dashboardSummary.recentSessions ||
                 dashboardSummary.recentSessions.length===0) {
                 container.innerHTML='<div class="text-center py-6 text-gray-500 text-sm">No recent sessions found. Create your first poll to get started!</div>'
                 ; return; } try { container.innerHTML='' ; dashboardSummary.recentSessions.forEach(function (session) {
@@ -10476,8 +2440,8 @@
                 });
                 } catch (e) {
                 console.error('Error in renderRecentSessions:', e);
-                container.innerHTML = '<div class="text-center py-6 text-red-500 text-sm">Error loading recent sessions
-                </div>';
+                container.innerHTML = `<div class="text-center py-6 text-red-500 text-sm">Error loading recent sessions
+                </div>`;
                 }
                 }
 
@@ -10490,8 +2454,8 @@
                 }
 
                 if (!dashboardSummary || !dashboardSummary.dailyActivity || dashboardSummary.dailyActivity.length === 0) {
-                chartContainer.innerHTML = '<div class="text-center py-6 text-gray-500 text-sm">No activity data available
-                </div>';
+                chartContainer.innerHTML = `<div class="text-center py-6 text-gray-500 text-sm">No activity data available
+                </div>`;
                 summaryContainer.innerHTML = '';
                 return;
                 }
@@ -10521,15 +2485,15 @@
 
                 summaryContainer.innerHTML = '<div class="flex items-center justify-between">' +
                   '<p class="text-sm text-gray-600">' +
-                    '<span class="font-semibold ' + changeClass + '">' + changeSymbol + ' ' + Math.abs(change) + '%</span>
-                    compared to last week' +
+                    '<span class="font-semibold ' + changeClass + '">' + changeSymbol + ' ' + Math.abs(change) + `%</span>
+                    compared to last week` +
                     '</p>' +
                   '<span class="text-xs text-gray-400 italic">' + totalActivity + ' total interactions</span>' +
                   '</div>';
                 } catch (e) {
                 console.error('Error in renderActivityPulse:', e);
-                chartContainer.innerHTML = '<div class="text-center py-6 text-red-500 text-sm">Error loading activity data
-                </div>';
+                chartContainer.innerHTML = `<div class="text-center py-6 text-red-500 text-sm">Error loading activity data
+                </div>`;
                 summaryContainer.innerHTML = '';
                 }
                 }
@@ -10589,7 +2553,8 @@
                 }
 
                 // FIREBASE MIGRATION: Roster data is usually loaded via showRosterManager
-                // But we can pre-fetch it here if needed, or just let the app load polls.
+                // But we can pre-fetch it here if needed, or just
+                let the app load polls.
                 // The polls are already being loaded via loadDashboardSummary() which uses the RTDB listener.
 
                 console.log('[Firebase] loadInitialData: Relying on RTDB listeners for polls.');
@@ -10674,8 +2639,8 @@
                 var opt = document.createElement('option');
                 opt.value = poll.pollId;
                 var questionTotal = Array.isArray(poll.questions) ? poll.questions.length : 0;
-                var label = poll.pollName + ' (' + (poll.className || 'Unassigned') + ') - ' + questionTotal + '
-                questions';
+                var label = poll.pollName + ' (' + (poll.className || 'Unassigned') + ') - ' + questionTotal + `
+                questions`;
                 if (isSecureSessionTypeClient(poll.sessionType)) {
                 var minutes = getSecureTimeLimitMinutes(poll);
                 var code = getSecureAccessCode(poll);
@@ -10787,7 +2752,8 @@
                   correctText.indexOf(normalizedQuery) !==-1) return true; var options=Array.isArray(question.options) ?
                   question.options : (Array.isArray(question.answers) ? question.answers : []); for (var j=0; j <
                   options.length; j++) { var option=options[j] || {}; var optionText=(option.text || option.label || ''
-                  ).toLowerCase(); if (optionText.indexOf(normalizedQuery) !==-1) return true; } } } var
+                  ).toLowerCase(); if (optionText.indexOf(normalizedQuery) !==-1) return true; } } }
+                  var
                   sessionCollections=[]; if (poll && Array.isArray(poll.liveSessions))
                   sessionCollections.push(poll.liveSessions); if (poll && Array.isArray(poll.recentSessions))
                   sessionCollections.push(poll.recentSessions); if (poll && Array.isArray(poll.sessions))
@@ -10807,18 +2773,22 @@
                   < sessionOptions.length; so++) { var sessionOption=sessionOptions[so] || {}; var
                   sessionOptionRaw=sessionOption.text || sessionOption.label || '' ; var sessionOptionText=(typeof
                   sessionOptionRaw==='string' ? sessionOptionRaw : String(sessionOptionRaw || '' )).toLowerCase(); if
-                  (sessionOptionText.indexOf(normalizedQuery) !==-1) return true; } } } } return false; } function
+                  (sessionOptionText.indexOf(normalizedQuery) !==-1) return true; } } } }
+                  return false; } function
                   getFilteredSortedPolls() { var list=ALL_POLLS.slice(); if (pollClassFilter !=='all' ) {
-                  list=list.filter(function (poll) { return poll.className===pollClassFilter; }); } if (pollSearchQuery) {
+                  list=list.filter(function (poll) { return poll.className===pollClassFilter; }); }
+                  if (pollSearchQuery) {
                   var normalizedQuery=pollSearchQuery.toLowerCase(); list=list.filter(function (poll) { return
                   pollMatchesSearch(poll, normalizedQuery); }); } list.sort(function (a, b) { switch (pollSortMode) {
                   case 'updated_asc' : return getPollTimestamp(a) - getPollTimestamp(b); case 'name_asc' : return
                   (a.pollName || '' ).localeCompare(b.pollName || '' ); case 'class_asc' : var classCompare=(a.className
                   || '' ).localeCompare(b.className || '' ); if (classCompare !==0) return classCompare; return
                   (a.pollName || '' ).localeCompare(b.pollName || '' ); case 'updated_desc' : default: return
-                  getPollTimestamp(b) - getPollTimestamp(a); } }); return list; } function getPollTimestamp(poll) { var
+                  getPollTimestamp(b) - getPollTimestamp(a); } }); return list; }
+                  function getPollTimestamp(poll) { var
                   value=poll && (poll.updatedAt || poll.lastRunAt || poll.createdAt || '' ); var time=value ?
-                  Date.parse(value) : NaN; return isNaN(time) ? 0 : time; } function refreshPollViews() { var
+                  Date.parse(value) : NaN; return isNaN(time) ? 0 : time; }
+                  function refreshPollViews() { var
                   polls=getFilteredSortedPolls(); // Update Combobox Data if (pollCombobox) { var comboData=[]; // Add
                   Classes ALL_CLASSES.forEach(function (cls) { comboData.push({ label: cls, type: 'class' ,
                   subLabel: 'Class' }); }); // Add Polls ALL_POLLS.forEach(function (poll) { comboData.push({ label:
@@ -10839,16 +2809,21 @@
                   + '" did not return any results. Try different keywords.' ; } else { if (emptyStateTitle)
                   emptyStateTitle.textContent='Welcome to Your Poll Library' ; if (emptyStateParagraph)
                   emptyStateParagraph.textContent='This is where your polls will live. Create your first interactive poll to engage your students and gather real-time feedback.'
-                  ; } } else { pollsEmptyState.classList.add('hidden'); } } } function startEditPoll(pollId,
+                  ; } } else { pollsEmptyState.classList.add('hidden'); } } }
+                  function startEditPoll(pollId,
                   triggerButton) { if (!pollId) return; var button=triggerButton || null; var originalLabel=button ?
-                  button.innerHTML : '' ; if (button) { button.disabled=true; button.textContent='Loading...' ; } if
+                  button.innerHTML : '' ; if (button) { button.disabled=true; button.textContent='Loading...' ; }
+                  if
                   (PREVIEW_MODE) { var previewPoll=ALL_POLLS.find(function (p) { return p.pollId===pollId; }); if (button)
-                  { button.disabled=false; button.innerHTML=originalLabel; } if (previewPoll) { // Use unified wizard for
-                  editing openPollWizard(deepClone(previewPoll)); } else { veritasAlert('Unable to locate this poll in
-                  preview mode.', { title: 'Edit poll' }); } return; } // FIREBASE MIGRATION: Load Poll for Editing from
+                  { button.disabled=false; button.innerHTML=originalLabel; }
+                  if (previewPoll) { // Use unified wizard for
+                  editing openPollWizard(deepClone(previewPoll)); } else { veritasAlert(`Unable to locate this poll in
+                  preview mode.`, { title: 'Edit poll' }); }
+                  return; } // FIREBASE MIGRATION: Load Poll for Editing from
                   RTDB // Ensures we get the latest version (Source of Truth) var db=firebase.database(); db.ref('polls/'
                   + pollId).once('value') .then(function (snapshot) { var poll=snapshot.val(); if (button) {
-                  button.disabled=false; button.innerHTML=originalLabel; } if (poll) { // Determine if this is a legacy
+                  button.disabled=false; button.innerHTML=originalLabel; }
+                  if (poll) { // Determine if this is a legacy
                   poll structure or migrated one. // Our unified wizard expects specific fields. // The GAS version likely
                   did some transformation. // Since we write the 'clean' structure in createNewPoll, we can use it
                   directly. // Ensure pollId is present poll.pollId=pollId; openPollWizard(poll); } else {
@@ -10856,7 +2831,8 @@
                   { if (button) { button.disabled=false; button.innerHTML=originalLabel; } handleError(error); }); /*
                   LEGACY GAS LOAD REMOVED google.script.run .withSuccessHandler(...) .getPollForEditing(pollId); */ }
                   function renderPollCards(polls) { if (!pollsCardView) { return; } pollsCardView.innerHTML='' ; if
-                  (!polls || polls.length===0) { return; } var renderErrors=0; polls.forEach(function (poll) { try { if
+                  (!polls || polls.length===0) { return; }
+                  var renderErrors=0; polls.forEach(function (poll) { try { if
                   (!poll) return; var card=document.createElement('article'); card.className='poll-card' ; if (poll &&
                   poll.pollId) { card.dataset.pollId=poll.pollId; } card.setAttribute('tabindex', '0' );
                   card.setAttribute('role', 'group' ); var safeName=escapeHtml(poll && poll.pollName ? poll.pollName
@@ -10872,16 +2848,16 @@
                   htmlParts.push('<div class="flex flex-wrap gap-2 mb-4">');
                     // Session Type Badge
                     var sessionTypeInfo = getSessionTypeInfo(sessionType);
-                    htmlParts.push('<span
-                      class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ' + sessionTypeInfo.badgeClass + '">');
+                    htmlParts.push(`<span
+                      class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ` + sessionTypeInfo.badgeClass + '">');
                       htmlParts.push('<span class="material-symbols-outlined text-sm">' + sessionTypeInfo.icon +
                         '</span>');
                       htmlParts.push(sessionTypeInfo.label);
                       htmlParts.push('</span>');
 
                     // Question Count Badge
-                    htmlParts.push('<span
-                      class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">');
+                    htmlParts.push(`<span
+                      class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">`);
                       htmlParts.push('<span class="material-symbols-outlined text-sm">quiz</span>');
                       htmlParts.push(questionCount + ' Questions');
                       htmlParts.push('</span>');
@@ -10892,16 +2868,16 @@
                   var secureTimeLabel = describeSecureTimeLimit(poll);
                   var secureAccessCode = getSecureAccessCode(poll);
                   var secureWindowLabel = describeSecureAvailability(poll);
-                  htmlParts.push('<div
+                  htmlParts.push(`<div
                     class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-100 mb-4">
-                    ');
+                    `);
                     if (secureTimeLabel) {
-                    htmlParts.push('<div class="flex items-center gap-2 mb-2"><span
-                        class="material-symbols-outlined text-base">timer</span><span>' + escapeHtml(secureTimeLabel) +
+                    htmlParts.push(`<div class="flex items-center gap-2 mb-2"><span
+                        class="material-symbols-outlined text-base">timer</span><span>` + escapeHtml(secureTimeLabel) +
                         '</span></div>');
                     }
-                    htmlParts.push('<div class="flex items-center gap-2 mb-2"><span
-                        class="material-symbols-outlined text-base">key</span><span>Access Code: ');
+                    htmlParts.push(`<div class="flex items-center gap-2 mb-2"><span
+                        class="material-symbols-outlined text-base">key</span><span>Access Code: `);
                         if (secureAccessCode) {
                         htmlParts.push('<span class="font-semibold tracking-widest">' + escapeHtml(secureAccessCode) +
                           '</span>');
@@ -10910,8 +2886,8 @@
                         }
                         htmlParts.push('</span></div>');
                     if (secureWindowLabel) {
-                    htmlParts.push('<div class="flex items-center gap-2"><span
-                        class="material-symbols-outlined text-base">calendar_month</span><span>' +
+                    htmlParts.push(`<div class="flex items-center gap-2"><span
+                        class="material-symbols-outlined text-base">calendar_month</span><span>` +
                         escapeHtml(secureWindowLabel) + '</span></div>');
                     }
                     htmlParts.push('</div>');
@@ -10924,22 +2900,22 @@
 
                   // Actions
                   htmlParts.push('<div class="flex gap-2 mt-auto">');
-                    htmlParts.push('<button type="button" class="flex-1 poll-card-btn primary poll-preview-btn"
-                      data-poll-id="' + (poll && poll.pollId ? poll.pollId : '') + '"
-                      aria-label="Preview ' + safeName + '"><span
-                        class="material-symbols-outlined text-base">visibility</span>Preview</button>');
-                    htmlParts.push('<button type="button" class="poll-card-btn secondary poll-edit-btn"
-                      data-poll-id="' + (poll && poll.pollId ? poll.pollId : '') + '"
-                      aria-label="Edit ' + safeName + '"><span
-                        class="material-symbols-outlined text-base">edit</span></button>');
-                    htmlParts.push('<button type="button" class="poll-card-btn info poll-copy-btn"
-                      data-poll-id="' + (poll && poll.pollId ? poll.pollId : '') + '"
-                      aria-label="Duplicate ' + safeName + '"><span
-                        class="material-symbols-outlined text-base">content_copy</span></button>');
-                    htmlParts.push('<button type="button" class="poll-card-btn danger poll-delete-btn"
-                      data-poll-id="' + (poll && poll.pollId ? poll.pollId : '') + '"
-                      aria-label="Delete ' + safeName + '"><span
-                        class="material-symbols-outlined text-base">delete</span></button>');
+                    htmlParts.push(`<button type="button" class="flex-1 poll-card-btn primary poll-preview-btn"
+                      data-poll-id="` + (poll && poll.pollId ? poll.pollId : '') + `"
+                      aria-label="Preview ` + safeName + `"><span
+                        class="material-symbols-outlined text-base">visibility</span>Preview</button>`);
+                    htmlParts.push(`<button type="button" class="poll-card-btn secondary poll-edit-btn"
+                      data-poll-id="` + (poll && poll.pollId ? poll.pollId : '') + `"
+                      aria-label="Edit ` + safeName + `"><span
+                        class="material-symbols-outlined text-base">edit</span></button>`);
+                    htmlParts.push(`<button type="button" class="poll-card-btn info poll-copy-btn"
+                      data-poll-id="` + (poll && poll.pollId ? poll.pollId : '') + `"
+                      aria-label="Duplicate ` + safeName + `"><span
+                        class="material-symbols-outlined text-base">content_copy</span></button>`);
+                    htmlParts.push(`<button type="button" class="poll-card-btn danger poll-delete-btn"
+                      data-poll-id="` + (poll && poll.pollId ? poll.pollId : '') + `"
+                      aria-label="Delete ` + safeName + `"><span
+                        class="material-symbols-outlined text-base">delete</span></button>`);
                     htmlParts.push('</div>');
 
                   card.innerHTML = htmlParts.join('');
@@ -10978,9 +2954,9 @@
 
                   if (renderErrors > 0 && pollsCardView.children.length === 0) {
                   // If all failed, show a friendly error
-                  pollsCardView.innerHTML = '<div
+                  pollsCardView.innerHTML = `<div
                     class="col-span-full text-center p-8 text-red-500 bg-red-50 rounded-lg border border-red-200">Unable
-                    to load polls due to a data error. Please contact support.</div>';
+                    to load polls due to a data error. Please contact support.</div>`;
                   }
 
                   attachPollActionHandlers(pollsCardView);
@@ -11082,8 +3058,8 @@
                   var sessionType = normalizeSessionTypeClient(poll.sessionType);
                   var info = getSessionTypeInfo(sessionType);
                   var html = '<div class="flex flex-col gap-1">';
-                    html += '<span
-                      class="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold rounded-full ' + info.badgeClass + '">';
+                    html += `<span
+                      class="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold rounded-full ` + info.badgeClass + '">';
                       html += '<span class="material-symbols-outlined text-sm">' + info.icon + '</span>' + info.label +
                       '</span>';
                     if (sessionType === 'SECURE_ASSESSMENT') {
@@ -11093,8 +3069,8 @@
                     html += '<span class="text-xs text-rose-700 dark:text-rose-200">' + escapeHtml(timeLabel) + '</span>';
                     }
                     if (code) {
-                    html += '<span class="text-xs text-rose-700 dark:text-rose-200">Code: <span
-                        class="font-semibold tracking-widest">' + escapeHtml(code) + '</span></span>';
+                    html += `<span class="text-xs text-rose-700 dark:text-rose-200">Code: <span
+                        class="font-semibold tracking-widest">` + escapeHtml(code) + '</span></span>';
                     } else {
                     html += '<span class="text-xs text-rose-700/80 dark:text-rose-200/80">No access code</span>';
                     }
@@ -11120,7 +3096,7 @@
                   return;
                   }
                   // If clicking the trigger button again, it's handled by the toggle logic, but we need to ensure we
-                  don't double-close/open
+                  don`t double-close/open
                   // Actually, the trigger button click handler stops propagation, so this global listener only catches
                   clicks *outside* or on *other* elements.
                   closeActiveDropdown();
@@ -11140,10 +3116,10 @@
                   var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
                   var scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
 
-                  var menu = document.createElement('div');
-                  menu.className = 'fixed z-[9999] w-52 rounded-xl border border-white/5 bg-gray-800 p-1 text-sm
-                  text-white shadow-lg transition duration-100 ease-out origin-top-right';
-                  menu.style.top = (rect.bottom + 5) + 'px';
+                  var menu = document.createElement(`div`);
+                  menu.className = `fixed z-[9999] w-52 rounded-xl border border-white/5 bg-gray-800 p-1 text-sm
+                  text-white shadow-lg transition duration-100 ease-out origin-top-right`;
+                  menu.style.top = (rect.bottom + 5) + `px`;
 
                   // Align right edge of menu with right edge of button
                   var menuWidth = 208; // w-52 is 13rem = 208px
@@ -11151,21 +3127,22 @@
 
                   // Check if it goes off screen to the left
                   if (leftPos < 10) { leftPos=rect.left; // Align left if no space on right } menu.style.left=leftPos
-                    + 'px' ; menu.dataset.triggerId=pollId; // Menu Items var items=[ { label: 'Edit' , icon: 'edit' ,
-                    action: 'edit' , kbd: '⌘E' }, { label: 'Duplicate' , icon: 'content_copy' , action: 'duplicate' ,
-                    kbd: '⌘D' }, { label: 'Preview' , icon: 'visibility' , action: 'preview' , kbd: '⌘P' }, // Divider {
-                    type: 'divider' }, // Delete { label: 'Delete' , icon: 'delete' , action: 'delete' , kbd: '⌘Del' ,
-                    danger: true } ]; items.forEach(function (item) { if (item.type==='divider' ) { var
-                    div=document.createElement('div'); div.className='my-1 h-px bg-white/5' ; menu.appendChild(div);
-                    return; } var btnItem=document.createElement('button');
-                    btnItem.className='group flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-white/10 text-left transition-colors '
-                    + (item.danger ? 'text-red-400 hover:text-red-300' : 'text-white' ); var iconColorClass=item.danger
-                    ? 'text-red-400 group-hover:text-red-300' : 'text-white/60 group-hover:text-white' ;
-                    btnItem.innerHTML=` <span class="material-symbols-outlined text-base ${iconColorClass}">
+                    + `px' ; menu.dataset.triggerId=pollId; // Menu Items var items=[ { label: 'Edit' , icon: 'edit` ,
+                    action: `edit' , kbd: '⌘E' }, { label: 'Duplicate' , icon: 'content_copy' , action: 'duplicate` ,
+                    kbd: `⌘D' }, { label: 'Preview' , icon: 'visibility' , action: 'preview' , kbd: '⌘P` }, // Divider {
+                    type: `divider' }, // Delete { label: 'Delete' , icon: 'delete' , action: 'delete' , kbd: '⌘Del` ,
+                    danger: true } ]; items.forEach(function (item) { if (item.type===`divider` ) { var
+                    div=document.createElement(`div'); div.className='my-1 h-px bg-white/5` ; menu.appendChild(div);
+                    return; }
+                    var btnItem=document.createElement(`button`);
+                    btnItem.className=`group flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-white/10 text-left transition-colors `
+                    + (item.danger ? `text-red-400 hover:text-red-300' : 'text-white` ); var iconColorClass=item.danger
+                    ? `text-red-400 group-hover:text-red-300' : 'text-white/60 group-hover:text-white` ;
+                    btnItem.innerHTML=` <span class=`material-symbols-outlined text-base ${iconColorClass}`>
                     ${item.icon}</span>
                     <span>${item.label}</span>
                     ${item.kbd ? `<kbd
-                      class="ml-auto hidden font-sans text-xs text-white/50 group-hover:inline">${item.kbd}</kbd>` : ''}
+                      class="ml-auto hidden font-sans text-xs text-white/50 group-hover:inline">${item.kbd}</kbd>` : ``}
                     `;
 
                     btnItem.onclick = function (e) {
@@ -11181,20 +3158,20 @@
 
                     // Delay adding the click listener to avoid immediate close from the trigger click bubbling
                     requestAnimationFrame(function () {
-                    document.addEventListener('click', handleGlobalDropdownClick);
+                    document.addEventListener(`click`, handleGlobalDropdownClick);
                     });
                     }
 
                     function handleDropdownAction(action, pollId) {
-                    if (action === 'edit') startEditPoll(pollId);
-                    else if (action === 'duplicate') handleCopyPoll(pollId);
-                    else if (action === 'preview') openPollPreview(pollId);
-                    else if (action === 'delete') handleDeletePoll(pollId);
+                    if (action === `edit`) startEditPoll(pollId);
+                    else if (action === `duplicate`) handleCopyPoll(pollId);
+                    else if (action === `preview`) openPollPreview(pollId);
+                    else if (action === `delete`) handleDeletePoll(pollId);
                     }
 
                     function renderPollTable(polls) {
                     polls = polls || getFilteredSortedPolls();
-                    pollsTableBody.innerHTML = '';
+                    pollsTableBody.innerHTML = ``;
 
                     if (polls.length === 0) {
                     return;
@@ -11203,51 +3180,51 @@
                     polls.forEach(function (poll) {
                     try {
                     if (!poll) return;
-                    var row = document.createElement('tr');
-                    row.className = 'hover:bg-brand-light-gray/40 dark:hover:bg-brand-dark-gray/40 transition-colors';
+                    var row = document.createElement(`tr`);
+                    row.className = `hover:bg-brand-light-gray/40 dark:hover:bg-brand-dark-gray/40 transition-colors`;
                     var lastEdited = formatDateTime(poll.updatedAt || poll.lastRunAt || poll.createdAt);
-                    var createdLabel = poll.createdAt ? formatDateTime(poll.createdAt) : '—';
+                    var createdLabel = poll.createdAt ? formatDateTime(poll.createdAt) : `—`;
                     var htmlParts = [];
-                    htmlParts.push('<td class="px-4 py-3 align-top">');
-                      htmlParts.push('<div class="font-semibold text-brand-dark-gray dark:text-brand-white"><span
+                    htmlParts.push(`<td class="px-4 py-3 align-top">`);
+                      htmlParts.push(`<div class="font-semibold text-brand-dark-gray dark:text-brand-white"><span
                           class="poll-name-link cursor-pointer hover:text-primary dark:hover:text-primary transition-colors"
                           data-poll-id="' + poll.pollId + '">' + escapeHtml(poll.pollName || 'Untitled Poll') + '</span>
-                      </div>');
-                      htmlParts.push('<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/50">Created ' +
-                        createdLabel + '</div>');
-                      htmlParts.push('</td>');
-                    htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">' +
-                      escapeHtml(poll.className || '—') + '</td>');
-                    htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">' +
-                      (poll.questions ? poll.questions.length : 0) + '</td>');
-                    htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">' +
-                      buildSessionModeCellHtml(poll) + '</td>');
-                    htmlParts.push('<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">' +
-                      lastEdited + '</td>');
+                      </div>`);
+                      htmlParts.push(`<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/50">Created ` +
+                        createdLabel + `</div>`);
+                      htmlParts.push(`</td>`);
+                    htmlParts.push(`<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">` +
+                      escapeHtml(poll.className || `—') + '</td>`);
+                    htmlParts.push(`<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">` +
+                      (poll.questions ? poll.questions.length : 0) + `</td>`);
+                    htmlParts.push(`<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">` +
+                      buildSessionModeCellHtml(poll) + `</td>`);
+                    htmlParts.push(`<td class="px-4 py-3 align-top text-brand-dark-gray/80 dark:text-brand-white/70">` +
+                      lastEdited + `</td>`);
 
                     // Actions Column
-                    htmlParts.push('<td class="px-4 py-3 align-top text-right">');
-                      htmlParts.push('<div class="flex justify-end items-center gap-2">');
+                    htmlParts.push(`<td class="px-4 py-3 align-top text-right">`);
+                      htmlParts.push(`<div class="flex justify-end items-center gap-2">`);
 
                         // Primary Action: Select
-                        htmlParts.push('<button
+                        htmlParts.push(`<button
                           class="poll-select-btn h-8 px-3 rounded-md bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-xs font-semibold hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors"
-                          data-poll-id="' + poll.pollId + '">Select</button>');
+                          data-poll-id="' + poll.pollId + '">Select</button>`);
 
                         // Options Dropdown Trigger
-                        htmlParts.push('<div class="relative inline-block text-left">');
-                          htmlParts.push('<button type="button"
+                        htmlParts.push(`<div class="relative inline-block text-left">`);
+                          htmlParts.push(`<button type="button"
                             class="poll-options-btn inline-flex items-center gap-2 rounded-md bg-gray-800 px-3 py-1.5 text-xs font-semibold text-white shadow-inner shadow-white/10 hover:bg-gray-700 focus:outline-none transition-colors"
-                            data-poll-id="' + poll.pollId + '" aria-expanded="false" aria-haspopup="true">');
-                            htmlParts.push('Options');
-                            htmlParts.push('<span
-                              class="material-symbols-outlined text-base text-white/60">keyboard_arrow_down</span>');
-                            htmlParts.push('</button>');
-                          htmlParts.push('</div>');
+                            data-poll-id="' + poll.pollId + '" aria-expanded="false" aria-haspopup="true">`);
+                            htmlParts.push(`Options`);
+                            htmlParts.push(`<span
+                              class="material-symbols-outlined text-base text-white/60">keyboard_arrow_down</span>`);
+                            htmlParts.push(`</button>`);
+                          htmlParts.push(`</div>`);
 
-                        htmlParts.push('</div>');
-                      htmlParts.push('</td>');
-                    row.innerHTML = htmlParts.join('');
+                        htmlParts.push(`</div>`);
+                      htmlParts.push(`</td>`);
+                    row.innerHTML = htmlParts.join(``);
                     pollsTableBody.appendChild(row);
                     } catch (rowError) {
                     console.error("Error rendering poll table row:", rowError, poll);
@@ -11261,15 +3238,15 @@
                     var poll = ALL_POLLS.find(function (p) { return p.pollId === pollId; });
                     if (!poll) return;
 
-                    var newName = await veritasPrompt('Enter a name for the copied poll:', {
-                    defaultValue: poll.pollName + ' (Copy)',
-                    title: 'Copy poll'
+                    var newName = await veritasPrompt(`Enter a name for the copied poll:`, {
+                    defaultValue: poll.pollName + ` (Copy)`,
+                    title: `Copy poll`
                     });
                     if (newName === null) return;
 
                     newName = newName.trim();
-                    if (newName === '') {
-                    await veritasAlert('Poll name cannot be empty', { title: 'Copy poll' });
+                    if (newName === ``) {
+                    await veritasAlert(`Poll name cannot be empty', { title: 'Copy poll` });
                     return;
                     }
 
@@ -11279,20 +3256,21 @@
                     if (PREVIEW_MODE) {
                     setTimeout(async function () {
                     var clone = deepClone(poll);
-                    clone.pollId = poll.pollId + '-copy-' + Date.now();
+                    clone.pollId = poll.pollId + `-copy-` + Date.now();
                     clone.pollName = newName;
                     clone.createdAt = new Date().toISOString();
                     clone.updatedAt = clone.createdAt;
                     ALL_POLLS.push(clone);
                     refreshPollViews();
-                    await veritasAlert('Poll copied (preview data only).', { title: 'Poll copied' });
+                    await veritasAlert(`Poll copied (preview data only).', { title: 'Poll copied` });
                     }, 140);
                     return;
                     }
 
-                    // Since we don't have a button reference to disable easily (detached dropdown), use global loader or
+                    // Since we don`t have a button reference to disable easily (detached dropdown), use global loader or
                     modal
-                    // Or just let it run. The user sees the modal close.
+                    // Or just
+                    let it run. The user sees the modal close.
 
                     // FIREBASE MIGRATION: Duplicate Poll in RTDB
                     var clone = deepClone(poll);
@@ -11322,8 +3300,8 @@
                     }
 
                     async function handleDeletePoll(pollId) {
-                    var confirmed = await veritasConfirm('Delete this poll permanently? This will also remove all
-                    responses.', {
+                    var confirmed = await veritasConfirm(`Delete this poll permanently? This will also remove all
+                    responses.`, {
                     title: 'Delete poll',
                     confirmText: 'Delete',
                     destructive: true
@@ -11522,34 +3500,34 @@
                     // Time limit
                     var timeLabel = describeSecureTimeLimit(selectedPoll);
                     if (timeLabel) {
-                    metaItems.push('<span class="flex items-center gap-1.5"><span
-                        class="material-symbols-outlined text-sm opacity-80">timer</span><span>' + escapeHtml(timeLabel) +
+                    metaItems.push(`<span class="flex items-center gap-1.5"><span
+                        class="material-symbols-outlined text-sm opacity-80">timer</span><span>` + escapeHtml(timeLabel) +
                         '</span></span>');
                     }
 
                     // Access code
                     var accessCode = getSecureAccessCode(selectedPoll);
                     if (accessCode) {
-                    metaItems.push('<span class="flex items-center gap-1.5"><span
+                    metaItems.push(`<span class="flex items-center gap-1.5"><span
                         class="material-symbols-outlined text-sm opacity-80">key</span><span>Code: <span
-                          class="font-semibold tracking-widest">' + escapeHtml(accessCode) + '</span></span></span>');
+                          class="font-semibold tracking-widest">` + escapeHtml(accessCode) + '</span></span></span>');
                     } else {
-                    metaItems.push('<span class="flex items-center gap-1.5"><span
+                    metaItems.push(`<span class="flex items-center gap-1.5"><span
                         class="material-symbols-outlined text-sm opacity-80">key</span><span class="opacity-70">No access
-                        code</span></span>');
+                        code</span></span>`);
                     }
 
                     var calculatorEnabled = selectedPoll.calculatorEnabled === true ||
                     (selectedPoll.secureSettings && selectedPoll.secureSettings.calculatorEnabled === true);
-                    metaItems.push('<span class="flex items-center gap-1.5"><span
-                        class="material-symbols-outlined text-sm opacity-80">calculate</span><span>' + (calculatorEnabled
+                    metaItems.push(`<span class="flex items-center gap-1.5"><span
+                        class="material-symbols-outlined text-sm opacity-80">calculate</span><span>` + (calculatorEnabled
                         ? 'Calculator enabled' : 'Calculator off') + '</span></span>');
 
                     // Availability window
                     var windowLabel = describeSecureAvailability(selectedPoll);
                     if (windowLabel) {
-                    metaItems.push('<span class="flex items-center gap-1.5"><span
-                        class="material-symbols-outlined text-sm opacity-80">calendar_month</span><span>' +
+                    metaItems.push(`<span class="flex items-center gap-1.5"><span
+                        class="material-symbols-outlined text-sm opacity-80">calendar_month</span><span>` +
                         escapeHtml(windowLabel) + '</span></span>');
                     }
 
@@ -11628,8 +3606,8 @@
                     function renderRosterClassList() {
                     rosterClassList.innerHTML = '';
                     if (ALL_CLASSES.length === 0) {
-                    rosterClassList.innerHTML = '<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No
-                      classes yet. Click the + button to add one.</p>';
+                    rosterClassList.innerHTML = `<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No
+                      classes yet. Click the + button to add one.</p>`;
                     return;
                     }
 
@@ -11638,9 +3616,9 @@
                     button.type = 'button';
                     var isActive = className === selectedRosterClass;
                     button.className = 'w-full text-left px-3 py-2 rounded-lg transition-colors ' + (isActive ?
-                    'bg-primary text-brand-white shadow-sm' : 'bg-brand-light-gray/40 dark:bg-brand-dark-gray/30
+                    'bg-primary text-brand-white shadow-sm' : `bg-brand-light-gray/40 dark:bg-brand-dark-gray/30
                     text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray/60
-                    dark:hover:bg-brand-dark-gray/50');
+                    dark:hover:bg-brand-dark-gray/50`);
                     button.textContent = className;
                     button.onclick = function () {
                     selectRosterClass(className);
@@ -11680,21 +3658,21 @@
                     var row = document.createElement('tr');
                     row.innerHTML =
                     '<td class="px-4 py-2 align-top">' +
-                      '<input type="text"
+                      `<input type="text"
                         class="roster-name-input w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        data-index="' + index + '" placeholder="Student Name"
-                        value="' + escapeHtml(entry.name || '') + '" />' +
+                        data-index="` + index + `" placeholder="Student Name"
+                        value="` + escapeHtml(entry.name || '') + '" />' +
                       '</td>' +
                     '<td class="px-4 py-2 align-top">' +
-                      '<input type="email"
+                      `<input type="email"
                         class="roster-email-input w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        data-index="' + index + '" placeholder="email@example.com"
-                        value="' + escapeHtml(entry.email || '') + '" />' +
+                        data-index="` + index + `" placeholder="email@example.com"
+                        value="` + escapeHtml(entry.email || '') + '" />' +
                       '</td>' +
                     '<td class="px-4 py-2 align-top text-center">' +
-                      '<button
+                      `<button
                         class="remove-roster-row-btn h-8 w-8 rounded-full bg-red-600/10 text-red-600 dark:text-red-300 dark:bg-red-500/20 hover:bg-red-600/20 dark:hover:bg-red-500/30 transition-colors"
-                        data-index="' + index + '" title="Remove">' +
+                        data-index="` + index + '" title="Remove">' +
                         '<span class="material-symbols-outlined text-base">close</span>' +
                         '</button>' +
                       '</td>';
@@ -11867,8 +3845,8 @@
                     });
 
                     if (entries.length === 0) {
-                    await veritasAlert('No valid student entries found. Use format: Name, Email', { title: 'Bulk add
-                    students' });
+                    await veritasAlert('No valid student entries found. Use format: Name, Email', { title: `Bulk add
+                    students` });
                     return;
                     }
 
@@ -12019,8 +3997,8 @@
                     await veritasAlert('Select a class first.', { title: 'Roster' });
                     return;
                     }
-                    var confirmed = await veritasConfirm('Delete class "' + selectedRosterClass + '" and remove all
-                    students?', {
+                    var confirmed = await veritasConfirm('Delete class "' + selectedRosterClass + `" and remove all
+                    students?`, {
                     title: 'Delete class',
                     confirmText: 'Delete',
                     destructive: true
@@ -12072,8 +4050,8 @@
                     return;
                     }
 
-                    archivedList.innerHTML = '<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">Loading
-                      archived polls...</p>';
+                    archivedList.innerHTML = `<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">Loading
+                      archived polls...</p>`;
                     archivedEmptyState.classList.remove('hidden');
                     archivedDetail.classList.add('hidden');
 
@@ -12098,7 +4076,8 @@
                     var fbHistory = snapshot.val() || {};
                     var flattened = [];
 
-                    // Flatten { pollId: { sessionId: payload } } to array [ payload ]
+                    // Flatten
+                    { pollId: { sessionId: payload } } to array [ payload ]
                     Object.keys(fbHistory).forEach(function (pollId) {
                     var sessions = fbHistory[pollId];
                     Object.keys(sessions).forEach(function (sessionId) {
@@ -12132,8 +4111,8 @@
                     return poll.className === archivedClassFilter; });
 
                     if (filtered.length === 0) {
-                    archivedList.innerHTML = '<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No
-                      archived polls for this filter.</p>';
+                    archivedList.innerHTML = `<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No
+                      archived polls for this filter.</p>`;
                     archivedEmptyState.classList.remove('hidden');
                     archivedDetail.classList.add('hidden');
                     return;
@@ -12144,14 +4123,14 @@
                     button.type = 'button';
                     var isActive = poll.pollId === selectedArchivedPollId;
                     button.className = 'w-full text-left px-3 py-2 rounded-lg transition-colors ' + (isActive ?
-                    'bg-primary text-brand-white shadow-sm' : 'bg-brand-light-gray/40 dark:bg-brand-dark-gray/30
+                    'bg-primary text-brand-white shadow-sm' : `bg-brand-light-gray/40 dark:bg-brand-dark-gray/30
                     text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray/60
-                    dark:hover:bg-brand-dark-gray/50');
+                    dark:hover:bg-brand-dark-gray/50`);
                     var metaText = (poll.className || 'Unassigned') + ' • ' + formatDateTime(poll.lastRunAt ||
                     poll.updatedAt || poll.createdAt);
-                    button.innerHTML = '<div class="font-semibold">' + escapeHtml(poll.pollName || 'Untitled Poll') + '
+                    button.innerHTML = '<div class="font-semibold">' + escapeHtml(poll.pollName || 'Untitled Poll') + `
                     </div>
-                    <div class="text-xs opacity-80">' + escapeHtml(metaText) + '</div>';
+                    <div class="text-xs opacity-80">` + escapeHtml(metaText) + '</div>';
                     button.onclick = function () {
                     selectedArchivedPollId = poll.pollId;
                     renderArchivedList();
@@ -12181,8 +4160,8 @@
                     archivedQuestionsContainer.innerHTML = '';
                     poll.questions.forEach(function (question, index) {
                     var card = document.createElement('div');
-                    card.className = 'border border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg p-4
-                    bg-brand-white dark:bg-brand-dark-gray/40';
+                    card.className = `border border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg p-4
+                    bg-brand-white dark:bg-brand-dark-gray/40`;
                     var summary = question.summary || { correct: 0, incorrect: 0, noResponse: 0, violations: 0 };
                     var responses = Array.isArray(question.responses) ? question.responses : [];
                     var nonResponders = Array.isArray(question.nonResponders) ? question.nonResponders : [];
@@ -12193,10 +4172,10 @@
 
                     var responsesHtml = '';
                     if (responses.length === 0) {
-                    responsesHtml = '<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No responses
-                      recorded.</p>';
+                    responsesHtml = `<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No responses
+                      recorded.</p>`;
                     } else {
-                    responsesHtml = '<table
+                    responsesHtml = `<table
                       class="min-w-full text-sm divide-y divide-brand-light-gray dark:divide-brand-dark-gray/40">
                       <thead class="text-xs uppercase tracking-wide text-brand-dark-gray/60 dark:text-brand-white/50">
                         <tr>
@@ -12205,19 +4184,19 @@
                           <th class="py-2 text-left">Status</th>
                         </tr>
                       </thead>
-                      <tbody class="divide-y divide-brand-light-gray/70 dark:divide-brand-dark-gray/40">';
+                      <tbody class="divide-y divide-brand-light-gray/70 dark:divide-brand-dark-gray/40">`;
                         responses.forEach(function (response) {
                         var status = response.violation ? 'Violation' : (response.isCorrect ? 'Correct' : 'Incorrect');
                         var statusClass = response.violation ? 'text-orange-600 dark:text-orange-300' :
                         (response.isCorrect ? 'text-green-600 dark:text-green-300' : 'text-red-600 dark:text-red-300');
-                        responsesHtml += '<tr>
-                          <td class="py-2 pr-3">' + escapeHtml(response.name || response.email) + '</td>
-                          <td class="py-2 pr-3">' + escapeHtml(response.answer || '—') + '</td>
-                          <td class="py-2 pr-3 ' + statusClass + '">' + status + '</td>
-                        </tr>';
+                        responsesHtml += `<tr>
+                          <td class="py-2 pr-3">` + escapeHtml(response.name || response.email) + `</td>
+                          <td class="py-2 pr-3">` + escapeHtml(response.answer || '—') + `</td>
+                          <td class="py-2 pr-3 ` + statusClass + '">' + status + `</td>
+                        </tr>`;
                         });
-                        responsesHtml += '</tbody>
-                    </table>';
+                        responsesHtml += `</tbody>
+                    </table>`;
                     }
 
                     var nonResponderHtml = '';
@@ -12227,9 +4206,9 @@
                         Response</h4>
                       <div class="flex flex-wrap gap-2 mt-1">`;
                         nonResponders.forEach(function (student) {
-                        var chipClass = student.violation ? 'bg-orange-100 text-orange-800 dark:bg-orange-500/20
-                        dark:text-orange-200' : 'bg-brand-light-gray text-brand-dark-gray dark:bg-brand-dark-gray/50
-                        dark:text-brand-white/80';
+                        var chipClass = student.violation ? `bg-orange-100 text-orange-800 dark:bg-orange-500/20
+                        dark:text-orange-200` : `bg-brand-light-gray text-brand-dark-gray dark:bg-brand-dark-gray/50
+                        dark:text-brand-white/80`;
                         var displayName = student.name ? formatStudentName(student) : student.email;
                         nonResponderHtml += `<span
                           class="px-2 py-1 rounded-full text-xs ${chipClass}">${escapeHtml(displayName)}</span>`;
@@ -12241,12 +4220,12 @@
                     var imageHtml = question.questionImageURL ? `<div class="mt-3"><img
                         src="${escapeHtml(question.questionImageURL)}" class="max-h-48 rounded-lg object-contain"
                         alt="Question image" /></div>` : '';
-                    var questionHtml = '<div>
-                      <h3 class="font-serif text-lg text-brand-dark-gray dark:text-brand-white">Question ' + (index + 1) +
-                        '</h3>
-                      <p class="text-sm text-brand-dark-gray/70 dark:text-brand-white/70 mt-1">' +
-                        escapeHtml(question.questionText || '') + '</p>
-                    </div>';
+                    var questionHtml = `<div>
+                      <h3 class="font-serif text-lg text-brand-dark-gray dark:text-brand-white">Question ` + (index + 1) +
+                        `</h3>
+                      <p class="text-sm text-brand-dark-gray/70 dark:text-brand-white/70 mt-1">` +
+                        escapeHtml(question.questionText || '') + `</p>
+                    </div>`;
                     var summaryHtml = '<div class="text-sm text-brand-dark-gray/70 dark:text-brand-white/70 text-right">'
                       +
                       '<p><span class="font-semibold text-brand-dark-gray dark:text-brand-white">Correct:</span> ' +
@@ -12280,7 +4259,8 @@
                     reportEl.classList.add('hidden');
 
                     // google.script.run
-                    // .withSuccessHandler(function (data) { ... })
+                    // .withSuccessHandler(function (data)
+                    { ... })
                     // .getEnhancedPostPollAnalytics(pollId);
 
                     const getAnalytics = firebase.functions().httpsCallable('getAnalytics');
@@ -12290,15 +4270,15 @@
                     if (data.success) {
                     renderPostPollAnalytics(data);
                     } else {
-                    loadingEl.innerHTML = '<div class="text-center py-12">
-                      <p class="text-red-600">Error: ' + escapeHtml(data.error || 'Failed to load analytics') + '</p>
-                    </div>';
+                    loadingEl.innerHTML = `<div class="text-center py-12">
+                      <p class="text-red-600">Error: ` + escapeHtml(data.error || 'Failed to load analytics') + `</p>
+                    </div>`;
                     }
                     })
                     .catch(function (error) {
-                    loadingEl.innerHTML = '<div class="text-center py-12">
-                      <p class="text-red-600">Error: ' + escapeHtml(error.message || 'Unknown error') + '</p>
-                    </div>';
+                    loadingEl.innerHTML = `<div class="text-center py-12">
+                      <p class="text-red-600">Error: ` + escapeHtml(error.message || 'Unknown error') + `</p>
+                    </div>`;
                     });
                     }
 
@@ -12343,10 +4323,10 @@
                     return;
                     }
 
-                    var html = '<h4
-                      class="text-lg font-bold text-brand-dark-gray dark:text-white mb-3 flex items-center gap-2">' +
-                      '<span class="material-symbols-outlined text-amber-500">lightbulb</span> Insights & Recommendations
-                    </h4>' +
+                    var html = `<h4
+                      class="text-lg font-bold text-brand-dark-gray dark:text-white mb-3 flex items-center gap-2">` +
+                      `<span class="material-symbols-outlined text-amber-500">lightbulb</span> Insights & Recommendations
+                    </h4>` +
                     '<div class="grid grid-cols-1 gap-3">';
 
                       items.forEach(function (item) {
@@ -12356,8 +4336,8 @@
 
                       html += '<div class="flex items-start gap-3 p-4 rounded-lg border ' + borderClass + '">' +
                         '<span class="material-symbols-outlined mt-0.5">' + icon + '</span>' +
-                        '<div>
-                          <p class="font-semibold">' + escapeHtml(item.message) + '</p>';
+                        `<div>
+                          <p class="font-semibold">` + escapeHtml(item.message) + '</p>';
 
                           if (item.items && item.items.length > 0) {
                           html += '<ul class="mt-2 text-sm list-disc list-inside opacity-90">';
@@ -12367,9 +4347,9 @@
                             html += '</ul>';
                           }
 
-                          html += '
+                          html += `
                         </div>
-                      </div>';
+                      </div>`;
                       });
 
                       html += '</div>';
@@ -12383,13 +4363,13 @@
                     var html = '<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">';
 
                       // Mean
-                      html += '<div
+                      html += `<div
                         class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/30 rounded-lg p-4">
-                        ';
-                        html += '<div class="text-sm text-blue-700 dark:text-blue-300 font-semibold mb-1">Mean Score</div>
-                        ';
-                        html += '<div class="text-3xl font-bold text-blue-900 dark:text-blue-100">' + overview.mean + '
-                        </div>';
+                        `;
+                        html += `<div class="text-sm text-blue-700 dark:text-blue-300 font-semibold mb-1">Mean Score</div>
+                        `;
+                        html += '<div class="text-3xl font-bold text-blue-900 dark:text-blue-100">' + overview.mean + `
+                        </div>`;
                         if (interp.meanScore) {
                         html += '<div class="mt-2 text-xs font-medium text-blue-800 dark:text-blue-200">' +
                           escapeHtml(interp.meanScore.message) + '</div>';
@@ -12397,21 +4377,21 @@
                         html += '</div>';
 
                       // Median
-                      html += '<div
+                      html += `<div
                         class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/30 rounded-lg p-4">
-                        ';
-                        html += '<div class="text-sm text-green-700 dark:text-green-300 font-semibold mb-1">Median Score
-                        </div>';
+                        `;
+                        html += `<div class="text-sm text-green-700 dark:text-green-300 font-semibold mb-1">Median Score
+                        </div>`;
                         html += '<div class="text-3xl font-bold text-green-900 dark:text-green-100">' + overview.median +
                           '</div>';
                         html += '</div>';
 
                       // Std Dev
-                      html += '<div
+                      html += `<div
                         class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700/30 rounded-lg p-4">
-                        ';
-                        html += '<div class="text-sm text-purple-700 dark:text-purple-300 font-semibold mb-1">Std.
-                          Deviation</div>';
+                        `;
+                        html += `<div class="text-sm text-purple-700 dark:text-purple-300 font-semibold mb-1">Std.
+                          Deviation</div>`;
                         html += '<div class="text-3xl font-bold text-purple-900 dark:text-purple-100">' + overview.stdDev
                           + '</div>';
                         if (interp.stdDev) {
@@ -12421,11 +4401,11 @@
                         html += '</div>';
 
                       // Participation
-                      html += '<div
+                      html += `<div
                         class="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700/30 rounded-lg p-4">
-                        ';
-                        html += '<div class="text-sm text-gray-700 dark:text-gray-300 font-semibold mb-1">Participants
-                        </div>';
+                        `;
+                        html += `<div class="text-sm text-gray-700 dark:text-gray-300 font-semibold mb-1">Participants
+                        </div>`;
                         html += '<div class="text-3xl font-bold text-gray-900 dark:text-gray-100">' +
                           overview.participantCount + '</div>';
                         if (interp.participation) {
@@ -12437,11 +4417,11 @@
 
                     // Score distribution histogram
                     if (distribution && distribution.histogram && distribution.histogram.length > 0) {
-                    html += '<div
+                    html += `<div
                       class="bg-white dark:bg-brand-dark-gray/40 border border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg p-4">
-                      ';
-                      html += '<h4 class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white mb-3">Score
-                        Distribution</h4>';
+                      `;
+                      html += `<h4 class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white mb-3">Score
+                        Distribution</h4>`;
                       html += '<div class="flex items-end gap-2 h-48">';
 
                         var maxCount = Math.max.apply(null, distribution.histogram.map(function (d) { return d.count; }));
@@ -12466,69 +4446,69 @@
                     var container = document.getElementById('metacognition-content');
 
                     if (!metacognition.overall) {
-                    container.innerHTML = '<p class="text-brand-dark-gray/60 dark:text-brand-white/60">No metacognition
-                      data available yet.</p>';
+                    container.innerHTML = `<p class="text-brand-dark-gray/60 dark:text-brand-white/60">No metacognition
+                      data available yet.</p>`;
                     return;
                     }
 
-                    var html = '<div
+                    var html = `<div
                       class="bg-white dark:bg-brand-dark-gray/40 border border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg p-6 mb-4">
-                      ';
-                      html += '<h4 class="text-lg font-semibold text-brand-dark-gray dark:text-brand-white mb-4">
-                        Confidence vs. Correctness Matrix</h4>';
+                      `;
+                      html += `<h4 class="text-lg font-semibold text-brand-dark-gray dark:text-brand-white mb-4">
+                        Confidence vs. Correctness Matrix</h4>`;
                       html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">';
 
                         // Confident & Correct (Mastery)
                         html += '<div class="bg-green-50 dark:bg-green-900/20 border-2 border-green-500 rounded-lg p-4">';
                           html += '<div class="flex items-center gap-2 mb-2">';
                             html += '<span class="text-2xl">💯</span>';
-                            html += '<div class="text-sm font-semibold text-green-700 dark:text-green-300">Conscious
-                              Competence</div>';
+                            html += `<div class="text-sm font-semibold text-green-700 dark:text-green-300">Conscious
+                              Competence</div>`;
                             html += '</div>';
                           html += '<div class="text-3xl font-bold text-green-900 dark:text-green-100">' +
                             metacognition.overall.confidentCorrect + '%</div>';
-                          html += '<div class="text-xs text-green-700 dark:text-green-300 mt-1">Confident & Correct
-                            (Mastery!)</div>';
+                          html += `<div class="text-xs text-green-700 dark:text-green-300 mt-1">Confident & Correct
+                            (Mastery!)</div>`;
                           html += '</div>';
 
                         // Confident & Incorrect (RED ALERT)
                         html += '<div class="bg-red-50 dark:bg-red-900/20 border-2 border-red-500 rounded-lg p-4">';
                           html += '<div class="flex items-center gap-2 mb-2">';
                             html += '<span class="text-2xl">⚠️</span>';
-                            html += '<div class="text-sm font-semibold text-red-700 dark:text-red-300">Confidently
-                              Incorrect</div>';
+                            html += `<div class="text-sm font-semibold text-red-700 dark:text-red-300">Confidently
+                              Incorrect</div>`;
                             html += '</div>';
                           html += '<div class="text-3xl font-bold text-red-900 dark:text-red-100">' +
                             metacognition.overall.confidentIncorrect + '%</div>';
-                          html += '<div class="text-xs text-red-700 dark:text-red-300 mt-1">RED ALERT: Deep misconception!
-                          </div>';
+                          html += `<div class="text-xs text-red-700 dark:text-red-300 mt-1">RED ALERT: Deep misconception!
+                          </div>`;
                           html += '</div>';
 
                         // Uncertain & Correct (Lucky guess)
-                        html += '<div
-                          class="bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-500 rounded-lg p-4">';
+                        html += `<div
+                          class="bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-500 rounded-lg p-4">`;
                           html += '<div class="flex items-center gap-2 mb-2">';
                             html += '<span class="text-2xl">🤔</span>';
-                            html += '<div class="text-sm font-semibold text-yellow-700 dark:text-yellow-300">Imposter
-                              Syndrome</div>';
+                            html += `<div class="text-sm font-semibold text-yellow-700 dark:text-yellow-300">Imposter
+                              Syndrome</div>`;
                             html += '</div>';
                           html += '<div class="text-3xl font-bold text-yellow-900 dark:text-yellow-100">' +
                             metacognition.overall.uncertainCorrect + '%</div>';
-                          html += '<div class="text-xs text-yellow-700 dark:text-yellow-300 mt-1">Uncertain but Correct
-                            (Lucky?)</div>';
+                          html += `<div class="text-xs text-yellow-700 dark:text-yellow-300 mt-1">Uncertain but Correct
+                            (Lucky?)</div>`;
                           html += '</div>';
 
                         // Uncertain & Incorrect (Conscious incompetence)
                         html += '<div class="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-500 rounded-lg p-4">';
                           html += '<div class="flex items-center gap-2 mb-2">';
                             html += '<span class="text-2xl">🤷</span>';
-                            html += '<div class="text-sm font-semibold text-blue-700 dark:text-blue-300">Conscious
-                              Incompetence</div>';
+                            html += `<div class="text-sm font-semibold text-blue-700 dark:text-blue-300">Conscious
+                              Incompetence</div>`;
                             html += '</div>';
                           html += '<div class="text-3xl font-bold text-blue-900 dark:text-blue-100">' +
                             metacognition.overall.uncertainIncorrect + '%</div>';
-                          html += '<div class="text-xs text-blue-700 dark:text-blue-300 mt-1">Know they don\'t know
-                            (Good!)</div>';
+                          html += `<div class="text-xs text-blue-700 dark:text-blue-300 mt-1">Know they don\'t know
+                            (Good!)</div>`;
                           html += '</div>';
 
                         html += '</div>';
@@ -12572,8 +4552,8 @@
                         item.flags.length> 0) {
                         html += '<div class="flex flex-wrap gap-2 mb-3">';
                           item.flags.forEach(function (flag) {
-                          var flagClass = flag === 'negative-discrimination' ? 'bg-red-100 text-red-800 dark:bg-red-500/20
-                          dark:text-red-300' :
+                          var flagClass = flag === 'negative-discrimination' ? `bg-red-100 text-red-800 dark:bg-red-500/20
+                          dark:text-red-300` :
                           flag === 'too-hard' ? 'bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-300'
                           :
                           'bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-300';
@@ -12585,24 +4565,24 @@
 
                         // Actionable Insights
                         if (interp.actionable && interp.actionable.length > 0) {
-                        html += '<div
+                        html += `<div
                           class="mt-3 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30 rounded text-sm text-amber-800 dark:text-amber-200">
-                          ';
+                          `;
                           html += '<p class="font-semibold text-xs uppercase tracking-wide mb-1">Recommendation:</p>';
                           html += '<ul class="list-disc list-inside space-y-1">';
                             interp.actionable.forEach(function (insight) {
                             html += '<li>' + escapeHtml(insight) + '</li>';
                             });
-                            html += '</ul>
-                        </div>';
+                            html += `</ul>
+                        </div>`;
                         }
 
                         // Distractor Analysis
                         if (item.distractorAnalysis && item.distractorAnalysis.length > 0) {
                         html += '<div class="bg-gray-50 dark:bg-brand-dark-gray/20 rounded-lg p-3">';
-                          html += '<h5
+                          html += `<h5
                             class="text-xs font-semibold uppercase text-brand-dark-gray/60 dark:text-brand-white/60 mb-2">
-                            Distractor Analysis</h5>';
+                            Distractor Analysis</h5>`;
                           html += '<div class="space-y-2">';
 
                             item.distractorAnalysis.forEach(function (dist) {
@@ -12617,15 +4597,15 @@
                                   escapeHtml(dist.option.substring(0, 50)) + (dist.option.length > 50 ? '...' : '') +
                                   '</span>';
                                 if (dist.isCorrect) {
-                                html += '<span
-                                  class="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-300">Correct</span>';
+                                html += `<span
+                                  class="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-300">Correct</span>`;
                                 }
                                 html += '</div>';
                               html += '<div class="flex items-center gap-3">';
                                 html += '<span class="text-brand-dark-gray/60 dark:text-brand-white/60">' + dist.totalPct
                                   + '%</span>';
-                                html += '<span
-                                  class="text-xs text-' + qualityColor + '-600 dark:text-' + qualityColor + '-400">' +
+                                html += `<span
+                                  class="text-xs text-` + qualityColor + '-600 dark:text-' + qualityColor + '-400">' +
                                   dist.quality + '</span>';
                                 html += '</div>';
                               html += '</div>';
@@ -12720,12 +4700,12 @@
                         .catch(function (error) {
                         console.error('Analytics loading error:', error);
                         // Show error states
-                        document.getElementById('analytics-overview-loading').innerHTML = '<p class="text-red-600">Error
-                          loading analytics: ' + escapeHtml(error.message || 'Unknown error') + '</p>';
-                        document.getElementById('analytics-items-loading').innerHTML = '<p class="text-red-600">Error
-                          loading analytics: ' + escapeHtml(error.message || 'Unknown error') + '</p>';
-                        document.getElementById('analytics-students-loading').innerHTML = '<p class="text-red-600">Error
-                          loading analytics: ' + escapeHtml(error.message || 'Unknown error') + '</p>';
+                        document.getElementById('analytics-overview-loading').innerHTML = `<p class="text-red-600">Error
+                          loading analytics: ` + escapeHtml(error.message || 'Unknown error') + '</p>';
+                        document.getElementById('analytics-items-loading').innerHTML = `<p class="text-red-600">Error
+                          loading analytics: ` + escapeHtml(error.message || 'Unknown error') + '</p>';
+                        document.getElementById('analytics-students-loading').innerHTML = `<p class="text-red-600">Error
+                          loading analytics: ` + escapeHtml(error.message || 'Unknown error') + '</p>';
                         });
                         }
 
@@ -12752,23 +4732,23 @@
 
                         (analyticsData.kpis || []).forEach(function (kpi) {
                         var card = document.createElement('div');
-                        card.className = 'bg-brand-white dark:bg-brand-dark-gray/40 rounded-xl p-5 border
+                        card.className = `bg-brand-white dark:bg-brand-dark-gray/40 rounded-xl p-5 border
                         border-brand-light-gray dark:border-brand-dark-gray/40 shadow-sm hover:shadow-md transition-shadow
-                        cursor-pointer';
+                        cursor-pointer`;
                         card.title = kpi.tooltip;
 
                         var deltaHtml = '';
                         if (kpi.delta !== undefined && kpi.delta !== null) {
-                        var deltaColor = kpi.delta >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600
-                        dark:text-red-400';
+                        var deltaColor = kpi.delta >= 0 ? 'text-green-600 dark:text-green-400' : `text-red-600
+                        dark:text-red-400`;
                         var deltaIcon = kpi.delta >= 0 ? '▲' : '▼';
                         deltaHtml = '<div class="text-xs font-semibold ' + deltaColor + ' mt-1">' + deltaIcon + ' ' +
                           Math.abs(kpi.delta) + '</div>';
                         }
 
-                        card.innerHTML = '<div
+                        card.innerHTML = `<div
                           class="text-xs font-semibold uppercase tracking-wide text-brand-dark-gray/60 dark:text-brand-white/60 mb-2">
-                          ' +
+                          ` +
                           escapeHtml(kpi.label) + '</div>' +
                         '<div class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">' +
                           escapeHtml(kpi.value) + '</div>' + deltaHtml;
@@ -12787,28 +4767,28 @@
                           var color = topic.masteryPct >= 70 ? 'bg-green-500' : topic.masteryPct >= 50 ? 'bg-yellow-500' :
                           'bg-red-500';
                           topicHtml += '<div class="flex items-center gap-3">';
-                            topicHtml += '<div
-                              class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white min-w-[120px]">' +
+                            topicHtml += `<div
+                              class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white min-w-[120px]">` +
                               escapeHtml(topic.topic) + '</div>';
-                            topicHtml += '<div
+                            topicHtml += `<div
                               class="flex-1 bg-brand-light-gray dark:bg-brand-dark-gray/30 rounded-full h-6 overflow-hidden">
-                              ';
-                              topicHtml += '<div
-                                class="' + color + ' h-full flex items-center justify-end px-2 text-xs text-white font-semibold"
-                                style="width: ' + topic.masteryPct + '%">';
+                              `;
+                              topicHtml += `<div
+                                class="` + color + ` h-full flex items-center justify-end px-2 text-xs text-white font-semibold"
+                                style="width: ` + topic.masteryPct + '%">';
                                 if (topic.masteryPct > 15) topicHtml += topic.masteryPct + '%';
-                                topicHtml += '</div>
-                            </div>';
-                            topicHtml += '<div
-                              class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 min-w-[60px] text-right">' +
+                                topicHtml += `</div>
+                            </div>`;
+                            topicHtml += `<div
+                              class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 min-w-[60px] text-right">` +
                               topic.questionCount + ' items</div>';
                             topicHtml += '</div>';
                           });
                           topicHtml += '</div>';
                         topicHeat.innerHTML = topicHtml;
                         } else {
-                        topicHeat.innerHTML = '<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No
-                          topic data available. Add topic tags to your questions.</p>';
+                        topicHeat.innerHTML = `<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No
+                          topic data available. Add topic tags to your questions.</p>`;
                         }
 
                         // Render Item Scatter (simplified - using Google Charts)
@@ -12817,8 +4797,8 @@
                         return;
                         }
                         if (!analyticsData.items || analyticsData.items.length === 0) {
-                        scatterHost.innerHTML = '<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No
-                          item data available</p>';
+                        scatterHost.innerHTML = `<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No
+                          item data available</p>`;
                         } else if (googleChartsReady && window.google && google.visualization && typeof
                         google.visualization.ScatterChart === 'function') {
                         var scatterData = [['Difficulty (% Correct)', 'Discrimination', 'Question']];
@@ -12840,8 +4820,8 @@
                         var chart = new google.visualization.ScatterChart(scatterHost);
                         chart.draw(data, options);
                         } else {
-                        scatterHost.innerHTML = '<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">
-                          Preparing analytics visuals…</p>';
+                        scatterHost.innerHTML = `<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">
+                          Preparing analytics visuals…</p>`;
                         }
                         }
 
@@ -12924,10 +4904,10 @@
                         var flagsHtml = '';
                         item.flags.forEach(function (flag) {
                         var flagColor = 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
-                        if (flag === 'low-disc') flagColor = 'bg-red-100 dark:bg-red-900/30 text-red-700
-                        dark:text-red-300';
-                        flagsHtml += '<span
-                          class="inline-block px-2 py-0.5 rounded text-xs font-semibold ' + flagColor + ' mr-1">' +
+                        if (flag === 'low-disc') flagColor = `bg-red-100 dark:bg-red-900/30 text-red-700
+                        dark:text-red-300`;
+                        flagsHtml += `<span
+                          class="inline-block px-2 py-0.5 rounded text-xs font-semibold ` + flagColor + ' mr-1">' +
                           escapeHtml(flag) + '</span>';
                         });
                         flagsCell.innerHTML = flagsHtml;
@@ -12953,9 +4933,9 @@
                           if (count > 0) {
                           html += '<div class="flex items-center gap-0.5">';
                             html += '<span class="font-semibold">' + choice + '</span>';
-                            html += '<div class="h-4 rounded ' + borderStyle + '"
-                              style="width: ' + (pct * 0.8) + 'px; background-color: ' + colors[idx] + '; opacity: 0.7;">
-                            </div>';
+                            html += '<div class="h-4 rounded ' + borderStyle + `"
+                              style="width: ` + (pct * 0.8) + 'px; background-color: ' + colors[idx] + `; opacity: 0.7;">
+                            </div>`;
                             html += '<span class="text-brand-dark-gray/60 dark:text-brand-white/60">' + pct + '%</span>';
                             html += '</div>';
                           }
@@ -12977,18 +4957,18 @@
                         // Display error message in the student insights container
                         var container = document.getElementById('student-insights-content');
                         if (container) {
-                        container.innerHTML = '<div
+                        container.innerHTML = `<div
                           class="flex items-center justify-center p-12 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/30 rounded-lg">
-                          ' +
+                          ` +
                           '<div class="text-center">' +
-                            '<span
-                              class="material-symbols-outlined text-5xl text-red-600 dark:text-red-400 mb-4">error</span>'
+                            `<span
+                              class="material-symbols-outlined text-5xl text-red-600 dark:text-red-400 mb-4">error</span>`
                             +
-                            '<p class="text-red-800 dark:text-red-200 text-lg font-semibold mb-2">Failed to Load Student
-                              Insights</p>' +
+                            `<p class="text-red-800 dark:text-red-200 text-lg font-semibold mb-2">Failed to Load Student
+                              Insights</p>` +
                             '<p class="text-red-600 dark:text-red-300 text-sm">' + escapeHtml(message) + '</p>' +
-                            '<button onclick="loadStudentInsights()"
-                              class="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">Retry</button>'
+                            `<button onclick="loadStudentInsights()"
+                              class="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">Retry</button>`
                             +
                             '</div>' +
                           '</div>';
@@ -13121,20 +5101,20 @@
                             flagText + '</span>';
                           });
 
-                          html += '<tr
+                          html += `<tr
                             class="border-t border-brand-light-gray dark:border-brand-dark-gray/40 hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/30 transition-colors">
-                            ';
-                            html += '<td class="px-4 py-3 text-sm font-medium text-brand-dark-gray dark:text-brand-white">
-                              ' + escapeHtml(formatStudentName(student)) + '</td>';
-                            html += '<td class="px-4 py-3 text-center"><span
-                                class="text-sm font-semibold ' + accuracyColor + '">' + Math.round(student.accuracy) +
+                            `;
+                            html += `<td class="px-4 py-3 text-sm font-medium text-brand-dark-gray dark:text-brand-white">
+                              ` + escapeHtml(formatStudentName(student)) + '</td>';
+                            html += `<td class="px-4 py-3 text-center"><span
+                                class="text-sm font-semibold ` + accuracyColor + '">' + Math.round(student.accuracy) +
                                 '%</span><br><span class="text-xs text-brand-dark-gray/50 dark:text-brand-white/50">' +
                                 student.correctAnswers + '/' + (student.correctAnswers + student.incorrectAnswers) +
                                 '</span></td>';
-                            html += '<td class="px-4 py-3 text-center"><span
-                                class="text-sm font-semibold ' + participationColor + '">' +
-                                Math.round(student.participationRate) + '%</span><br><span
-                                class="text-xs text-brand-dark-gray/50 dark:text-brand-white/50">' +
+                            html += `<td class="px-4 py-3 text-center"><span
+                                class="text-sm font-semibold ` + participationColor + '">' +
+                                Math.round(student.participationRate) + `%</span><br><span
+                                class="text-xs text-brand-dark-gray/50 dark:text-brand-white/50">` +
                                 student.questionsAnswered + '/' + student.totalQuestions + '</span></td>';
                             html += '<td class="px-4 py-3 text-center text-sm font-semibold ' + violationsColor + '">' +
                               student.violations.length + '</td>';
@@ -13142,11 +5122,11 @@
                             html += '</tr>';
                           });
 
-                          tbody.innerHTML = html || '<tr>
+                          tbody.innerHTML = html || `<tr>
                             <td colspan="5"
                               class="px-4 py-8 text-center text-brand-dark-gray/60 dark:text-brand-white/60">No students
                               found</td>
-                          </tr>';
+                          </tr>`;
                           }
 
                           function filterStudentsByFlag(flag) {
@@ -13224,31 +5204,31 @@
                           // Render student summary
                           var summary = document.getElementById('analytics-student-summary');
                           summary.innerHTML = '<div class="flex flex-wrap items-center justify-between gap-4">' +
-                            '<div>
-                              <h3 class="text-xl font-bold text-brand-dark-gray dark:text-brand-white">' +
+                            `<div>
+                              <h3 class="text-xl font-bold text-brand-dark-gray dark:text-brand-white">` +
                                 escapeHtml(formatStudentName(student)) + '</h3>' +
                               '<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">' +
-                                escapeHtml(student.email) + '</p>
-                            </div>' +
+                                escapeHtml(student.email) + `</p>
+                            </div>` +
                             '<div class="grid grid-cols-3 gap-4 text-center">' +
-                              '<div>
-                                <div class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">' +
+                              `<div>
+                                <div class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">` +
                                   student.successLast10.toFixed(1) + '%</div>' +
-                                '<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">Success Rate</div>
-                              </div>' +
-                              '<div>
-                                <div class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">' +
+                                `<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">Success Rate</div>
+                              </div>` +
+                              `<div>
+                                <div class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">` +
                                   student.participationPct.toFixed(0) + '%</div>' +
-                                '<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">Participation</div>
-                              </div>' +
-                              '<div>
-                                <div class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">' +
+                                `<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">Participation</div>
+                              </div>` +
+                              `<div>
+                                <div class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">` +
                                   student.integrityCount + '</div>' +
-                                '<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">Integrity Events
+                                `<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">Integrity Events
                                 </div>
-                              </div>' +
-                              '</div>
-                          </div>';
+                              </div>` +
+                              `</div>
+                          </div>`;
 
                           // Render sparkline (last 10 sessions)
                           var sparkline = document.getElementById('analytics-student-sparkline');
@@ -13258,10 +5238,10 @@
                             sessions.slice(0, 10).reverse().forEach(function (session) {
                             var color = session.scorePct >= 70 ? 'bg-green-500' : session.scorePct >= 50 ? 'bg-yellow-500'
                             : 'bg-red-500';
-                            sparkHtml += '<div class="flex-1 flex flex-col items-center gap-1"
-                              title="' + escapeHtml(session.sessionName) + ': ' + session.scorePct + '%">';
-                              sparkHtml += '<div class="w-full rounded ' + color + '"
-                                style="height: ' + (session.scorePct * 0.8) + 'px; min-height: 20px;"></div>';
+                            sparkHtml += `<div class="flex-1 flex flex-col items-center gap-1"
+                              title="` + escapeHtml(session.sessionName) + ': ' + session.scorePct + '%">';
+                              sparkHtml += '<div class="w-full rounded ' + color + `"
+                                style="height: ` + (session.scorePct * 0.8) + 'px; min-height: 20px;"></div>';
                               sparkHtml += '<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">' +
                                 session.scorePct.toFixed(0) + '%</div>';
                               sparkHtml += '</div>';
@@ -13269,8 +5249,8 @@
                             sparkHtml += '</div>';
                           sparkline.innerHTML = sparkHtml;
                           } else {
-                          sparkline.innerHTML = '<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No
-                            session data</p>';
+                          sparkline.innerHTML = `<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No
+                            session data</p>`;
                           }
 
                           // Render topic bands
@@ -13283,18 +5263,18 @@
                             var pct = perf.total > 0 ? (perf.correct / perf.total * 100).toFixed(0) : 0;
                             var color = pct >= 70 ? 'bg-green-500' : pct >= 50 ? 'bg-yellow-500' : 'bg-red-500';
                             topicsHtml += '<div class="flex items-center gap-2">';
-                              topicsHtml += '<div
-                                class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white min-w-[100px]">' +
+                              topicsHtml += `<div
+                                class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white min-w-[100px]">` +
                                 escapeHtml(topic) + '</div>';
-                              topicsHtml += '<div
+                              topicsHtml += `<div
                                 class="flex-1 bg-brand-light-gray dark:bg-brand-dark-gray/30 rounded-full h-5 overflow-hidden">
-                                ';
-                                topicsHtml += '<div
-                                  class="' + color + ' h-full flex items-center justify-end px-2 text-xs text-white font-semibold"
-                                  style="width: ' + pct + '%">';
+                                `;
+                                topicsHtml += `<div
+                                  class="` + color + ` h-full flex items-center justify-end px-2 text-xs text-white font-semibold"
+                                  style="width: ` + pct + '%">';
                                   if (pct > 15) topicsHtml += pct + '%';
-                                  topicsHtml += '</div>
-                              </div>';
+                                  topicsHtml += `</div>
+                              </div>`;
                               topicsHtml += '<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">' +
                                 perf.correct + '/' + perf.total + '</div>';
                               topicsHtml += '</div>';
@@ -13302,8 +5282,8 @@
                             topicsHtml += '</div>';
                           topicsDiv.innerHTML = topicsHtml;
                           } else {
-                          topicsDiv.innerHTML = '<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No
-                            topic data</p>';
+                          topicsDiv.innerHTML = `<p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No
+                            topic data</p>`;
                           }
                           }
 
@@ -13378,11 +5358,11 @@
                           };
 
                           // Convert to CSV format (sessions only for now)
-                          var csv = 'Session Name,Class,Date,Questions,Participants,Total Students,Mastery %,Participation
-                          %,Median Time (s),Integrity Rate\n';
+                          var csv = `Session Name,Class,Date,Questions,Participants,Total Students,Mastery %,Participation
+                          %,Median Time (s),Integrity Rate\n`;
                           (exportData.sessions || []).forEach(function (session) {
-                          csv += '"' + (session.sessionName || '').replace(/"/g, '""') + '",';
-                          csv += '"' + (session.className || '').replace(/"/g, '""') + '",';
+                          csv += '"' + (session.sessionName || '').replace(/"/g, '""') + '",`;
+                          csv += `"' + (session.className || '').replace(/"/g, '""') + '",';
                           csv += '"' + (session.date || '') + '",';
                           csv += session.questionCount + ',';
                           csv += session.participants + ',';
@@ -13461,7 +5441,8 @@
                           return;
                           }
 
-                          // Check session type and call appropriate function
+                          // Check session type and call appropriate
+                          function
                           if (isSecureSessionTypeClient(selectedPoll.sessionType)) {
                           setButtonLoading(startPollBtn, true, 'Launching...');
 
@@ -13677,26 +5658,28 @@
                             nextIndex, status: 'OPEN' , questionText: qDef ? qDef.questionText : '' , options: qDef ?
                             qDef.options : [] }) .then(function (result) { // UI updates handled by listeners, but we
                             unblock navigation setTimeout(function () { isNavigating=false; }, 500); }) .catch(function
-                            (error) { isNavigating=false; handleError(error); }); } function onNextQuestion() { if
-                            (navigationRequestInFlight) { console.warn('Navigation already in progress; ignoring extra
-                            Next click'); return; } navigationRequestInFlight=true; if (pollInterval)
+                            (error) { isNavigating=false; handleError(error); }); }
+                            function onNextQuestion() { if
+                            (navigationRequestInFlight) { console.warn(`Navigation already in progress; ignoring extra
+                            Next click`); return; } navigationRequestInFlight=true; if (pollInterval)
                             clearInterval(pollInterval); pauseTimerCountdown(); stopVisualTimer();
                             timerExpiredHandled=false; timerActive=false; timerRemainingSeconds=timerPresetSeconds;
                             updateTimerDisplay(); updateTimerStatus('Timer ready for next question.', 'info' );
                             isPaused=false; violationsAlertDismissed=false; // Reset violations alert for new question
                             isNavigating=true; // Set flag to prevent polling during navigation if (PREVIEW_MODE) {
-                            isNavigating=false; navigationRequestInFlight=false; previewOnlyNotice('advance to the next
-                            question'); return; } // OPTIMISTIC UPDATE: Update UI immediately using local data // This
+                            isNavigating=false; navigationRequestInFlight=false; previewOnlyNotice(`advance to the next
+                            question`); return; } // OPTIMISTIC UPDATE: Update UI immediately using local data // This
                             eliminates the visual lag for the teacher while the server processes the request if
                             (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions) { var
                             nextIndex=(CURRENT_POLL_DATA.questionIndex || 0) + 1; if (nextIndex <
-                            CURRENT_POLL_DATA.questions.length) { console.log('[Optimistic] Advancing UI to question
-                            index:', nextIndex); var optimisticData={ mode: 'lightweight' , pollId:
+                            CURRENT_POLL_DATA.questions.length) { console.log(`[Optimistic] Advancing UI to question
+                            index:`, nextIndex); var optimisticData={ mode: 'lightweight' , pollId:
                             CURRENT_POLL_DATA.pollId, questionIndex: nextIndex, status: 'OPEN' , metadata: {
                             sessionPhase: 'LIVE' , resultsVisibility: 'HIDDEN' , startedAt: new Date().toISOString() } };
                             // 1. Update UI instantly handleLightweightSessionUpdate(optimisticData); // 2. Broadcast to
                             Firebase instantly (Fast Path for students) // handleLightweightSessionUpdate already calls
-                            broadcastSessionState, // but we want to ensure the optimistic payload is what's sent. } } var
+                            broadcastSessionState, // but we want to ensure the optimistic payload is what's sent. } }
+                            var
                             nextIndex=(CURRENT_POLL_DATA.questionIndex || 0) + 1; // Optimistic update logic preserved
                             above... var setSessionFn=firebase.functions().httpsCallable('setLiveSessionState'); var
                             pollId=CURRENT_POLL_DATA.pollId; // Fetch qDef for payload - CRITICAL for fast path var
@@ -13708,17 +5691,20 @@
                             navigationRequestInFlight=false; }, 500); }) .catch(function (error) { isNavigating=false;
                             navigationRequestInFlight=false; handleError(error); }); } async function onResetQuestion() {
                             var pollId=CURRENT_POLL_DATA.pollId; var questionIndex=CURRENT_POLL_DATA.questionIndex; if
-                            (!pollId || typeof questionIndex==='undefined' ) { await veritasAlert('No active question to
-                            reset.', { title: 'Reset question' }); return; } var proceed=await veritasConfirm('Reset the
-                            current question for all students?', { title: 'Reset question' , confirmText: 'Reset question'
-                            , destructive: true }); if (!proceed) { return; } var clearResponses=await
-                            veritasConfirm('Select OK to reset and clear responses, or Cancel to reset while keeping
-                            submissions.', { title: 'Responses' , confirmText: 'Reset & clear' ,
+                            (!pollId || typeof questionIndex==='undefined' ) { await veritasAlert(`No active question to
+                            reset.`, { title: 'Reset question' }); return; }
+                            var proceed=await veritasConfirm(`Reset the
+                            current question for all students?`, { title: 'Reset question' , confirmText: 'Reset question'
+                            , destructive: true }); if (!proceed) { return; }
+                            var clearResponses=await
+                            veritasConfirm(`Select OK to reset and clear responses, or Cancel to reset while keeping
+                            submissions.`, { title: 'Responses' , confirmText: 'Reset & clear' ,
                             cancelText: 'Keep submissions' , destructive: true }); // Pause and reset timer pauseTimer();
                             stopVisualTimer(); timerExpiredHandled=false; timerActive=false; isRunning=false;
                             timerRemainingSeconds=timerPresetSeconds; totalSeconds=timerPresetSeconds;
                             toggleButtons(false); updateDisplay(); updateTimerStatus('Timer idle.', 'info' ); if
-                            (PREVIEW_MODE) { await previewOnlyNotice('reset the live question'); return; } var
+                            (PREVIEW_MODE) { await previewOnlyNotice('reset the live question'); return; }
+                            var
                             setSessionFn=firebase.functions().httpsCallable('setLiveSessionState'); // If clearResponses
                             is true, we ideally need a separate function or flag // But for now we just reset state.
                             Handling clearResponses requires DB delete. if (clearResponses) {
@@ -13732,7 +5718,8 @@
                             CURRENT_POLL_DATA.questions[questionIndex].options : [] }) .then(function (result) {
                             isPaused=false; showToast('success', 'Question Reset' , clearResponses
                             ? 'Timer restarted and responses cleared.' : 'Timer restarted (responses kept).' ); })
-                            .catch(handleError); } function setLiveCalculatorToggleState(isEnabled, isSecureSession) {
+                            .catch(handleError); }
+                            function setLiveCalculatorToggleState(isEnabled, isSecureSession) {
                             liveCalculatorEnabled=!!isEnabled; if (!liveCalculatorToggle) return; // Allow calculator for
                             live poll and secure sessions; only disable when no active poll var
                             disabled=!CURRENT_POLL_DATA.pollId; liveCalculatorToggle.disabled=disabled;
@@ -13747,9 +5734,11 @@
                             liveCalculatorStateText.classList.toggle('text-veritas-gold', liveCalculatorEnabled);
                             liveCalculatorStateText.classList.toggle('opacity-80', !liveCalculatorEnabled); } } async
                             function onToggleLiveCalculator() { if (!liveCalculatorToggle || PREVIEW_MODE) { if
-                            (PREVIEW_MODE) { previewOnlyNotice('toggle the calculator'); } return; } var
-                            pollId=CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId; if (!pollId) { handleError('No active
-                            session to update.'); return; } var targetState=!liveCalculatorEnabled;
+                            (PREVIEW_MODE) { previewOnlyNotice('toggle the calculator'); }
+                            return; } var
+                            pollId=CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId; if (!pollId) { handleError(`No active
+                            session to update.`); return; }
+                            var targetState=!liveCalculatorEnabled;
                             liveCalculatorToggle.setAttribute('aria-busy', 'true' ); liveCalculatorToggle.disabled=true;
                             try { var setLiveSessionState=firebase.functions().httpsCallable('setLiveSessionState'); var
                             result=await setLiveSessionState({ pollId: pollId, metadata: { calculatorEnabled: targetState
@@ -13759,28 +5748,34 @@
                             targetState ? 'Students can now access the calculator.'
                             : 'Calculator has been disabled for students.' ); } catch (error) {
                             liveCalculatorToggle.removeAttribute('aria-busy'); liveCalculatorToggle.disabled=false;
-                            handleError(error); } } function onRevealResults() { var
+                            handleError(error); } }
+                            function onRevealResults() { var
                             revealBtn=document.getElementById('reveal-results-btn'); if (revealBtn) {
-                            revealBtn.disabled=true; } if (PREVIEW_MODE) { if (revealBtn) { revealBtn.disabled=false; }
-                            previewOnlyNotice('reveal results to students'); return; } const
+                            revealBtn.disabled=true; }
+                            if (PREVIEW_MODE) { if (revealBtn) { revealBtn.disabled=false; }
+                            previewOnlyNotice('reveal results to students'); return; }
+                            const
                             setLiveSessionState=firebase.functions().httpsCallable('setLiveSessionState');
                             setLiveSessionState({ pollId: CURRENT_POLL_DATA.pollId, status: 'PAUSED' , questionIndex:
                             CURRENT_QUESTION_INDEX, sessionPhase: 'RESULTS_REVEALED' , resultsVisibility: 'REVEALED' })
                             .then(function (result) { if (revealBtn) { revealBtn.disabled=false; } // The UI will update
                             via the RTDB listener (liveSessionRef) }) .catch(function (error) { if (revealBtn) {
-                            revealBtn.disabled=false; } handleError(error); }); } function onHideResults() { var
+                            revealBtn.disabled=false; } handleError(error); }); }
+                            function onHideResults() { var
                             hideBtn=document.getElementById('hide-results-btn'); if (hideBtn) { hideBtn.disabled=true; }
-                            if (PREVIEW_MODE) { if (hideBtn) { hideBtn.disabled=false; } previewOnlyNotice('hide results
-                            from students'); return; } const
+                            if (PREVIEW_MODE) { if (hideBtn) { hideBtn.disabled=false; } previewOnlyNotice(`hide results
+                            from students`); return; }
+                            const
                             setLiveSessionState=firebase.functions().httpsCallable('setLiveSessionState');
                             setLiveSessionState({ pollId: CURRENT_POLL_DATA.pollId, status: 'PAUSED' , questionIndex:
                             CURRENT_QUESTION_INDEX, sessionPhase: 'RESULTS_HOLD' , resultsVisibility: 'HIDDEN' })
                             .then(function (result) { if (hideBtn) { hideBtn.disabled=false; } // UI updates via listener
                             }) .catch(function (error) { if (hideBtn) { hideBtn.disabled=false; } handleError(error); });
-                            } async function onEndPoll() { var confirmed=await veritasConfirm('Are you sure you want to
-                            end this poll completely?', { title: 'End poll' , confirmText: 'End poll' , destructive: true
-                            }); if (!confirmed) return; showDashboard(); if (PREVIEW_MODE) { previewOnlyNotice('end the
-                            live poll'); return; } const
+                            } async function onEndPoll() { var confirmed=await veritasConfirm(`Are you sure you want to
+                            end this poll completely?`, { title: 'End poll' , confirmText: 'End poll' , destructive: true
+                            }); if (!confirmed) return; showDashboard(); if (PREVIEW_MODE) { previewOnlyNotice(`end the
+                            live poll`); return; }
+                            const
                             finalizeSession=firebase.functions().httpsCallable('finalizeSession'); finalizeSession({
                             pollId: (CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId) || '' }) .then(function (result) {
                             showDashboard(); }) .catch(handleError); } // --- Live View & Data Polling --- function
@@ -13794,15 +5789,16 @@
                             hudResponseCaption=document.getElementById('hud-response-caption'); var
                             hudResponseTrend=document.getElementById('hud-response-trend'); var
                             mobileResponseChip=document.getElementById('mobile-response-chip'); if (responsesEl) {
-                            responsesEl.textContent=totalResponses + ' / ' + totalStudents; } var
+                            responsesEl.textContent=totalResponses + ' / ' + totalStudents; }
+                            var
                             completionPct=totalStudents> 0 ? Math.round((totalResponses / totalStudents) * 100) : 0;
                             if (progressEl) {
                             var safeWidth = Math.max(0, Math.min(100, completionPct));
                             progressEl.style.width = safeWidth + '%';
                             }
                             if (responseCaption) {
-                            responseCaption.textContent = totalStudents > 0 ? completionPct + '% complete' : 'Awaiting
-                            roster data';
+                            responseCaption.textContent = totalStudents > 0 ? completionPct + '% complete' : `Awaiting
+                            roster data`;
                             }
 
                             if (hudResponseCount) {
@@ -13814,8 +5810,8 @@
                             (totalStudents || 0);
                             }
                             if (hudResponseCaption) {
-                            hudResponseCaption.textContent = totalStudents > 0 ? completionPct + '% complete' : 'Awaiting
-                            roster data';
+                            hudResponseCaption.textContent = totalStudents > 0 ? completionPct + '% complete' : `Awaiting
+                            roster data`;
                             }
                             if (hudResponseTrend) {
                             hudResponseTrend.classList.remove('hud-trend-up', 'hud-trend-down', 'hud-trend-steady');
@@ -14085,8 +6081,8 @@
                                 }
 
                                 async function onEndIndividualSession() {
-                                var confirmed = await veritasConfirm('Are you sure you want to end this session for all
-                                students?', {
+                                var confirmed = await veritasConfirm(`Are you sure you want to end this session for all
+                                students?`, {
                                 title: 'End Session',
                                 confirmText: 'End Session',
                                 cancelText: 'Cancel'
@@ -14181,7 +6177,8 @@
                                 // FIX TASK A: Initialize Firebase for ALL proctored sessions (Live Polls + Secure
                                 Assessment)
                                 // This enables real-time proctoring status on the teacher dashboard
-                                // DO NOT set currentMissionControlPollId here - let initFirebaseMissionControl handle it
+                                // DO NOT set currentMissionControlPollId here -
+                                let initFirebaseMissionControl handle it
                                 if (CURRENT_POLL_DATA.pollId) {
                                 initFirebaseMissionControl(CURRENT_POLL_DATA.pollId);
                                 }
@@ -14217,7 +6214,8 @@
                                 if (backBtn) {
                                 backBtn.disabled = data.questionIndex <= 0; if (data.questionIndex <=0) {
                                   backBtn.style.opacity='0.5' ; backBtn.style.cursor='not-allowed' ; } else {
-                                  backBtn.style.opacity='1' ; backBtn.style.cursor='pointer' ; } } if (nextBtn) { var
+                                  backBtn.style.opacity='1' ; backBtn.style.cursor='pointer' ; } }
+                                  if (nextBtn) { var
                                   isLastQuestion=data.questionIndex>= data.totalQuestions - 1;
                                   nextBtn.disabled = isLastQuestion;
                                   if (isLastQuestion) {
@@ -14368,8 +6366,8 @@
                                   data.totalStudents + ' answered';
                                   var responseCountHeader = document.getElementById('response-count-header');
                                   if (responseCountHeader) {
-                                  responseCountHeader.textContent = data.totalResponses + ' / ' + data.totalStudents + '
-                                  answered';
+                                  responseCountHeader.textContent = data.totalResponses + ' / ' + data.totalStudents + `
+                                  answered`;
                                   }
 
                                   updateLiveOverviewFromData(data);
@@ -14439,21 +6437,23 @@
                                   dotsContainer.innerHTML = '';
                                   for (var i = 0; i < total; i++) { var dot=document.createElement('span');
                                     dot.className='h-2 w-2 rounded-full ' + (i===current ? 'bg-primary' : 'bg-primary/50'
-                                    ); dotsContainer.appendChild(dot); } } function renderResultsBars(results,
+                                    ); dotsContainer.appendChild(dot); } }
+                                    function renderResultsBars(results,
                                     correctAnswer, studentsList) { var container=document.getElementById('results-bars');
                                     container.innerHTML='' ; var optionDefs=Array.isArray(CURRENT_POLL_DATA.options) ?
                                     CURRENT_POLL_DATA.options.slice() : []; var knownKeys={}; optionDefs.forEach(function
                                     (option) { knownKeys[(option && option.text) || '' ]=true; }); if (results) {
                                     Object.keys(results).forEach(function (answerText) { if (!knownKeys[answerText || ''
                                     ]) { optionDefs.push({ text: answerText || '' , imageURL: '' }); knownKeys[answerText
-                                    || '' ]=true; } }); } if (optionDefs.length===0) { optionDefs=(results &&
+                                    || '' ]=true; } }); }
+                                    if (optionDefs.length===0) { optionDefs=(results &&
                                     Object.keys(results).length> 0) ? Object.keys(results).map(function (key) { return {
                                     text: key, imageURL: '' }; }) : [];
                                     }
 
                                     if (optionDefs.length === 0) {
-                                    container.innerHTML = '<p class="text-center text-gray-500 py-4">Waiting for
-                                      responses...</p>';
+                                    container.innerHTML = `<p class="text-center text-gray-500 py-4">Waiting for
+                                      responses...</p>`;
                                     return;
                                     }
 
@@ -14479,8 +6479,8 @@
                                     // Student-view-style answer card with percentage overlay
                                     var borderColor = isCorrect ? 'border-green-500 dark:border-green-400' :
                                     'border-gray-200 dark:border-gray-700';
-                                    var bgColor = isCorrect ? 'bg-green-50/50 dark:bg-green-900/20' : 'bg-white
-                                    dark:bg-brand-dark-gray/30';
+                                    var bgColor = isCorrect ? 'bg-green-50/50 dark:bg-green-900/20' : `bg-white
+                                    dark:bg-brand-dark-gray/30`;
 
                                     card.className = `relative rounded-xl border ${borderColor} ${bgColor} overflow-hidden
                                     transition-all hover:shadow-sm`;
@@ -14488,8 +6488,8 @@
                                     var cardHtml = '<div class="flex items-start gap-2.5 p-3">';
 
                                       // Letter badge (student view style - smaller 32px)
-                                      var badgeBg = isCorrect ? 'bg-green-500 dark:bg-green-600' : 'bg-gray-600
-                                      dark:bg-gray-500';
+                                      var badgeBg = isCorrect ? 'bg-green-500 dark:bg-green-600' : `bg-gray-600
+                                      dark:bg-gray-500`;
                                       cardHtml += `<div
                                         class="flex-shrink-0 w-8 h-8 ${badgeBg} rounded-lg flex items-center justify-center">
                                         `;
@@ -14504,8 +6504,8 @@
                                           class="text-[1.125rem] font-medium text-brand-dark-gray dark:text-brand-white break-words leading-relaxed">
                                           ${escapeHtml(answerText)}</p>`;
                                         } else if (!imageURL) {
-                                        cardHtml += '<p class="text-sm font-medium text-gray-400 dark:text-gray-500">(No
-                                          content)</p>';
+                                        cardHtml += `<p class="text-sm font-medium text-gray-400 dark:text-gray-500">(No
+                                          content)</p>`;
                                         }
 
                                         if (imageURL) {
@@ -14522,8 +6522,8 @@
                                           studentsWithAnswer.forEach(function (student) {
                                           var confidenceText = describeConfidence(student.confidence);
                                           var style = CONFIDENCE_LEVEL_STYLES[student.confidence] || {};
-                                          var badgeClass = style.badgeClass || 'bg-gray-100 text-gray-700 dark:bg-gray-700
-                                          dark:text-gray-300';
+                                          var badgeClass = style.badgeClass || `bg-gray-100 text-gray-700 dark:bg-gray-700
+                                          dark:text-gray-300`;
                                           var displayText = formatStudentName(student);
                                           if (confidenceText) {
                                           var emoji = style.emoji || '';
@@ -14538,11 +6538,11 @@
                                         cardHtml += '</div>';
 
                                       // Percentage badge (top right corner - smaller)
-                                      var percentageBg = isCorrect ? 'bg-green-500 dark:bg-green-600' : 'bg-gray-700
-                                      dark:bg-gray-600';
-                                      cardHtml += '<div
-                                        class="flex-shrink-0 ' + percentageBg + ' text-white rounded-lg px-2 py-1 flex flex-col items-center">
-                                        ';
+                                      var percentageBg = isCorrect ? 'bg-green-500 dark:bg-green-600' : `bg-gray-700
+                                      dark:bg-gray-600`;
+                                      cardHtml += `<div
+                                        class="flex-shrink-0 ` + percentageBg + ` text-white rounded-lg px-2 py-1 flex flex-col items-center">
+                                        `;
                                         cardHtml += '<span class="text-lg font-bold leading-none">' + percentage +
                                           '%</span>';
                                         cardHtml += '<span class="text-[10px] opacity-90 mt-0.5">' + count + '</span>';
@@ -14568,8 +6568,8 @@
 
                                     var card = document.createElement('div');
                                     card.id = 'live-metacognition-card';
-                                    card.className = 'bg-white dark:bg-brand-dark-gray/30 p-3 rounded-xl border
-                                    border-purple-200 dark:border-purple-700 shadow-sm';
+                                    card.className = `bg-white dark:bg-brand-dark-gray/30 p-3 rounded-xl border
+                                    border-purple-200 dark:border-purple-700 shadow-sm`;
 
                                     var totalResponses = metacognition.totalResponses || 0;
                                     var participation = metacognition.responseRate || 0;
@@ -14593,32 +6593,32 @@
 
                                     var html = '<div class="flex items-start justify-between gap-3 mb-2">';
                                       html += '<div class="flex items-start gap-2">';
-                                        html += '<span
-                                          class="material-symbols-outlined text-purple-600 dark:text-purple-300 text-xl">psychology</span>';
-                                        html += '<div>
+                                        html += `<span
+                                          class="material-symbols-outlined text-purple-600 dark:text-purple-300 text-xl">psychology</span>`;
+                                        html += `<div>
                                           <h4
                                             class="text-brand-dark-gray dark:text-brand-white font-semibold text-sm leading-tight">
-                                            Confidence Pulse</h4>';
-                                          html += '<p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">
+                                            Confidence Pulse</h4>`;
+                                          html += `<p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">
                                             Certainty vs. accuracy snapshot</p>
-                                        </div>';
+                                        </div>`;
                                         html += '</div>';
-                                      html += '<div
+                                      html += `<div
                                         class="text-xs px-2 py-1 rounded-md bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-200 font-semibold">
-                                        ' + escapeHtml(statusLabel) + '</div>';
+                                        ` + escapeHtml(statusLabel) + '</div>';
                                       html += '</div>';
 
                                     // Quick stats chips
                                     html += '<div class="flex flex-wrap gap-2 mb-3 text-xs font-semibold">';
-                                      html += '<span
+                                      html += `<span
                                         class="px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200">✓
-                                        Correct:' + (metacognition.correctCount || 0) + '</span>';
-                                      html += '<span
+                                        Correct:` + (metacognition.correctCount || 0) + '</span>';
+                                      html += `<span
                                         class="px-2 py-1 rounded-md bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-200">✗
-                                        Incorrect:' + (metacognition.incorrectCount || 0) + '</span>';
-                                      html += '<span
+                                        Incorrect:` + (metacognition.incorrectCount || 0) + '</span>';
+                                      html += `<span
                                         class="px-2 py-1 rounded-md bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-200">⊘
-                                        Unanswered:' + (metacognition.unansweredCount || 0) + '</span>';
+                                        Unanswered:` + (metacognition.unansweredCount || 0) + '</span>';
                                       html += '</div>';
 
                                     html += '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">';
@@ -14649,31 +6649,31 @@
                                       html += '<div class="confidence-row flex flex-col">';
                                         html += '<div class="flex items-center justify-between gap-2">';
                                           html += '<div class="flex items-center gap-1.5"><span class="text-sm">' +
-                                              def.emoji + '</span><span
-                                              class="text-xs font-semibold ' + def.textClass + '">' + def.label + '</span>
-                                          </div>';
+                                              def.emoji + `</span><span
+                                              class="text-xs font-semibold ` + def.textClass + '">' + def.label + `</span>
+                                          </div>`;
                                           html += '<span class="text-sm font-bold ' + def.textClass + '">' + pct +
                                             '%</span>';
                                           html += '</div>';
-                                        html += '<div class="confidence-bar-track my-1">
-                                          <div class="confidence-bar-fill ' + def.barClass + '"
-                                            style="width:' + pct + '%"></div>
-                                        </div>';
+                                        html += `<div class="confidence-bar-track my-1">
+                                          <div class="confidence-bar-fill ` + def.barClass + `"
+                                            style="width:` + pct + `%"></div>
+                                        </div>`;
 
                                         // Students List in this quadrant
                                         if (categoryStudents.length > 0) {
                                         html += '<div class="flex flex-wrap gap-1 mt-1 mb-2">';
                                           categoryStudents.forEach(function (s) {
-                                          html += '<span
-                                            class="px-1.5 py-0.5 rounded bg-white/50 dark:bg-black/20 text-[10px] font-medium border border-black/5 truncate max-w-full">'
+                                          html += `<span
+                                            class="px-1.5 py-0.5 rounded bg-white/50 dark:bg-black/20 text-[10px] font-medium border border-black/5 truncate max-w-full">`
                                             + escapeHtml(formatStudentName(s)) + '</span>';
                                           });
                                           html += '</div>';
                                         }
 
-                                        html += '<div
+                                        html += `<div
                                           class="flex items-center justify-between text-[11px] text-brand-dark-gray/60 dark:text-brand-white/60 mt-auto">
-                                          ';
+                                          `;
                                           html += '<span>' + count + ' students</span>';
                                           html += '<span>live</span>';
                                           html += '</div>';
@@ -14684,16 +6684,16 @@
                                     if (flagged.length > 0) {
                                     html += '<div class="rounded-lg border border-rose-500/40 bg-rose-500/10 p-2 mt-2">';
                                       html += '<div class="flex items-center gap-1 mb-1">';
-                                        html += '<span
-                                          class="material-symbols-outlined text-sm text-rose-700 dark:text-rose-200">report</span>';
+                                        html += `<span
+                                          class="material-symbols-outlined text-sm text-rose-700 dark:text-rose-200">report</span>`;
                                         html += '<span class="text-xs font-semibold text-rose-700 dark:text-rose-200">' +
                                           flagged.length + ' confidently wrong</span>';
                                         html += '</div>';
                                       html += '<div class="flex flex-wrap gap-1">';
                                         flagged.forEach(function (student) {
                                         var display = escapeHtml(student.name || student.email || 'Student');
-                                        html += '<span
-                                          class="px-1.5 py-0.5 rounded bg-white/70 text-xs font-medium text-rose-700 dark:bg-rose-900/40 dark:text-rose-100">'
+                                        html += `<span
+                                          class="px-1.5 py-0.5 rounded bg-white/70 text-xs font-medium text-rose-700 dark:bg-rose-900/40 dark:text-rose-100">`
                                           + display + '</span>';
                                         });
                                         html += '</div>';
@@ -14755,8 +6755,8 @@
                                     if (!popoverList) return;
 
                                     if (!flaggedStudents || flaggedStudents.length === 0) {
-                                    popoverList.innerHTML = '<div class="text-xs text-center text-gray-500 py-4 italic">No
-                                      students need attention</div>';
+                                    popoverList.innerHTML = `<div class="text-xs text-center text-gray-500 py-4 italic">No
+                                      students need attention</div>`;
                                     return;
                                     }
 
@@ -14765,9 +6765,9 @@
                                     var isLocked = needsUnlockAttention(student);
                                     var isBlocked = isBlockedStatus(student);
 
-                                    html += '<div
+                                    html += `<div
                                       class="flex items-center justify-between gap-3 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-700">
-                                      ';
+                                      `;
                                       html += '<div class="flex flex-col min-w-0">';
                                         html += '<span class="text-xs font-bold truncate text-gray-900 dark:text-white">'
                                           + escapeHtml(formatStudentName(student)) + '</span>';
@@ -14776,16 +6776,16 @@
                                         html += '</div>';
 
                                       if (isLocked) {
-                                      html += '<button
+                                      html += `<button
                                         class="quick-approve-btn flex items-center justify-center h-8 w-8 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-900 transition-colors"
-                                        data-email="' + student.email + '" data-poll-id="' + CURRENT_POLL_DATA.pollId + '"
-                                        data-lock-version="' + (student.lockVersion || 0) + '" title="Approve re-entry">';
+                                        data-email="` + student.email + '" data-poll-id="' + CURRENT_POLL_DATA.pollId + `"
+                                        data-lock-version="` + (student.lockVersion || 0) + '" title="Approve re-entry">';
                                         html += '<span class="material-symbols-outlined text-base">lock_open</span>';
                                         html += '</button>';
                                       } else if (isBlocked) {
-                                      html += '<button
+                                      html += `<button
                                         class="quick-unblock-btn flex items-center justify-center h-8 w-8 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-900 transition-colors"
-                                        data-email="' + student.email + '" title="Unblock Student">';
+                                        data-email="` + student.email + '" title="Unblock Student">';
                                         html += '<span class="material-symbols-outlined text-base">person_check</span>';
                                         html += '</button>';
                                       }
@@ -14849,15 +6849,19 @@
 
                                     lockToastState[email] = lockVersion;
 
-                                    // var studentName = formatStudentName(student);
+                                    //
+                                    var studentName = formatStudentName(student);
 
                                     // Disabled redundant toast per user request - status is visible on tile
                                     // showToast('warning', 'Approve re-entry', studentName + ' exited fullscreen or
-                                    switched tabs.', 6000, {
-                                    // label: 'Approve',
-                                    // onClick: function () {
-                                    // if (!CURRENT_POLL_DATA || !CURRENT_POLL_DATA.pollId) return;
-                                    // approveStudentUnlock(email, CURRENT_POLL_DATA.pollId, lockVersion, null, {
+                                    switched tabs.`, 6000, {
+                                    // label: `Approve`,
+                                    // onClick:
+                                    function () {
+                                    //
+                                    if (!CURRENT_POLL_DATA || !CURRENT_POLL_DATA.pollId) return;
+                                    // approveStudentUnlock(email, CURRENT_POLL_DATA.pollId, lockVersion, null,
+                                    {
                                     skipConfirm: true });
                                     // }
                                     // });
@@ -14871,10 +6875,10 @@
                                     }
 
                                     function updateLockoutBanner() {
-                                    var banner = document.getElementById('lockout-alert-banner');
+                                    var banner = document.getElementById(`lockout-alert-banner`);
                                     if (banner) {
-                                    banner.classList.add('hidden');
-                                    banner.setAttribute('aria-hidden', 'true');
+                                    banner.classList.add(`hidden`);
+                                    banner.setAttribute(`aria-hidden', 'true`);
                                     }
                                     }
 
@@ -14883,52 +6887,52 @@
                                     * Shows prominent unlock buttons for all locked students
                                     */
                                     function updateLockedStudentsAlert(lockedStudents) {
-                                    var alertPanel = document.getElementById('locked-students-alert');
-                                    var buttonsContainer = document.getElementById('locked-students-buttons');
-                                    var titleEl = document.getElementById('locked-alert-title');
+                                    var alertPanel = document.getElementById(`locked-students-alert`);
+                                    var buttonsContainer = document.getElementById(`locked-students-buttons`);
+                                    var titleEl = document.getElementById(`locked-alert-title`);
 
                                     if (!alertPanel || !buttonsContainer) return;
 
                                     if (!lockedStudents || lockedStudents.length === 0) {
-                                    alertPanel.classList.add('hidden');
+                                    alertPanel.classList.add(`hidden`);
                                     return;
                                     }
 
-                                    alertPanel.classList.remove('hidden');
+                                    alertPanel.classList.remove(`hidden`);
 
                                     if (titleEl) {
-                                    titleEl.textContent = lockedStudents.length + ' Student' + (lockedStudents.length > 1
-                                    ? 's' : '') + ' Locked Out';
+                                    titleEl.textContent = lockedStudents.length + ` Student` + (lockedStudents.length > 1
+                                    ? `s' : '') + ' Locked Out`;
                                     }
 
-                                    var html = '';
+                                    var html = ``;
                                     lockedStudents.forEach(function (student) {
                                     var name = formatStudentName(student);
                                     var lockVersion = student.lockVersion || 0;
-                                    html += '<button
-                                      class="locked-student-unlock-btn flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-colors"';
-          html += ' data-email="' + escapeHtml(student.email) + '" ';
-          html += ' data-lock-version="' + lockVersion + '">';
-                                      html += '<span class="material-symbols-outlined text-base">lock_open</span>';
-                                      html += '<span>Unlock ' + escapeHtml(name) + '</span>';
-                                      html += '</button>';
+                                    html += `<button
+                                      class="locked-student-unlock-btn flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-colors"`;
+          html += ` data-email="' + escapeHtml(student.email) + '" `;
+          html += ` data-lock-version="' + lockVersion + '">`;
+                                      html += `<span class="material-symbols-outlined text-base">lock_open</span>`;
+                                      html += `<span>Unlock ' + escapeHtml(name) + '</span>`;
+                                      html += `</button>`;
                                     });
 
                                     buttonsContainer.innerHTML = html;
 
                                     // Attach click handlers
-                                    buttonsContainer.querySelectorAll('.locked-student-unlock-btn').forEach(function (btn)
+                                    buttonsContainer.querySelectorAll(`.locked-student-unlock-btn`).forEach(function (btn)
                                     {
                                     btn.onclick = async function () {
                                     var email = this.dataset.email;
                                     var lockVersion = parseInt(this.dataset.lockVersion, 10);
                                     if (!CURRENT_POLL_DATA || !CURRENT_POLL_DATA.pollId) {
-                                    await veritasAlert('No active poll found.', { title: 'Error', destructive: true });
+                                    await veritasAlert(`No active poll found.', { title: 'Error`, destructive: true });
                                     return;
                                     }
                                     this.disabled = true;
-                                    this.innerHTML = '<span
-                                      class="material-symbols-outlined text-base animate-spin">progress_activity</span><span>Unlocking...</span>';
+                                    this.innerHTML = `<span
+                                      class="material-symbols-outlined text-base animate-spin">progress_activity</span><span>Unlocking...</span>`;
                                     await approveStudentUnlock(email, CURRENT_POLL_DATA.pollId, lockVersion, this, {
                                     skipConfirm: true });
                                     };
@@ -14940,9 +6944,9 @@
                                     * More visible and functional than the violations alert
                                     */
                                     function updateExitedStudentsPanel(lockedStudents) {
-                                    var panel = document.getElementById('exited-students-panel');
+                                    var panel = document.getElementById(`exited-students-panel`);
                                     if (panel) {
-                                    panel.classList.add('hidden');
+                                    panel.classList.add(`hidden`);
                                     }
                                     }
 
@@ -14957,26 +6961,26 @@
                                     });
 
                                     if (lockedStudents.length === 0) {
-                                    await veritasAlert('No students are currently locked.', { title: 'No students to
-                                    approve' });
+                                    await veritasAlert(`No students are currently locked.', { title: 'No students to
+                                    approve` });
                                     return;
                                     }
 
                                     var confirmed = await veritasConfirm(
-                                    'Approve re-entry for all ' + lockedStudents.length + ' locked student(s)?',
+                                    `Approve re-entry for all ' + lockedStudents.length + ' locked student(s)?`,
                                     {
-                                    title: 'Approve All',
-                                    confirmText: 'Approve All (' + lockedStudents.length + ')'
+                                    title: `Approve All`,
+                                    confirmText: `Approve All (' + lockedStudents.length + ')`
                                     }
                                     );
 
                                     if (!confirmed) return;
 
                                     // Disable the approve all button
-                                    var approveAllBtn = document.getElementById('approve-all-unlocks-btn');
+                                    var approveAllBtn = document.getElementById(`approve-all-unlocks-btn`);
                                     if (approveAllBtn) {
                                     approveAllBtn.disabled = true;
-                                    approveAllBtn.querySelector('span:last-child').textContent = 'Approving...';
+                                    approveAllBtn.querySelector(`span:last-child').textContent = 'Approving...`;
                                     }
 
                                     // Approve each student
@@ -14984,29 +6988,30 @@
                                     var failCount = 0;
 
                                     for (var i = 0; i < lockedStudents.length; i++) { var student=lockedStudents[i]; try {
-                                      var manageProctoring=firebase.functions().httpsCallable('manageProctoring'); var
+                                      var manageProctoring=firebase.functions().httpsCallable(`manageProctoring`); var
                                       safeLockVersion=parseInt(student.lockVersion, 10); if (isNaN(safeLockVersion))
-                                      safeLockVersion=0; var response=await manageProctoring({ action: 'UNLOCK' ,
+                                      safeLockVersion=0; var response=await manageProctoring({ action: `UNLOCK` ,
                                       studentEmail: student.email, pollId: CURRENT_POLL_DATA.pollId, lockVersion:
                                       safeLockVersion }); if (response.data && response.data.success) { successCount++; //
                                       Update local status currentStudentStatusData=currentStudentStatusData.map(function
                                       (s) { if (s.email===student.email) { return { name: s.name, email: s.email,
-                                      status: 'AWAITING_FULLSCREEN' , lockVersion: response.data.lockVersion ||
+                                      status: `AWAITING_FULLSCREEN` , lockVersion: response.data.lockVersion ||
                                       student.lockVersion, lockReason: s.lockReason, lockedAt: s.lockedAt, answer:
-                                      s.answer, isCorrect: s.isCorrect, timestamp: s.timestamp }; } return s; }); } else {
+                                      s.answer, isCorrect: s.isCorrect, timestamp: s.timestamp }; }
+                                      return s; }); } else {
                                       failCount++; } } catch (error) { failCount++; } } // Re-render status
                                       renderStudentStatus(); // Re-enable button if (approveAllBtn) {
                                       approveAllBtn.disabled=false;
-                                      approveAllBtn.querySelector('span:last-child').textContent='Approve All' ; } // Show
+                                      approveAllBtn.querySelector(`span:last-child').textContent='Approve All` ; } // Show
                                       result - simple toast notification if (successCount> 0) {
-                                      var toastMsg = 'Approved ' + successCount + ' student(s)';
+                                      var toastMsg = `Approved ' + successCount + ' student(s)`;
                                       if (failCount > 0) {
-                                      toastMsg += ', ' + failCount + ' failed';
+                                      toastMsg += `, ' + failCount + ' failed`;
                                       }
-                                      showToast('success', 'Batch Approval Complete', toastMsg, 4000);
+                                      showToast(`success', 'Batch Approval Complete`, toastMsg, 4000);
                                       } else {
-                                      showToast('error', 'Approval Failed', 'Failed to approve students. Please try
-                                      again.', 4000);
+                                      showToast(`error', 'Approval Failed', 'Failed to approve students. Please try
+                                      again.`, 4000);
                                       }
                                       }
 
@@ -15015,152 +7020,168 @@
                                       */
                                       function getTimeAgo(date) {
                                       var seconds = Math.floor((new Date() - date) / 1000);
-                                      if (seconds < 60) return 'just now' ; if (seconds < 120) return '1 minute ago' ; if
-                                        (seconds < 3600) return Math.floor(seconds / 60) + ' minutes ago' ; if (seconds <
-                                        7200) return '1 hour ago' ; if (seconds < 86400) return Math.floor(seconds / 3600)
-                                        + ' hours ago' ; return Math.floor(seconds / 86400) + ' days ago' ; } async
+                                      if (seconds < 60) return `just now' ; if (seconds < 120) return '1 minute ago` ; if
+                                        (seconds < 3600) return Math.floor(seconds / 60) + ` minutes ago` ; if (seconds <
+                                        7200) return `1 hour ago` ; if (seconds < 86400) return Math.floor(seconds / 3600)
+                                        + ` hours ago' ; return Math.floor(seconds / 86400) + ' days ago` ; } async
                                         function approveStudentUnlock(email, pollId, lockVersion, buttonElement, options)
                                         { if (!email || !pollId) return; options=options || {}; // Ensure lockVersion is a
                                         valid number to prevent server errors lockVersion=parseInt(lockVersion, 10); if
-                                        (isNaN(lockVersion)) { lockVersion=0; } if (!options.skipConfirm) { var
-                                        approved=await veritasConfirm('Approve unlock for ' + email + ' ?', {
-                                        title: 'Approve unlock' , confirmText: 'Approve' }); if (!approved) { return; } }
+                                        (isNaN(lockVersion)) { lockVersion=0; }
+                                        if (!options.skipConfirm) { var
+                                        approved=await veritasConfirm(`Approve unlock for ' + email + ' ?`, {
+                                        title: `Approve unlock' , confirmText: 'Approve` }); if (!approved) { return; } }
                                         if (buttonElement) { buttonElement.disabled=true;
-                                        buttonElement.querySelector('span:last-child').textContent='Unlocking...' ; } if
-                                        (PREVIEW_MODE) { await previewOnlyNotice('approve unlock requests'); if
+                                        buttonElement.querySelector(`span:last-child').textContent='Unlocking...` ; }
+                                        if
+                                        (PREVIEW_MODE) { await previewOnlyNotice(`approve unlock requests`); if
                                         (buttonElement) { buttonElement.disabled=false;
-                                        buttonElement.querySelector('span:last-child').textContent=formatStudentName(email);
-                                        } return; } recordTeacherAction('Unlock ' + email);
+                                        buttonElement.querySelector(`span:last-child`).textContent=formatStudentName(email);
+                                        }
+                                        return; } recordTeacherAction(`Unlock ` + email);
 
         // FIREBASE MIGRATION: Approve unlock via Cloud Function
-        firebase.functions().httpsCallable(' manageRoster')({ action: 'APPROVE_UNLOCK' , pollId: pollId, studentEmail:
+        firebase.functions().httpsCallable(` manageRoster')({ action: 'APPROVE_UNLOCK` , pollId: pollId, studentEmail:
                                         email, lockVersion: lockVersion }).then(function (result) { var
                                         response=result.data; if (response && response.success) { // Success: Instant UI
                                         feedback is good, but RTDB listener handles the source of truth if (buttonElement)
                                         { buttonElement.disabled=false; var
-                                        lastSpan=buttonElement.querySelector('span:last-child'); if (lastSpan)
-                                        lastSpan.textContent='Unlocked' ; setTimeout(function () { if
+                                        lastSpan=buttonElement.querySelector(`span:last-child`); if (lastSpan)
+                                        lastSpan.textContent=`Unlocked` ; setTimeout(function () { if
                                         (currentManagedStudent && currentManagedStudent.email===email) {
                                         populateStudentModal(currentManagedStudent); } }, 1000); }
-                                        showToast('success', 'Unlocked' , email + ' has been approved to rejoin.' ); }
-                                        else { throw new Error((response && response.error) || 'Failed to approve unlock'
+                                        showToast(`success', 'Unlocked' , email + ' has been approved to rejoin.` ); }
+                                        else { throw new Error((response && response.error) || `Failed to approve unlock`
                                         ); } }).catch(function (error) { if (buttonElement) {
                                         buttonElement.disabled=false; var
-                                        lastSpan=buttonElement.querySelector('span:last-child'); if (lastSpan)
-                                        lastSpan.textContent='Approve Unlock' ; } handleError(error); }); } /** * Force
+                                        lastSpan=buttonElement.querySelector(`span:last-child`); if (lastSpan)
+                                        lastSpan.textContent=`Approve Unlock` ; } handleError(error); }); } /** * Force
                                         unlock a student when server has no lock record but student is locked client-side.
                                         * This handles the edge case where Firebase reported a violation but the server
                                         call failed. */ async function teacherForceUnlock(email, pollId, buttonElement) {
-                                        try { var manageProctoring=firebase.functions().httpsCallable('manageProctoring');
-                                        var response=await manageProctoring({ action: 'RESET' , studentEmail: email,
+                                        try { var manageProctoring=firebase.functions().httpsCallable(`manageProctoring`);
+                                        var response=await manageProctoring({ action: `RESET` , studentEmail: email,
                                         pollId: pollId }); if (response.data && response.data.success) { // SUCCESS: Now
-                                        write to Firebase for instant student feedback setFirebaseStatus(email, 'ACTIVE'
+                                        write to Firebase for instant student feedback setFirebaseStatus(email, `ACTIVE`
                                         ); currentStudentStatusData=currentStudentStatusData.map(function (s) { if
                                         (s.email===email) { return { name: s.name, email: s.email,
-                                        status: 'AWAITING_FULLSCREEN' , lockVersion: response.data.lockVersion || 0,
+                                        status: `AWAITING_FULLSCREEN` , lockVersion: response.data.lockVersion || 0,
                                         lockReason: s.lockReason, lockedAt: s.lockedAt, answer: s.answer, isCorrect:
-                                        s.isCorrect, timestamp: s.timestamp }; } return s; }); renderStudentStatus(); //
+                                        s.isCorrect, timestamp: s.timestamp }; }
+                                        return s; }); renderStudentStatus(); //
                                         Simple toast notification instead of blocking alert dialog
-                                        showToast('success', 'Approval Successful'
-                                        , 'Student can now re-enter fullscreen.' , 3000); } else { await
-                                        veritasAlert(response.data?.reason || 'Failed to force unlock student.' , {
-                                        title: 'Unlock failed' , destructive: true }); if (buttonElement) {
+                                        showToast(`success', 'Approval Successful`
+                                        , `Student can now re-enter fullscreen.` , 3000); } else { await
+                                        veritasAlert(response.data?.reason || `Failed to force unlock student.` , {
+                                        title: `Unlock failed` , destructive: true }); if (buttonElement) {
                                         buttonElement.disabled=false; var
-                                        lastSpan=buttonElement.querySelector('span:last-child'); if (lastSpan)
+                                        lastSpan=buttonElement.querySelector(`span:last-child`); if (lastSpan)
                                         lastSpan.textContent=formatStudentName(email); } } } catch (error) { await
-                                        veritasAlert('Error: ' + (error.message || error), {
-            title: ' Force unlock failed', destructive: true }); if (buttonElement) { buttonElement.disabled=false;
-                                        buttonElement.querySelector('span:last-child').textContent=formatStudentName(email);
-                                        } } } function createResetButton(student) { var
-                                        button=document.createElement('button');
-                                        button.className='reset-btn flex-shrink-0 flex items-center justify-center gap-1 h-7 px-2.5 rounded-md bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-xs font-semibold hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors'
-                                        ; button.dataset.email=student.email || '' ; var
-                                        icon=document.createElement('span');
-                                        icon.className='material-symbols-outlined text-sm' ; icon.textContent='refresh' ;
-                                        var label=document.createElement('span'); label.textContent='Reset' ;
-                                        button.appendChild(icon); button.appendChild(label); return button; } function
-                                        createUnlockButton(student) { var button=document.createElement('button');
-                                        button.className='unlock-btn flex-shrink-0 flex items-center justify-center gap-1 h-8 px-3 rounded-md bg-red-600 text-white text-xs font-bold hover:bg-red-700 transition-colors shadow-sm'
-                                        ; button.dataset.email=student.email || '' ; if (CURRENT_POLL_DATA &&
+                                        veritasAlert(`Error: ` + (error.message || error), {
+            title: ` Force unlock failed`, destructive: true }); if (buttonElement) { buttonElement.disabled=false;
+                                        buttonElement.querySelector(`span:last-child`).textContent=formatStudentName(email);
+                                        } } }
+                                        function createResetButton(student) { var
+                                        button=document.createElement(`button`);
+                                        button.className=`reset-btn flex-shrink-0 flex items-center justify-center gap-1 h-7 px-2.5 rounded-md bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-xs font-semibold hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors`
+                                        ; button.dataset.email=student.email || `` ; var
+                                        icon=document.createElement(`span`);
+                                        icon.className=`material-symbols-outlined text-sm' ; icon.textContent='refresh` ;
+                                        var label=document.createElement(`span'); label.textContent='Reset` ;
+                                        button.appendChild(icon); button.appendChild(label); return button; }
+                                        function
+                                        createUnlockButton(student) { var button=document.createElement(`button`);
+                                        button.className=`unlock-btn flex-shrink-0 flex items-center justify-center gap-1 h-8 px-3 rounded-md bg-red-600 text-white text-xs font-bold hover:bg-red-700 transition-colors shadow-sm`
+                                        ; button.dataset.email=student.email || `` ; if (CURRENT_POLL_DATA &&
                                         CURRENT_POLL_DATA.pollId !==undefined) {
                                         button.dataset.pollId=CURRENT_POLL_DATA.pollId; }
                                         button.dataset.lockVersion=student.lockVersion !=null ? student.lockVersion : 0;
-                                        var icon=document.createElement('span');
-                                        icon.className='material-symbols-outlined text-sm' ; icon.textContent='lock_open'
-                                        ; var label=document.createElement('span'); label.textContent='Approve' ;
-                                        button.appendChild(icon); button.appendChild(label); return button; } function
-                                        createBlockButton(student) { var button=document.createElement('button');
-                                        button.className='block-btn flex-shrink-0 flex items-center justify-center gap-1 h-8 px-3 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 dark:bg-amber-500/20 text-xs font-semibold hover:bg-amber-500/20 dark:hover:bg-amber-500/30 transition-colors'
-                                        ; button.dataset.email=student.email || '' ; var
-                                        icon=document.createElement('span');
-                                        icon.className='material-symbols-outlined text-sm' ; icon.textContent='block' ;
-                                        var label=document.createElement('span'); label.textContent='Block' ;
-                                        button.appendChild(icon); button.appendChild(label); return button; } function
-                                        createUnblockButton(student) { var button=document.createElement('button');
-                                        button.className='unblock-btn flex-shrink-0 flex items-center justify-center gap-1 h-8 px-3 rounded-md bg-green-500/10 text-green-700 dark:text-green-300 dark:bg-green-500/20 text-xs font-semibold hover:bg-green-500/20 dark:hover:bg-green-500/30 transition-colors'
-                                        ; button.dataset.email=student.email || '' ; var
-                                        icon=document.createElement('span');
-                                        icon.className='material-symbols-outlined text-sm' ; icon.textContent='lock_open'
-                                        ; var label=document.createElement('span'); label.textContent='Unblock' ;
-                                        button.appendChild(icon); button.appendChild(label); return button; } function
+                                        var icon=document.createElement(`span`);
+                                        icon.className=`material-symbols-outlined text-sm' ; icon.textContent='lock_open`
+                                        ; var label=document.createElement(`span'); label.textContent='Approve` ;
+                                        button.appendChild(icon); button.appendChild(label); return button; }
+                                        function
+                                        createBlockButton(student) { var button=document.createElement(`button`);
+                                        button.className=`block-btn flex-shrink-0 flex items-center justify-center gap-1 h-8 px-3 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 dark:bg-amber-500/20 text-xs font-semibold hover:bg-amber-500/20 dark:hover:bg-amber-500/30 transition-colors`
+                                        ; button.dataset.email=student.email || `` ; var
+                                        icon=document.createElement(`span`);
+                                        icon.className=`material-symbols-outlined text-sm' ; icon.textContent='block` ;
+                                        var label=document.createElement(`span'); label.textContent='Block` ;
+                                        button.appendChild(icon); button.appendChild(label); return button; }
+                                        function
+                                        createUnblockButton(student) { var button=document.createElement(`button`);
+                                        button.className=`unblock-btn flex-shrink-0 flex items-center justify-center gap-1 h-8 px-3 rounded-md bg-green-500/10 text-green-700 dark:text-green-300 dark:bg-green-500/20 text-xs font-semibold hover:bg-green-500/20 dark:hover:bg-green-500/30 transition-colors`
+                                        ; button.dataset.email=student.email || `` ; var
+                                        icon=document.createElement(`span`);
+                                        icon.className=`material-symbols-outlined text-sm' ; icon.textContent='lock_open`
+                                        ; var label=document.createElement(`span'); label.textContent='Unblock` ;
+                                        button.appendChild(icon); button.appendChild(label); return button; }
+                                        function
                                         setButtonLoadingState(button, label) { if (!button) { return function () { }; }
                                         var originalHtml=button.innerHTML; button.disabled=true;
-                                        button.innerHTML='<span class="material-symbols-outlined text-sm animate-spin">progress_activity</span><span>'
-                                        + label + '</span>' ; return function () { button.disabled=false;
-                                        button.innerHTML=originalHtml; }; } function runTeacherBlock(email, pollId,
+                                        button.innerHTML=`<span class="material-symbols-outlined text-sm animate-spin">progress_activity</span><span>`
+                                        + label + `</span>` ; return function () { button.disabled=false;
+                                        button.innerHTML=originalHtml; }; }
+                                        function runTeacherBlock(email, pollId,
                                         reason) { return new Promise(function (resolve, reject) { var
-                                        manageProctoring=firebase.functions().httpsCallable('manageProctoring');
-                                        manageProctoring({ action: 'BLOCK' , studentEmail: email, pollId: pollId, reason:
-                                        reason || '' }) .then(function (result) { resolve(result.data); }) .catch(reject);
-                                        }); } function runTeacherUnblock(email, pollId) { return new Promise(function
+                                        manageProctoring=firebase.functions().httpsCallable(`manageProctoring`);
+                                        manageProctoring({ action: `BLOCK` , studentEmail: email, pollId: pollId, reason:
+                                        reason || `` }) .then(function (result) { resolve(result.data); }) .catch(reject);
+                                        }); }
+                                        function runTeacherUnblock(email, pollId) { return new Promise(function
                                         (resolve, reject) { var
-                                        manageProctoring=firebase.functions().httpsCallable('manageProctoring');
-                                        manageProctoring({ action: 'UNBLOCK' , studentEmail: email, pollId: pollId })
+                                        manageProctoring=firebase.functions().httpsCallable(`manageProctoring`);
+                                        manageProctoring({ action: `UNBLOCK` , studentEmail: email, pollId: pollId })
                                         .then(function (result) { resolve(result.data); }) .catch(reject); }); } async
                                         function requestTeacherBlock(student, buttonElement) { if (!student ||
                                         !student.email) return; var pollId=CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId;
-                                        if (pollId===undefined) { await veritasAlert('Start a poll before blocking
-                                        students.', { title: 'No active poll' }); return; } var
+                                        if (pollId===undefined) { await veritasAlert(`Start a poll before blocking
+                                        students.', { title: 'No active poll` }); return; }
+                                        var
                                         displayName=formatStudentName(student); var confirmed=await
-                                        veritasConfirm('Temporarily block ' + displayName + ' from responding? This will
-                                        be recorded for proctoring.', { title: 'Block Student' , confirmText: 'Block' ,
+                                        veritasConfirm(`Temporarily block ' + displayName + ' from responding? This will
+                                        be recorded for proctoring.', { title: 'Block Student' , confirmText: 'Block` ,
                                         destructive: true }); if (!confirmed) return; var
-                                        restore=setButtonLoadingState(buttonElement, 'Blocking...' ); try { // 1. FIREBASE
-                                        WRITE (Instant) // 'BLOCKED' or 'LOCKED' depending on implementation. The user
+                                        restore=setButtonLoadingState(buttonElement, `Blocking...` ); try { // 1. FIREBASE
+                                        WRITE (Instant) // `BLOCKED' or 'LOCKED` depending on implementation. The user
                                         asked for "Lock/Unlock buttons that write to RTDB" . // The contract says: ACTIVE
-                                        | LOCKED | DISCONNECTED | FINISHED // So we write 'LOCKED' .
-                                        setFirebaseStatus(student.email, 'LOCKED' ); // 2. SERVER WRITE (Canonical) await
-                                        runTeacherBlock(student.email, pollId, '' ); pollForResults(); } catch (error) {
+                                        | LOCKED | DISCONNECTED | FINISHED // So we write `LOCKED` .
+                                        setFirebaseStatus(student.email, `LOCKED` ); // 2. SERVER WRITE (Canonical) await
+                                        runTeacherBlock(student.email, pollId, `` ); pollForResults(); } catch (error) {
                                         restore(); handleError(error); } } async function requestTeacherUnblock(email,
                                         buttonElement) { if (!email) return; var pollId=CURRENT_POLL_DATA &&
-                                        CURRENT_POLL_DATA.pollId; if (pollId===undefined) { await veritasAlert('Start a
-                                        poll before unblocking students.', { title: 'No active poll' }); return; } var
+                                        CURRENT_POLL_DATA.pollId; if (pollId===undefined) { await veritasAlert(`Start a
+                                        poll before unblocking students.', { title: 'No active poll` }); return; }
+                                        var
                                         student=currentStudentStatusData.find(function (s) { return s.email===email; });
                                         var displayName=formatStudentName(student || email); var confirmed=await
-                                        veritasConfirm('Unblock ' + displayName + ' ?', { title: 'Unblock Student' ,
-                                        confirmText: 'Unblock' }); if (!confirmed) return; var
-                                        restore=setButtonLoadingState(buttonElement, 'Unblocking...' ); try { await
+                                        veritasConfirm(`Unblock ' + displayName + ' ?', { title: 'Unblock Student` ,
+                                        confirmText: `Unblock` }); if (!confirmed) return; var
+                                        restore=setButtonLoadingState(buttonElement, `Unblocking...` ); try { await
                                         runTeacherUnblock(email, pollId); pollForResults(); } catch (error) { restore();
-                                        handleError(error); } } function buildStudentStatusTile(student) { var
-                                        tile=document.createElement('div'); var status=student.status || 'Unknown' ; var
+                                        handleError(error); } }
+                                        function buildStudentStatusTile(student) { var
+                                        tile=document.createElement(`div'); var status=student.status || 'Unknown` ; var
                                         normalizedStatus=deriveProctorStatus(student) || status; var
-                                        isLocked=normalizedStatus==='LOCKED' ; var
-                                        isAwaitingFullscreen=normalizedStatus==='AWAITING_FULLSCREEN' ; var
-                                        isBlocked=normalizedStatus==='BLOCKED' ; var isCorrect=student.isCorrect===true;
+                                        isLocked=normalizedStatus===`LOCKED` ; var
+                                        isAwaitingFullscreen=normalizedStatus===`AWAITING_FULLSCREEN` ; var
+                                        isBlocked=normalizedStatus===`BLOCKED` ; var isCorrect=student.isCorrect===true;
                                         var isIncorrect=student.isCorrect===false; var name=formatStudentName(student);
-                                        var tileClass='student-tile' ; if (isLocked || isAwaitingFullscreen) tileClass
-                                        +=' locked animate-pulse-gentle' ; else if (isBlocked) tileClass +=' blocked' ;
-                                        else if (student.status==='Submitted' ) { tileClass +=isCorrect
-                                        ? ' submitted correct' : ' submitted incorrect' ; } tile.className=tileClass; var
-                                        emoji='⏳' ; if (student.confidence) {
-                                        emoji=(CONFIDENCE_LEVEL_STYLES[student.confidence] || {}).emoji || '🧠' ; } else
-                                        if (isLocked || isAwaitingFullscreen) { emoji='🔒' ; } var
-                                        html='<span class="text-lg shrink-0">' + emoji + '</span>' ; html
-                                        +='<div class="flex-1 min-w-0 font-bold text-xs truncate">' + escapeHtml(name)
-                                        + '</div>' ; if (isLocked || isAwaitingFullscreen) { // We'll still keep the icon
+                                        var tileClass=`student-tile` ; if (isLocked || isAwaitingFullscreen) tileClass
+                                        +=` locked animate-pulse-gentle' ; else if (isBlocked) tileClass +=' blocked` ;
+                                        else if (student.status===`Submitted` ) { tileClass +=isCorrect
+                                        ? ` submitted correct' : ' submitted incorrect` ; } tile.className=tileClass; var
+                                        emoji=`⏳` ; if (student.confidence) {
+                                        emoji=(CONFIDENCE_LEVEL_STYLES[student.confidence] || {}).emoji || `🧠` ; } else
+                                        if (isLocked || isAwaitingFullscreen) { emoji=`🔒` ; }
+                                        var
+                                        html=`<span class="text-lg shrink-0">' + emoji + '</span>` ; html
+                                        +=`<div class="flex-1 min-w-0 font-bold text-xs truncate">` + escapeHtml(name)
+                                        + `</div>' ; if (isLocked || isAwaitingFullscreen) { // We'll still keep the icon
                                         but the main management is now top-bar html
                                         +='<span class="material-symbols-outlined text-rose-600 text-sm">warning</span>' ;
-                                        } tile.innerHTML=html; return tile; } function buildStudentStatusRow(student) {
+                                        } tile.innerHTML=html; return tile; }
+                                        function buildStudentStatusRow(student) {
                                         var row=document.createElement('tr');
                                         row.className='border-b border-brand-light-gray/30 dark:border-brand-dark-gray/20 hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/20'
                                         ; var nameCell=document.createElement('td');
@@ -15169,7 +7190,8 @@
                                         statusCell=document.createElement('td');
                                         statusCell.className='px-3 py-2 text-sm text-brand-dark-gray/80 dark:text-brand-white/80'
                                         ; var telemetryIndicators=buildTelemetryIndicators(student.telemetry); if
-                                        (telemetryIndicators) { statusCell.appendChild(telemetryIndicators); } var
+                                        (telemetryIndicators) { statusCell.appendChild(telemetryIndicators); }
+                                        var
                                         statusLabel=document.createElement('span'); statusLabel.textContent=student.status
                                         || 'Unknown' ; statusCell.appendChild(statusLabel); row.appendChild(statusCell);
                                         var answerCell=document.createElement('td');
@@ -15483,8 +7505,8 @@
 
                                           if (typeof telemetry.timeOnQuestion === 'number') {
                                           var badge = document.createElement('span');
-                                          badge.className = 'px-2 py-0.5 rounded-full text-xs bg-slate-100
-                                          text-slate-700';
+                                          badge.className = `px-2 py-0.5 rounded-full text-xs bg-slate-100
+                                          text-slate-700`;
                                           badge.textContent = formatTimeOnQuestion(telemetry.timeOnQuestion);
                                           badge.title = 'Time on current question';
                                           container.appendChild(badge);
@@ -15524,7 +7546,8 @@
                                             // FIREBASE MIGRATION: Polling is deprecated in favor of Realtime Listeners
                                             // `initFirebaseMissionControl` handles updates via `child_changed` /
                                             `child_added`.
-                                            // We keep this function only as a connection heartbeat / fallback check.
+                                            // We keep this
+                                            function only as a connection heartbeat / fallback check.
 
                                             if (!realtimeConnected) {
                                             console.warn('[Firebase] Connection lost, attempting reconnect...');
@@ -15636,7 +7659,8 @@
                                             return formattedMinutes + ':' + formattedSeconds;
                                             }
 
-                                            // Legacy function for compatibility
+                                            // Legacy
+                                            function for compatibility
                                             function formatSeconds(seconds) {
                                             return formatTime(seconds);
                                             }
@@ -15664,9 +7688,12 @@
                                               caption='Timer running' ; icon='play_arrow' ; label='Running' ; } } else if
                                               (totalSeconds < timerPresetSeconds) { variant='paused' ;
                                               caption='Paused — extend or resume' ; icon='pause_circle' ; label='Paused' ;
-                                              } if (paceCaption) { paceCaption.textContent=caption; } if (paceChip) {
-                                              paceChip.setAttribute('data-variant', variant); } if (paceChipIcon) {
-                                              paceChipIcon.textContent=icon; } if (paceChipLabel) {
+                                              }
+                                              if (paceCaption) { paceCaption.textContent=caption; } if (paceChip) {
+                                              paceChip.setAttribute('data-variant', variant); }
+                                              if (paceChipIcon) {
+                                              paceChipIcon.textContent=icon; }
+                                              if (paceChipLabel) {
                                               paceChipLabel.textContent=label; } } /** * Updates the timer display on the
                                               screen */ function updateDisplay() { var
                                               timerDisplay=document.getElementById('timer-display'); if (!timerDisplay)
@@ -15702,7 +7729,8 @@
                                                 timerDisplayCompact=document.getElementById('timer-display-compact'); var
                                                 mobileAdd10sBtn=document.getElementById('add-10s-btn-mobile'); var
                                                 mobileSubtract10sBtn=document.getElementById('subtract-10s-btn-mobile');
-                                                // Toggle Start/Pause buttons if (startBtn)
+                                                // Toggle Start/Pause buttons
+                                                if (startBtn)
                                                 startBtn.classList.toggle('hidden', running); if (pauseBtn)
                                                 pauseBtn.classList.toggle('hidden', !running); if (mobileStartBtn)
                                                 mobileStartBtn.classList.toggle('hidden', running); if (mobilePauseBtn)
@@ -15725,16 +7753,16 @@
                                                 updateTimerStatus('Timer running…', 'info' );
                                                 teacherCountdown.start(totalSeconds); } /** * Pauses the countdown */
                                                 function pauseTimer() { if (!isRunning) return; teacherCountdown.pause();
-                                                toggleButtons(false); updateTimerStatus('Timer paused
-                                                at ' + formatTime(totalSeconds) + ' .', 'info' ); } /** * Resets the timer
+                                                toggleButtons(false); updateTimerStatus(`Timer paused
+                                                at ` + formatTime(totalSeconds) + ' .', 'info' ); } /** * Resets the timer
                                                 to the default value */ function resetTimer() { teacherCountdown.stop();
                                                 totalSeconds=timerPresetSeconds; timerRemainingSeconds=totalSeconds;
                                                 timerExpiredHandled=false; teacherCountdown.set(totalSeconds);
                                                 toggleButtons(false); var
                                                 timerDisplay=document.getElementById('timer-display'); if (timerDisplay) {
                                                 timerDisplay.classList.remove('timer-finished'); // Remove flash effect if
-                                                present } updateTimerStatus('Timer reset
-                                                to ' + formatTime(timerPresetSeconds) + ' .', 'info' );
+                                                present } updateTimerStatus(`Timer reset
+                                                to ` + formatTime(timerPresetSeconds) + ' .', 'info' );
                                                 document.title='Veritas Live Poll' ; } /** * Called when the timer reaches
                                                 0 */ function finishTimer() { teacherCountdown.stop();
                                                 toggleButtons(false); var
@@ -15746,8 +7774,8 @@
                                                 timer expiry - pause the poll if (!timerExpiredHandled) {
                                                 timerExpiredHandled=true; timerRemainingSeconds=0; totalSeconds=0;
                                                 updateDisplay(); updateTimerStatus('Time expired — poll paused.', 'danger'
-                                                ); if (PREVIEW_MODE) { previewOnlyNotice('auto-pause the poll when the
-                                                timer expires'); } else {
+                                                ); if (PREVIEW_MODE) { previewOnlyNotice(`auto-pause the poll when the
+                                                timer expires`); } else {
                                                 firebase.functions().httpsCallable('setLiveSessionState')({ pollId:
                                                 CURRENT_POLL_DATA.pollId, status: 'PAUSED' , questionIndex:
                                                 CURRENT_POLL_DATA.questionIndex || 0, metadata: { reason: 'TIMER_EXPIRED'
@@ -15771,7 +7799,8 @@
                                                 Handle raw seconds format (e.g., "90" ) var parsedSeconds=parseInt(text,
                                                 10) || 0; totalSeconds=parsedSeconds; } // Update legacy variables
                                                 timerRemainingSeconds=totalSeconds; timerPresetSeconds=totalSeconds;
-                                                teacherCountdown.set(totalSeconds); updateHudTimer(); } function
+                                                teacherCountdown.set(totalSeconds); updateHudTimer(); }
+                                                function
                                                 updateTimerStatus(message, tone) { var
                                                 statusEl=document.getElementById('timer-status-message'); if (!statusEl)
                                                 return; statusEl.textContent=message; if (tone==='danger' ) {
@@ -15781,22 +7810,28 @@
                                                 ; } else {
                                                 statusEl.className='text-xs text-brand-dark-gray/60 dark:text-brand-white/60 text-center'
                                                 ; } } // Legacy functions for compatibility function startTimerCountdown()
-                                                { startTimer(); } function pauseTimerCountdown() { pauseTimer(); }
-                                                function resetTimerCountdown() { resetTimer(); } function
+                                                { startTimer(); }
+                                                function pauseTimerCountdown() { pauseTimer(); }
+                                                function resetTimerCountdown() { resetTimer(); }
+                                                function
                                                 stopVisualTimer() { teacherCountdown.stop(); isRunning=false;
-                                                timerActive=false; } function updateTimerInputs() { updateDisplay(); }
+                                                timerActive=false; }
+                                                function updateTimerInputs() { updateDisplay(); }
                                                 function updateTimerDisplay() { // Sync totalSeconds from
                                                 timerRemainingSeconds for legacy code compatibility // Legacy code may set
                                                 timerRemainingSeconds and expect the display to update if
                                                 (timerRemainingSeconds !==totalSeconds) {
-                                                totalSeconds=timerRemainingSeconds; } updateDisplay(); } function
+                                                totalSeconds=timerRemainingSeconds; } updateDisplay(); }
+                                                function
                                                 adjustTimerPreset(delta) { editTime(delta); } // --- Student Link Controls
                                                 --- async function onSendLink() { var btn=sendLinkBtn; if (!btn) {
-                                                console.warn('Missing send link button'); return; } var className=btn &&
-                                                btn.dataset.className; if (!className) { await veritasAlert('Please select
-                                                a poll first.', { title: 'Send poll links' }); return; } var
-                                                confirmed=await veritasConfirm('This will email a new, unique poll link to
-                                                all students in ' + className + ' . Are you sure?', {
+                                                console.warn('Missing send link button'); return; }
+                                                var className=btn &&
+                                                btn.dataset.className; if (!className) { await veritasAlert(`Please select
+                                                a poll first.`, { title: 'Send poll links' }); return; }
+                                                var
+                                                confirmed=await veritasConfirm(`This will email a new, unique poll link to
+                                                all students in ` + className + ' . Are you sure?', {
                                                 title: 'Send poll links' , confirmText: 'Send links' }); if (!confirmed)
                                                 return; var restoreViewLinks=viewLinksBtn && !viewLinksBtn.disabled; if
                                                 (viewLinksBtn) { setButtonLoading(viewLinksBtn, false);
@@ -15804,7 +7839,8 @@
                                                 viewLinksBtn.setAttribute('aria-disabled', 'true' ); }
                                                 setButtonLoading(btn, true, 'Sending...' ); if (PREVIEW_MODE) { await
                                                 previewOnlyNotice('email poll links'); setButtonLoading(btn, false);
-                                                return; } var baseUrl=window.location.href.split('?')[0];
+                                                return; }
+                                                var baseUrl=window.location.href.split('?')[0];
                                                 firebase.functions().httpsCallable('manageRoster')({ action: 'SEND_EMAILS'
                                                 , className: className, pollId: CURRENT_POLL_DATA.pollId }).then(function
                                                 (result) { var payload=result.data; if (!payload.success) throw new
@@ -15814,9 +7850,10 @@
                                                 firebase.functions().httpsCallable('sendEmail')(payload) .then(function
                                                 (result) { var response=result.data; setButtonLoading(btn, false); if
                                                 (viewLinksBtn) { if (restoreViewLinks) { viewLinksBtn.disabled=false;
-                                                viewLinksBtn.removeAttribute('aria-disabled'); } } if (response.success) {
-                                                veritasAlert('Emails processed (SIMULATED) for ' + response.sentCount + '
-                                                students.\n(Note: See Cloud Logging for details)', {
+                                                viewLinksBtn.removeAttribute('aria-disabled'); } }
+                                                if (response.success) {
+                                                veritasAlert('Emails processed (SIMULATED) for ' + response.sentCount + `
+                                                students.\n(Note: See Cloud Logging for details)`, {
                                                 title: 'Emails Processed' }); } else { var msg='Sent: ' +
                                                 (response.sentCount || 0) + ', Failed: ' + (response.failedCount || 0)
                                                 + '.' ; if (response.failures && response.failures.length> 0) {
@@ -15835,8 +7872,8 @@
                                                 // Show fallback instructions
                                                 if (viewLinksBtn) {
                                                 viewLinksBtn.click(); // Auto-open links view as fallback
-                                                showToast('info', 'Fallback', 'Opening link list for manual
-                                                distribution.', 4000);
+                                                showToast('info', 'Fallback', `Opening link list for manual
+                                                distribution.`, 4000);
                                                 }
                                                 }
                                                 });
@@ -15864,56 +7901,56 @@
                                                 var container = document.getElementById('links-container');
                                                 var roster = (PREVIEW_PAYLOAD && PREVIEW_PAYLOAD.rosters &&
                                                 PREVIEW_PAYLOAD.rosters[className]) || [];
-                                                var html = '<div class="overflow-x-auto">
-                                                  <table class="w-full border-collapse">';
-                                                    html += '<thead>
+                                                var html = `<div class="overflow-x-auto">
+                                                  <table class="w-full border-collapse">`;
+                                                    html += `<thead>
                                                       <tr
                                                         class="bg-brand-light-gray dark:bg-brand-dark-gray/50 border-b-2 border-brand-light-gray dark:border-brand-dark-gray/40">
-                                                        ';
-                                                        html += '<th
+                                                        `;
+                                                        html += `<th
                                                           class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">
-                                                          Student Name</th>';
-                                                        html += '<th
+                                                          Student Name</th>`;
+                                                        html += `<th
                                                           class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">
-                                                          Email</th>';
-                                                        html += '<th
+                                                          Email</th>`;
+                                                        html += `<th
                                                           class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">
-                                                          Link</th>';
-                                                        html += '<th
+                                                          Link</th>`;
+                                                        html += `<th
                                                           class="px-4 py-3 text-center text-sm font-semibold text-brand-dark-gray dark:text-brand-white">
-                                                          Actions</th>';
-                                                        html += '</tr>
+                                                          Actions</th>`;
+                                                        html += `</tr>
                                                     </thead>
-                                                    <tbody>';
+                                                    <tbody>`;
                                                       roster.forEach(function (student) {
-                                                      html += '<tr
+                                                      html += `<tr
                                                         class="border-b border-brand-light-gray/50 dark:border-brand-dark-gray/20">
-                                                        ';
-                                                        html += '<td
+                                                        `;
+                                                        html += `<td
                                                           class="px-4 py-3 text-sm text-brand-dark-gray dark:text-brand-white">
-                                                          ' + escapeHtml(student.name || 'Student') + '</td>';
-                                                        html += '<td
+                                                          ` + escapeHtml(student.name || 'Student') + '</td>';
+                                                        html += `<td
                                                           class="px-4 py-3 text-sm text-brand-dark-gray dark:text-brand-white">
-                                                          ' + escapeHtml(student.email || 'student@example.com') + '</td>
-                                                        ';
-                                                        html += '<td
+                                                          ` + escapeHtml(student.email || 'student@example.com') + `</td>
+                                                        `;
+                                                        html += `<td
                                                           class="px-4 py-3 text-xs text-brand-dark-gray/70 dark:text-brand-white/70 italic">
-                                                          Preview links unavailable</td>';
-                                                        html += '<td
+                                                          Preview links unavailable</td>`;
+                                                        html += `<td
                                                           class="px-4 py-3 text-center text-xs text-brand-dark-gray/60 dark:text-brand-white/60">
-                                                          —</td>';
+                                                          —</td>`;
                                                         html += '</tr>';
                                                       });
                                                       if (roster.length === 0) {
-                                                      html += '<tr>
+                                                      html += `<tr>
                                                         <td colspan="4"
                                                           class="px-4 py-6 text-center text-sm text-brand-dark-gray/60 dark:text-brand-white/60">
                                                           No roster data available in preview.</td>
-                                                      </tr>';
+                                                      </tr>`;
                                                       }
-                                                      html += '</tbody>
+                                                      html += `</tbody>
                                                   </table>
-                                                </div>';
+                                                </div>`;
                                                 container.innerHTML = html;
 
                                                 // Apply comprehensive modal visibility fix
@@ -15921,10 +7958,10 @@
                                                 document.body.appendChild(linksModal);
                                                 }
                                                 linksModal.classList.remove('hidden');
-                                                linksModal.style.cssText = 'display: flex !important; visibility: visible
+                                                linksModal.style.cssText = `display: flex !important; visibility: visible
                                                 !important; position: fixed !important; top: 0 !important; left: 0
                                                 !important; right: 0 !important; bottom: 0 !important; z-index: 99999
-                                                !important; background-color: rgba(0,0,0,0.6) !important;';
+                                                !important; background-color: rgba(0,0,0,0.6) !important;`;
                                                 linksModal.setAttribute('aria-hidden', 'false');
                                                 document.body.style.overflow = 'hidden';
                                                 setButtonLoading(btn, false);
@@ -15938,58 +7975,58 @@
                                                 className: className
                                                 }).then(function (result) {
                                                 var response = result.data;
-                                                if (!response.success) return handleError(new Error('Could not load
-                                                links'));
+                                                if (!response.success) return handleError(new Error(`Could not load
+                                                links`));
 
                                                 var container = document.getElementById('links-container');
-                                                var html = '<div class="overflow-x-auto">
-                                                  <table class="w-full border-collapse">';
-                                                    html += '<thead>
+                                                var html = `<div class="overflow-x-auto">
+                                                  <table class="w-full border-collapse">`;
+                                                    html += `<thead>
                                                       <tr
                                                         class="bg-brand-light-gray dark:bg-brand-dark-gray/50 border-b-2 border-brand-light-gray dark:border-brand-dark-gray/40">
-                                                        ';
-                                                        html += '<th
+                                                        `;
+                                                        html += `<th
                                                           class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">
-                                                          Student Name</th>';
-                                                        html += '<th
+                                                          Student Name</th>`;
+                                                        html += `<th
                                                           class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">
-                                                          Email</th>';
-                                                        html += '<th
+                                                          Email</th>`;
+                                                        html += `<th
                                                           class="px-4 py-3 text-left text-sm font-semibold text-brand-dark-gray dark:text-brand-white">
-                                                          Link</th>';
-                                                        html += '<th
+                                                          Link</th>`;
+                                                        html += `<th
                                                           class="px-4 py-3 text-center text-sm font-semibold text-brand-dark-gray dark:text-brand-white">
-                                                          Actions</th>';
-                                                        html += '</tr>
+                                                          Actions</th>`;
+                                                        html += `</tr>
                                                     </thead>
-                                                    <tbody>';
+                                                    <tbody>`;
 
                                                       response.links.forEach(function (link) {
                                                       var fullUrl = baseUrl + '?token=' + link.token;
-                                                      html += '<tr
+                                                      html += `<tr
                                                         class="border-b border-brand-light-gray/50 dark:border-brand-dark-gray/20 hover:bg-brand-light-gray/30 dark:hover:bg-brand-dark-gray/10">
-                                                        ';
-                                                        html += '<td
+                                                        `;
+                                                        html += `<td
                                                           class="px-4 py-3 text-sm text-brand-dark-gray dark:text-brand-white">
-                                                          ' + escapeHtml(link.name) + '</td>';
-                                                        html += '<td
+                                                          ` + escapeHtml(link.name) + '</td>';
+                                                        html += `<td
                                                           class="px-4 py-3 text-sm text-brand-dark-gray dark:text-brand-white">
-                                                          ' + escapeHtml(link.email) + '</td>';
-                                                        html += '<td
+                                                          ` + escapeHtml(link.email) + '</td>';
+                                                        html += `<td
                                                           class="px-4 py-3 text-xs font-mono text-brand-dark-gray/70 dark:text-brand-white/70 max-w-[200px] truncate"
-                                                          title="' + escapeHtml(fullUrl) + '">' + escapeHtml(fullUrl) + '
-                                                        </td>';
+                                                          title="` + escapeHtml(fullUrl) + '">' + escapeHtml(fullUrl) + `
+                                                        </td>`;
                                                         html += '<td class="px-4 py-3 text-center">';
-                                                          html += '<button
+                                                          html += `<button
                                                             class="copy-link-btn px-3 py-1.5 text-xs font-semibold rounded-md bg-primary text-brand-white hover:bg-primary/90 transition-colors"
-                                                            data-url="' + escapeHtml(fullUrl) + '">Copy</button>';
-                                                          html += '</td>
-                                                      </tr>';
+                                                            data-url="` + escapeHtml(fullUrl) + '">Copy</button>';
+                                                          html += `</td>
+                                                      </tr>`;
                                                       });
 
-                                                      html += '</tbody>
+                                                      html += `</tbody>
                                                   </table>
-                                                </div>';
+                                                </div>`;
                                                 container.innerHTML = html;
 
                                                 container.querySelectorAll('.copy-link-btn').forEach(function (btn) {
@@ -16000,19 +8037,19 @@
                                                 'function') {
                                                 await navigator.clipboard.writeText(url);
                                                 } else {
-                                                await veritasAlert('Automatic copy is not supported in this browser.
-                                                Please copy the link manually.', { title: 'Copy link' });
+                                                await veritasAlert(`Automatic copy is not supported in this browser.
+                                                Please copy the link manually.`, { title: 'Copy link' });
                                                 return;
                                                 }
 
                                                 btn.textContent = '✓ Copied!';
-                                                btn.className = 'copy-link-btn px-3 py-1.5 text-xs font-semibold
-                                                rounded-md bg-green-600 text-brand-white';
+                                                btn.className = `copy-link-btn px-3 py-1.5 text-xs font-semibold
+                                                rounded-md bg-green-600 text-brand-white`;
                                                 setTimeout(function () {
                                                 btn.textContent = 'Copy';
-                                                btn.className = 'copy-link-btn px-3 py-1.5 text-xs font-semibold
+                                                btn.className = `copy-link-btn px-3 py-1.5 text-xs font-semibold
                                                 rounded-md bg-primary text-brand-white hover:bg-primary/90
-                                                transition-colors';
+                                                transition-colors`;
                                                 }, 2000);
                                                 } catch (err) {
                                                 await veritasAlert('Could not copy link. Please copy it manually.', {
@@ -16026,10 +8063,10 @@
                                                 document.body.appendChild(linksModal);
                                                 }
                                                 linksModal.classList.remove('hidden');
-                                                linksModal.style.cssText = 'display: flex !important; visibility: visible
+                                                linksModal.style.cssText = `display: flex !important; visibility: visible
                                                 !important; position: fixed !important; top: 0 !important; left: 0
                                                 !important; right: 0 !important; bottom: 0 !important; z-index: 99999
-                                                !important; background-color: rgba(0,0,0,0.6) !important;';
+                                                !important; background-color: rgba(0,0,0,0.6) !important;`;
                                                 linksModal.setAttribute('aria-hidden', 'false');
                                                 document.body.style.overflow = 'hidden';
 
@@ -16079,8 +8116,8 @@
                                                 previewPollName.textContent = poll.pollName || 'Untitled Poll';
                                                 var questionsCount = poll.questions.length;
                                                 var classText = poll.className || 'No class';
-                                                previewPollMeta.textContent = classText + ' • ' + questionsCount + '
-                                                Question' + (questionsCount !== 1 ? 's' : '');
+                                                previewPollMeta.textContent = classText + ' • ' + questionsCount + `
+                                                Question` + (questionsCount !== 1 ? 's' : '');
 
                                                 renderPreviewNav();
                                                 renderPreviewQuestion();
@@ -16092,10 +8129,10 @@
                                                 }
 
                                                 previewModal.classList.remove('hidden');
-                                                previewModal.style.cssText = 'display: flex !important; visibility:
+                                                previewModal.style.cssText = `display: flex !important; visibility:
                                                 visible !important; position: fixed !important; top: 0 !important; left: 0
                                                 !important; right: 0 !important; bottom: 0 !important; z-index: 99999
-                                                !important; background-color: rgba(0,0,0,0.6) !important;';
+                                                !important; background-color: rgba(0,0,0,0.6) !important;`;
                                                 previewModal.setAttribute('aria-hidden', 'false');
 
                                                 // Prevent background scrolling
@@ -16120,27 +8157,27 @@
                                                 previewQuestionsNav.innerHTML = '';
                                                 currentPreviewPoll.questions.forEach(function (q, index) {
                                                 var div = document.createElement('div');
-                                                div.className = 'preview-nav-item cursor-pointer rounded-lg p-3
-                                                transition-colors ' + (index === currentPreviewQuestionIndex ?
+                                                div.className = `preview-nav-item cursor-pointer rounded-lg p-3
+                                                transition-colors ` + (index === currentPreviewQuestionIndex ?
                                                 'bg-primary/20 dark:bg-primary/30 border-l-4 border-primary' :
-                                                'bg-brand-white dark:bg-brand-dark-gray/30 hover:bg-brand-light-gray/40
-                                                dark:hover:bg-brand-dark-gray/40');
+                                                `bg-brand-white dark:bg-brand-dark-gray/30 hover:bg-brand-light-gray/40
+                                                dark:hover:bg-brand-dark-gray/40`);
                                                 div.dataset.questionIndex = index;
 
                                                 var html = '<div class="flex items-start gap-2">';
                                                   if (isPreviewReorderMode) {
-                                                  html += '<span
-                                                    class="material-symbols-outlined text-sm text-brand-dark-gray/40 dark:text-brand-white/40 cursor-move">drag_indicator</span>';
+                                                  html += `<span
+                                                    class="material-symbols-outlined text-sm text-brand-dark-gray/40 dark:text-brand-white/40 cursor-move">drag_indicator</span>`;
                                                   }
                                                   html += '<div class="flex-1 min-w-0">';
-                                                    html += '<div
+                                                    html += `<div
                                                       class="text-xs font-semibold text-brand-dark-gray/80 dark:text-brand-white/80">
-                                                      Q' + (index + 1) + '</div>';
-                                                    html += '<div
+                                                      Q` + (index + 1) + '</div>';
+                                                    html += `<div
                                                       class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 truncate mt-1">
-                                                      ' + escapeHtml(q.questionText || 'No text') + '</div>';
-                                                    html += '</div>
-                                                </div>';
+                                                      ` + escapeHtml(q.questionText || 'No text') + '</div>';
+                                                    html += `</div>
+                                                </div>`;
 
                                                 div.innerHTML = html;
                                                 div.onclick = function () {
@@ -16163,9 +8200,9 @@
                                                 function renderPreviewQuestion() {
                                                 if (!currentPreviewPoll || !currentPreviewPoll.questions ||
                                                 currentPreviewQuestionIndex >= currentPreviewPoll.questions.length) {
-                                                previewQuestionDisplay.innerHTML = '<p
+                                                previewQuestionDisplay.innerHTML = `<p
                                                   class="text-brand-dark-gray/60 dark:text-brand-white/60">No question
-                                                  selected</p>';
+                                                  selected</p>`;
                                                 return;
                                                 }
 
@@ -16175,19 +8212,19 @@
                                                 // Question header
                                                 html += '<div class="mb-6">';
                                                   html += '<div class="flex items-center gap-2 mb-2">';
-                                                    html += '<span
-                                                      class="text-sm font-semibold text-brand-dark-gray/60 dark:text-brand-white/60">Question'
+                                                    html += `<span
+                                                      class="text-sm font-semibold text-brand-dark-gray/60 dark:text-brand-white/60">Question`
                                                       + (currentPreviewQuestionIndex + 1) + ' of ' +
                                                       currentPreviewPoll.questions.length + '</span>';
                                                     if (q.timerSeconds) {
-                                                    html += '<span
+                                                    html += `<span
                                                       class="text-sm text-brand-dark-gray/50 dark:text-brand-white/50">•
-                                                      Timer:' + q.timerSeconds + 's</span>';
+                                                      Timer:` + q.timerSeconds + 's</span>';
                                                     }
                                                     html += '</div>';
-                                                  html += '<h3
+                                                  html += `<h3
                                                     class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">
-                                                    ' + escapeHtml(q.questionText || 'No question text') + '</h3>';
+                                                    ` + escapeHtml(q.questionText || 'No question text') + '</h3>';
                                                   html += '</div>';
 
                                                 // Question image
@@ -16235,13 +8272,13 @@
                                                   });
                                                   html += '</div>';
                                                 } else {
-                                                html += '<p class="text-brand-dark-gray/60 dark:text-brand-white/60">No
-                                                  answer options</p>';
+                                                html += `<p class="text-brand-dark-gray/60 dark:text-brand-white/60">No
+                                                  answer options</p>`;
                                                 }
 
                                                 previewQuestionDisplay.innerHTML = html;
-                                                previewQuestionCounter.textContent = (currentPreviewQuestionIndex + 1) + '
-                                                / ' + currentPreviewPoll.questions.length;
+                                                previewQuestionCounter.textContent = (currentPreviewQuestionIndex + 1) + `
+                                                / ` + currentPreviewPoll.questions.length;
 
                                                 // Update navigation button states
                                                 document.getElementById('preview-prev-question-btn').disabled =
@@ -16262,11 +8299,13 @@
                                                 if (currentPreviewPoll && currentPreviewQuestionIndex <
                                                   currentPreviewPoll.questions.length - 1) {
                                                   currentPreviewQuestionIndex++; renderPreviewNav();
-                                                  renderPreviewQuestion(); } } function previewOpenLinks() { if
+                                                  renderPreviewQuestion(); } }
+                                                  function previewOpenLinks() { if
                                                   (!currentPreviewPoll) return; var
                                                   className=currentPreviewPoll.className; if (!className) {
                                                   veritasAlert('This poll has no class assigned.', { title: 'No class' ,
-                                                  destructive: true }); return; } openLinksModal(className); } function
+                                                  destructive: true }); return; } openLinksModal(className); }
+                                                  function
                                                   previewEditQuestion() { if (!currentPreviewPoll) return;
                                                   closePollPreview(); startEditPoll(currentPreviewPoll.pollId); } async
                                                   function previewDeleteQuestion() { if (!currentPreviewPoll ||
@@ -16276,12 +8315,13 @@
                                                   title: 'Delete question' , confirmText: 'Delete' , destructive: true });
                                                   if (!confirmed) return;
                                                   currentPreviewPoll.questions.splice(currentPreviewQuestionIndex, 1); if
-                                                  (currentPreviewPoll.questions.length===0) { await veritasAlert('Cannot
-                                                  delete the last question. A poll must have at least one question.', {
+                                                  (currentPreviewPoll.questions.length===0) { await veritasAlert(`Cannot
+                                                  delete the last question. A poll must have at least one question.`, {
                                                   title: 'Cannot delete' , destructive: true });
                                                   currentPreviewPoll.questions.splice(currentPreviewQuestionIndex, 0, {
                                                   questionText: '' , options: [], correctAnswer: 'A' , timerSeconds: 90
-                                                  }); return; } if (currentPreviewQuestionIndex>=
+                                                  }); return; }
+                                                  if (currentPreviewQuestionIndex>=
                                                   currentPreviewPoll.questions.length) {
                                                   currentPreviewQuestionIndex = currentPreviewPoll.questions.length - 1;
                                                   }
@@ -16316,8 +8356,8 @@
                                                   // RTDB listener will update ALL_POLLS and UI
                                                   renderPreviewNav();
                                                   renderPreviewQuestion();
-                                                  veritasAlert('Question deleted successfully.', { title: 'Question
-                                                  deleted' });
+                                                  veritasAlert('Question deleted successfully.', { title: `Question
+                                                  deleted` });
                                                   } else {
                                                   throw new Error('Failed to update poll');
                                                   }
@@ -16333,8 +8373,8 @@
                                                   if (isPreviewReorderMode) {
                                                   originalQuestionOrder =
                                                   JSON.parse(JSON.stringify(currentPreviewPoll.questions));
-                                                  btn.innerHTML = '<span
-                                                    class="material-symbols-outlined text-sm align-middle">check</span>';
+                                                  btn.innerHTML = `<span
+                                                    class="material-symbols-outlined text-sm align-middle">check</span>`;
                                                   btn.classList.add('bg-primary', 'text-white');
                                                   btn.classList.remove('bg-brand-dark-gray/10', 'dark:bg-brand-white/10',
                                                   'text-brand-dark-gray', 'dark:text-brand-white');
@@ -16345,8 +8385,8 @@
                                                   saveReorderedQuestions();
                                                   }
                                                   originalQuestionOrder = null;
-                                                  btn.innerHTML = '<span
-                                                    class="material-symbols-outlined text-sm align-middle">swap_vert</span>';
+                                                  btn.innerHTML = `<span
+                                                    class="material-symbols-outlined text-sm align-middle">swap_vert</span>`;
                                                   btn.classList.remove('bg-primary', 'text-white');
                                                   btn.classList.add('bg-brand-dark-gray/10', 'dark:bg-brand-white/10',
                                                   'text-brand-dark-gray', 'dark:text-brand-white');
@@ -16382,8 +8422,8 @@
                                                   metadata: reorderMetadata
                                                   }).then(function (result) {
                                                   if (result.data && result.data.success) {
-                                                  veritasAlert('Question order updated successfully.', { title: 'Questions
-                                                  reordered' });
+                                                  veritasAlert('Question order updated successfully.', { title: `Questions
+                                                  reordered` });
                                                   } else {
                                                   throw new Error('Failed to update poll');
                                                   }
@@ -16422,9 +8462,11 @@
                                                     currentPreviewQuestionIndex--;
                                                     } else if (draggedItemIndex > currentPreviewQuestionIndex && index <=
                                                       currentPreviewQuestionIndex) { currentPreviewQuestionIndex++; }
-                                                      draggedItemIndex=index; renderPreviewNav(); } }); } function
+                                                      draggedItemIndex=index; renderPreviewNav(); } }); }
+                                                      function
                                                       generateQuestionId() { questionIdCounter +=1; return 'q-' +
-                                                      questionIdCounter; } function assignQuestionId(question) { if
+                                                      questionIdCounter; }
+                                                      function assignQuestionId(question) { if
                                                       (!question) return question; if (!question._id) {
                                                       question._id=generateQuestionId(); } else { var
                                                       match=String(question._id).match(/q-(\d+)/); if (match) { var
@@ -16457,17 +8499,20 @@
                                                       if (typeof insertIndex === 'number' && insertIndex >= 0 &&
                                                       insertIndex <= customQuestionOrder.length) {
                                                         customQuestionOrder.splice(insertIndex, 0, questionId); } else {
-                                                        customQuestionOrder.push(questionId); } } function
+                                                        customQuestionOrder.push(questionId); } }
+                                                        function
                                                         removeFromCustomOrder(questionId) { if (!questionId) return; var
                                                         index=customQuestionOrder.indexOf(questionId); if (index !==-1) {
-                                                        customQuestionOrder.splice(index, 1); } } function
+                                                        customQuestionOrder.splice(index, 1); } }
+                                                        function
                                                         buildOrderFromIds(orderIds) { var idMap=new Map();
                                                         questions.forEach(function (question) { if (question &&
                                                         question._id) { idMap.set(question._id, question); } }); var
                                                         ordered=[]; (orderIds || []).forEach(function (id) { if
                                                         (idMap.has(id)) { ordered.push(idMap.get(id)); idMap.delete(id); }
                                                         }); idMap.forEach(function (question) { ordered.push(question);
-                                                        }); return ordered; } function
+                                                        }); return ordered; }
+                                                        function
                                                         enforceQuestionOrder(preserveQuestionId) { var
                                                         selectionId=preserveQuestionId ||
                                                         (questions[selectedQuestionIndex] &&
@@ -16475,7 +8520,8 @@
                                                         ordered=buildOrderFromIds(customQuestionOrder); questions=ordered;
                                                         customQuestionOrder=ordered.map(function (question) { return
                                                         question._id; }); if (questions.length===0) {
-                                                        selectedQuestionIndex=0; return; } if (selectionId) { var
+                                                        selectedQuestionIndex=0; return; }
+                                                        if (selectionId) { var
                                                         newIndex=questions.findIndex(function (question) { return question
                                                         && question._id===selectionId; }); if (newIndex !==-1) {
                                                         selectedQuestionIndex=newIndex; } else if (selectedQuestionIndex>=
@@ -16489,8 +8535,8 @@
 
                                                         function setQuestionReorderHelp() {
                                                         if (questionSortHelp) {
-                                                        questionSortHelp.textContent = 'Drag questions to reorder them
-                                                        manually.';
+                                                        questionSortHelp.textContent = `Drag questions to reorder them
+                                                        manually.`;
                                                         }
                                                         }
 
@@ -16565,10 +8611,12 @@
                                                           { this.classList.add('drop-before');
                                                           this.classList.remove('drop-after'); } else {
                                                           this.classList.add('drop-after');
-                                                          this.classList.remove('drop-before'); } } function
+                                                          this.classList.remove('drop-before'); } }
+                                                          function
                                                           handleQuestionDragLeave() { if
                                                           (!this.classList.contains('question-nav-item')) return;
-                                                          this.classList.remove('drop-before', 'drop-after' ); } function
+                                                          this.classList.remove('drop-before', 'drop-after' ); }
+                                                          function
                                                           handleQuestionDrop(e) { if (!draggedQuestionId) return; var
                                                           questionId=this.dataset.questionId; if (!questionId ||
                                                           questionId===draggedQuestionId) return; e.preventDefault();
@@ -16578,29 +8626,37 @@
                                                           targetIndex=customQuestionOrder.indexOf(questionId); if
                                                           (targetIndex===-1) return; var insertIndex=before ? targetIndex
                                                           : targetIndex + 1; moveQuestionToIndex(draggedQuestionId,
-                                                          insertIndex); draggedQuestionId=null; } function
+                                                          insertIndex); draggedQuestionId=null; }
+                                                          function
                                                           handleQuestionDragEnd() { clearDragVisuals();
-                                                          draggedQuestionId=null; } function handleNavigatorDragOver(e) {
+                                                          draggedQuestionId=null; }
+                                                          function handleNavigatorDragOver(e) {
                                                           if (!draggedQuestionId) return; e.preventDefault();
-                                                          clearDropIndicators(); } function handleNavigatorDrop(e) { if
+                                                          clearDropIndicators(); }
+                                                          function handleNavigatorDrop(e) { if
                                                           (!draggedQuestionId) return; if (e.target
                                                           !==questionNavigatorContainer) return; e.preventDefault();
                                                           clearDropIndicators(); moveQuestionToIndex(draggedQuestionId,
-                                                          customQuestionOrder.length); draggedQuestionId=null; } function
+                                                          customQuestionOrder.length); draggedQuestionId=null; }
+                                                          function
                                                           setSaveStatus(message) { var
                                                           saveStatus=document.getElementById('save-status'); if
-                                                          (saveStatus) { saveStatus.textContent=message; } } function
+                                                          (saveStatus) { saveStatus.textContent=message; } }
+                                                          function
                                                           markPollDirty() { if (!isPollDirty) { isPollDirty=true; }
-                                                          setSaveStatus('Unsaved changes'); } function
+                                                          setSaveStatus('Unsaved changes'); }
+                                                          function
                                                           resetPollDirty(message) { isPollDirty=false;
-                                                          setSaveStatus(message || 'All changes saved' ); } function
+                                                          setSaveStatus(message || 'All changes saved' ); }
+                                                          function
                                                           normalizeSessionTypeClient(value) { if (!value)
                                                           return 'LIVE_POLL' ; var
                                                           normalized=value.toString().toUpperCase(); if
                                                           (normalized==='LIVE' || normalized==='LIVE_POLL' )
                                                           return 'LIVE_POLL' ; if (normalized==='SECURE_ASSESSMENT' ||
                                                           normalized==='SECURE' || normalized==='INDIVIDUAL_TIMED' )
-                                                          return 'SECURE_ASSESSMENT' ; return 'LIVE_POLL' ; } function
+                                                          return 'SECURE_ASSESSMENT' ; return 'LIVE_POLL' ; }
+                                                          function
                                                           isSecureSessionTypeClient(value) { return
                                                           normalizeSessionTypeClient(value)==='SECURE_ASSESSMENT' ; }
                                                           function syncSessionTypeToggleUI() { if (!sessionToggleButtons)
@@ -16612,11 +8668,13 @@
                                                           ); } else {
                                                           btn.classList.remove('bg-primary', 'text-brand-white' );
                                                           btn.classList.add('text-brand-dark-gray', 'dark:text-brand-white/70'
-                                                          ); } }); } function updateSecureSettingsVisibility() { if
+                                                          ); } }); }
+                                                          function updateSecureSettingsVisibility() { if
                                                           (!secureSettingsPanel) return; if
                                                           (isSecureSessionTypeClient(pollSessionType)) {
                                                           secureSettingsPanel.classList.remove('hidden'); } else {
-                                                          secureSettingsPanel.classList.add('hidden'); } } function
+                                                          secureSettingsPanel.classList.add('hidden'); } }
+                                                          function
                                                           isoToLocalInput(isoValue) { if (!isoValue) return '' ; var
                                                           date=new Date(isoValue); if (isNaN(date.getTime())) return '' ;
                                                           var year=date.getFullYear(); var month=String(date.getMonth() +
@@ -16631,36 +8689,47 @@
                                                           function populateSecureSettingsInputs() { if
                                                           (secureTimeLimitInput) { secureTimeLimitInput.value=typeof
                                                           secureAssessmentConfig.timeLimitMinutes==='number' ?
-                                                          secureAssessmentConfig.timeLimitMinutes : '' ; } if
+                                                          secureAssessmentConfig.timeLimitMinutes : '' ; }
+                                                          if
                                                           (secureAccessCodeInput) {
                                                           secureAccessCodeInput.value=secureAssessmentConfig.accessCode
-                                                          || '' ; } if (secureAvailableInput) {
+                                                          || '' ; }
+                                                          if (secureAvailableInput) {
                                                           secureAvailableInput.value=isoToLocalInput(secureAssessmentConfig.availableFrom);
-                                                          } if (secureDueInput) {
+                                                          }
+                                                          if (secureDueInput) {
                                                           secureDueInput.value=isoToLocalInput(secureAssessmentConfig.dueBy);
-                                                          } } function readSecureSettingsFromInputs() { if
+                                                          } }
+                                                          function readSecureSettingsFromInputs() { if
                                                           (secureTimeLimitInput) { var
                                                           parsed=parseInt(secureTimeLimitInput.value, 10);
                                                           secureAssessmentConfig.timeLimitMinutes=isNaN(parsed) ? '' :
-                                                          parsed; } if (secureAccessCodeInput) {
+                                                          parsed; }
+                                                          if (secureAccessCodeInput) {
                                                           secureAssessmentConfig.accessCode=(secureAccessCodeInput.value
-                                                          || '' ).trim().toUpperCase(); } if (secureAvailableInput) {
+                                                          || '' ).trim().toUpperCase(); }
+                                                          if (secureAvailableInput) {
                                                           secureAssessmentConfig.availableFrom=localInputToIso(secureAvailableInput.value);
-                                                          } if (secureDueInput) {
+                                                          }
+                                                          if (secureDueInput) {
                                                           secureAssessmentConfig.dueBy=localInputToIso(secureDueInput.value);
-                                                          } return { timeLimitMinutes: typeof
+                                                          }
+                                                          return { timeLimitMinutes: typeof
                                                           secureAssessmentConfig.timeLimitMinutes==='number' ?
                                                           secureAssessmentConfig.timeLimitMinutes : null, accessCode:
                                                           secureAssessmentConfig.accessCode || '' , availableFrom:
                                                           secureAssessmentConfig.availableFrom || '' , dueBy:
-                                                          secureAssessmentConfig.dueBy || '' }; } function
+                                                          secureAssessmentConfig.dueBy || '' }; }
+                                                          function
                                                           resetSecureAssessmentState() { secureAssessmentConfig={
                                                           timeLimitMinutes: 60, accessCode: '' , availableFrom: '' ,
-                                                          dueBy: '' }; populateSecureSettingsInputs(); } function
+                                                          dueBy: '' }; populateSecureSettingsInputs(); }
+                                                          function
                                                           setPollSessionType(newType, suppressDirty) {
                                                           pollSessionType=normalizeSessionTypeClient(newType);
                                                           syncSessionTypeToggleUI(); updateSecureSettingsVisibility(); if
-                                                          (!suppressDirty) { markPollDirty(); } } function
+                                                          (!suppressDirty) { markPollDirty(); } }
+                                                          function
                                                           buildSecureAssessmentPayload() { var
                                                           current=readSecureSettingsFromInputs(); return { sessionType:
                                                           pollSessionType, timeLimitMinutes: current.timeLimitMinutes,
@@ -16675,12 +8744,13 @@
                                                           Modal --- function openPollCreator(existingPoll) {
                                                           console.log('openPollCreator called', existingPoll
                                                           ? 'with existing poll' : 'for new poll' ); try { // Defensive
-                                                          check: ensure modal exists if (!modal) { console.log('Modal
-                                                          variable is null, fetching from DOM...');
+                                                          check: ensure modal exists if (!modal) { console.log(`Modal
+                                                          variable is null, fetching from DOM...`);
                                                           modal=document.getElementById('poll-creator-modal'); if (!modal)
                                                           { console.error('Poll creator modal not found in DOM');
-                                                          veritasAlert('Unable to open poll creator. Please refresh the
-                                                          page and try again.', { title: 'Error' }); return; } } var
+                                                          veritasAlert(`Unable to open poll creator. Please refresh the
+                                                          page and try again.`, { title: 'Error' }); return; } }
+                                                          var
                                                           saveButton=document.getElementById('save-poll-btn');
                                                           questionCounter=0; questions=[]; selectedQuestionIndex=0;
                                                           questionIdCounter=0; customQuestionOrder=[];
@@ -16714,7 +8784,8 @@
                                                           text: opt.text || '' , image: opt.imageURL || null, imageURL:
                                                           opt.imageURL || null, imageFileId: opt.imageFileId || null };
                                                           }); while (answers.length < 2) { answers.push({ text: '' ,
-                                                          image: null, imageURL: null, imageFileId: null }); } var
+                                                          image: null, imageURL: null, imageFileId: null }); }
+                                                          var
                                                           correctIndex=0; answers.forEach(function (answer, idx) { if
                                                           (answer.text===question.correctAnswer) { correctIndex=idx; } });
                                                           return assignQuestionId({ questionText: question.questionText
@@ -16739,10 +8810,10 @@
                                                           question._id; });
                                                           initialQuestionOrder=customQuestionOrder.slice();
                                                           enforceQuestionOrder(); renderQuestionNavigator();
-                                                          renderQuestionWorkspace(); console.log('About to show modal.
-                                                          Modal element:', modal); console.log('Modal current classes:',
-                                                          modal ? modal.className : 'N/A' ); console.log('Modal current
-                                                          display style:', modal ? modal.style.display : 'N/A' ); //
+                                                          renderQuestionWorkspace(); console.log(`About to show modal.
+                                                          Modal element:`, modal); console.log('Modal current classes:',
+                                                          modal ? modal.className : 'N/A' ); console.log(`Modal current
+                                                          display style:`, modal ? modal.style.display : 'N/A' ); //
                                                           Ensure modal is appended to document.body to escape any
                                                           container clipping if (modal.parentElement !==document.body) {
                                                           document.body.appendChild(modal); } // Remove hidden class first
@@ -16753,10 +8824,11 @@
                                                           background scrolling document.body.style.overflow='hidden' ;
                                                           console.log('Modal should now be visible. Display:',
                                                           modal.style.display, 'Classes:' , modal.className, 'Parent:' ,
-                                                          modal.parentElement.tagName); } catch (e) { console.error("Error
-                                                          opening poll creator:", e); console.error("Error stack:",
-                                                          e.stack); veritasAlert("Error opening poll
-                                                          creator: " + e.message, { title: " Error" }); } } function
+                                                          modal.parentElement.tagName); } catch (e) { console.error(`Error
+                                                          opening poll creator:`, e); console.error("Error stack:",
+                                                          e.stack); veritasAlert(`Error opening poll
+                                                          creator: ` + e.message, { title: " Error" }); } }
+                                                          function
                                                           closePollCreator() { if (modal) { modal.style.display='none' ;
                                                           modal.classList.add('hidden'); modal.style.cssText='' ; // Reset
                                                           inline styles } // Restore body scroll
@@ -16773,7 +8845,8 @@
                                                           function openQuestionBank() { var
                                                           bankModal=document.getElementById('question-bank-modal'); if
                                                           (bankModal) { bankModal.style.display='flex' ;
-                                                          loadQuestionBank(); } } function closeQuestionBank() { var
+                                                          loadQuestionBank(); } }
+                                                          function closeQuestionBank() { var
                                                           bankModal=document.getElementById('question-bank-modal'); if
                                                           (bankModal) { bankModal.style.display='none' ; }
                                                           selectedBankQuestions.clear(); updateBankSelectionCount(); }
@@ -16799,10 +8872,11 @@
                                                           answers: q.answers || q.options || [], topicTag: q.topicTag ||
                                                           q.topic || '' , difficultyLevel: q.difficultyLevel || '' }); });
                                                           }); questionBankData=questions; renderQuestionBank();
-                                                          populatePollFilter(); } catch (error) { console.error('Question
-                                                          Bank synthesis failed:', error);
+                                                          populatePollFilter(); } catch (error) { console.error(`Question
+                                                          Bank synthesis failed:`, error);
                                                           container.innerHTML='<p class="text-center text-red-600 py-8">Failed to synthesize question bank: '
-                                                          + error.message + '</p>' ; } })(); } function
+                                                          + error.message + '</p>' ; } })(); }
+                                                          function
                                                           populatePollFilter() { var
                                                           pollFilter=document.getElementById('bank-poll-filter'); if
                                                           (!pollFilter) return; var pollNames=[...new
@@ -16814,7 +8888,8 @@
                                                           q.pollName===name; }).length; pollFilter.innerHTML
                                                           +='<option value="' + escapeHtml(name) + '">' + escapeHtml(name)
                                                           + ' (' + count + ')</option>' ; }); pollFilter.onchange=function
-                                                          () { renderQuestionBank(this.value); }; } function
+                                                          () { renderQuestionBank(this.value); }; }
+                                                          function
                                                           renderQuestionBank(filterByPoll) { var
                                                           container=document.getElementById('bank-questions-container');
                                                           if (!container) return; var filteredQuestions=filterByPoll ?
@@ -16835,23 +8910,23 @@
             '" data-bank-key="' + q.pollId + ':' + q.questionIndex + '">' +
                                                             '<div class="flex items-start justify-between gap-3">' +
                                                               '<div class="flex-1">' +
-                                                                '<p
+                                                                `<p
                                                                   class="text-sm font-medium text-brand-dark-gray dark:text-brand-white line-clamp-2">
-                                                                  ' + escapeHtml(q.questionText || 'No question text') + '
-                                                                </p>' +
+                                                                  ` + escapeHtml(q.questionText || 'No question text') + `
+                                                                </p>` +
                                                                 '<div class="flex flex-wrap items-center gap-2 mt-2">' +
-                                                                  '<span
-                                                                    class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">'
+                                                                  `<span
+                                                                    class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">`
                                                                     + escapeHtml(q.pollName) + '</span>' +
-                                                                  (q.topicTag ? '<span
-                                                                    class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">'
+                                                                  (q.topicTag ? `<span
+                                                                    class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">`
                                                                     + escapeHtml(q.topicTag) + '</span>' : '') +
                                                                   diffBadge +
                                                                   '</div>' +
                                                                 '</div>' +
                                                               '<div class="flex-shrink-0">' +
-                                                                '<span
-                                                                  class="material-symbols-outlined text-xl ' + (isSelected ? 'text-amber-600' : 'text-brand-light-gray') + '">'
+                                                                `<span
+                                                                  class="material-symbols-outlined text-xl ` + (isSelected ? 'text-amber-600' : 'text-brand-light-gray') + '">'
                                                                   +
                                                                   (isSelected ? 'check_circle' : 'radio_button_unchecked')
                                                                   + '</span>' +
@@ -16977,10 +9052,12 @@
                                                             openAISuggestions() { var
                                                             aiModal=document.getElementById('ai-suggestions-modal'); if
                                                             (aiModal) { aiModal.style.display='flex' ;
-                                                            updateAICurrentQuestion(); initAPBioTagger(); } } function
+                                                            updateAICurrentQuestion(); initAPBioTagger(); } }
+                                                            function
                                                             closeAISuggestions() { var
                                                             aiModal=document.getElementById('ai-suggestions-modal'); if
-                                                            (aiModal) { aiModal.style.display='none' ; } } function
+                                                            (aiModal) { aiModal.style.display='none' ; } }
+                                                            function
                                                             updateAICurrentQuestion() { var
                                                             currentQEl=document.getElementById('ai-current-question'); if
                                                             (!currentQEl) return; var
@@ -17003,8 +9080,8 @@
 
                                                             // Reset state
                                                             unitSelect.value = '';
-                                                            topicSelect.innerHTML = '<option value="">-- Select Unit First
-                                                              --</option>';
+                                                            topicSelect.innerHTML = `<option value="">-- Select Unit First
+                                                              --</option>`;
                                                             topicSelect.disabled = true;
                                                             document.getElementById('bigidea-evo').checked = false;
                                                             document.getElementById('bigidea-ene').checked = false;
@@ -17045,15 +9122,15 @@
                                                             document.getElementById('apbio-topic-select');
 
                                                             if (!unitKey || !AP_BIO_CURRICULUM[unitKey]) {
-                                                            topicSelect.innerHTML = '<option value="">-- Select Unit First
-                                                              --</option>';
+                                                            topicSelect.innerHTML = `<option value="">-- Select Unit First
+                                                              --</option>`;
                                                             topicSelect.disabled = true;
                                                             return;
                                                             }
 
                                                             var unit = AP_BIO_CURRICULUM[unitKey];
-                                                            topicSelect.innerHTML = '<option value="">-- Select Topic --
-                                                            </option>';
+                                                            topicSelect.innerHTML = `<option value="">-- Select Topic --
+                                                            </option>`;
                                                             unit.topics.forEach(function (topic) {
                                                             var option = document.createElement('option');
                                                             option.value = topic;
@@ -17242,11 +9319,13 @@
                                                               renderQuestionWorkspace(); } async function
                                                               deleteQuestion(index) { if (questions.length <=1) { await
                                                               veritasAlert('A poll must have at least one question.', {
-                                                              title: 'Edit poll' }); return; } var
+                                                              title: 'Edit poll' }); return; }
+                                                              var
                                                               removedQuestion=questions[index]; var
                                                               removedId=removedQuestion && removedQuestion._id;
                                                               questions.splice(index, 1); if (removedId) {
-                                                              removeFromCustomOrder(removedId); } if
+                                                              removeFromCustomOrder(removedId); }
+                                                              if
                                                               (selectedQuestionIndex>= questions.length) {
                                                               selectedQuestionIndex = Math.max(0, questions.length - 1);
                                                               }
@@ -17258,8 +9337,8 @@
 
                                                               async function duplicateQuestionLocal(index) {
                                                               if (questions.length >= 50) {
-                                                              await veritasAlert('Maximum 50 questions per poll. Cannot
-                                                              duplicate.', { title: 'Edit poll' });
+                                                              await veritasAlert(`Maximum 50 questions per poll. Cannot
+                                                              duplicate.`, { title: 'Edit poll' });
                                                               return;
                                                               }
                                                               // Deep copy the question
@@ -17297,32 +9376,32 @@
                                                               questions.forEach(function (q, index) {
                                                               var isSelected = index === selectedQuestionIndex;
                                                               var div = document.createElement('div');
-                                                              div.className = 'question-nav-item group relative flex
-                                                              items-center gap-3 px-3 py-2 rounded-lg cursor-pointer ' +
+                                                              div.className = `question-nav-item group relative flex
+                                                              items-center gap-3 px-3 py-2 rounded-lg cursor-pointer ` +
                                                               (isSelected ? 'bg-primary/20 dark:bg-primary/30' :
                                                               'hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10');
 
-                                                              var html = '<span
-                                                                class="material-symbols-outlined ' + (isSelected ? 'text-brand-dark-gray dark:text-brand-white' : 'text-brand-dark-gray/50 dark:text-brand-white/50') + '">drag_indicator</span>';
-                                                              html += '<p
-                                                                class="' + (isSelected ? 'text-primary dark:text-brand-white' : 'text-brand-dark-gray dark:text-brand-white') + ' text-sm font-medium leading-normal">
-                                                                Question' + (index + 1) + '</p>';
+                                                              var html = `<span
+                                                                class="material-symbols-outlined ` + (isSelected ? 'text-brand-dark-gray dark:text-brand-white' : 'text-brand-dark-gray/50 dark:text-brand-white/50') + '">drag_indicator</span>';
+                                                              html += `<p
+                                                                class="` + (isSelected ? 'text-primary dark:text-brand-white' : 'text-brand-dark-gray dark:text-brand-white') + ` text-sm font-medium leading-normal">
+                                                                Question` + (index + 1) + '</p>';
 
-                                                              html += '<div
+                                                              html += `<div
                                                                 class="absolute right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                ';
-                                                                html += '<button
+                                                                `;
+                                                                html += `<button
                                                                   class="duplicate-question-btn p-1 rounded-full hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10"
-                                                                  data-index="' + index + '" title="Duplicate question">';
-                                                                  html += '<span
-                                                                    class="material-symbols-outlined text-brand-dark-gray dark:text-brand-white text-base">content_copy</span>';
+                                                                  data-index="` + index + '" title="Duplicate question">';
+                                                                  html += `<span
+                                                                    class="material-symbols-outlined text-brand-dark-gray dark:text-brand-white text-base">content_copy</span>`;
                                                                   html += '</button>';
                                                                 if (questions.length > 1) {
-                                                                html += '<button
+                                                                html += `<button
                                                                   class="delete-question-btn p-1 rounded-full hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10"
-                                                                  data-index="' + index + '" title="Delete question">';
-                                                                  html += '<span
-                                                                    class="material-symbols-outlined text-brand-dark-gray dark:text-brand-white text-base">close</span>';
+                                                                  data-index="` + index + '" title="Delete question">';
+                                                                  html += `<span
+                                                                    class="material-symbols-outlined text-brand-dark-gray dark:text-brand-white text-base">close</span>`;
                                                                   html += '</button>';
                                                                 }
                                                                 html += '</div>';
@@ -17374,38 +9453,38 @@
                                                               var question = questions[selectedQuestionIndex];
 
                                                               var html = '<div class="max-w-4xl mx-auto">';
-                                                                html += '<div
-                                                                  class="flex flex-wrap justify-between gap-3 mb-6">';
+                                                                html += `<div
+                                                                  class="flex flex-wrap justify-between gap-3 mb-6">`;
                                                                   html += '<div class="flex min-w-72 flex-col gap-1">';
-                                                                    html += '<p
+                                                                    html += `<p
                                                                       class="text-brand-dark-gray dark:text-brand-white tracking-light text-[32px] font-bold leading-tight">
-                                                                      Question' + (selectedQuestionIndex + 1) + '</p>';
-                                                                    html += '<p
+                                                                      Question` + (selectedQuestionIndex + 1) + '</p>';
+                                                                    html += `<p
                                                                       class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm font-normal leading-normal">
-                                                                      Edit the question and answer choices below.</p>';
-                                                                    html += '</div>
-                                                                </div>';
+                                                                      Edit the question and answer choices below.</p>`;
+                                                                    html += `</div>
+                                                                </div>`;
 
-                                                                html += '<div
+                                                                html += `<div
                                                                   class="bg-brand-white dark:bg-brand-dark-gray/20 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/30 p-6 shadow-sm mb-6">
-                                                                  ';
+                                                                  `;
                                                                   html += '<label class="flex flex-col w-full">';
-                                                                    html += '<p
+                                                                    html += `<p
                                                                       class="text-brand-dark-gray dark:text-brand-white text-base font-medium leading-normal pb-2">
-                                                                      Question Text</p>';
-                                                                    html += '<textarea id="question-text-input"
+                                                                      Question Text</p>`;
+                                                                    html += `<textarea id="question-text-input"
                                                                       class="form-input flex w-full min-w-0 flex-1 resize-y overflow-hidden rounded-lg text-brand-dark-gray dark:text-brand-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 focus:border-primary min-h-36 placeholder:text-brand-dark-gray/50 dark:placeholder:text-brand-white/50 p-[15px] text-base font-normal leading-normal"
-                                                                      placeholder="Type your question here...">' + escapeHtml(question.questionText || '') + '</textarea>';
+                                                                      placeholder="Type your question here...">` + escapeHtml(question.questionText || '') + '</textarea>';
                                                                     html += '</label>';
-                                                                  html += '<div
+                                                                  html += `<div
                                                                     class="grid w-full max-w-xs items-center gap-1.5 mt-4">
-                                                                    ';
-                                                                    html += '<label for="question-image-input"
+                                                                    `;
+                                                                    html += `<label for="question-image-input"
                                                                       class="text-sm text-gray-400 font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Question
-                                                                      Image</label>';
-                                                                    html += '<input id="question-image-input" type="file"
+                                                                      Image</label>`;
+                                                                    html += `<input id="question-image-input" type="file"
                                                                       accept="image/*"
-                                                                      class="flex h-10 w-full rounded-md border border-brand-light-gray dark:border-brand-dark-gray/50 bg-white dark:bg-brand-dark-gray/30 px-3 py-2 text-sm text-gray-400 file:border-0 file:bg-transparent file:text-gray-600 dark:file:text-gray-300 file:text-sm file:font-medium focus:outline-none focus:ring-2 focus:ring-primary/50">';
+                                                                      class="flex h-10 w-full rounded-md border border-brand-light-gray dark:border-brand-dark-gray/50 bg-white dark:bg-brand-dark-gray/30 px-3 py-2 text-sm text-gray-400 file:border-0 file:bg-transparent file:text-gray-600 dark:file:text-gray-300 file:text-sm file:font-medium focus:outline-none focus:ring-2 focus:ring-primary/50">`;
                                                                     html += '</div>';
 
                                                                   // Show image preview or uploading state
@@ -17417,18 +9496,18 @@
                                                                   'UPLOADING';
 
                                                                   if (questionImagePreview || isUploading) {
-                                                                  html += '<div
+                                                                  html += `<div
                                                                     class="mt-4 flex flex-wrap items-center gap-3 bg-primary/5 dark:bg-primary/10 p-3 rounded-lg">
-                                                                    ';
+                                                                    `;
                                                                     if (isUploading) {
-                                                                    html += '<div
+                                                                    html += `<div
                                                                       class="flex items-center gap-2 text-primary dark:text-brand-white">
-                                                                      ';
-                                                                      html += '<div
+                                                                      `;
+                                                                      html += `<div
                                                                         class="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent">
-                                                                      </div>';
-                                                                      html += '<span class="text-sm font-medium">Uploading
-                                                                        image...</span>';
+                                                                      </div>`;
+                                                                      html += `<span class="text-sm font-medium">Uploading
+                                                                        image...</span>`;
                                                                       html += '</div>';
                                                                     } else if (questionImagePreview) {
                                                                     html += `<img src="${questionImagePreview}"
@@ -17441,36 +9520,36 @@
                                                                     html += '</div>';
                                                                   }
 
-                                                                  html += '<div
-                                                                    class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">';
+                                                                  html += `<div
+                                                                    class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">`;
                                                                     html += '<div>';
-                                                                      html += '<label
+                                                                      html += `<label
                                                                         class="text-brand-dark-gray dark:text-brand-white text-sm font-medium leading-normal block pb-2"
                                                                         for="question-topic-input">Topic/Standard
-                                                                        Tag</label>';
-                                                                      html += '<input id="question-topic-input"
+                                                                        Tag</label>`;
+                                                                      html += `<input id="question-topic-input"
                                                                         type="text"
                                                                         class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                                                                         placeholder="e.g., Cell Division, Algebra, etc."
-                                                                        value="' + escapeHtml(question.topicTag || question.topic || '') + '">';
-                                                                      html += '<p
+                                                                        value="` + escapeHtml(question.topicTag || question.topic || '') + '">';
+                                                                      html += `<p
                                                                         class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-1">
-                                                                        Used for topic-level analytics.</p>';
+                                                                        Used for topic-level analytics.</p>`;
                                                                       html += '</div>';
 
                                                                     // NEW FEATURE: Difficulty Level Selector
                                                                     html += '<div>';
-                                                                      html += '<label
+                                                                      html += `<label
                                                                         class="text-brand-dark-gray dark:text-brand-white text-sm font-medium leading-normal block pb-2"
                                                                         for="question-difficulty-select">Difficulty
-                                                                        Level</label>';
-                                                                      html += '<select id="question-difficulty-select"
-                                                                        class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">';
+                                                                        Level</label>`;
+                                                                      html += `<select id="question-difficulty-select"
+                                                                        class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">`;
                                                                         var difficultyValue = question.difficultyLevel ||
                                                                         '';
-                                                                        html += '<option
-                                                                          value=""' + (difficultyValue === '' ? '
-                                                                          selected' : '' ) + '>-- Select --</option>' ;
+                                                                        html += `<option
+                                                                          value=""` + (difficultyValue === '' ? `
+                                                                          selected` : '' ) + '>-- Select --</option>' ;
                                                                           html +='<option value="easy"' +
                                                                           (difficultyValue==='easy' ? ' selected' : '' )
                                                                           + '>🟢 Easy</option>' ; html
@@ -17530,13 +9609,14 @@
                                                                           questions[selectedQuestionIndex].questionImageURL=null;
                                                                           markPollDirty(); renderQuestionWorkspace();
                                                                           }).catch(async function (error) { await
-                                                                          veritasAlert('Image upload
-                                                                          failed: ' + (error.message || error), { title: '
-                                                                          Upload image', destructive: true });
+                                                                          veritasAlert(`Image upload
+                                                                          failed: ` + (error.message || error), { title: `
+                                                                          Upload image`, destructive: true });
                                                                           questions[selectedQuestionIndex].questionImage=null;
                                                                           questions[selectedQuestionIndex].questionImageFileId=null;
                                                                           questions[selectedQuestionIndex].questionImageURL=null;
-                                                                          renderQuestionWorkspace(); }); } }; } var
+                                                                          renderQuestionWorkspace(); }); } }; }
+                                                                          var
                                                                           removeQImgBtn=workspace.querySelector('.remove-question-image-btn');
                                                                           if (removeQImgBtn) {
                                                                           removeQImgBtn.onclick=function () {
@@ -17597,9 +9677,9 @@
                                                                           questions[selectedQuestionIndex].answers[index].imageURL=null;
                                                                           markPollDirty(); renderQuestionWorkspace();
                                                                           }).catch(async function (error) { await
-                                                                          veritasAlert('Image upload
-                                                                          failed: ' + (error.message || error), { title: '
-                                                                          Upload image', destructive: true });
+                                                                          veritasAlert(`Image upload
+                                                                          failed: ` + (error.message || error), { title: `
+                                                                          Upload image`, destructive: true });
                                                                           questions[selectedQuestionIndex].answers[index].image=null;
                                                                           questions[selectedQuestionIndex].answers[index].imageFileId=null;
                                                                           questions[selectedQuestionIndex].answers[index].imageURL=null;
@@ -17611,7 +9691,8 @@
                                                                           questions[selectedQuestionIndex].answers[idx].imageURL=null;
                                                                           questions[selectedQuestionIndex].answers[idx].imageFileId=null;
                                                                           markPollDirty(); renderQuestionWorkspace(); };
-                                                                          }); } function renderAnswerChoice(answer, index,
+                                                                          }); }
+                                                                          function renderAnswerChoice(answer, index,
                                                                           isCorrect) { var
                                                                           html='<div class="flex items-center gap-3">' ;
                                                                           html
@@ -17633,11 +9714,11 @@
                                                                           ; html +='</label>' ; if
                                                                           (questions[selectedQuestionIndex].answers.length>
                                                                           2) {
-                                                                          html += '<button
+                                                                          html += `<button
                                                                             class="delete-answer-btn p-2 rounded-lg hover:bg-brand-dark-gray/10 dark:hover:bg-brand-white/10 transition-colors"
-                                                                            title="Remove this answer">';
-                                                                            html += '<span
-                                                                              class="material-symbols-outlined text-brand-dark-gray/60 dark:text-brand-white/60">delete</span>';
+                                                                            title="Remove this answer">`;
+                                                                            html += `<span
+                                                                              class="material-symbols-outlined text-brand-dark-gray/60 dark:text-brand-white/60">delete</span>`;
                                                                             html += '</button>';
                                                                           } else {
                                                                           html += '<div class="w-10"></div>';
@@ -17652,18 +9733,18 @@
                                                                     var isAnswerUploading = answer.image === 'UPLOADING';
 
                                                                     if (answerPreview || isAnswerUploading) {
-                                                                    html += '<div
+                                                                    html += `<div
                                                                       class="mt-2 flex items-center gap-3 bg-primary/5 dark:bg-primary/10 p-2 rounded-lg">
-                                                                      ';
+                                                                      `;
                                                                       if (isAnswerUploading) {
-                                                                      html += '<div
+                                                                      html += `<div
                                                                         class="flex items-center gap-2 text-primary dark:text-brand-white">
-                                                                        ';
-                                                                        html += '<div
+                                                                        `;
+                                                                        html += `<div
                                                                           class="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent">
-                                                                        </div>';
-                                                                        html += '<span
-                                                                          class="text-xs font-medium">Uploading...</span>';
+                                                                        </div>`;
+                                                                        html += `<span
+                                                                          class="text-xs font-medium">Uploading...</span>`;
                                                                         html += '</div>';
                                                                       } else if (answerPreview) {
                                                                       html += `<img src="${answerPreview}"
@@ -17681,8 +9762,8 @@
 
                                                                     async function deleteAnswer(index) {
                                                                     if (questions[selectedQuestionIndex].answers.length <=
-                                                                      2) { await veritasAlert('A question must have at
-                                                                      least two answer choices.', { title: 'Edit poll' });
+                                                                      2) { await veritasAlert(`A question must have at
+                                                                      least two answer choices.`, { title: 'Edit poll' });
                                                                       return; }
                                                                       questions[selectedQuestionIndex].answers.splice(index,
                                                                       1); if
@@ -17746,14 +9827,14 @@
                                                                       async function savePoll() {
                                                                       var savePollBtn =
                                                                       document.getElementById('save-poll-btn');
-                                                                      var defaultLabel = editingPollId ? '<span
-                                                                        class="truncate">Save Changes</span>' : '<span
-                                                                        class="truncate">Publish Poll</span>';
+                                                                      var defaultLabel = editingPollId ? `<span
+                                                                        class="truncate">Save Changes</span>` : `<span
+                                                                        class="truncate">Publish Poll</span>`;
 
                                                                       savePollBtn.disabled = true;
-                                                                      savePollBtn.innerHTML = '<div
+                                                                      savePollBtn.innerHTML = `<div
                                                                         class="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent">
-                                                                      </div><span>Saving...</span>';
+                                                                      </div><span>Saving...</span>`;
 
                                                                       var pollName =
                                                                       document.getElementById('new-poll-name').value.trim();
@@ -17764,8 +9845,8 @@
                                                                       securePayload.sessionType = currentSessionType;
 
                                                                       if (!pollName || !className) {
-                                                                      await veritasAlert('Please enter a poll name and
-                                                                      select a class.', { title: 'Save poll' });
+                                                                      await veritasAlert(`Please enter a poll name and
+                                                                      select a class.`, { title: 'Save poll' });
                                                                       savePollBtn.disabled = false;
                                                                       savePollBtn.innerHTML = defaultLabel;
                                                                       return;
@@ -17774,44 +9855,48 @@
                                                                       if (isSecureSessionTypeClient(currentSessionType)) {
                                                                       if (!securePayload.timeLimitMinutes ||
                                                                       securePayload.timeLimitMinutes <= 0) { await
-                                                                        veritasAlert('Secure Assessments require a
-                                                                        positive time limit.', { title: 'Save poll' });
+                                                                        veritasAlert(`Secure Assessments require a
+                                                                        positive time limit.`, { title: 'Save poll' });
                                                                         savePollBtn.disabled=false;
-                                                                        savePollBtn.innerHTML=defaultLabel; return; } } if
+                                                                        savePollBtn.innerHTML=defaultLabel; return; } }
+                                                                        if
                                                                         (questions.length===0) { await
                                                                         veritasAlert('Please add at least one question.',
                                                                         { title: 'Save poll' });
                                                                         savePollBtn.disabled=false;
-                                                                        savePollBtn.innerHTML=defaultLabel; return; } var
+                                                                        savePollBtn.innerHTML=defaultLabel; return; }
+                                                                        var
                                                                         validationError='' ; questions.forEach(function
                                                                         (question, index) { if (validationError) return;
                                                                         var questionText=(question.questionText || ''
                                                                         ).trim(); if (questionText==='' ) {
                                                                         validationError='Question ' + (index + 1)
-                                                                        + ' needs question text.' ; return; } var
+                                                                        + ' needs question text.' ; return; }
+                                                                        var
                                                                         answerTexts=question.answers.map(function (answer)
                                                                         { return (answer.text || '' ).trim(); }); var
                                                                         filledAnswers=answerTexts.filter(function (text) {
                                                                         return text !=='' ; }); if (filledAnswers.length <
                                                                         2) { validationError='Question ' + (index + 1)
                                                                         + ' must include at least two answer choices with text.'
-                                                                        ; return; } var correctIndex=typeof
+                                                                        ; return; }
+                                                                        var correctIndex=typeof
                                                                         question.correctAnswerIndex==='number' ?
                                                                         question.correctAnswerIndex : 0; if (correctIndex
                                                                         < 0 || correctIndex>= answerTexts.length) {
-                                                                        validationError = 'Question ' + (index + 1) + '
-                                                                        has an invalid correct answer selection.';
+                                                                        validationError = 'Question ' + (index + 1) + `
+                                                                        has an invalid correct answer selection.`;
                                                                         return;
                                                                         }
                                                                         if (answerTexts[correctIndex] === '') {
-                                                                        validationError = 'Question ' + (index + 1) + '
-                                                                        must mark a correct answer with text.';
+                                                                        validationError = 'Question ' + (index + 1) + `
+                                                                        must mark a correct answer with text.`;
                                                                         }
                                                                         });
 
                                                                         if (validationError) {
-                                                                        await veritasAlert(validationError, { title: 'Save
-                                                                        poll' });
+                                                                        await veritasAlert(validationError, { title: `Save
+                                                                        poll` });
                                                                         savePollBtn.disabled = false;
                                                                         savePollBtn.innerHTML = defaultLabel;
                                                                         return;
@@ -17823,17 +9908,17 @@
                                                                         questions.forEach(function (question, index) {
                                                                         if (question.questionImage === 'UPLOADING') {
                                                                         uploadsInProgress = true;
-                                                                        uploadMessages.push('Question ' + (index + 1) + '
+                                                                        uploadMessages.push('Question ' + (index + 1) + `
                                                                         image is still uploading. Please wait for upload
-                                                                        to complete.');
+                                                                        to complete.`);
                                                                         }
                                                                         question.answers.forEach(function (answer, aIndex)
                                                                         {
                                                                         if (answer.image === 'UPLOADING') {
                                                                         uploadsInProgress = true;
-                                                                        uploadMessages.push('Question ' + (index + 1) + ',
-                                                                        answer ' + (aIndex + 1) + ' image is still
-                                                                        uploading. Please wait for upload to complete.');
+                                                                        uploadMessages.push('Question ' + (index + 1) + `,
+                                                                        answer ` + (aIndex + 1) + ` image is still
+                                                                        uploading. Please wait for upload to complete.`);
                                                                         }
                                                                         });
                                                                         });
@@ -17865,7 +9950,8 @@
                                                                         var correctIndex = typeof
                                                                         question.correctAnswerIndex === 'number' ?
                                                                         question.correctAnswerIndex : 0;
-                                                                        if (correctIndex < 0) { correctIndex=0; } if
+                                                                        if (correctIndex < 0) { correctIndex=0; }
+                                                                        if
                                                                           (correctIndex>= answers.length) {
                                                                           correctIndex = Math.max(0, answers.length - 1);
                                                                           }
@@ -17880,7 +9966,8 @@
                                                                           10);
                                                                           }
                                                                           if (timerValue && (!isFinite(timerValue) ||
-                                                                          timerValue <= 0)) { timerValue=null; } if
+                                                                          timerValue <= 0)) { timerValue=null; }
+                                                                          if
                                                                             (timerValue) {
                                                                             timerValue=Math.min(Math.round(timerValue),
                                                                             600); } // Use questionImageFileId as
@@ -17942,9 +10029,9 @@
                                                                               // Validate payload before sending
                                                                               if (!payloadQuestions ||
                                                                               payloadQuestions.length === 0) {
-                                                                              await veritasAlert('❌ Error: No valid
+                                                                              await veritasAlert(`❌ Error: No valid
                                                                               questions to save. Please check your poll
-                                                                              data.', { title: 'Save poll', destructive:
+                                                                              data.`, { title: 'Save poll', destructive:
                                                                               true });
                                                                               savePollBtn.disabled = false;
                                                                               savePollBtn.innerHTML = defaultLabel;
@@ -18003,9 +10090,9 @@
                                                                               savePollBtn.disabled = false;
                                                                               savePollBtn.innerHTML = defaultLabel;
                                                                               closePollCreator();
-                                                                              await veritasAlert('Poll saved locally for
+                                                                              await veritasAlert(`Poll saved locally for
                                                                               preview. Use the live dashboard to publish
-                                                                              changes.', { title: 'Save poll' });
+                                                                              changes.`, { title: 'Save poll' });
                                                                               return;
                                                                               }
 
@@ -18139,8 +10226,8 @@
                                                                               === 'string') {
                                                                               resolve(reader.result);
                                                                               } else {
-                                                                              reject(new Error('Failed to read file
-                                                                              data'));
+                                                                              reject(new Error(`Failed to read file
+                                                                              data`));
                                                                               }
                                                                               };
                                                                               reader.onerror = function (error) {
@@ -18155,8 +10242,8 @@
                                                                               reject) {
                                                                               // Validate file before processing
                                                                               if (!file) {
-                                                                              reject(new Error('No file provided for
-                                                                              upload'));
+                                                                              reject(new Error(`No file provided for
+                                                                              upload`));
                                                                               return;
                                                                               }
                                                                               if (!file.name) {
@@ -18168,8 +10255,8 @@
                                                                               // Double-check dataUrl before sending
                                                                               if (!dataUrl || typeof dataUrl !== 'string')
                                                                               {
-                                                                              reject(new Error('Invalid data URL generated
-                                                                              from file'));
+                                                                              reject(new Error(`Invalid data URL generated
+                                                                              from file`));
                                                                               return;
                                                                               }
 
@@ -18200,22 +10287,22 @@
                                                                               return snapshot.ref.getDownloadURL();
                                                                               })
                                                                               .then(function (url) {
-                                                                              console.log('[Firebase Storage] Upload
-                                                                              success:', url);
+                                                                              console.log(`[Firebase Storage] Upload
+                                                                              success:`, url);
                                                                               resolve(url);
                                                                               })
                                                                               .catch(function (error) {
-                                                                              console.error('[Firebase Storage] Upload
-                                                                              failed:', error);
+                                                                              console.error(`[Firebase Storage] Upload
+                                                                              failed:`, error);
                                                                               // Check for retryable errors
                                                                               var msg = (error.message || '').toString();
                                                                               var isRetryable = msg.includes('retry') ||
                                                                               msg.includes('network');
 
                                                                               if (isRetryable && attempts < maxAttempts) {
-                                                                                console.warn('Upload
-                                                                                attempt ' + attempts + ' failed.
-                                                                                Retrying...', error); setTimeout(doUpload,
+                                                                                console.warn(`Upload
+                                                                                attempt ` + attempts + ` failed.
+                                                                                Retrying...`, error); setTimeout(doUpload,
                                                                                 attempts * 2000); } else { reject(new
                                                                                 Error(error.message
                                                                                 || 'Image upload failed' )); } }); }
@@ -18227,8 +10314,10 @@
 
       // --- Utilities ---
       function formatDateTime(value) {
-        if (!value) return ' —'; var date=new Date(value); if (isNaN(date.getTime())) { return value; } return
-                                                                                date.toLocaleString(); } function
+        if (!value) return ' —'; var date=new Date(value); if (isNaN(date.getTime())) { return value; }
+        return
+                                                                                date.toLocaleString(); }
+                                                                                function
                                                                                 escapeHtml(text) { if (!text) return '' ;
                                                                                 var div=document.createElement('div');
                                                                                 div.textContent=text; return
@@ -18284,17 +10373,17 @@
                                                                                 console.error('Error:', error);
 
                                                                                 // Extract error message and avoid "Error:
-                                                                                Error:" duplication
+                                                                                Error:` duplication
                                                                                 var errorMsg = (error && error.message ?
                                                                                 error.message : error) || 'Unknown error';
                                                                                 var errorString = String(errorMsg);
 
-                                                                                // Remove "Error: " prefix if it exists
+                                                                                // Remove `Error: ` prefix if it exists
                                                                                 since title already indicates error
                                                                                 if (typeof errorMsg === 'string' &&
                                                                                 errorMsg.indexOf('Error: ') === 0) {
                                                                                 errorMsg = errorMsg.substring(7); //
-                                                                                Remove "Error: " prefix
+                                                                                Remove `Error: ` prefix
                                                                                 }
 
                                                                                 // Handle generic network errors
@@ -18318,10 +10407,10 @@
                                                                                 var imgSrc =
                                                                                 document.getElementById('live-question-image').src;
                                                                                 var modalHtml = `<div
-                                                                                  style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;"
-                                                                                  onclick="this.remove()">`;
-                                                                                  modalHtml += `<img src="${imgSrc}"
-                                                                                    style="max-width:90%;max-height:90%;" />`;
+                                                                                  style=`position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;`
+                                                                                  onclick=`this.remove()`>`;
+                                                                                  modalHtml += `<img src=`${imgSrc}`
+                                                                                    style=`max-width:90%;max-height:90%;` />`;
                                                                                   modalHtml += `</div>`;
                                                                                 document.body.insertAdjacentHTML('beforeend',
                                                                                 modalHtml);
@@ -18584,7 +10673,7 @@
                                                                                 }
                                                                                 });
 
-                                                                                // Auto-Pulse "Next Question" Button When
+                                                                                // Auto-Pulse `Next Question` Button When
                                                                                 All Responded
                                                                                 // This is called from
                                                                                 updateLiveOverviewFromData
@@ -18725,7 +10814,7 @@
 
                                                                                 // PHASE 2 MIGRATION: Try Cloud Function
                                                                                 First
-                                                                                // This is the "Gold Standard" - single
+                                                                                // This is the `Gold Standard` - single
                                                                                 authority, fast, logged.
                                                                                 if (firebase && firebase.functions) {
                                                                                 try {
@@ -19069,7 +11158,7 @@
                                                                                   status is active // UI UPDATE: Find the
                                                                                   card and update the progress bar/text
                                                                                   immediately var
-                                                                                  card=document.querySelector('.student-status-card[data-email="' + CSS.escape(student.email) + '"
+                                                                                  card=document.querySelector('.student-status-card[data-email=`' + CSS.escape(student.email) + '`
                                                                                   ]'); if (card) { var
                                                                                   progressBar=card.querySelector('.progress-bar-fill');
                                                                                   var
@@ -19133,7 +11222,7 @@
                                                                                   text-xs font-bold bg-green-100
                                                                                   text-green-700 border border-green-200';
                                                                                   badgeEl.innerHTML = '<span
-                                                                                    class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+                                                                                    class=`h-2 w-2 rounded-full bg-green-500 animate-pulse`></span>
                                                                                   Realtime Active';
                                                                                   } else {
                                                                                   badgeEl.className = 'ml-4 inline-flex
@@ -19141,7 +11230,7 @@
                                                                                   text-xs font-bold bg-red-100
                                                                                   text-red-700 border border-red-200';
                                                                                   badgeEl.innerHTML = '<span
-                                                                                    class="h-2 w-2 rounded-full bg-red-500"></span>
+                                                                                    class=`h-2 w-2 rounded-full bg-red-500`></span>
                                                                                   Realtime OFF (Polling mode)';
                                                                                   }
                                                                                   }
@@ -19306,10 +11395,10 @@
                                                                                   }
 
                                                                                   var connDot = realtimeConnected ? '<span
-                                                                                    style="color:#4ade80">●</span>' :
-                                                                                  '<span style="color:#f87171">●</span>';
+                                                                                    style=`color:#4ade80`>●</span>' :
+                                                                                  '<span style=`color:#f87171`>●</span>';
                                                                                   var html = '<strong
-                                                                                    style="color:#fff">🔥 FIREBASE DEBUG
+                                                                                    style=`color:#fff`>🔥 FIREBASE DEBUG
                                                                                     (TEACHER)</strong><br>';
                                                                                   html += connDot + '
                                                                                   <strong>.info/connected:</strong> ' +
@@ -19345,7 +11434,7 @@
                                                                                   '#4ade80' : '#facc15';
                                                                                   html += ' • ' + key.substring(0, 8) +
                                                                                   '...: <span
-                                                                                    style="color:' + statusColor + '">' +
+                                                                                    style=`color:' + statusColor + '`>' +
                                                                                     realtimeStatuses[key] + '</span><br>';
                                                                                   });
                                                                                   }
@@ -19381,7 +11470,7 @@
                                                                                   Math.round((Date.now() -
                                                                                   lastViolation.timestamp) / 1000);
                                                                                   html += '<strong
-                                                                                    style="color:#f87171">Last
+                                                                                    style=`color:#f87171`>Last
                                                                                     violation:</strong> ' +
                                                                                   lastViolation.studentKey.substring(0, 8)
                                                                                   + '... - ' + lastViolation.reason + ' ('
@@ -19650,79 +11739,79 @@
                                                                                   card.dataset.email = student.email;
                                                                                   card.innerHTML = `
                                                                                   <div
-                                                                                    class="flex items-start justify-between gap-3">
+                                                                                    class=`flex items-start justify-between gap-3`>
                                                                                     <div>
                                                                                       <p
-                                                                                        class="text-base font-semibold text-brand-dark-gray dark:text-white">
+                                                                                        class=`text-base font-semibold text-brand-dark-gray dark:text-white`>
                                                                                         ${escapeHtml(student.name)}</p>
                                                                                       <div
-                                                                                        class="flex items-center gap-2 flex-wrap mt-1">
+                                                                                        class=`flex items-center gap-2 flex-wrap mt-1`>
                                                                                         <span
-                                                                                          class="inline-flex px-2.5 py-1 text-xs font-semibold rounded-full ${statusClass}">${student.status}</span>
+                                                                                          class=`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full ${statusClass}`>${student.status}</span>
                                                                                         ${renderTelemetryPill(student.telemetry)}
                                                                                       </div>
                                                                                     </div>
                                                                                     <div
-                                                                                      class="flex items-center gap-3 text-xs text-slate-500">
-                                                                                      <button type="button"
-                                                                                        class="mission-select-btn rounded-full border border-slate-300 dark:border-slate-600 p-1.5 text-slate-500 hover:text-veritas-navy"
-                                                                                        data-action="toggle-select"
-                                                                                        data-email="${student.email}"
-                                                                                        aria-pressed="${selected ? 'true' : 'false'}"
-                                                                                        title="Select student">
+                                                                                      class=`flex items-center gap-3 text-xs text-slate-500`>
+                                                                                      <button type=`button`
+                                                                                        class=`mission-select-btn rounded-full border border-slate-300 dark:border-slate-600 p-1.5 text-slate-500 hover:text-veritas-navy`
+                                                                                        data-action=`toggle-select`
+                                                                                        data-email=`${student.email}`
+                                                                                        aria-pressed=`${selected ? 'true' : 'false'}`
+                                                                                        title=`Select student`>
                                                                                         <span
-                                                                                          class="material-symbols-outlined text-base"
-                                                                                          data-role="selection-icon">${selected
+                                                                                          class=`material-symbols-outlined text-base`
+                                                                                          data-role=`selection-icon`>${selected
                                                                                           ? 'check_circle' :
                                                                                           'radio_button_unchecked'}</span>
                                                                                       </button>
                                                                                       <div
-                                                                                        class="flex items-center gap-1.5">
+                                                                                        class=`flex items-center gap-1.5`>
                                                                                         <span
-                                                                                          class="h-2.5 w-2.5 rounded-full ${connectionClass}"></span>
+                                                                                          class=`h-2.5 w-2.5 rounded-full ${connectionClass}`></span>
                                                                                         <span>${connectionLabel}</span>
                                                                                       </div>
                                                                                     </div>
                                                                                   </div>
                                                                                   <div>
                                                                                     <div
-                                                                                      class="flex items-center justify-between text-xs text-slate-500 mb-1">
+                                                                                      class=`flex items-center justify-between text-xs text-slate-500 mb-1`>
                                                                                       <span>${progressDisplay}</span>
                                                                                       <span>Remaining ${timeLabel}</span>
                                                                                     </div>
                                                                                     <div
-                                                                                      class="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800">
+                                                                                      class=`w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800`>
                                                                                       <div
-                                                                                        class="h-2 rounded-full ${progressFillClass}"
-                                                                                        style="width: ${progressPct}%">
+                                                                                        class=`h-2 rounded-full ${progressFillClass}`
+                                                                                        style=`width: ${progressPct}%`>
                                                                                       </div>
                                                                                     </div>
                                                                                     <div
-                                                                                      class="flex items-center justify-between text-xs text-slate-600 mt-2">
+                                                                                      class=`flex items-center justify-between text-xs text-slate-600 mt-2`>
                                                                                       <span
-                                                                                        class="font-semibold">${scoreSummary}</span>
+                                                                                        class=`font-semibold`>${scoreSummary}</span>
                                                                                       <span>${scorePctSummary}</span>
                                                                                     </div>
                                                                                   </div>
-                                                                                  <div class="flex flex-col gap-2 pt-1">
+                                                                                  <div class=`flex flex-col gap-2 pt-1`>
                                                                                     <button
-                                                                                      class="mission-manage-btn inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 dark:border-slate-600 px-4 py-2 text-sm font-semibold text-brand-dark-gray dark:text-white hover:bg-slate-50 disabled:opacity-60"
-                                                                                      data-action="manage-student"
-                                                                                      data-email="${student.email}"
+                                                                                      class=`mission-manage-btn inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 dark:border-slate-600 px-4 py-2 text-sm font-semibold text-brand-dark-gray dark:text-white hover:bg-slate-50 disabled:opacity-60`
+                                                                                      data-action=`manage-student`
+                                                                                      data-email=`${student.email}`
                                                                                       ${manageDisabled ? 'disabled' : ''
                                                                                       }>
                                                                                       <span
-                                                                                        class="material-symbols-outlined text-base">tune</span>
+                                                                                        class=`material-symbols-outlined text-base`>tune</span>
                                                                                       Manage
                                                                                     </button>
                                                                                     ${requiresUnlock ? `<button
-                                                                                      type="button"
-                                                                                      class="inline-flex items-center justify-center gap-2 rounded-full border border-blue-200 text-blue-700 bg-blue-50 px-4 py-2 text-xs font-semibold hover:bg-blue-100"
-                                                                                      data-action="unlock-student"
-                                                                                      data-email="${student.email}"
-                                                                                      data-lock-version="${student.lockVersion || 0}">
+                                                                                      type=`button`
+                                                                                      class=`inline-flex items-center justify-center gap-2 rounded-full border border-blue-200 text-blue-700 bg-blue-50 px-4 py-2 text-xs font-semibold hover:bg-blue-100`
+                                                                                      data-action=`unlock-student`
+                                                                                      data-email=`${student.email}`
+                                                                                      data-lock-version=`${student.lockVersion || 0}`>
                                                                                       <span
-                                                                                        class="material-symbols-outlined text-base">lock_open_right</span>
+                                                                                        class=`material-symbols-outlined text-base`>lock_open_right</span>
                                                                                       <span>Approve re-entry</span>
                                                                                     </button>` : ''}
                                                                                   </div>
@@ -19759,7 +11848,7 @@
                                                                                   function attachSelectionHandlers() {
                                                                                   var toggles =
                                                                                   document.querySelectorAll('#individual-session-students-grid
-                                                                                  [data-action="toggle-select"]');
+                                                                                  [data-action=`toggle-select`]');
                                                                                   toggles.forEach(function (toggle) {
                                                                                   toggle.addEventListener('click',
                                                                                   function (event) {
@@ -19773,7 +11862,7 @@
                                                                                   function attachUnlockHandlers() {
                                                                                   var buttons =
                                                                                   document.querySelectorAll('#individual-session-students-grid
-                                                                                  [data-action="unlock-student"]');
+                                                                                  [data-action=`unlock-student`]');
                                                                                   buttons.forEach(function (btn) {
                                                                                   btn.addEventListener('click', function
                                                                                   (event) {
@@ -19830,14 +11919,14 @@
                                                                                   card.classList.toggle('shadow-lg',
                                                                                   !!selected);
                                                                                   var icon =
-                                                                                  card.querySelector('[data-role="selection-icon"]');
+                                                                                  card.querySelector('[data-role=`selection-icon`]');
                                                                                   if (icon) {
                                                                                   icon.textContent = selected ?
                                                                                   'check_circle' :
                                                                                   'radio_button_unchecked';
                                                                                   }
                                                                                   var toggle =
-                                                                                  card.querySelector('[data-action="toggle-select"]');
+                                                                                  card.querySelector('[data-action=`toggle-select`]');
                                                                                   if (toggle) {
                                                                                   toggle.setAttribute('aria-pressed',
                                                                                   selected ? 'true' : 'false');
@@ -19942,7 +12031,8 @@
                                                                                     await veritasAlert('Enter a positive
                                                                                     number of minutes to add.', {
                                                                                     title: 'Extend time' });
-                                                                                    bulkTimeInput.focus(); return; } if
+                                                                                    bulkTimeInput.focus(); return; }
+                                                                                    if
                                                                                     (PREVIEW_MODE) { await
                                                                                     previewOnlyNotice('adjust secure
                                                                                     assessment time'); return; }
@@ -19975,7 +12065,8 @@
                                                                                     currentMissionControlPollId,
                                                                                     currentSecureSessionId,
                                                                                     Array.from(missionControlSelectedEmails),
-                                                                                    minutes ); } } function
+                                                                                    minutes ); } }
+                                                                                    function
                                                                                     pollIndividualSessionState() { if
                                                                                     (!currentMissionControlPollId ||
                                                                                     !currentSecureSessionId) { return; }
@@ -20031,7 +12122,8 @@
                                                                                       missionControlPollFailures++; } else
                                                                                       { handleError(error); } } })
                                                                                       .getIndividualTimedSessionTeacherView(currentMissionControlPollId,
-                                                                                      currentSecureSessionId); } function
+                                                                                      currentSecureSessionId); }
+                                                                                      function
                                                                                       updateMissionControlSummary(summary)
                                                                                       { var
                                                                                       readyEl=document.getElementById('summary-not-started');
@@ -20043,18 +12135,22 @@
                                                                                       completedEl=document.getElementById('summary-completed');
                                                                                       if (readyEl) {
                                                                                       readyEl.textContent=summary.notStarted
-                                                                                      || 0; } if (inProgressEl) {
+                                                                                      || 0; }
+                                                                                      if (inProgressEl) {
                                                                                       inProgressEl.textContent=summary.inProgress
-                                                                                      || 0; } var flagged=(summary.locked
+                                                                                      || 0; }
+                                                                                      var flagged=(summary.locked
                                                                                       || 0) + (summary.paused || 0); if
                                                                                       (lockedEl) {
-                                                                                      lockedEl.textContent=flagged; } if
+                                                                                      lockedEl.textContent=flagged; }
+                                                                                      if
                                                                                       (completedEl) {
                                                                                       completedEl.textContent=summary.completed
-                                                                                      || 0; } } function
+                                                                                      || 0; } }
+                                                                                      function
                                                                                       attachManageHandlers() { var
                                                                                       buttons=document.querySelectorAll('#individual-session-students-grid
-                                                                                      [data-action="manage-student" ]');
+                                                                                      [data-action=`manage-student` ]');
                                                                                       buttons.forEach(function (btn) {
                                                                                       btn.addEventListener('click',
                                                                                       function () { var
@@ -20064,14 +12160,16 @@
                                                                                       student.email===email; }); if
                                                                                       (target) {
                                                                                       openStudentManager(target); } });
-                                                                                      }); } function
+                                                                                      }); }
+                                                                                      function
                                                                                       openStudentManager(student) { if
                                                                                       (!studentManagerModal || !student) {
                                                                                       return; }
                                                                                       currentManagedStudent=student;
                                                                                       updateStudentManagerUi(student);
                                                                                       studentManagerModal.classList.remove('hidden');
-                                                                                      } function closeStudentManager() {
+                                                                                      }
+                                                                                      function closeStudentManager() {
                                                                                       if (!studentManagerModal) { return;
                                                                                       }
                                                                                       studentManagerModal.classList.add('hidden');
@@ -20082,7 +12180,8 @@
                                                                                       !missionControlStudents.length ||
                                                                                       !studentManagerModal ||
                                                                                       studentManagerModal.classList.contains('hidden'))
-                                                                                      { return; } var
+                                                                                      { return; }
+                                                                                      var
                                                                                       updated=missionControlStudents.find(function
                                                                                       (student) { return
                                                                                       student.email===currentManagedStudent.email;
@@ -20091,12 +12190,15 @@
                                                                                       updateStudentManagerUi(updated); } }
                                                                                       function
                                                                                       updateStudentManagerUi(student) { if
-                                                                                      (!student) { return; } if
+                                                                                      (!student) { return; }
+                                                                                      if
                                                                                       (studentManagerName) {
                                                                                       studentManagerName.textContent=student.name;
-                                                                                      } if (studentManagerStatus) {
+                                                                                      }
+                                                                                      if (studentManagerStatus) {
                                                                                       studentManagerStatus.textContent=student.status;
-                                                                                      } if (studentManagerProgress) { var
+                                                                                      }
+                                                                                      if (studentManagerProgress) { var
                                                                                       answeredQuestions=student.progress
                                                                                       || 0; var progressText='Q ' +
                                                                                       answeredQuestions + ' / ' +
@@ -20165,7 +12267,7 @@
                                                                                       if (studentManagerPause) {
                                                                                       studentManagerPause.innerHTML =
                                                                                       '<span
-                                                                                        class="material-symbols-outlined text-base">'
+                                                                                        class=`material-symbols-outlined text-base`>'
                                                                                         + (student.pauseActive ?
                                                                                         'play_arrow' : 'pause_circle') +
                                                                                         '</span><span>' +
@@ -20343,7 +12445,7 @@
                                                                                       if
                                                                                       (overview.interpretation.participation)
                                                                                       {
-                                                                                      html += '<div class="mb-2">
+                                                                                      html += '<div class=`mb-2`>
                                                                                         <strong>Participation:</strong> '
                                                                                         +
                                                                                         overview.interpretation.participation.message
@@ -20353,7 +12455,7 @@
                                                                                       if
                                                                                       (overview.interpretation.meanScore)
                                                                                       {
-                                                                                      html += '<div class="mb-2">
+                                                                                      html += '<div class=`mb-2`>
                                                                                         <strong>Class
                                                                                           Performance:</strong> ' +
                                                                                         overview.interpretation.meanScore.message
@@ -20391,13 +12493,13 @@
                                                                                       var rankBadge = '';
                                                                                       if (student.rank === 1) rankBadge =
                                                                                       '<span
-                                                                                        class="ml-2 text-yellow-500">🥇</span>';
+                                                                                        class=`ml-2 text-yellow-500`>🥇</span>';
                                                                                       else if (student.rank === 2)
                                                                                       rankBadge = '<span
-                                                                                        class="ml-2 text-gray-400">🥈</span>';
+                                                                                        class=`ml-2 text-gray-400`>🥈</span>';
                                                                                       else if (student.rank === 3)
                                                                                       rankBadge = '<span
-                                                                                        class="ml-2 text-orange-600">🥉</span>';
+                                                                                        class=`ml-2 text-orange-600`>🥉</span>';
 
                                                                                       var percentageClass =
                                                                                       'text-slate-700
@@ -20418,28 +12520,28 @@
                                                                                       dark:text-red-400';
 
                                                                                       row.innerHTML = '<td
-                                                                                        class="px-4 py-3 text-sm font-semibold">
+                                                                                        class=`px-4 py-3 text-sm font-semibold`>
                                                                                         ' + student.rank + rankBadge + '
                                                                                       </td>' +
                                                                                       '<td
-                                                                                        class="px-4 py-3 text-sm font-medium text-brand-dark-gray dark:text-white">
+                                                                                        class=`px-4 py-3 text-sm font-medium text-brand-dark-gray dark:text-white`>
                                                                                         ' + escapeHtml(student.name) + '
                                                                                       </td>' +
                                                                                       '<td
-                                                                                        class="px-4 py-3 text-sm text-center">
+                                                                                        class=`px-4 py-3 text-sm text-center`>
                                                                                         ' + student.totalScore + '/' +
                                                                                         student.maxScore + '</td>' +
                                                                                       '<td
-                                                                                        class="px-4 py-3 text-sm text-center ' + percentageClass + '">
+                                                                                        class=`px-4 py-3 text-sm text-center ' + percentageClass + '`>
                                                                                         ' + student.percentage + '%</td>'
                                                                                       +
                                                                                       '<td
-                                                                                        class="px-4 py-3 text-sm text-center">
+                                                                                        class=`px-4 py-3 text-sm text-center`>
                                                                                         ' + student.percentileRank + 'th
                                                                                       </td>' +
-                                                                                      '<td class="px-4 py-3 text-center">
+                                                                                      '<td class=`px-4 py-3 text-center`>
                                                                                         <button
-                                                                                          class="px-3 py-1 text-xs font-semibold rounded-lg bg-veritas-gold/10 text-veritas-gold hover:bg-veritas-gold/20 transition-colors">View
+                                                                                          class=`px-3 py-1 text-xs font-semibold rounded-lg bg-veritas-gold/10 text-veritas-gold hover:bg-veritas-gold/20 transition-colors`>View
                                                                                           Details</button>
                                                                                       </td>';
 
@@ -20472,20 +12574,20 @@
                                                                                       item.interpretation.overall.color;
 
                                                                                       var html = '<div
-                                                                                        class="flex items-start justify-between gap-4 mb-4">
+                                                                                        class=`flex items-start justify-between gap-4 mb-4`>
                                                                                         ' +
-                                                                                        '<div class="flex-1">
+                                                                                        '<div class=`flex-1`>
                                                                                           <h4
-                                                                                            class="text-lg font-bold text-brand-dark-gray dark:text-white mb-2">
+                                                                                            class=`text-lg font-bold text-brand-dark-gray dark:text-white mb-2`>
                                                                                             Question ' + (idx + 1) + '
                                                                                           </h4>' +
                                                                                           '<p
-                                                                                            class="text-sm text-slate-600 dark:text-slate-400">
+                                                                                            class=`text-sm text-slate-600 dark:text-slate-400`>
                                                                                             ' +
                                                                                             escapeHtml(item.questionText)
                                                                                             + '</p>
                                                                                         </div>' +
-                                                                                        '<div class="flex gap-2">';
+                                                                                        '<div class=`flex gap-2`>';
 
                                                                                           item.flags.forEach(function
                                                                                           (flag) {
@@ -20493,7 +12595,7 @@
                                                                                           flag.replace(/-/g, '
                                                                                           ').toUpperCase();
                                                                                           html += '<span
-                                                                                            class="px-2 py-1 text-xs font-semibold rounded bg-red-100 text-red-800">⚠'
+                                                                                            class=`px-2 py-1 text-xs font-semibold rounded bg-red-100 text-red-800`>⚠'
                                                                                             + flagLabel + '</span>';
                                                                                           });
 
@@ -20502,63 +12604,63 @@
 
                                                                                       // Psychometric metrics
                                                                                       html += '<div
-                                                                                        class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                                                                        class=`grid grid-cols-2 md:grid-cols-4 gap-4 mb-4`>
                                                                                         ' +
                                                                                         '<div
-                                                                                          class="bg-slate-50 dark:bg-brand-dark-gray/40 rounded-lg p-3">
+                                                                                          class=`bg-slate-50 dark:bg-brand-dark-gray/40 rounded-lg p-3`>
                                                                                           <p
-                                                                                            class="text-xs text-slate-500 mb-1">
+                                                                                            class=`text-xs text-slate-500 mb-1`>
                                                                                             Difficulty (P-Value)</p>
-                                                                                          <p class="text-2xl font-bold"
-                                                                                            style="color:' + difficultyColor + '">
+                                                                                          <p class=`text-2xl font-bold`
+                                                                                            style=`color:' + difficultyColor + '`>
                                                                                             ' + (item.difficultyPct || 0)
                                                                                             + '%</p>
                                                                                           <p
-                                                                                            class="text-xs text-slate-600 dark:text-slate-400">
+                                                                                            class=`text-xs text-slate-600 dark:text-slate-400`>
                                                                                             ' +
                                                                                             item.interpretation.difficulty.message
                                                                                             + '</p>
                                                                                         </div>' +
                                                                                         '<div
-                                                                                          class="bg-slate-50 dark:bg-brand-dark-gray/40 rounded-lg p-3">
+                                                                                          class=`bg-slate-50 dark:bg-brand-dark-gray/40 rounded-lg p-3`>
                                                                                           <p
-                                                                                            class="text-xs text-slate-500 mb-1">
+                                                                                            class=`text-xs text-slate-500 mb-1`>
                                                                                             Discrimination</p>
-                                                                                          <p class="text-2xl font-bold"
-                                                                                            style="color:' + discriminationColor + '">
+                                                                                          <p class=`text-2xl font-bold`
+                                                                                            style=`color:' + discriminationColor + '`>
                                                                                             ' +
                                                                                             item.discrimination.toFixed(2)
                                                                                             + '</p>
                                                                                           <p
-                                                                                            class="text-xs text-slate-600 dark:text-slate-400">
+                                                                                            class=`text-xs text-slate-600 dark:text-slate-400`>
                                                                                             ' +
                                                                                             item.interpretation.discrimination.message
                                                                                             + '</p>
                                                                                         </div>' +
                                                                                         '<div
-                                                                                          class="bg-slate-50 dark:bg-brand-dark-gray/40 rounded-lg p-3">
+                                                                                          class=`bg-slate-50 dark:bg-brand-dark-gray/40 rounded-lg p-3`>
                                                                                           <p
-                                                                                            class="text-xs text-slate-500 mb-1">
+                                                                                            class=`text-xs text-slate-500 mb-1`>
                                                                                             Responses</p>
                                                                                           <p
-                                                                                            class="text-2xl font-bold text-slate-700 dark:text-slate-300">
+                                                                                            class=`text-2xl font-bold text-slate-700 dark:text-slate-300`>
                                                                                             ' + item.responseCount + '</p>
                                                                                           <p
-                                                                                            class="text-xs text-slate-600 dark:text-slate-400">
+                                                                                            class=`text-xs text-slate-600 dark:text-slate-400`>
                                                                                             students answered</p>
                                                                                         </div>' +
                                                                                         '<div
-                                                                                          class="bg-slate-50 dark:bg-brand-dark-gray/40 rounded-lg p-3">
+                                                                                          class=`bg-slate-50 dark:bg-brand-dark-gray/40 rounded-lg p-3`>
                                                                                           <p
-                                                                                            class="text-xs text-slate-500 mb-1">
+                                                                                            class=`text-xs text-slate-500 mb-1`>
                                                                                             Overall Quality</p>
-                                                                                          <p class="text-sm font-bold"
-                                                                                            style="color:' + overallColor + '">
+                                                                                          <p class=`text-sm font-bold`
+                                                                                            style=`color:' + overallColor + '`>
                                                                                             ' +
                                                                                             item.interpretation.overall.quality.toUpperCase()
                                                                                             + '</p>
                                                                                           <p
-                                                                                            class="text-xs text-slate-600 dark:text-slate-400">
+                                                                                            class=`text-xs text-slate-600 dark:text-slate-400`>
                                                                                             ' +
                                                                                             item.interpretation.overall.message
                                                                                             + '</p>
@@ -20570,11 +12672,11 @@
                                                                                       item.distractorAnalysis.length > 0)
                                                                                       {
                                                                                       html += '<div
-                                                                                        class="border-t border-slate-200 dark:border-brand-dark-gray/40 pt-4">
+                                                                                        class=`border-t border-slate-200 dark:border-brand-dark-gray/40 pt-4`>
                                                                                         <h5
-                                                                                          class="text-sm font-semibold text-brand-dark-gray dark:text-white mb-3">
+                                                                                          class=`text-sm font-semibold text-brand-dark-gray dark:text-white mb-3`>
                                                                                           Answer Choice Analysis</h5>' +
-                                                                                        '<div class="space-y-2">';
+                                                                                        '<div class=`space-y-2`>';
 
                                                                                           item.distractorAnalysis.forEach(function
                                                                                           (dist) {
@@ -20591,40 +12693,40 @@
                                                                                           var icon = isCorrect ? '✓' : '';
 
                                                                                           html += '<div
-                                                                                            class="flex items-center gap-3 p-3 rounded-lg border ' + bgClass + '">
+                                                                                            class=`flex items-center gap-3 p-3 rounded-lg border ' + bgClass + '`>
                                                                                             ' +
                                                                                             '<div
-                                                                                              class="flex-shrink-0 w-8 h-8 rounded-full bg-white dark:bg-brand-dark-gray flex items-center justify-center font-bold text-sm">
+                                                                                              class=`flex-shrink-0 w-8 h-8 rounded-full bg-white dark:bg-brand-dark-gray flex items-center justify-center font-bold text-sm`>
                                                                                               ' + dist.optionLetter + '
                                                                                             </div>' +
-                                                                                            '<div class="flex-1">
+                                                                                            '<div class=`flex-1`>
                                                                                               <p
-                                                                                                class="text-sm font-medium text-brand-dark-gray dark:text-white">
+                                                                                                class=`text-sm font-medium text-brand-dark-gray dark:text-white`>
                                                                                                 ' + icon + ' ' +
                                                                                                 escapeHtml(dist.option) +
                                                                                                 (isCorrect ? ' <span
-                                                                                                  class="text-green-600 dark:text-green-400">(Correct
+                                                                                                  class=`text-green-600 dark:text-green-400`>(Correct
                                                                                                   Answer)</span>' : '') +
                                                                                                 '</p>
                                                                                             </div>' +
-                                                                                            '<div class="text-right">
+                                                                                            '<div class=`text-right`>
                                                                                               <p
-                                                                                                class="text-sm font-bold text-brand-dark-gray dark:text-white">
+                                                                                                class=`text-sm font-bold text-brand-dark-gray dark:text-white`>
                                                                                                 ' +
                                                                                                 dist.totalPct.toFixed(1) +
                                                                                                 '%</p>
                                                                                               <p
-                                                                                                class="text-xs text-slate-500">
+                                                                                                class=`text-xs text-slate-500`>
                                                                                                 selected</p>
                                                                                             </div>' +
-                                                                                            '<div class="text-right">
+                                                                                            '<div class=`text-right`>
                                                                                               <p
-                                                                                                class="text-xs text-slate-500">
+                                                                                                class=`text-xs text-slate-500`>
                                                                                                 High: ' +
                                                                                                 dist.highGroupPct.toFixed(1)
                                                                                                 + '%</p>
                                                                                               <p
-                                                                                                class="text-xs text-slate-500">
+                                                                                                class=`text-xs text-slate-500`>
                                                                                                 Low: ' +
                                                                                                 dist.lowGroupPct.toFixed(1)
                                                                                                 + '%</p>
@@ -20670,7 +12772,8 @@
                                                                                         th=document.createElement('th');
                                                                                         th.className='bg-slate-100 dark:bg-brand-dark-gray/50 px-3 py-2 text-center font-semibold border-l border-slate-300 dark:border-brand-dark-gray/60'
                                                                                         ; th.textContent='Q' + (i + 1);
-                                                                                        headerRow.appendChild(th); } var
+                                                                                        headerRow.appendChild(th); }
+                                                                                        var
                                                                                         totalHeader=document.createElement('th');
                                                                                         totalHeader.className='bg-slate-100 dark:bg-brand-dark-gray/50 px-3 py-2 text-center font-semibold'
                                                                                         ; totalHeader.textContent='Total'
@@ -20696,13 +12799,13 @@
                                                                                         (qResp.isCorrect) { cell.className
                                                                                         +=' bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 font-semibold'
                                                                                         ;
-                                                                                        cell.innerHTML='✓<br><span class="text-[10px]">'
+                                                                                        cell.innerHTML='✓<br><span class=`text-[10px]`>'
                                                                                         + escapeHtml(qResp.studentAnswer)
                                                                                         + '</span>' ; } else {
                                                                                         cell.className
                                                                                         +=' bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 font-semibold'
                                                                                         ;
-                                                                                        cell.innerHTML='✗<br><span class="text-[10px]">'
+                                                                                        cell.innerHTML='✗<br><span class=`text-[10px]`>'
                                                                                         + escapeHtml(qResp.studentAnswer)
                                                                                         + '</span>' ; } } else {
                                                                                         cell.className
@@ -20761,29 +12864,31 @@
                                                                                         (!qResp.answered) {
                                                                                         statusClass='bg-slate-100 text-slate-600 dark:bg-brand-dark-gray/40 dark:text-slate-400'
                                                                                         ; statusIcon='—' ;
-                                                                                        statusText='Not Answered' ; } var
-                                                                                        html='<div class="flex items-start justify-between gap-4 mb-3">'
-                                                                                        + '<h5 class="text-sm font-bold text-brand-dark-gray dark:text-white">Question '
+                                                                                        statusText='Not Answered' ; }
+                                                                                        var
+                                                                                        html='<div class=`flex items-start justify-between gap-4 mb-3`>'
+                                                                                        + '<h5 class=`text-sm font-bold text-brand-dark-gray dark:text-white`>Question '
                                                                                         + (idx + 1) + '</h5>'
-                                                                                        + '<span class="px-3 py-1 text-xs font-semibold rounded-full '
-                                                                                        + statusClass + '">' + statusIcon
+                                                                                        + '<span class=`px-3 py-1 text-xs font-semibold rounded-full `
+                                                                                        + statusClass + ``>' + statusIcon
                                                                                         + ' ' + statusText + '</span>'
                                                                                         + '</div>'
-                                                                                        + '<p class="text-sm text-slate-700 dark:text-slate-300 mb-3">'
+                                                                                        + '<p class=`text-sm text-slate-700 dark:text-slate-300 mb-3`>'
                                                                                         + escapeHtml(qResp.questionText)
                                                                                         + '</p>' ; if (qResp.answered) {
-                                                                                        html +='<div class="space-y-2">'
-                                                                                        + '<div><span class="text-xs font-semibold text-slate-500">Student Answer:</span> <span class="text-sm font-medium text-brand-dark-gray dark:text-white">'
+                                                                                        html +='<div class=`space-y-2`>'
+                                                                                        + '<div><span class=`text-xs font-semibold text-slate-500">Student Answer:</span> <span class="text-sm font-medium text-brand-dark-gray dark:text-white`>'
                                                                                         + escapeHtml(qResp.studentAnswer)
                                                                                         + '</span></div>'
-                                                                                        + '<div><span class="text-xs font-semibold text-slate-500">Correct Answer:</span> <span class="text-sm font-medium text-green-700 dark:text-green-400">'
+                                                                                        + '<div><span class=`text-xs font-semibold text-slate-500">Correct Answer:</span> <span class="text-sm font-medium text-green-700 dark:text-green-400`>'
                                                                                         + escapeHtml(qResp.correctAnswer)
                                                                                         + '</span></div>' + '</div>' ; }
                                                                                         card.innerHTML=html;
                                                                                         responsesContainer.appendChild(card);
                                                                                         }); }
                                                                                         detailView.classList.remove('hidden');
-                                                                                        } function closeStudentDetail() {
+                                                                                        }
+                                                                                        function closeStudentDetail() {
                                                                                         var
                                                                                         detailView=document.getElementById('book-student-detail');
                                                                                         if (detailView)
@@ -20801,7 +12906,8 @@
                                                                                         !detailView.classList.contains('hidden'))
                                                                                         { closeStudentDetail(); } } });
                                                                                         function switchBookTab(tabName) {
-                                                                                        // Update tab buttons var
+                                                                                        // Update tab buttons
+                                                                                        var
                                                                                         tabs=['students', 'questions'
                                                                                         , 'matrix' ];
                                                                                         tabs.forEach(function (tab) { var
@@ -20813,36 +12919,38 @@
                                                                                         btn.className='px-6 py-3 font-semibold text-sm transition-colors border-b-2 border-veritas-gold text-veritas-gold'
                                                                                         ; } else {
                                                                                         btn.className='px-6 py-3 font-semibold text-sm transition-colors border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-veritas-gold hover:border-veritas-gold/30'
-                                                                                        ; } } if (content) { if
+                                                                                        ; } }
+                                                                                        if (content) { if
                                                                                         (tab===tabName) {
                                                                                         content.classList.remove('hidden');
                                                                                         } else {
                                                                                         content.classList.add('hidden'); }
-                                                                                        } }); } function escapeHtml(text)
+                                                                                        } }); }
+                                                                                        function escapeHtml(text)
                                                                                         { if (!text) return '' ; var
                                                                                         map={ '&' : '&amp;' , '<' : '&lt;'
-                                                                                        , '>' : '&gt;' , '"' : '&quot;'
-                                                                                        , "'" : '&#039;' }; return
-                                                                                        String(text).replace(/[&<>"']/g,
+                                                                                        , '>' : '&gt;' , '`' : '&quot;`
+                                                                                        , "`` : '&#039;' }; return
+                                                                                        String(text).replace(/[&<>``]/g,
                                                                                         function (m) { return map[m]; });
                                                                                         }
 
                                                                                         // Bind book view events
-                                                                                        bindClick('view-book-report-btn',
+                                                                                        bindClick(`view-book-report-btn`,
                                                                                         openBookView);
 
                                                                                         // FIX Bug #6: Add secure view
                                                                                         links button handler
-                                                                                        bindClick('secure-view-links-btn',
+                                                                                        bindClick(`secure-view-links-btn`,
                                                                                         function () {
-                                                                                        // Use the current poll data's
+                                                                                        // Use the current poll data`s
                                                                                         className if available
                                                                                         var className = CURRENT_POLL_DATA
                                                                                         && CURRENT_POLL_DATA.className;
                                                                                         if (!className) {
-                                                                                        veritasAlert('No class assigned to
-                                                                                        this assessment.', { title: 'View
-                                                                                        Links', destructive: true });
+                                                                                        veritasAlert(`No class assigned to
+                                                                                        this assessment.`, { title: `View
+                                                                                        Links`, destructive: true });
                                                                                         return;
                                                                                         }
                                                                                         // Set viewLinksBtn dataset so
@@ -20879,8 +12987,8 @@
                                                                                         openLinksModalWithData(className,
                                                                                         links);
                                                                                         } else {
-                                                                                        veritasAlert('No students found in
-                                                                                        this class roster.', { title:
+                                                                                        veritasAlert(`No students found in
+                                                                                        this class roster.`, { title:
                                                                                         'View Links', destructive: true
                                                                                         });
                                                                                         }
@@ -20918,8 +13026,8 @@
                                                                                         runMissionControlAction(fnName,
                                                                                         args) {
                                                                                         if (PREVIEW_MODE) {
-                                                                                        previewOnlyNotice('manage secure
-                                                                                        assessments');
+                                                                                        previewOnlyNotice(`manage secure
+                                                                                        assessments`);
                                                                                         return;
                                                                                         }
                                                                                         if (!currentMissionControlPollId
@@ -21037,8 +13145,8 @@
                                                                                         if (!currentManagedStudent) {
                                                                                         return; }
                                                                                         var confirmed = await
-                                                                                        veritasConfirm('Force submit and
-                                                                                        lock ' +
+                                                                                        veritasConfirm(`Force submit and
+                                                                                        lock ` +
                                                                                         currentManagedStudent.name + '?',
                                                                                         { title: 'Force submit',
                                                                                         destructive: true, confirmText:
@@ -21136,7 +13244,7 @@
                                                                                         showResultsImmediately: false,
                                                                                         pollId: null, // For edit mode
                                                                                         isEditMode: false // Track if
-                                                                                        we're editing
+                                                                                        we`re editing
                                                                                         };
 
                                                                                         var wizardQuestionIdCounter = 0;
@@ -21157,16 +13265,16 @@
                                                                                         wizardState = {
                                                                                         currentStep: 1,
                                                                                         mode: null,
-                                                                                        pollName: '',
-                                                                                        className: '',
+                                                                                        pollName: ``,
+                                                                                        className: ``,
                                                                                         timeLimitMinutes: null,
-                                                                                        accessCode: '',
+                                                                                        accessCode: ``,
                                                                                         availabilityStart: null,
                                                                                         availabilityEnd: null,
                                                                                         calculatorEnabled: false,
                                                                                         proctoringRules:
-                                                                                        ['FULLSCREEN_REQUIRED',
-                                                                                        'DETECT_TAB_SWITCH'],
+                                                                                        [`FULLSCREEN_REQUIRED`,
+                                                                                        `DETECT_TAB_SWITCH`],
                                                                                         questions: [],
                                                                                         showResultsImmediately: false,
                                                                                         pollId: isEdit ? pollData.pollId :
@@ -21180,30 +13288,30 @@
                                                                                         with existing poll data
                                                                                         if (isEdit && pollData) {
                                                                                         wizardState.pollName =
-                                                                                        pollData.pollName || '';
+                                                                                        pollData.pollName || ``;
                                                                                         wizardState.className =
-                                                                                        pollData.className || '';
+                                                                                        pollData.className || ``;
 
                                                                                         // Determine mode from session
                                                                                         type
                                                                                         var sessionType =
                                                                                         normalizeSessionTypeClient(pollData.sessionType);
                                                                                         wizardState.mode = (sessionType
-                                                                                        === 'SECURE_ASSESSMENT') ?
-                                                                                        'secure' : 'live';
+                                                                                        === `SECURE_ASSESSMENT`) ?
+                                                                                        `secure' : 'live`;
 
                                                                                         // Load secure settings if
                                                                                         applicable
-                                                                                        if (wizardState.mode === 'secure')
+                                                                                        if (wizardState.mode === `secure`)
                                                                                         {
                                                                                         wizardState.timeLimitMinutes =
                                                                                         typeof pollData.timeLimitMinutes
-                                                                                        === 'number'
+                                                                                        === `number`
                                                                                         ? pollData.timeLimitMinutes
                                                                                         : (pollData.secureSettings &&
                                                                                         typeof
                                                                                         pollData.secureSettings.timeLimitMinutes
-                                                                                        === 'number'
+                                                                                        === `number`
                                                                                         ?
                                                                                         pollData.secureSettings.timeLimitMinutes
                                                                                         : 60);
@@ -21211,7 +13319,7 @@
                                                                                         (pollData.accessCode ||
                                                                                         (pollData.secureSettings &&
                                                                                         pollData.secureSettings.accessCode)
-                                                                                        || '').toString().toUpperCase();
+                                                                                        || ``).toString().toUpperCase();
                                                                                         wizardState.availabilityStart =
                                                                                         pollData.availableFrom ||
                                                                                         (pollData.secureSettings &&
@@ -21239,8 +13347,8 @@
                                                                                         var options = (q.options ||
                                                                                         []).map(function (opt) {
                                                                                         return {
-                                                                                        text: opt.text || '',
-                                                                                        imageURL: opt.imageURL || '',
+                                                                                        text: opt.text || ``,
+                                                                                        imageURL: opt.imageURL || ``,
                                                                                         imageFileId: opt.imageFileId ||
                                                                                         null
                                                                                         };
@@ -21248,8 +13356,8 @@
 
                                                                                         // Ensure at least 4 options
                                                                                         while (options.length < 4) {
-                                                                                          options.push({ text: '' ,
-                                                                                          imageURL: '' , imageFileId: null
+                                                                                          options.push({ text: `` ,
+                                                                                          imageURL: `` , imageFileId: null
                                                                                           }); } // Find correct answer
                                                                                           index var correctIndex=0;
                                                                                           options.forEach(function (opt,
@@ -21257,8 +13365,8 @@
                                                                                           (opt.text===q.correctAnswer) {
                                                                                           correctIndex=idx; } }); return {
                                                                                           questionText: q.questionText
-                                                                                          || '' , questionImageURL:
-                                                                                          q.questionImageURL || '' ,
+                                                                                          || `` , questionImageURL:
+                                                                                          q.questionImageURL || `` ,
                                                                                           questionImageFileId:
                                                                                           q.questionImageFileId || null,
                                                                                           options: options,
@@ -21269,27 +13377,27 @@
                                                                                           timerSeconds: q.timerSeconds ||
                                                                                           null }; }); } // Update wizard
                                                                                           title var
-                                                                                          wizardTitle=document.getElementById('wizard-title');
+                                                                                          wizardTitle=document.getElementById(`wizard-title`);
                                                                                           if (wizardTitle) {
-                                                                                          wizardTitle.textContent='Edit Poll'
+                                                                                          wizardTitle.textContent=`Edit Poll`
                                                                                           ; } } else { // New poll -
                                                                                           update title var
-                                                                                          wizardTitle=document.getElementById('wizard-title');
+                                                                                          wizardTitle=document.getElementById(`wizard-title`);
                                                                                           if (wizardTitle) {
-                                                                                          wizardTitle.textContent='Create Poll'
+                                                                                          wizardTitle.textContent=`Create Poll`
                                                                                           ; } }
                                                                                           wizardQuestionIdCounter=wizardState.questions.length;
                                                                                           // Populate class dropdown from
                                                                                           ALL_CLASSES or BASE_CLASSES var
-                                                                                          classSelect=document.getElementById('wizard-class-select');
+                                                                                          classSelect=document.getElementById(`wizard-class-select`);
                                                                                           if (classSelect) {
-                                                                                          classSelect.innerHTML='<option value="">-- Select a class --</option>'
+                                                                                          classSelect.innerHTML=`<option value="">-- Select a class --</option>`
                                                                                           ; var
                                                                                           classesList=(window.ALL_CLASSES
                                                                                           && window.ALL_CLASSES.length> 0)
                                                                                           ? window.ALL_CLASSES
                                                                                           : (typeof BASE_CLASSES !==
-                                                                                          'undefined' ? BASE_CLASSES :
+                                                                                          `undefined` ? BASE_CLASSES :
                                                                                           []);
 
                                                                                           if (classesList.length === 0) {
@@ -21297,7 +13405,7 @@
                                                                                           case of timing issue, or show
                                                                                           placeholder
                                                                                           var loadingOpt =
-                                                                                          document.createElement('option');
+                                                                                          document.createElement(`option`);
                                                                                           loadingOpt.textContent =
                                                                                           "Loading classes...";
                                                                                           loadingOpt.disabled = true;
@@ -21310,13 +13418,13 @@
                                                                                           window.ALL_CLASSES.length > 0) ?
                                                                                           window.ALL_CLASSES : [];
                                                                                           if (retryList.length > 0) {
-                                                                                          classSelect.innerHTML = '<option
+                                                                                          classSelect.innerHTML = `<option
                                                                                             value="">-- Select a class --
-                                                                                          </option>';
+                                                                                          </option>`;
                                                                                           retryList.forEach(function (cls)
                                                                                           {
                                                                                           var option =
-                                                                                          document.createElement('option');
+                                                                                          document.createElement(`option`);
                                                                                           option.value = cls;
                                                                                           option.textContent = cls;
                                                                                           classSelect.appendChild(option);
@@ -21331,7 +13439,7 @@
                                                                                           classesList.forEach(function
                                                                                           (cls) {
                                                                                           var option =
-                                                                                          document.createElement('option');
+                                                                                          document.createElement(`option`);
                                                                                           option.value = cls;
                                                                                           option.textContent = cls;
                                                                                           classSelect.appendChild(option);
@@ -21342,7 +13450,7 @@
                                                                                           mode
                                                                                           if (isEdit &&
                                                                                           wizardState.className) {
-                                                                                          // If the class isn't in the
+                                                                                          // If the class isn`t in the
                                                                                           list, add it
                                                                                           if
                                                                                           (classesList.indexOf(wizardState.className)
@@ -21407,8 +13515,8 @@
                                                                                           if (secureSection)
                                                                                           secureSection.classList.remove('hidden');
                                                                                           if (modeLabel)
-                                                                                          modeLabel.textContent = 'Secure
-                                                                                          Assessment';
+                                                                                          modeLabel.textContent = `Secure
+                                                                                          Assessment`;
                                                                                           } else if (wizardState.mode ===
                                                                                           'live') {
                                                                                           if (liveSection)
@@ -21416,8 +13524,8 @@
                                                                                           if (secureSection)
                                                                                           secureSection.classList.add('hidden');
                                                                                           if (modeLabel)
-                                                                                          modeLabel.textContent = 'Live
-                                                                                          Poll';
+                                                                                          modeLabel.textContent = `Live
+                                                                                          Poll`;
                                                                                           }
                                                                                           } else {
                                                                                           goToWizardStep(1);
@@ -21428,9 +13536,9 @@
                                                                                           if (wizardState.pollName ||
                                                                                           wizardState.questions.length >
                                                                                           0) {
-                                                                                          if (!confirm('You have unsaved
+                                                                                          if (!confirm(`You have unsaved
                                                                                           changes. Are you sure you want
-                                                                                          to close?')) {
+                                                                                          to close?`)) {
                                                                                           return;
                                                                                           }
                                                                                           }
@@ -21525,8 +13633,8 @@
                                                                                           if (previewPoll) {
                                                                                           openPollWizard(deepClone(previewPoll));
                                                                                           } else {
-                                                                                          veritasAlert('Unable to locate
-                                                                                          this poll in preview mode.', {
+                                                                                          veritasAlert(`Unable to locate
+                                                                                          this poll in preview mode.`, {
                                                                                           title: 'Edit poll' });
                                                                                           }
                                                                                           return;
@@ -21540,8 +13648,8 @@
                                                                                           if (poll) {
                                                                                           openPollWizard(poll);
                                                                                           } else {
-                                                                                          veritasAlert('Failed to load
-                                                                                          poll data for editing.', {
+                                                                                          veritasAlert(`Failed to load
+                                                                                          poll data for editing.`, {
                                                                                           title: 'Error' });
                                                                                           }
                                                                                           }
@@ -21576,8 +13684,8 @@
 
                                                                                             for (var i = 1; i <= 4; i++) {
                                                                                               var
-                                                                                              progressStep=container.querySelector('.progress-step[data-step="' + i + '"
-                                                                                              ]'); if (progressStep) {
+                                                                                              progressStep=container.querySelector('.progress-step[data-step="' + i + `"
+                                                                                              ]`); if (progressStep) {
                                                                                               progressStep.classList.remove('active', 'completed'
                                                                                               ); if (i < stepNumber) {
                                                                                               progressStep.classList.add('completed');
@@ -21608,7 +13716,8 @@
                                                                                               step=document.getElementById('wizard-step-'
                                                                                               + i); if (step)
                                                                                               step.classList.remove('active');
-                                                                                              } var
+                                                                                              }
+                                                                                              var
                                                                                               targetStep=document.getElementById('wizard-step-'
                                                                                               + stepNumber); if
                                                                                               (targetStep)
@@ -21631,17 +13740,21 @@
                                                                                               if (pollNameInput &&
                                                                                               wizardState.pollName) {
                                                                                               pollNameInput.value=wizardState.pollName;
-                                                                                              } if (classSelect &&
+                                                                                              }
+                                                                                              if (classSelect &&
                                                                                               wizardState.className) {
                                                                                               classSelect.value=wizardState.className;
-                                                                                              } if (timeLimitInput &&
+                                                                                              }
+                                                                                              if (timeLimitInput &&
                                                                                               wizardState.timeLimitMinutes)
                                                                                               {
                                                                                               timeLimitInput.value=wizardState.timeLimitMinutes;
-                                                                                              } if (accessCodeInput &&
+                                                                                              }
+                                                                                              if (accessCodeInput &&
                                                                                               wizardState.accessCode) {
                                                                                               accessCodeInput.value=wizardState.accessCode;
-                                                                                              } if (calculatorToggle) {
+                                                                                              }
+                                                                                              if (calculatorToggle) {
                                                                                               calculatorToggle.checked=wizardState.calculatorEnabled===true;
                                                                                               } // Update mode-specific
                                                                                               content if in edit mode if
@@ -21665,7 +13778,8 @@
                                                                                               if (wizardState.currentStep
                                                                                               < 4) {
                                                                                               goToWizardStep(wizardState.currentStep
-                                                                                              + 1); } } function
+                                                                                              + 1); } }
+                                                                                              function
                                                                                               wizardGoBack() { if
                                                                                               (wizardState.currentStep> 1)
                                                                                               {
@@ -21695,7 +13809,8 @@
                                                                                               wizardState.currentStep <=
                                                                                                 2; } else {
                                                                                                 backBtn.disabled=wizardState.currentStep===1;
-                                                                                                } if
+                                                                                                }
+                                                                                                if
                                                                                                 (wizardState.currentStep===4)
                                                                                                 {
                                                                                                 nextBtn.classList.add('hidden');
@@ -21753,13 +13868,15 @@
                                                                                                 wizardState.accessCode=document.getElementById('wizard-access-code')?.value
                                                                                                 || '' ;
                                                                                                 wizardState.calculatorEnabled=document.getElementById('wizard-calculator-toggle')?.checked
-                                                                                                || false; } } } function
+                                                                                                || false; } } }
+                                                                                                function
                                                                                                 validateWizardStep(stepNumber)
                                                                                                 { if (stepNumber===1) { if
                                                                                                 (!wizardState.mode) {
-                                                                                                alert('Please select a
-                                                                                                poll mode.'); return
-                                                                                                false; } var
+                                                                                                alert(`Please select a
+                                                                                                poll mode.`); return
+                                                                                                false; }
+                                                                                                var
                                                                                                 liveSection=document.getElementById('live-config-section');
                                                                                                 var
                                                                                                 secureSection=document.getElementById('secure-config-section');
@@ -21780,33 +13897,37 @@
                                                                                                 secureSection.classList.remove('hidden');
                                                                                                 if (modeLabel)
                                                                                                 modeLabel.textContent='Secure Assessment'
-                                                                                                ; } return true; } if
+                                                                                                ; }
+                                                                                                return true; } if
                                                                                                 (stepNumber===2) { var
                                                                                                 pollName=document.getElementById('wizard-poll-name')?.value.trim();
                                                                                                 var
                                                                                                 className=document.getElementById('wizard-class-select')?.value;
                                                                                                 if (!pollName) {
-                                                                                                alert('Please enter a poll
-                                                                                                name.'); return false; }
+                                                                                                alert(`Please enter a poll
+                                                                                                name.`); return false; }
                                                                                                 if (!className) {
-                                                                                                alert('Please select a
-                                                                                                class.'); return false; }
+                                                                                                alert(`Please select a
+                                                                                                class.`); return false; }
                                                                                                 if
                                                                                                 (wizardState.mode==='secure'
                                                                                                 ) { var
                                                                                                 timeLimit=parseInt(document.getElementById('wizard-time-limit')?.value);
                                                                                                 if (!timeLimit ||
                                                                                                 timeLimit <=0) {
-                                                                                                alert('Time limit is
+                                                                                                alert(`Time limit is
                                                                                                 required for Secure
-                                                                                                Assessments.'); return
-                                                                                                false; } } return true; }
+                                                                                                Assessments.`); return
+                                                                                                false; } }
+                                                                                                return true; }
                                                                                                 if (stepNumber===3) { if
                                                                                                 (wizardState.questions.length===0)
-                                                                                                { alert('Please add at
-                                                                                                least one question.');
-                                                                                                return false; } return
-                                                                                                true; } return true; }
+                                                                                                { alert(`Please add at
+                                                                                                least one question.`);
+                                                                                                return false; }
+                                                                                                return
+                                                                                                true; }
+                                                                                                return true; }
                                                                                                 //===========================//
                                                                                                 STEP 3: QUESTIONS - Full
                                                                                                 Editor
@@ -21836,27 +13957,30 @@
                                                                                                 newQuestion.scrollIntoView({
                                                                                                 behavior: 'smooth' ,
                                                                                                 block: 'center' }); } },
-                                                                                                100); } function
+                                                                                                100); }
+                                                                                                function
                                                                                                 removeWizardQuestion(index)
                                                                                                 { if
                                                                                                 (wizardState.questions.length
-                                                                                                <=1) { alert('You must
+                                                                                                <=1) { alert(`You must
                                                                                                 have at least one
-                                                                                                question.'); return; } if
-                                                                                                (confirm('Are you sure you
+                                                                                                question.`); return; }
+                                                                                                if
+                                                                                                (confirm(`Are you sure you
                                                                                                 want to remove this
-                                                                                                question?')) {
+                                                                                                question?`)) {
                                                                                                 wizardState.questions.splice(index,
                                                                                                 1);
                                                                                                 renderWizardQuestions(); }
-                                                                                                } function
+                                                                                                }
+                                                                                                function
                                                                                                 addWizardOption(qIndex) {
                                                                                                 var
                                                                                                 q=wizardState.questions[qIndex];
                                                                                                 if (q.options.length>= 6)
                                                                                                 {
-                                                                                                alert('Maximum 6 answer
-                                                                                                choices allowed.');
+                                                                                                alert(`Maximum 6 answer
+                                                                                                choices allowed.`);
                                                                                                 return;
                                                                                                 }
                                                                                                 q.options.push({ text: '',
@@ -21870,9 +13994,9 @@
                                                                                                 var q =
                                                                                                 wizardState.questions[qIndex];
                                                                                                 if (q.options.length <= 2)
-                                                                                                  { alert('Minimum 2
+                                                                                                  { alert(`Minimum 2
                                                                                                   answer choices
-                                                                                                  required.'); return; }
+                                                                                                  required.`); return; }
                                                                                                   q.options.splice(optIndex,
                                                                                                   1); // Adjust correct
                                                                                                   answer index if needed
@@ -21912,13 +14036,13 @@
                                                                                                   var questionDiv =
                                                                                                   document.createElement('div');
                                                                                                   questionDiv.className =
-                                                                                                  'question-card bg-white
+                                                                                                  `question-card bg-white
                                                                                                   border
                                                                                                   border-brand-light-gray
                                                                                                   rounded-xl
                                                                                                   overflow-hidden
                                                                                                   shadow-sm transition-all
-                                                                                                  duration-200';
+                                                                                                  duration-200`;
                                                                                                   questionDiv.draggable =
                                                                                                   true;
                                                                                                   questionDiv.dataset.qIndex
@@ -21926,37 +14050,37 @@
 
                                                                                                   // Compact Question
                                                                                                   Header with drag handle
-                                                                                                  var headerHtml = '<div
+                                                                                                  var headerHtml = `<div
                                                                                                     class="question-card-header flex justify-between items-center px-4 py-2.5 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-brand-light-gray cursor-move"
-                                                                                                    data-drag-handle>' +
-                                                                                                    '<div
+                                                                                                    data-drag-handle>` +
+                                                                                                    `<div
                                                                                                       class="flex items-center gap-2">
-                                                                                                      ' +
-                                                                                                      '<span
+                                                                                                      ` +
+                                                                                                      `<span
                                                                                                         class="material-symbols-outlined text-slate-400 text-lg"
-                                                                                                        title="Drag to reorder">drag_indicator</span>'
+                                                                                                        title="Drag to reorder">drag_indicator</span>`
                                                                                                       +
-                                                                                                      '<div
+                                                                                                      `<div
                                                                                                         class="h-7 w-7 rounded-lg bg-primary text-white flex items-center justify-center font-bold text-xs">
-                                                                                                        ' + (qIndex + 1) +
+                                                                                                        ` + (qIndex + 1) +
                                                                                                         '</div>' +
-                                                                                                      '<span
-                                                                                                        class="font-bold text-brand-dark-gray">Q'
+                                                                                                      `<span
+                                                                                                        class="font-bold text-brand-dark-gray">Q`
                                                                                                         + (qIndex + 1) +
                                                                                                         '</span>' +
                                                                                                       '</div>' +
-                                                                                                    '<div
+                                                                                                    `<div
                                                                                                       class="flex items-center gap-1">
-                                                                                                      ' +
-                                                                                                      '<label
+                                                                                                      ` +
+                                                                                                      `<label
                                                                                                         class="flex items-center gap-1 px-2 py-1 rounded hover:bg-slate-200 cursor-pointer text-xs text-slate-500"
-                                                                                                        title="Enable confidence tracking">'
+                                                                                                        title="Enable confidence tracking">`
                                                                                                         +
-                                                                                                        '<input
+                                                                                                        `<input
                                                                                                           type="checkbox"
                                                                                                           class="wizard-meta-cb h-3.5 w-3.5 rounded"
-                                                                                                          data-q-index="' + qIndex + '" ' + (q.metacognitionEnabled ? '
-                                                                                                          checked' : '' )
+                                                                                                          data-q-index="` + qIndex + '" ' + (q.metacognitionEnabled ? `
+                                                                                                          checked` : '' )
                                                                                                           + '>'
                                                                                                           + '<span>Confidence</span></label>'
                                                                                                           + '<button type="button" class="p-1.5 rounded text-red-500 hover:bg-red-50 transition-colors" onclick="removeWizardQuestion('
@@ -22003,22 +14127,22 @@
                                                                                                           title="Remove">&times;</button>
                                                                                                     </div>` ; }
                                                                                                     else { bodyHtml
-                                                                                                    +='<label
-                                                                                                      class="h-16 w-20 rounded-lg border-2 border-dashed border-brand-light-gray flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all">'
-                                                                                                      + '<span
-                                                                                                        class="material-symbols-outlined text-brand-dark-gray/40 text-lg">image</span>'
-                                                                                                      + '<span
-                                                                                                        class="text-[10px] text-brand-dark-gray/40">Upload</span>'
-                                                                                                      + '<input
+                                                                                                    +=`<label
+                                                                                                      class="h-16 w-20 rounded-lg border-2 border-dashed border-brand-light-gray flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all">`
+                                                                                                      + `<span
+                                                                                                        class="material-symbols-outlined text-brand-dark-gray/40 text-lg">image</span>`
+                                                                                                      + `<span
+                                                                                                        class="text-[10px] text-brand-dark-gray/40">Upload</span>`
+                                                                                                      + `<input
                                                                                                         type="file"
                                                                                                         class="wizard-q-img-input hidden"
                                                                                                         accept="image/*"
-                                                                                                        data-q-index="'
+                                                                                                        data-q-index="`
                                                                                                           + qIndex + '">'
                                                                                                       + '</label>' ; }
                                                                                                     bodyHtml
-                                                                                                    +='</div>
-                                                                  </div>'
+                                                                                                    +=`</div>
+                                                                  </div>`
                                                                   ; // Answer
                                                                   Choices -
                                                                   Compact bodyHtml
@@ -22038,8 +14162,8 @@
                                                                     var
                                                                     optIsUploading=opt.imageURL==='UPLOADING'
                                                                     ; bodyHtml
-                                                                    +='<div
-                                                                      class="answer-option flex items-center gap-2 p-2 rounded-lg border '
+                                                                    +=`<div
+                                                                      class="answer-option flex items-center gap-2 p-2 rounded-lg border `
                                                                                                           + correctBorder
                                                                                                           + ' transition-all">'
                                                                       + // Correct
@@ -22047,12 +14171,12 @@
                                                                       radio '<label class="cursor-pointer">'
                                                                         + '<input type="radio" name="correct-'
                                                                                                           + qIndex
-                                                                                                          + '"
+                                                                                                          + `"
                                                                           class="hidden wizard-correct-radio"
-                                                                          data-q-index="'
+                                                                          data-q-index="`
                                                                                                           + qIndex
-                                                                                                          + '"
-                                                                          data-opt-index="'
+                                                                                                          + `"
+                                                                          data-opt-index="`
                                                                                                           + optIndex
                                                                                                           + '" ' +
                                                                                                           (isCorrect
@@ -22082,28 +14206,28 @@
                                                                           data-opt-index="${optIndex}">&times;</button>
                                                                     </div>` ; }
                                                                     else { bodyHtml
-                                                                    +='<label
-                                                                      class="h-8 w-10 rounded border border-dashed border-brand-light-gray/70 flex items-center justify-center cursor-pointer hover:border-primary shrink-0">'
-                                                                      + '<span
-                                                                        class="material-symbols-outlined text-sm text-slate-400">add_photo_alternate</span>'
-                                                                      + '<input type="file"
+                                                                    +=`<label
+                                                                      class="h-8 w-10 rounded border border-dashed border-brand-light-gray/70 flex items-center justify-center cursor-pointer hover:border-primary shrink-0">`
+                                                                      + `<span
+                                                                        class="material-symbols-outlined text-sm text-slate-400">add_photo_alternate</span>`
+                                                                      + `<input type="file"
                                                                         class="wizard-opt-img-input hidden"
-                                                                        accept="image/*" data-q-index="'
+                                                                        accept="image/*" data-q-index="`
                                                                                                           + qIndex
-                                                                                                          + '"
-                                                                        data-opt-index="'
+                                                                                                          + `"
+                                                                        data-opt-index="`
                                                                                                           + optIndex
                                                                                                           + '">'
                                                                       + '</label>' ; }
                                                                     // Remove option
                                                                     bodyHtml
-                                                                    +='<button type="button"
+                                                                    +=`<button type="button"
                                                                       class="p-1 rounded text-slate-300 hover:text-red-500 transition-colors"
-                                                                      onclick="removeWizardOption('
+                                                                      onclick="removeWizardOption(`
                                                                                                           + qIndex + ',' +
                                                                                                           optIndex + ')">'
-                                                                      + '<span
-                                                                        class="material-symbols-outlined text-base">close</span></button>'
+                                                                      + `<span
+                                                                        class="material-symbols-outlined text-base">close</span></button>`
                                                                     + '</div>' ; });
                                                                   bodyHtml
                                                                   +='</div>' ; //
@@ -22135,7 +14259,8 @@
                                                                     wizardState.questions[qIndex].questionText=this.value;
                                                                     // Auto-resize as user types this.style.height='auto'
                                                                     ; this.style.height=this.scrollHeight + 'px' ; }); }
-                                                                    // Question image file input var
+                                                                    // Question image file input
+                                                                    var
                                                                     qImgInput=questionDiv.querySelector('.wizard-q-img-input');
                                                                     if (qImgInput) { qImgInput.addEventListener('change',
                                                                     function (e) {
@@ -22209,7 +14334,8 @@
                                                                     this.classList.remove('border-blue-500', 'border-dashed'
                                                                     , 'border-2' ); });
                                                                     questionDiv.addEventListener('drop', function (e) { if
-                                                                    (e.stopPropagation) { e.stopPropagation(); } var
+                                                                    (e.stopPropagation) { e.stopPropagation(); }
+                                                                    var
                                                                     dropIndex=parseInt(this.dataset.qIndex); if
                                                                     (wizardDraggedIndex !==null && wizardDraggedIndex
                                                                     !==dropIndex) { // Reorder questions in the array var
@@ -22217,17 +14343,18 @@
                                                                     wizardState.questions.splice(wizardDraggedIndex, 1);
                                                                     wizardState.questions.splice(dropIndex, 0,
                                                                     draggedQuestion); // Re-render questions to show new
-                                                                    order renderWizardQuestions(); } return false; }); });
+                                                                    order renderWizardQuestions(); }
+                                                                    return false; }); });
                                                                     } // Image upload handler for wizard function
                                                                     handleWizardImageUpload(file, qIndex, optIndex) { if
                                                                     (!file) return; // Validate file type if
-                                                                    (!file.type.startsWith('image/')) { alert('Please
-                                                                    select an image file.'); return; } // Validate file
+                                                                    (!file.type.startsWith('image/')) { alert(`Please
+                                                                    select an image file.`); return; } // Validate file
                                                                     size (max 5MB) if (file.size> 5 *
                                                                     1024 * 1024) {
-                                                                    alert('Image must
+                                                                    alert(`Image must
                                                                     be less than
-                                                                    5MB.');
+                                                                    5MB.`);
                                                                     return;
                                                                     }
 
@@ -22282,8 +14409,8 @@
                                                                     wizardState.questions[qIndex].options[optIndex].imageURL
                                                                     = null;
                                                                     }
-                                                                    alert('Image
-                                                                    upload failed: ' +
+                                                                    alert(`Image
+                                                                    upload failed: ` +
                                                                     (response.error ||
                                                                     'Unknown error'));
                                                                     }
@@ -22301,8 +14428,8 @@
                                                                     wizardState.questions[qIndex].options[optIndex].imageURL
                                                                     = null;
                                                                     }
-                                                                    alert('Image
-                                                                    upload failed: ' +
+                                                                    alert(`Image
+                                                                    upload failed: ` +
                                                                     error);
                                                                     renderWizardQuestions();
                                                                     })
@@ -22337,9 +14464,9 @@
                                                                     {
                                                                     var modeText =
                                                                     wizardState.mode
-                                                                    === 'live' ? 'Live
-                                                                    Poll' : 'Secure
-                                                                    Assessment';
+                                                                    === 'live' ? `Live
+                                                                    Poll` : `Secure
+                                                                    Assessment`;
                                                                     document.getElementById('review-mode').textContent
                                                                     = modeText;
                                                                     document.getElementById('review-name').textContent
@@ -22349,8 +14476,8 @@
                                                                     document.getElementById('review-class').textContent
                                                                     =
                                                                     wizardState.className
-                                                                    || '(No class
-                                                                    selected)';
+                                                                    || `(No class
+                                                                    selected)`;
 
                                                                     var qSummary =
                                                                     document.getElementById('review-questions-summary');
@@ -22359,63 +14486,63 @@
                                                                     (wizardState.questions.length
                                                                     === 0) {
                                                                     qSummary.innerHTML
-                                                                    = '<p class="text-red-500 font-medium">
+                                                                    = `<p class="text-red-500 font-medium">
                                                                       No questions
                                                                       added. Please go
                                                                       back and add at
                                                                       least one
-                                                                      question.</p>';
+                                                                      question.</p>`;
                                                                     } else {
                                                                     var optionLabels =
                                                                     ['A', 'B', 'C',
                                                                     'D', 'E', 'F'];
-                                                                    var html = '<div class="space-y-4">
-                                                                      ';
-                                                                      html += '<p
+                                                                    var html = `<div class="space-y-4">
+                                                                      `;
+                                                                      html += `<p
                                                                         class="text-sm text-brand-dark-gray/60 mb-3">
-                                                                        ' +
+                                                                        ` +
                                                                         wizardState.questions.length
-                                                                        + '
+                                                                        + `
                                                                         question(s)
                                                                         ready to
-                                                                        publish</p>';
+                                                                        publish</p>`;
 
                                                                       wizardState.questions.forEach(function
                                                                       (q, i) {
                                                                       var text =
                                                                       q.questionText
-                                                                      || '(Empty
-                                                                      question)';
+                                                                      || `(Empty
+                                                                      question)`;
                                                                       if (text.length
                                                                       > 80) text =
                                                                       text.substring(0,
                                                                       80) + '...';
 
-                                                                      html += '<div
+                                                                      html += `<div
                                                                         class="bg-slate-50 rounded-lg p-3 border border-brand-light-gray hover:border-primary hover:bg-primary/5 cursor-pointer transition-all group"
-                                                                        data-edit-question="' + i + '"
+                                                                        data-edit-question="` + i + `"
                                                                         title="Click to edit this question">
-                                                                        ';
-                                                                        html += '<div class="flex items-start gap-2 mb-2">
-                                                                          ';
+                                                                        `;
+                                                                        html += `<div class="flex items-start gap-2 mb-2">
+                                                                          `;
                                                                           html +=
-                                                                          '<span
-                                                                            class="h-6 w-6 rounded bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">'
+                                                                          `<span
+                                                                            class="h-6 w-6 rounded bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">`
                                                                             + (i + 1)
                                                                             +
                                                                             '</span>';
                                                                           html +=
-                                                                          '<span
-                                                                            class="font-medium text-brand-dark-gray text-sm group-hover:text-primary">'
+                                                                          `<span
+                                                                            class="font-medium text-brand-dark-gray text-sm group-hover:text-primary">`
                                                                             +
                                                                             escapeHtml(text)
                                                                             +
                                                                             '</span>';
                                                                           html +=
-                                                                          '<span
-                                                                            class="material-symbols-outlined text-xs text-slate-400 ml-auto opacity-0 group-hover:opacity-100 transition-opacity">edit</span>';
-                                                                          html += '
-                                                                        </div>';
+                                                                          `<span
+                                                                            class="material-symbols-outlined text-xs text-slate-400 ml-auto opacity-0 group-hover:opacity-100 transition-opacity">edit</span>`;
+                                                                          html += `
+                                                                        </div>`;
 
                                                                         // Show answer
                                                                         choices
@@ -22423,8 +14550,8 @@
                                                                         &&
                                                                         q.options.length
                                                                         > 0) {
-                                                                        html += '<div class="ml-8 flex flex-wrap gap-2">
-                                                                          ';
+                                                                        html += `<div class="ml-8 flex flex-wrap gap-2">
+                                                                          `;
                                                                           q.options.forEach(function
                                                                           (opt, j) {
                                                                           if (opt.text
@@ -22438,12 +14565,12 @@
                                                                           var optClass
                                                                           = isCorrect
                                                                           ?
-                                                                          'bg-green-100
+                                                                          `bg-green-100
                                                                           text-green-700
-                                                                          border-green-300'
-                                                                          : 'bg-white
+                                                                          border-green-300`
+                                                                          : `bg-white
                                                                           text-brand-dark-gray/70
-                                                                          border-brand-light-gray';
+                                                                          border-brand-light-gray`;
                                                                           var optText
                                                                           =
                                                                           opt.text.length
@@ -22452,34 +14579,34 @@
                                                                           20) + '...'
                                                                           : opt.text;
                                                                           html +=
-                                                                          '<span
-                                                                            class="inline-flex items-center gap-1 px-2 py-1 text-xs rounded border ' + optClass + '">';
+                                                                          `<span
+                                                                            class="inline-flex items-center gap-1 px-2 py-1 text-xs rounded border ` + optClass + '">';
                                                                             html +=
                                                                             '<strong>'
                                                                               +
                                                                               optionLabels[j]
                                                                               +
-                                                                              '</strong>
-                                                                            ' +
+                                                                              `</strong>
+                                                                            ` +
                                                                             escapeHtml(optText);
                                                                             if
                                                                             (isCorrect)
                                                                             html +=
-                                                                            '<span
-                                                                              class="material-symbols-outlined text-xs">check</span>';
+                                                                            `<span
+                                                                              class="material-symbols-outlined text-xs">check</span>`;
                                                                             html +=
                                                                             '</span>';
                                                                           }
                                                                           });
-                                                                          html += '
-                                                                        </div>';
+                                                                          html += `
+                                                                        </div>`;
                                                                         }
-                                                                        html += '
-                                                                      </div>';
+                                                                        html += `
+                                                                      </div>`;
                                                                       });
 
-                                                                      html += '</div>
-                                                                    ';
+                                                                      html += `</div>
+                                                                    `;
 
                                                                     // Show secure
                                                                     settings if
@@ -22487,53 +14614,53 @@
                                                                     if
                                                                     (wizardState.mode
                                                                     === 'secure') {
-                                                                    html += '<div
+                                                                    html += `<div
                                                                       class="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200">
-                                                                      ';
-                                                                      html += '<h5
+                                                                      `;
+                                                                      html += `<h5
                                                                         class="text-sm font-bold text-amber-800 mb-2 flex items-center gap-2">
                                                                         <span
                                                                           class="material-symbols-outlined text-base">lock</span>Secure
                                                                         Assessment
                                                                         Settings
                                                                       </h5>
-                                                                      ';
-                                                                      html += '<div
+                                                                      `;
+                                                                      html += `<div
                                                                         class="text-sm text-amber-700 space-y-1">
-                                                                        ';
-                                                                        html += '<p>
+                                                                        `;
+                                                                        html += `<p>
                                                                           <strong>Time
                                                                             Limit:</strong>
-                                                                          ' +
+                                                                          ` +
                                                                           (wizardState.timeLimitMinutes
-                                                                          || 'Not
-                                                                          set') + '
+                                                                          || `Not
+                                                                          set`) + `
                                                                           minutes
                                                                         </p>
-                                                                        ';
+                                                                        `;
                                                                         if
                                                                         (wizardState.accessCode)
                                                                         {
-                                                                        html += '<p>
+                                                                        html += `<p>
                                                                           <strong>Access
                                                                             Code:</strong>
-                                                                          ' +
+                                                                          ` +
                                                                           escapeHtml(wizardState.accessCode)
-                                                                          + '
-                                                                        </p>';
+                                                                          + `
+                                                                        </p>`;
                                                                         }
-                                                                        html += '<p>
+                                                                        html += `<p>
                                                                           <strong>Calculator:</strong>
-                                                                          ' +
+                                                                          ` +
                                                                           (wizardState.calculatorEnabled
                                                                           ? 'Enabled'
                                                                           :
                                                                           'Disabled')
-                                                                          + '
-                                                                        </p>';
-                                                                        html += '
+                                                                          + `
+                                                                        </p>`;
+                                                                        html += `
                                                                       </div>
-                                                                    </div>';
+                                                                    </div>`;
                                                                     }
 
                                                                     qSummary.innerHTML
@@ -22599,9 +14726,9 @@
                                                                     ||
                                                                     wizardState.pollName.trim()
                                                                     === '') {
-                                                                    alert('Please
+                                                                    alert(`Please
                                                                     enter a poll
-                                                                    name.');
+                                                                    name.`);
                                                                     goToWizardStep(2);
                                                                     return;
                                                                     }
@@ -22611,8 +14738,8 @@
                                                                     ||
                                                                     wizardState.className.trim()
                                                                     === '') {
-                                                                    alert('Please
-                                                                    select a class.');
+                                                                    alert(`Please
+                                                                    select a class.`);
                                                                     goToWizardStep(2);
                                                                     return;
                                                                     }
@@ -22620,9 +14747,9 @@
                                                                     if
                                                                     (wizardState.questions.length
                                                                     === 0) {
-                                                                    alert('Please add
+                                                                    alert(`Please add
                                                                     at least one
-                                                                    question.');
+                                                                    question.`);
                                                                     goToWizardStep(3);
                                                                     return;
                                                                     }
@@ -22635,19 +14762,21 @@
                                                                     < wizardState.questions.length; i++) { var
                                                                       q=wizardState.questions[i]; if (!q.questionText ||
                                                                       q.questionText.trim()==='' ) {
-                                                                      alert('Question ' + (i + 1) + ' is missing the
-                                                                      question text.'); goToWizardStep(3); return; } var
+                                                                      alert('Question ' + (i + 1) + ` is missing the
+                                                                      question text.`); goToWizardStep(3); return; }
+                                                                      var
                                                                       hasValidOption=false; for (var j=0; j <
                                                                       q.options.length; j++) { if (q.options[j].text &&
                                                                       q.options[j].text.trim() !=='' ) {
-                                                                      hasValidOption=true; break; } } if (!hasValidOption)
-                                                                      { alert('Question ' + (i + 1) + ' needs at least one
-                                                                      answer choice.'); goToWizardStep(3); return; } } //
+                                                                      hasValidOption=true; break; } }
+                                                                      if (!hasValidOption)
+                                                                      { alert('Question ' + (i + 1) + ` needs at least one
+                                                                      answer choice.`); goToWizardStep(3); return; } } //
                                                                       Validate secure assessment settings if
                                                                       (wizardState.mode==='secure' ) { if
                                                                       (!wizardState.timeLimitMinutes ||
-                                                                      wizardState.timeLimitMinutes <=0) { alert('Please
-                                                                      set a time limit for secure assessments.');
+                                                                      wizardState.timeLimitMinutes <=0) { alert(`Please
+                                                                      set a time limit for secure assessments.`);
                                                                       goToWizardStep(2); return; } } // Transform
                                                                       questions to match API format // API expects: {
                                                                       questionText, questionImageURL, questionImageFileId,
@@ -22668,7 +14797,7 @@
                                                                       (correctOpt && correctOpt.text &&
                                                                       correctOpt.text.trim() !=='' ) {
                                                                       correctAnswerText=correctOpt.text.trim(); } } // If
-                                                                      correct answer wasn't set or was invalid, default to
+                                                                      correct answer wasn`t set or was invalid, default to
                                                                       first option if (!correctAnswerText &&
                                                                       validOptions.length>
                                                                       0) {
@@ -22684,7 +14813,7 @@
                                                                       q.questionImageURL
                                                                       &&
                                                                       q.questionImageURL
-                                                                      !== 'UPLOADING'
+                                                                      !== `UPLOADING`
                                                                       ?
                                                                       q.questionImageURL
                                                                       : null,
@@ -22700,7 +14829,7 @@
                                                                       imageURL:
                                                                       opt.imageURL &&
                                                                       opt.imageURL !==
-                                                                      'UPLOADING' ?
+                                                                      `UPLOADING` ?
                                                                       opt.imageURL :
                                                                       null,
                                                                       imageFileId:
@@ -22723,14 +14852,14 @@
                                                                       var metadata = {
                                                                       sessionType:
                                                                       wizardState.mode
-                                                                      === 'secure' ?
-                                                                      'SECURE_ASSESSMENT'
-                                                                      : 'LIVE_POLL'
+                                                                      === `secure` ?
+                                                                      `SECURE_ASSESSMENT`
+                                                                      : `LIVE_POLL`
                                                                       };
 
                                                                       if
                                                                       (wizardState.mode
-                                                                      === 'secure') {
+                                                                      === `secure`) {
                                                                       metadata.timeLimitMinutes
                                                                       =
                                                                       parseInt(wizardState.timeLimitMinutes)
@@ -22738,7 +14867,7 @@
                                                                       metadata.accessCode
                                                                       =
                                                                       wizardState.accessCode
-                                                                      || '';
+                                                                      || ``;
                                                                       metadata.calculatorEnabled
                                                                       =
                                                                       wizardState.calculatorEnabled
@@ -22746,29 +14875,29 @@
                                                                       }
 
                                                                       var publishBtn =
-                                                                      document.getElementById('wizard-publish-btn');
+                                                                      document.getElementById(`wizard-publish-btn`);
                                                                       var actionText =
                                                                       wizardState.isEditMode
-                                                                      ? 'Updating' :
-                                                                      'Publishing';
+                                                                      ? `Updating` :
+                                                                      `Publishing`;
                                                                       var actionIcon =
                                                                       wizardState.isEditMode
-                                                                      ? 'save' :
-                                                                      'rocket_launch';
+                                                                      ? `save` :
+                                                                      `rocket_launch`;
 
                                                                       if (publishBtn)
                                                                       {
                                                                       publishBtn.disabled
                                                                       = true;
                                                                       publishBtn.innerHTML
-                                                                      = '<span
+                                                                      = `<span
                                                                         class="material-symbols-outlined animate-spin">hourglass_empty</span>
-                                                                      ' + actionText +
-                                                                      '...';
+                                                                      ` + actionText +
+                                                                      `...`;
                                                                       }
 
                                                                       console.log(actionText
-                                                                      + ' poll:',
+                                                                      + ` poll:`,
                                                                       wizardState.pollName,
                                                                       wizardState.className,
                                                                       apiQuestions,
@@ -22788,7 +14917,7 @@
                                                                       EXISTING POLL
                                                                       var updatePollFn
                                                                       =
-                                                                      firebase.functions().httpsCallable('updatePoll');
+                                                                      firebase.functions().httpsCallable(`updatePoll`);
                                                                       updatePollFn({
                                                                       pollId:
                                                                       wizardState.pollId,
@@ -22804,17 +14933,17 @@
                                                                       .then(async
                                                                       function
                                                                       (result) {
-                                                                      console.log('Poll
+                                                                      console.log(`Poll
                                                                       updated via
                                                                       Cloud
-                                                                      Function:',
+                                                                      Function:`,
                                                                       wizardState.pollId);
                                                                       await
-                                                                      veritasAlert('Poll
+                                                                      veritasAlert(`Poll
                                                                       updated
-                                                                      successfully!',
+                                                                      successfully!`,
                                                                       { title:
-                                                                      'Success' });
+                                                                      `Success` });
 
                                                                       completeWizardPublish({
                                                                       pollId:
@@ -22833,14 +14962,14 @@
                                                                       .catch(async
                                                                       function (error)
                                                                       {
-                                                                      console.error('Cloud
+                                                                      console.error(`Cloud
                                                                       Function Update
-                                                                      Error:', error);
+                                                                      Error:`, error);
                                                                       await
-                                                                      veritasAlert('Failed
-                                                                      to update: ' +
+                                                                      veritasAlert(`Failed
+                                                                      to update: ` +
                                                                       error.message, {
-                                                                      title: 'Error',
+                                                                      title: `Error`,
                                                                       destructive:
                                                                       true });
                                                                       if (publishBtn)
@@ -22848,10 +14977,10 @@
                                                                       publishBtn.disabled
                                                                       = false;
                                                                       publishBtn.innerHTML
-                                                                      = '<span class="material-symbols-outlined">'
+                                                                      = `<span class="material-symbols-outlined">`
                                                                         + actionIcon +
-                                                                        '</span>
-                                                                      Update Poll';
+                                                                        `</span>
+                                                                      Update Poll`;
                                                                       }
                                                                       });
 
@@ -22860,7 +14989,7 @@
                                                                       POLL
                                                                       var createPollFn
                                                                       =
-                                                                      firebase.functions().httpsCallable('createPoll');
+                                                                      firebase.functions().httpsCallable(`createPoll`);
                                                                       createPollFn({
                                                                       pollName:
                                                                       wizardState.pollName.trim(),
@@ -22876,17 +15005,17 @@
                                                                       (result) {
                                                                       var newPollId =
                                                                       result.data.pollId;
-                                                                      console.log('Poll
+                                                                      console.log(`Poll
                                                                       created via
                                                                       Cloud
-                                                                      Function:',
+                                                                      Function:`,
                                                                       newPollId);
                                                                       await
-                                                                      veritasAlert('Poll
+                                                                      veritasAlert(`Poll
                                                                       published
-                                                                      successfully!',
+                                                                      successfully!`,
                                                                       { title:
-                                                                      'Success' });
+                                                                      `Success` });
 
                                                                       completeWizardPublish({
                                                                       pollId:
@@ -22905,14 +15034,14 @@
                                                                       .catch(async
                                                                       function (error)
                                                                       {
-                                                                      console.error('Cloud
+                                                                      console.error(`Cloud
                                                                       Function Create
-                                                                      Error:', error);
+                                                                      Error:`, error);
                                                                       await
-                                                                      veritasAlert('Failed
-                                                                      to publish: ' +
+                                                                      veritasAlert(`Failed
+                                                                      to publish: ` +
                                                                       error.message, {
-                                                                      title: 'Error',
+                                                                      title: `Error`,
                                                                       destructive:
                                                                       true });
                                                                       if (publishBtn)
@@ -22920,10 +15049,10 @@
                                                                       publishBtn.disabled
                                                                       = false;
                                                                       publishBtn.innerHTML
-                                                                      = '<span class="material-symbols-outlined">'
+                                                                      = `<span class="material-symbols-outlined">`
                                                                         + actionIcon +
-                                                                        '</span>
-                                                                      Publish Poll';
+                                                                        `</span>
+                                                                      Publish Poll`;
                                                                       }
                                                                       });
                                                                       }
@@ -22994,10 +15123,10 @@
                                                                       function
                                                                       handleLightweightSessionUpdate(data)
                                                                       {
-                                                                      console.log('[Optimization]
+                                                                      console.log(`[Optimization]
                                                                       Handling
                                                                       lightweight
-                                                                      update:', data);
+                                                                      update:`, data);
 
                                                                       // 1. Broadcast
                                                                       immediately to
@@ -23031,11 +15160,11 @@
                                                                       sessionPhase:
                                                                       data.metadata ?
                                                                       data.metadata.sessionPhase
-                                                                      : 'LIVE',
+                                                                      : `LIVE`,
                                                                       resultsVisibility:
                                                                       data.metadata ?
                                                                       data.metadata.resultsVisibility
-                                                                      : 'HIDDEN',
+                                                                      : `HIDDEN`,
                                                                       // Pass content
                                                                       from local cache
                                                                       for instant
@@ -23044,11 +15173,11 @@
                                                                       questionText:
                                                                       questionDef ?
                                                                       questionDef.questionText
-                                                                      : '',
+                                                                      : ``,
                                                                       questionImageURL:
                                                                       questionDef ?
                                                                       questionDef.questionImageURL
-                                                                      : '',
+                                                                      : ``,
                                                                       options:
                                                                       questionDef ?
                                                                       questionDef.options
@@ -23064,12 +15193,12 @@
                                                                       ||
                                                                       !CURRENT_POLL_DATA.questions)
                                                                       {
-                                                                      console.warn('[Optimization]
+                                                                      console.warn(`[Optimization]
                                                                       CURRENT_POLL_DATA
                                                                       missing, falling
                                                                       back to full
-                                                                      refresh');
-                                                                      // If we don't
+                                                                      refresh`);
+                                                                      // If we don`t
                                                                       have poll
                                                                       definition, we
                                                                       must fetch full
@@ -23109,10 +15238,10 @@
                                                                       return;
                                                                       }
                                                                       }
-                                                                      console.error('[Firebase]
+                                                                      console.error(`[Firebase]
                                                                       Failed to locate
                                                                       poll definition
-                                                                      for sync:',
+                                                                      for sync:`,
                                                                       data.pollId);
                                                                       return;
                                                                       }
@@ -23125,11 +15254,11 @@
 
                                                                       if
                                                                       (!questionDef) {
-                                                                      console.error('[Optimization]
+                                                                      console.error(`[Optimization]
                                                                       Question
                                                                       definition not
                                                                       found for
-                                                                      index:',
+                                                                      index:`,
                                                                       qIndex);
                                                                       return;
                                                                       }
@@ -23207,11 +15336,11 @@
                                                                       consistency
                                                                       setTimeout(function
                                                                       () {
-                                                                      console.log('[Optimization]
+                                                                      console.log(`[Optimization]
                                                                       Triggering
                                                                       background fetch
                                                                       for
-                                                                      consistency');
+                                                                      consistency`);
                                                                       // Force reset
                                                                       navigation flag
                                                                       to ensure
@@ -23268,9 +15397,9 @@
                                                                       migrationPayload
                                                                       =
                                                                       JSON.parse(e.target.result);
-                                                                      console.log('[Migration]
+                                                                      console.log(`[Migration]
                                                                       Payload
-                                                                      loaded:',
+                                                                      loaded:`,
                                                                       migrationPayload);
 
                                                                       var pCount =
@@ -23280,23 +15409,23 @@
                                                                       (migrationPayload.rosters
                                                                       || []).length;
 
-                                                                      logMigration('File
+                                                                      logMigration(`File
                                                                       loaded
-                                                                      successfully.');
-                                                                      logMigration('Found
-                                                                      ' + pCount + '
-                                                                      polls and ' +
-                                                                      rCount + ' class
-                                                                      rosters.');
+                                                                      successfully.`);
+                                                                      logMigration(`Found
+                                                                      ` + pCount + `
+                                                                      polls and ` +
+                                                                      rCount + ` class
+                                                                      rosters.`);
 
                                                                       document.getElementById('start-migration-btn').disabled
                                                                       = false;
                                                                       } catch (err) {
-                                                                      console.error('[Migration]
-                                                                      Parse error:',
+                                                                      console.error(`[Migration]
+                                                                      Parse error:`,
                                                                       err);
-                                                                      alert('Invalid
-                                                                      JSON file.');
+                                                                      alert(`Invalid
+                                                                      JSON file.`);
                                                                       input.value =
                                                                       '';
                                                                       }
@@ -23330,9 +15459,9 @@
                                                                       btn.disabled =
                                                                       true;
                                                                       btn.innerHTML =
-                                                                      '<span
+                                                                      `<span
                                                                         class="material-symbols-outlined animate-spin">sync</span>
-                                                                      Importing...';
+                                                                      Importing...`;
 
                                                                       document.getElementById('migration-progress-container').classList.remove('hidden');
 
@@ -23364,9 +15493,9 @@
 
                                                                       // 1. IMPORT
                                                                       POLLS
-                                                                      logMigration('---
+                                                                      logMigration(`---
                                                                       STARTING POLL
-                                                                      IMPORT ---');
+                                                                      IMPORT ---`);
 
                                                                       // Use
                                                                       concurrency
@@ -23391,14 +15520,14 @@
                                                                         metadata:
                                                                         poll.metadata
                                                                         });
-                                                                        logMigration('Computed:
-                                                                        ' +
+                                                                        logMigration(`Computed:
+                                                                        ` +
                                                                         poll.pollName);
                                                                         } catch (err)
                                                                         {
                                                                         console.error(err);
-                                                                        logMigration('ERROR
-                                                                        importing ' +
+                                                                        logMigration(`ERROR
+                                                                        importing ` +
                                                                         poll.pollName
                                                                         + ': ' +
                                                                         err.message);
@@ -23410,17 +15539,17 @@
 
                                                                         // 2. IMPORT
                                                                         ROSTERS
-                                                                        logMigration('---
+                                                                        logMigration(`---
                                                                         STARTING
                                                                         ROSTER IMPORT
-                                                                        ---');
+                                                                        ---`);
                                                                         for (let i =
                                                                         0; i < rosters.length; i++) { var
-                                                                          roster=rosters[i]; try { logMigration('Importing
-                                                                          class: ' + roster.className);
+                                                                          roster=rosters[i]; try { logMigration(`Importing
+                                                                          class: ` + roster.className);
             await firebase.database().ref(' rosters/' + roster.className).set(roster.students); } catch (err) {
-                                                                          console.error(err); logMigration('ERROR
-                                                                          importing roster ' + roster.className + ' : ' + err.message);
+                                                                          console.error(err); logMigration(`ERROR
+                                                                          importing roster ` + roster.className + ' : ' + err.message);
           } finally {
             updateProgress();
           }
@@ -23436,8 +15565,8 @@
                                                                           document.getElementById('migration-modal').classList.add('hidden');
                                                                           // Reset UI
                                                                           btn.innerHTML
-                                                                          = 'Start
-                                                                          Import';
+                                                                          = `Start
+                                                                          Import`;
                                                                           }, 3000);
                                                                           }
 
@@ -23453,117 +15582,3 @@
                                                                           startMigration;
 
                                                                           })();
-</script>
-
-  <script>
-    /**
-     * Veritas Theme Manager
-     * Handles Dark Mode persistence, system preference detection, and UI toggling.
-     */
-    (function () {
-        var ThemeManager = {
-            LOCAL_STORAGE_KEY: 'veritas_theme',
-
-            init: function () {
-                this.applyTheme(this.getPreferredTheme());
-                this.injectToggle();
-
-                // Listen for system changes
-                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-                    if (!localStorage.getItem(this.LOCAL_STORAGE_KEY)) {
-                        this.applyTheme(e.matches ? 'dark' : 'light');
-                    }
-                });
-            },
-
-            getPreferredTheme: function () {
-                var stored = localStorage.getItem(this.LOCAL_STORAGE_KEY);
-                if (stored) return stored;
-                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            },
-
-            applyTheme: function (theme) {
-                if (theme === 'dark') {
-                    document.documentElement.classList.add('dark');
-                } else {
-                    document.documentElement.classList.remove('dark');
-                }
-                localStorage.setItem(this.LOCAL_STORAGE_KEY, theme);
-                this.updateButtonState(theme);
-            },
-
-            toggle: function () {
-                var current = this.getPreferredTheme();
-                var next = current === 'dark' ? 'light' : 'dark';
-                this.applyTheme(next);
-            },
-
-            updateButtonState: function (theme) {
-                var btn = document.getElementById('theme-toggle-btn');
-                if (!btn) return;
-
-                var icon = btn.querySelector('.material-symbols-outlined');
-                if (icon) {
-                    icon.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
-                }
-                btn.setAttribute('aria-label', 'Switch to ' + (theme === 'dark' ? 'light' : 'dark') + ' mode');
-            },
-
-            injectToggle: function () {
-                if (document.getElementById('theme-toggle-btn')) return;
-
-                var btn = document.createElement('button');
-                btn.id = 'theme-toggle-btn';
-                btn.className = 'theme-toggle fixed bottom-6 right-6 z-50 p-3 rounded-full shadow-lg transition-all duration-300 hover:scale-110 focus:outline-none';
-
-                // Styles are inline or tailwind, but we need dynamic logic for colors
-                // We'll use classes that adapt to dark mode via Tailwind
-                btn.classList.add('bg-white', 'dark:bg-slate-800', 'text-slate-800', 'dark:text-yellow-400');
-
-                btn.innerHTML = '<span class="material-symbols-outlined text-xl">dark_mode</span>';
-                btn.onclick = this.toggle.bind(this);
-
-                document.body.appendChild(btn);
-                this.updateButtonState(this.getPreferredTheme());
-            }
-        };
-
-        // Initialize on load
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => ThemeManager.init());
-        } else {
-            ThemeManager.init();
-        }
-
-        // Expose global
-        window.ThemeManager = ThemeManager;
-    })();
-</script>
-
-<style>
-    /* Extra transition for smooth theme switching */
-    html.dark body {
-        background-color: #0f172a;
-        /* slate-900 */
-        color: #f8fafc;
-        /* slate-50 */
-    }
-
-    html.dark .glass-card {
-        background: rgba(15, 23, 42, 0.6);
-        border-color: rgba(255, 255, 255, 0.1);
-    }
-
-    /* Transition properties */
-    body,
-    .glass-card,
-    .btn,
-    .card {
-        transition-property: background-color, border-color, color, fill, stroke;
-        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-        transition-duration: 300ms;
-    }
-</style>
-</body>
-
-</html>

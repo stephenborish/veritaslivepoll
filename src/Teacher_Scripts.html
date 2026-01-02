@@ -12990,7 +12990,7 @@
         '<': '&lt;',
         '>': '&gt;',
         '"': '&quot;',
-        "'": '&#039;'
+        "'": '&amp;#039;'
       };
       return String(text).replace(/[&<>"']/g, function (m) { return map[m]; });
     }

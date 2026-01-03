@@ -21291,19 +21291,7 @@
 
 
 
-    // FIXED: Use Cloud Function for Roster Save
-    var manageRoster = firebaseFunctions.httpsCallable('manageRoster');
-    manageRoster({
-      action: 'SAVE',
-      className: currentClasses,
-      roster: rosterData
-    }).then(function (result) {
-      setButtonLoading(saveRosterBtn, false);
-      onRosterSaved(result.data || result);
-    }).catch(function (error) {
-      setButtonLoading(saveRosterBtn, false);
-      handleError(error);
-    });
+    // [REMOVED] Orphaned code block that caused crash
 
     function handleAdjustStudentTime(deltaMinutes) {
       if (!currentManagedStudent) { return; }

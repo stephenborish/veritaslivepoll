@@ -31,8 +31,20 @@ Root collection for live exam instances.
     - `examId`: `string` (Reference to `exams`)
     - `teacherId`: `string` (Reference to `teachers`)
     - `accessCode`: `string` (6-digit unique code)
-    - `status`: `string` (`'WAITING'`, `'LIVE'`, `'CLOSED'`)
+    - `status`: `string` (`'WAITING'`, `'LIVE'`, `'CLOSED'`, `'OPEN'`, `'REVIEW'`)
+    - `currentQuestionIndex`: `number` (For Live Poll sync)
     - `createdAt`: `timestamp`
+
+### `sessions/{sessionId}/students`
+Sub-collection for student participation in a session.
+- **Document ID**: `studentId` (Auth UID, often anonymous)
+- **Fields**:
+    - `name`: `string`
+    - `status`: `string` (`'ACTIVE'`, `'LOCKED'`, `'FINISHED'`)
+    - `answers`: `map`
+        - `{questionId}`: `mixed` (Student's selected answer)
+    - `unlockCount`: `number` (Audit log)
+    - `joinedAt`: `timestamp`
 
 ### `polls`
 Root collection for poll templates and settings.

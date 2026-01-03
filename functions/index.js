@@ -1238,6 +1238,84 @@ exports.manageRoster = onCall({ cors: true }, async (request) => {
 });
 
 /**
+ * MISSION CONTROL DASHBOARD LOGIC
+ */
+
+/**
+ * Update Session State (Teacher Action - Live Poll Mode)
+ * Controls the flow of a synchronous poll (e.g. Next Question, Reveal).
+ */
+exports.updateSessionState = onCall({ cors: true }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "User must be authenticated.");
+  }
+
+  const { sessionId, newState } = request.data;
+  if (!sessionId || !newState) {
+    throw new HttpsError("invalid-argument", "Missing sessionId or newState");
+  }
+
+  const db = admin.firestore();
+  const sessionRef = db.collection("sessions").doc(sessionId);
+  const sessionSnap = await sessionRef.get();
+
+  if (!sessionSnap.exists) {
+    throw new HttpsError("not-found", "Session not found");
+  }
+
+  // Verify ownership
+  if (sessionSnap.data().teacherId !== request.auth.uid) {
+    throw new HttpsError("permission-denied", "You can only update your own sessions.");
+  }
+
+  // Update state (e.g., status, currentQuestionIndex)
+  await sessionRef.update({
+    ...newState,
+    lastUpdate: admin.firestore.FieldValue.serverTimestamp()
+  });
+
+  return { success: true };
+});
+
+/**
+ * Unlock Student (Teacher Action - Secure Assessment Mode)
+ * Resets a student's status to 'ACTIVE' after a lock triggering event.
+ */
+exports.unlockStudent = onCall({ cors: true }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "User must be authenticated.");
+  }
+
+  const { sessionId, studentId } = request.data;
+  if (!sessionId || !studentId) {
+    throw new HttpsError("invalid-argument", "Missing sessionId or studentId");
+  }
+
+  const db = admin.firestore();
+  const sessionRef = db.collection("sessions").doc(sessionId);
+  const sessionSnap = await sessionRef.get();
+
+  if (!sessionSnap.exists) {
+    throw new HttpsError("not-found", "Session not found");
+  }
+
+  if (sessionSnap.data().teacherId !== request.auth.uid) {
+    throw new HttpsError("permission-denied", "You can only manage your own sessions.");
+  }
+
+  const studentRef = sessionRef.collection("students").doc(studentId);
+
+  await studentRef.update({
+    status: "ACTIVE",
+    unlockCount: admin.firestore.FieldValue.increment(1),
+    unlockedAt: admin.firestore.FieldValue.serverTimestamp(),
+    unlockedBy: request.auth.uid
+  });
+
+  return { success: true };
+});
+
+/**
  * POLL CREATOR BACKEND (Rebuilt)
  */
 

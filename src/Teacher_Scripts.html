@@ -57,6 +57,7 @@
     var currentMainSection = 'dashboard';
     var activeMobilePanel = 'question';
 
+
     // OPTIMIZATION: Adaptive polling with backoff (like student view)
     var pollFailureCount = 0;
     var basePollInterval = 2500;
@@ -1220,273 +1221,16 @@
     var googleChartsLoading = false;
     var googleChartsBootstrapTimer = null;
 
-    function hasAppsScriptRuntime() {
-      return !!(window.google && window.google.script && window.google.script.run && typeof window.google.script.run.withSuccessHandler === 'function');
+
+    // FIREBASE MIGRATION: PREVIEW_MODE is permanently disabled.
+    // The application relies exclusively on Firebase.
+    const PREVIEW_MODE = false;
+
+    function initializeBackend() {
+      console.log('[Veritas] Initializing Firebase backend...');
+      loadInitialData();
     }
 
-    var PREVIEW_MODE = false;
-    var previewBootstrapped = false;
-
-    function deepClone(value) {
-      try {
-        return JSON.parse(JSON.stringify(value));
-      } catch (err) {
-        console.warn('Preview clone fallback failed:', err);
-        return value;
-      }
-    }
-
-    var PREVIEW_PAYLOAD = {
-      classes: ['AP Biology – Period 5', 'Chemistry – Period 2', 'World History – Period 7'],
-      polls: [
-        {
-          pollId: 'demo-bio-1',
-          pollName: 'Photosynthesis Pulse Check',
-          className: 'AP Biology – Period 5',
-          updatedAt: new Date(Date.now() - 3600 * 1000).toISOString(),
-          lastRunAt: new Date(Date.now() - 7200 * 1000).toISOString(),
-          createdAt: new Date(Date.now() - 86400 * 1000 * 3).toISOString(),
-          questions: [
-            {
-              questionText: 'Which organelle performs photosynthesis in plant cells?',
-              options: [
-                { text: 'Mitochondrion' },
-                { text: 'Chloroplast' },
-                { text: 'Golgi apparatus' },
-                { text: 'Nucleus' }
-              ],
-              correctAnswer: 'Chloroplast',
-              correctAnswerLetter: 'B',
-              timerSeconds: 90
-            },
-            {
-              questionText: 'What pigment captures light energy for photosynthesis?',
-              options: [
-                { text: 'Hemoglobin' },
-                { text: 'Chlorophyll' },
-                { text: 'Keratin' },
-                { text: 'Melanin' }
-              ],
-              correctAnswer: 'Chlorophyll',
-              correctAnswerLetter: 'B',
-              timerSeconds: 75
-            }
-          ]
-        },
-        {
-          pollId: 'demo-chem-1',
-          pollName: 'Stoichiometry Warm-Up',
-          className: 'Chemistry – Period 2',
-          updatedAt: new Date(Date.now() - 5400 * 1000).toISOString(),
-          lastRunAt: new Date(Date.now() - 86400 * 1000).toISOString(),
-          createdAt: new Date(Date.now() - 86400 * 1000 * 5).toISOString(),
-          questions: [
-            {
-              questionText: 'How many moles are in 36 grams of water (H₂O)?',
-              options: [
-                { text: '1.0 mol' },
-                { text: '2.0 mol' },
-                { text: '0.5 mol' },
-                { text: '4.0 mol' }
-              ],
-              correctAnswer: '2.0 mol',
-              correctAnswerLetter: 'B',
-              timerSeconds: 60
-            },
-            {
-              questionText: 'What is the limiting reactant when 2 mol of H₂ reacts with 1 mol of O₂?',
-              options: [
-                { text: 'Hydrogen' },
-                { text: 'Oxygen' },
-                { text: 'Water' },
-                { text: 'None' }
-              ],
-              correctAnswer: 'Hydrogen',
-              correctAnswerLetter: 'A',
-              timerSeconds: 65
-            }
-          ]
-        }
-      ],
-      dashboardSummary: {
-        recentSessions: [
-          { sessionName: 'Cell Energy Exit Ticket', date: new Date(Date.now() - 3600 * 1000 * 20).toISOString(), className: 'AP Biology – Period 5', participationPct: 92, masteryPct: 78, flags: 1 },
-          { sessionName: 'Stoichiometry Practice', date: new Date(Date.now() - 3600 * 1000 * 42).toISOString(), className: 'Chemistry – Period 2', participationPct: 88, masteryPct: 74, flags: 0 },
-          { sessionName: 'Industrial Revolution Check', date: new Date(Date.now() - 3600 * 1000 * 65).toISOString(), className: 'World History – Period 7', participationPct: 83, masteryPct: 69, flags: 0 }
-        ],
-        dailyActivity: [
-          { dayName: 'Mon', count: 18 },
-          { dayName: 'Tue', count: 22 },
-          { dayName: 'Wed', count: 31 },
-          { dayName: 'Thu', count: 26 },
-          { dayName: 'Fri', count: 19 },
-          { dayName: 'Sat', count: 9 },
-          { dayName: 'Sun', count: 6 }
-        ],
-        weekOverWeekChange: 6,
-        totalActivityThisWeek: 131
-      },
-      rosters: {
-        'AP Biology – Period 5': [
-          { name: 'Ava Martinez', email: 'ava.martinez@school.edu' },
-          { name: 'Ethan Patel', email: 'ethan.patel@school.edu' },
-          { name: 'Grace Lee', email: 'grace.lee@school.edu' },
-          { name: 'Noah Williams', email: 'noah.williams@school.edu' }
-        ],
-        'Chemistry – Period 2': [
-          { name: 'Liam Johnson', email: 'liam.johnson@school.edu' },
-          { name: 'Sophia Chen', email: 'sophia.chen@school.edu' },
-          { name: 'Mason Rivera', email: 'mason.rivera@school.edu' }
-        ],
-        'World History – Period 7': [
-          { name: 'Olivia Brooks', email: 'olivia.brooks@school.edu' },
-          { name: 'Henry Adams', email: 'henry.adams@school.edu' }
-        ]
-      },
-      archivedPolls: [
-        {
-          pollId: 'arch-bio-1',
-          pollName: 'Cell Processes Review',
-          className: 'AP Biology – Period 5',
-          lastRunAt: new Date(Date.now() - 86400 * 1000 * 9).toISOString(),
-          createdAt: new Date(Date.now() - 86400 * 1000 * 20).toISOString(),
-          questionCount: 4,
-          totalResponses: 22,
-          totalStudents: 24,
-          questions: [
-            {
-              questionText: 'What is ATP often called within the cell?',
-              options: [{ text: 'Energy currency' }, { text: 'Protein factory' }, { text: 'Genetic blueprint' }, { text: 'Cell wall' }],
-              correctAnswer: 'Energy currency',
-              summary: { correct: 18, incorrect: 3, noResponse: 3, violations: 0 },
-              responses: [
-                { name: 'Ava Martinez', answer: 'Energy currency', isCorrect: true },
-                { name: 'Ethan Patel', answer: 'Energy currency', isCorrect: true },
-                { name: 'Grace Lee', answer: 'Protein factory', isCorrect: false }
-              ],
-              nonResponders: [
-                { name: 'Noah Williams' },
-                { name: 'Miles Turner' }
-              ]
-            }
-          ]
-        }
-      ],
-      analytics: {
-        kpis: [
-          { label: 'Avg Participation', value: '88%', delta: 5, tooltip: 'Average participation over the last 7 days.' },
-          { label: 'Mastery Trend', value: '74%', delta: 3, tooltip: 'Average mastery compared to last week.' },
-          { label: 'Integrity Events', value: '2', delta: -1, tooltip: 'Academic integrity events this week.' }
-        ],
-        topics: [
-          { topic: 'Cell Biology', masteryPct: 82, questionCount: 12 },
-          { topic: 'Metabolism', masteryPct: 68, questionCount: 9 },
-          { topic: 'Industrialization', masteryPct: 74, questionCount: 7 }
-        ],
-        items: [
-          { qNum: 1, topic: 'Cell Biology', correctPct: 84, rbis: 0.38, choiceCounts: { A: 2, B: 18, C: 4, D: 1 }, correctIndex: 1, medianTimeSec: 32, total: 25, flags: [] },
-          { qNum: 2, topic: 'Metabolism', correctPct: 61, rbis: 0.22, choiceCounts: { A: 5, B: 9, C: 8, D: 3 }, correctIndex: 2, medianTimeSec: 45, total: 25, flags: ['watch'] },
-          { qNum: 3, topic: 'Industrialization', correctPct: 47, rbis: 0.11, choiceCounts: { A: 10, B: 6, C: 7, D: 2 }, correctIndex: 0, medianTimeSec: 38, total: 25, flags: ['low-disc'] }
-        ],
-        students: {
-          'ava.martinez@school.edu': {
-            name: 'Ava Martinez',
-            email: 'ava.martinez@school.edu',
-            successLast10: 92.0,
-            participationPct: 100,
-            integrityCount: 0,
-            sessions: [
-              { sessionName: 'Cell Energy Exit Ticket', scorePct: 95 },
-              { sessionName: 'Metabolism Pop Quiz', scorePct: 88 },
-              { sessionName: 'Photosynthesis Check', scorePct: 93 }
-            ],
-            topicPerformance: {
-              'Cell Biology': { correct: 18, total: 20 },
-              'Metabolism': { correct: 14, total: 16 },
-              'Industrialization': { correct: 6, total: 8 }
-            }
-          },
-          'ethan.patel@school.edu': {
-            name: 'Ethan Patel',
-            email: 'ethan.patel@school.edu',
-            successLast10: 78.0,
-            participationPct: 86,
-            integrityCount: 1,
-            sessions: [
-              { sessionName: 'Cell Energy Exit Ticket', scorePct: 82 },
-              { sessionName: 'Metabolism Pop Quiz', scorePct: 74 },
-              { sessionName: 'Photosynthesis Check', scorePct: 78 }
-            ],
-            topicPerformance: {
-              'Cell Biology': { correct: 15, total: 20 },
-              'Metabolism': { correct: 10, total: 16 },
-              'Industrialization': { correct: 5, total: 8 }
-            }
-          }
-        }
-      }
-    };
-
-    var runtimeWatchTimer = null;
-    var runtimeFallbackTimer = null;
-    var RUNTIME_MAX_WAIT_MS = 4000;
-    var RUNTIME_POLL_INTERVAL = 200;
-
-    function bootstrapAppsScriptRuntime() {
-      if (hasAppsScriptRuntime()) {
-        PREVIEW_MODE = false;
-        loadInitialData();
-        return;
-      }
-
-      if (runtimeWatchTimer) {
-        clearInterval(runtimeWatchTimer);
-      }
-      runtimeWatchTimer = setInterval(function () {
-        if (!hasAppsScriptRuntime()) {
-          return;
-        }
-        clearInterval(runtimeWatchTimer);
-        runtimeWatchTimer = null;
-        if (runtimeFallbackTimer) {
-          clearTimeout(runtimeFallbackTimer);
-          runtimeFallbackTimer = null;
-        }
-        if (previewBootstrapped) {
-          PREVIEW_MODE = false;
-          previewBootstrapped = false;
-          try {
-            LocalCache.invalidate('dashboardData');
-          } catch (err) {
-            console.warn('Unable to clear cached dashboard payload after reconnect:', err);
-          }
-          showToast('info', 'Connected', 'Live data connection restored. Loading polls…', 3500);
-        }
-        loadInitialData();
-      }, RUNTIME_POLL_INTERVAL);
-
-      if (runtimeFallbackTimer) {
-        clearTimeout(runtimeFallbackTimer);
-      }
-      runtimeFallbackTimer = setTimeout(function () {
-        runtimeFallbackTimer = null;
-        if (hasAppsScriptRuntime()) {
-          return;
-        }
-        console.warn('Apps Script runtime not detected after ' + RUNTIME_MAX_WAIT_MS + 'ms – showing cached preview data.');
-        PREVIEW_MODE = true;
-        previewBootstrapped = true;
-        loadInitialData();
-        showToast('warning', 'Offline preview', 'Live backend unavailable. Displaying cached sample data.', 5000);
-      }, RUNTIME_MAX_WAIT_MS);
-    }
-
-    function previewOnlyNotice(actionLabel) {
-      var actionText = actionLabel || 'complete this action';
-      return veritasAlert('This feature is disabled in preview mode. Open the deployed Veritas dashboard to ' + actionText + '.', {
-        title: 'Preview mode'
-      });
-    }
 
     // Update header datetime
     function updateHeaderDateTime() {
@@ -2074,7 +1818,16 @@
     storeButtonDefaultHtml(viewLinksBtn);
 
     // --- Initialization ---
-    bootstrapAppsScriptRuntime();
+    window.VeritasDebug = {
+      initialize: initializeBackend,
+      loadInitialData: loadInitialData,
+      loadDashboardSummary: loadDashboardSummary,
+      forceSync: function () {
+        loadInitialData();
+        loadDashboardSummary();
+      }
+    };
+    initializeBackend();
 
     if (window.google && google.charts && typeof google.charts.load === 'function') {
       bootstrapGoogleCharts();
@@ -2786,12 +2539,6 @@
     }
 
     function loadDashboardSummary() {
-      if (PREVIEW_MODE && PREVIEW_PAYLOAD) {
-        dashboardSummary = deepClone(PREVIEW_PAYLOAD.dashboardSummary || null);
-        renderDashboardSummary();
-        return;
-      }
-
       // FIREBASE MIGRATION: Load Polls directly from RTDB
       // This replaces google.script.run.getDashboardSummary()
 
@@ -2991,18 +2738,6 @@
       missionControlPollFailures = 0;
       missionControlBackoffMs = 0;
       missionControlHeartbeat.stop();
-
-      if (PREVIEW_MODE && PREVIEW_PAYLOAD) {
-        previewBootstrapped = true;
-        console.info('Apps Script runtime not detected – rendering preview data.');
-        setTimeout(function () {
-          onDashboardDataLoaded({
-            polls: deepClone(PREVIEW_PAYLOAD.polls || []),
-            classes: deepClone(PREVIEW_PAYLOAD.classes || [])
-          });
-        }, 120);
-        return;
-      }
 
       // FIREBASE MIGRATION: Roster data is usually loaded via showRosterManager
       // But we can pre-fetch it here if needed, or just let the app load polls.
@@ -4324,9 +4059,9 @@
           // Re-render (pass current data)
           onRosterDataLoaded({
             rosters: rosterData,
-            classes: (window.currentClasses && window.currentClasses.includes(selectedRosterClass))
-              ? window.currentClasses
-              : (window.currentClasses || []).concat([selectedRosterClass])
+            classes: ALL_CLASSES.includes(selectedRosterClass)
+              ? ALL_CLASSES
+              : ALL_CLASSES.concat([selectedRosterClass])
           }, selectedRosterClass);
         })
         .catch(function (error) {

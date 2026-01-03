@@ -4,10 +4,11 @@ const path = require('path');
 const SRC_DIR = path.join(__dirname, 'src');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
-// Ensure public dir exists
-if (!fs.existsSync(PUBLIC_DIR)) {
-    fs.mkdirSync(PUBLIC_DIR, { recursive: true });
+// Ensure public dir exists and is clean
+if (fs.existsSync(PUBLIC_DIR)) {
+    fs.rmSync(PUBLIC_DIR, { recursive: true, force: true });
 }
+fs.mkdirSync(PUBLIC_DIR, { recursive: true });
 
 // Helper to read file content
 function readFile(filename) {

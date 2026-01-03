@@ -60,3 +60,22 @@ Sub-collection for questions within a poll.
     - `correctAnswer`: `mixed`
     - `points`: `number`
     - `order`: `number`
+
+### `classes`
+Root collection for class rosters.
+- **Document ID**: `classId` (Auto-generated)
+- **Fields**:
+    - `teacherId`: `string` (Owner UID)
+    - `className`: `string`
+    - `studentCount`: `number`
+    - `updatedAt`: `timestamp`
+
+### `classes/{classId}/students`
+Sub-collection for student profiles within a class.
+- **Document ID**: `studentEmail` (Sanitized email)
+- **Fields**:
+    - `email`: `string`
+    - `firstName`: `string`
+    - `lastName`: `string`
+    - `lastActive`: `timestamp`
+    - `updatedAt`: `timestamp`

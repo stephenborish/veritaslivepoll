@@ -60,5 +60,11 @@ service cloud.firestore {
         allow read, write: if request.auth != null && get(/databases/$(database)/documents/classes/$(classId)).data.teacherId == request.auth.uid;
       }
     }
+
+    // Reports: Analytics Output
+    match /reports/{sessionId} {
+      allow read: if request.auth != null; // Teachers can read reports
+      allow write: if false; // Only Cloud Functions can write reports
+    }
   }
 }

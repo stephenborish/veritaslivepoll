@@ -1316,6 +1316,187 @@ exports.unlockStudent = onCall({ cors: true }, async (request) => {
 });
 
 /**
+ * ANALYTICS & GRADING ENGINE
+ */
+
+/**
+ * Submit Response (Student Action)
+ * Records a student's answer and metacognition confidence.
+ * Triggers grading logic via Firestore triggers.
+ */
+exports.submitResponse = onCall({ cors: true }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "User must be authenticated.");
+  }
+
+  const { sessionId, questionId, answer, confidence } = request.data;
+  if (!sessionId || !questionId || answer === undefined) {
+    throw new HttpsError("invalid-argument", "Missing required fields");
+  }
+
+  const db = admin.firestore();
+  const responseData = {
+    studentId: request.auth.uid,
+    questionId,
+    answer,
+    confidence: confidence || null,
+    submittedAt: admin.firestore.FieldValue.serverTimestamp(),
+    isGraded: false // Pending grading trigger
+  };
+
+  // Add to responses sub-collection
+  await db.collection("sessions").doc(sessionId).collection("responses").add(responseData);
+
+  return { success: true };
+});
+
+/**
+ * Grade Response (Firestore Trigger)
+ * Listens for new responses, fetches the correct answer, scores it, and updates the document.
+ */
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+
+exports.gradeResponse = onDocumentCreated("sessions/{sessionId}/responses/{responseId}", async (event) => {
+  const snapshot = event.data;
+  if (!snapshot) {
+    return;
+  }
+
+  const response = snapshot.data();
+  const { sessionId, questionId, answer } = response;
+
+  if (response.isGraded) return; // Already graded
+
+  const db = admin.firestore();
+
+  // 1. Get Exam ID from Session
+  const sessionSnap = await db.collection("sessions").doc(sessionId).get();
+  if (!sessionSnap.exists) return;
+  const examId = sessionSnap.data().examId || sessionSnap.data().pollId; // flexible for legacy poll vs new exam
+
+  if (!examId) return;
+
+  // 2. Fetch Question Key (Source: Exams or Polls)
+  // Optimizing: This read could be expensive at scale. Ideally, cache exam key in session or similar.
+  // For now, consistent with requirements: fetch from source.
+  // Checks both collections as we support both.
+  let questionDoc = null;
+  const examQRef = db.collection("exams").doc(examId).collection("questions").doc(questionId);
+  const examQSnap = await examQRef.get();
+
+  if (examQSnap.exists) {
+    questionDoc = examQSnap.data();
+  } else {
+    // Try Polls
+    const pollQRef = db.collection("polls").doc(examId).collection("questions").doc(questionId);
+    const pollQSnap = await pollQRef.get();
+    if (pollQSnap.exists) questionDoc = pollQSnap.data();
+  }
+
+  if (!questionDoc) {
+    console.warn(`Question key not found for ${questionId}`);
+    return;
+  }
+
+  // 3. Compare Answer
+  let isCorrect = false;
+  let score = 0;
+  const correctVal = questionDoc.correctAnswer;
+  const points = questionDoc.points || 1;
+
+  // Simple equality check. Can be expanded for multi-select arrays.
+  if (String(answer).trim().toLowerCase() === String(correctVal).trim().toLowerCase()) {
+    isCorrect = true;
+    score = points;
+  }
+
+  // 4. Update Response
+  return snapshot.ref.update({
+    isCorrect,
+    score,
+    isGraded: true,
+    gradedAt: admin.firestore.FieldValue.serverTimestamp()
+  });
+});
+
+/**
+ * Generate Session Report (Teacher Action)
+ * Aggregates all responses to calculate item analytics and metacognition stats.
+ */
+exports.generateSessionReport = onCall({ cors: true }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "User must be authenticated.");
+  }
+
+  const { sessionId } = request.data;
+  const db = admin.firestore();
+
+  // 1. Fetch all responses
+  const responsesSnap = await db.collection("sessions").doc(sessionId).collection("responses").get();
+  const responses = responsesSnap.docs.map(d => d.data());
+
+  if (responses.length === 0) {
+    return { success: false, message: "No responses found." };
+  }
+
+  // 2. Aggregate Data
+  const questionStats = {}; // { qId: { correct: 0, total: 0 } }
+  const studentScores = {}; // { studentId: totalScore }
+
+  // Metacognition Buckets
+  const metaMatrix = {
+    mastery: 0,       // Confident & Correct
+    misconception: 0, // Confident & Wrong
+    guessing: 0,      // Unsure & Correct
+    gap: 0            // Unsure & Wrong
+  };
+
+  responses.forEach(r => {
+    // Item Analysis Prep
+    if (!questionStats[r.questionId]) questionStats[r.questionId] = { correct: 0, total: 0 };
+    questionStats[r.questionId].total++;
+    if (r.isCorrect) questionStats[r.questionId].correct++;
+
+    // Student Scores Prep (for Point Biserial later if needed)
+    if (!studentScores[r.studentId]) studentScores[r.studentId] = 0;
+    studentScores[r.studentId] += (r.score || 0);
+
+    // Metacognition
+    if (r.confidence !== null) {
+      if (r.confidence && r.isCorrect) metaMatrix.mastery++;
+      else if (r.confidence && !r.isCorrect) metaMatrix.misconception++;
+      else if (!r.confidence && r.isCorrect) metaMatrix.guessing++;
+      else if (!r.confidence && !r.isCorrect) metaMatrix.gap++;
+    }
+  });
+
+  // 3. Calculate Item Statistics
+  const itemAnalysis = Object.keys(questionStats).map(qId => {
+    const stats = questionStats[qId];
+    const difficulty = stats.total > 0 ? (stats.correct / stats.total) : 0;
+    // Note: Point Biserial requires more complex array processing, using simplified difficulty for now.
+    // analyticsEngine.calculateDiscriminationIndex could be used if we passed full arrays.
+
+    return {
+      questionId: qId,
+      difficulty: parseFloat(difficulty.toFixed(2)),
+      totalResponses: stats.total
+    };
+  });
+
+  // 4. Save Report
+  await db.collection("reports").doc(sessionId).set({
+    sessionId,
+    generatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    itemAnalysis,
+    metacognition: metaMatrix,
+    totalParticipants: Object.keys(studentScores).length
+  });
+
+  return { success: true, reportId: sessionId };
+});
+
+/**
  * POLL CREATOR BACKEND (Rebuilt)
  */
 

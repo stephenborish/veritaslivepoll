@@ -7753,7 +7753,7 @@
 
   <!-- Poll Creation Wizard View -->
   <style>
-    /* Login Screen Styles */
+    /* Login Screen Styles - Premium Glassmorphism */
     #login-overlay {
         position: fixed !important;
         top: 0 !important;
@@ -7763,71 +7763,90 @@
         margin: 0 !important;
         padding: 0 !important;
         z-index: 2147483647 !important;
-        /* Max Z-Index */
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        background: radial-gradient(circle at top right, #1e293b, #0f172a);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-family: 'Inter', sans-serif;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
         box-sizing: border-box !important;
+        backdrop-filter: blur(8px);
     }
 
     .login-card {
-        background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-        border-radius: 24px;
-        padding: 48px;
+        background: rgba(30, 41, 59, 0.7);
+        backdrop-filter: blur(24px) saturate(180%);
+        -webkit-backdrop-filter: blur(24px) saturate(180%);
+        border: 1px solid rgba(255, 255, 255, 0.125);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+        border-radius: 28px;
+        padding: 56px;
         width: 100%;
-        max-width: 420px;
+        max-width: 440px;
         text-align: center;
-        animation: loginSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        animation: loginFadeInUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        position: relative;
+        overflow: hidden;
     }
 
-    @keyframes loginSlideUp {
+    .login-card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(251, 191, 36, 0.05) 0%, transparent 70%);
+        pointer-events: none;
+    }
+
+    @keyframes loginFadeInUp {
         from {
             opacity: 0;
-            transform: translateY(20px);
+            transform: translateY(30px) scale(0.98);
         }
-
         to {
             opacity: 1;
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
         }
     }
 
     .login-logo {
-        width: 64px;
-        height: 64px;
-        margin: 0 auto 24px;
+        width: 72px;
+        height: 72px;
+        margin: 0 auto 32px;
         background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
-        border-radius: 16px;
+        border-radius: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 0 30px rgba(251, 191, 36, 0.3);
+        box-shadow: 0 12px 24px -6px rgba(217, 119, 6, 0.4);
+        transform: rotate(-3deg);
+        transition: transform 0.3s ease;
+    }
+
+    .login-logo:hover {
+        transform: rotate(0deg) scale(1.05);
     }
 
     .login-logo span {
-        font-size: 32px;
+        font-size: 36px;
         color: white;
     }
 
     .login-title {
         color: white;
-        font-size: 24px;
-        font-weight: 700;
-        margin-bottom: 8px;
-        letter-spacing: -0.02em;
+        font-size: 32px;
+        font-weight: 800;
+        margin-bottom: 12px;
+        letter-spacing: -0.04em;
     }
 
     .login-subtitle {
         color: #94a3b8;
-        font-size: 15px;
-        margin-bottom: 32px;
-        line-height: 1.5;
+        font-size: 16px;
+        margin-bottom: 40px;
+        line-height: 1.6;
+        font-weight: 400;
     }
 
     .login-btn {
@@ -7835,23 +7854,23 @@
         background: white;
         color: #0f172a;
         border: none;
-        padding: 14px;
-        border-radius: 12px;
+        padding: 16px;
+        border-radius: 14px;
         font-size: 16px;
         font-weight: 600;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 12px;
-        transition: all 0.2s ease;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        gap: 14px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
     }
 
     .login-btn:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        background: #f8fafc;
+        transform: translateY(-2px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+        background: #fdfdfd;
     }
 
     .login-btn:active {
@@ -7859,42 +7878,36 @@
     }
 
     .login-btn-icon {
-        width: 20px;
-        height: 20px;
+        width: 24px;
+        height: 24px;
     }
 
     .login-error {
-        margin-top: 16px;
-        padding: 12px;
+        margin-top: 24px;
+        padding: 14px;
         background: rgba(239, 68, 68, 0.15);
-        border: 1px solid rgba(239, 68, 68, 0.3);
-        border-radius: 8px;
+        border: 1px solid rgba(239, 68, 68, 0.25);
+        border-radius: 12px;
         color: #fca5a5;
-        font-size: 13px;
+        font-size: 14px;
+        font-weight: 500;
         display: none;
-        animation: shake 0.4s ease-in-out;
+        animation: loginShake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
     }
 
-    @keyframes shake {
-
-        0%,
-        100% {
-            transform: translateX(0);
-        }
-
-        25% {
-            transform: translateX(-4px);
-        }
-
-        75% {
-            transform: translateX(4px);
-        }
+    @keyframes loginShake {
+        10%, 90% { transform: translate3d(-1px, 0, 0); }
+        20%, 80% { transform: translate3d(2px, 0, 0); }
+        30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+        40%, 60% { transform: translate3d(4px, 0, 0); }
     }
 
     .login-footer {
-        margin-top: 32px;
+        margin-top: 48px;
         color: #64748b;
-        font-size: 12px;
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 0.02em;
     }
 </style>
 
@@ -7904,18 +7917,17 @@
             <span class="material-symbols-outlined">school</span>
         </div>
         <h1 class="login-title">Veritas Live</h1>
-        <p class="login-subtitle">Sign in to access your classroom polls and assessments.</p>
+        <p class="login-subtitle">Secure Teacher Dashboard Access</p>
 
         <button id="google-login-btn" class="login-btn">
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="login-btn-icon"
-                alt="Google">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="login-btn-icon" alt="Google">
             Sign in with Google
         </button>
 
         <div id="login-error" class="login-error"></div>
 
         <div class="login-footer">
-            &copy; 2024 Veritas Education. Secure & Private.
+            &copy; 2024 Veritas Education. Professional Grade.
         </div>
     </div>
 </div>
@@ -7926,7 +7938,12 @@
         window.LoginManager = {
             show: function () {
                 var el = document.getElementById('login-overlay');
-                if (el) el.style.display = 'flex';
+                if (el) {
+                    el.style.display = 'flex';
+                    // Reset errors when showing
+                    var errEl = document.getElementById('login-error');
+                    if (errEl) errEl.style.display = 'none';
+                }
             },
             hide: function () {
                 var el = document.getElementById('login-overlay');
@@ -7943,8 +7960,12 @@
                 var btn = document.getElementById('google-login-btn');
                 if (btn) {
                     btn.addEventListener('click', function () {
+                        // Show loading state on button
+                        var originalHtml = btn.innerHTML;
+                        btn.innerHTML = '<span>Signing in...</span>';
+                        btn.disabled = true;
+
                         var provider = new firebase.auth.GoogleAuthProvider();
-                        // Force account selection
                         provider.setCustomParameters({
                             prompt: 'select_account'
                         });
@@ -7954,20 +7975,24 @@
                                 var user = result.user;
                                 console.log('[Auth] Signed in as:', user.email);
 
-                                // Persist session
-                                sessionStorage.setItem('veritas_session_token', user.uid); // Using UID as token for now
-                                sessionStorage.setItem('veritas_student_email', user.email);
+                                // Persist session for teachers
+                                sessionStorage.setItem('veritas_session_token', user.uid);
+                                sessionStorage.setItem('veritas_teacher_email', user.email);
 
                                 // Update Global State
                                 window.SESSION_TOKEN = user.uid;
-                                window.STUDENT_EMAIL = user.email;
+                                window.TEACHER_EMAIL = user.email;
 
                                 LoginManager.hide();
                                 if (onSuccess) onSuccess(user);
                             })
                             .catch(function (error) {
                                 console.error('[Auth] Login failed:', error);
-                                LoginManager.setError(error.message);
+                                LoginManager.setError(error.message || 'Authentication failed. Please try again.');
+                            })
+                            .finally(function() {
+                                btn.innerHTML = originalHtml;
+                                btn.disabled = false;
                             });
                     });
                 }
@@ -9324,47 +9349,61 @@
     const PREVIEW_MODE = false;
 
     // === Auth & Backend Initialization ===
-    
+
     // Global Logout Function
-    window.logout = function() {
-      if (firebase.auth()) {
-        firebase.auth().signOut().then(function() {
-          console.log('[Auth] Signed out successfully.');
-          sessionStorage.removeItem('veritas_session_token');
-          sessionStorage.removeItem('veritas_teacher_email');
-          window.location.reload();
-        }).catch(function(error) {
-          console.error('[Auth] Sign out error:', error);
-          alert('Failed to sign out: ' + error.message);
-        });
-      }
-    };
-
     function renderLogoutButton(user) {
-      if (document.getElementById('header-logout-btn')) return; // Already exists
-
-      var headerRight = document.querySelector('header .ml-auto');
-      if (headerRight) {
+      console.log('[Auth] Rendering Logout button for:', user.email);
+      var headerRight = document.querySelector('.header-right');
+      if (headerRight && !document.getElementById('teacher-logout-btn')) {
         var logoutBtn = document.createElement('button');
-        logoutBtn.id = 'header-logout-btn';
-        logoutBtn.className = 'flex items-center gap-2 h-9 px-3 ml-2 rounded bg-white/10 text-white text-sm font-semibold hover:bg-white/15 transition-colors border border-white/10';
+        logoutBtn.id = 'teacher-logout-btn';
+        logoutBtn.className = 'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400';
         logoutBtn.innerHTML = `
-          <span class="material-symbols-outlined text-sm">logout</span>
-          <span>Logout</span>
+          <span class="material-symbols-outlined text-[18px]">logout</span>
+          <span class="hidden sm:inline">Logout</span>
         `;
-        logoutBtn.onclick = window.logout;
-        
-        // Add user email tooltip or label if space permits, for now just button
+        logoutBtn.onclick = function () {
+          logoutTeacher();
+        };
+
+        // Add user email tooltip
         logoutBtn.title = 'Signed in as ' + (user.email || 'Teacher');
 
         headerRight.insertBefore(logoutBtn, headerRight.firstChild);
       }
     }
 
+    function logoutTeacher() {
+      if (confirm('Are you sure you want to log out?')) {
+        console.log('[Auth] Initiating logout...');
+        firebase.auth().signOut().then(function () {
+          console.log('[Auth] Signed out from Firebase.');
+
+          // Clear session/local storage
+          sessionStorage.removeItem('veritas_session_token');
+          sessionStorage.removeItem('veritas_teacher_email');
+          localStorage.removeItem('veritas_teacher_email');
+
+          // Clear global state
+          window.SESSION_TOKEN = null;
+          window.TEACHER_EMAIL = null;
+          window.DATA_LOAD_INITIATED = false;
+
+          // Reload page to reset all states securely
+          window.location.reload();
+        }).catch(function (error) {
+          console.error('[Auth] Logout failed:', error);
+          showToast('error', 'Logout Failed', error.message);
+        });
+      }
+    }
+
+    // Map global logout to the new function
+    window.logout = logoutTeacher;
+
     function initializeBackend() {
       console.log('[Veritas] Initializing Firebase backend...');
 
-      // 1. Centralized Initialization with Retry
       if (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG) {
         if (typeof firebase === 'undefined') {
           console.error('[Firebase] SDK not loaded! Retrying in 500ms...');
@@ -9378,53 +9417,80 @@
             console.log('[Firebase] App initialized successfully.');
           } catch (e) {
             console.error('[Firebase] Initialization error:', e);
-            alert('Critical Error: Failed to initialize backend. Please refresh.');
+            showToast('error', 'Critical Error', 'Failed to initialize backend. Please refresh.');
             return;
           }
         }
       } else {
-        console.error('[Firebase] FIREBASE_CONFIG missing! Backend features may fail.');
-        alert('Configuration Error: Backend config missing.');
+        console.error('[Firebase] FIREBASE_CONFIG missing!');
+        showToast('error', 'Configuration Error', 'Backend config missing.');
         return;
       }
 
-      // 2. Auth-Bound Data Loading and State Management
+      // Auth-Bound Data Loading and State Management
       try {
         firebase.auth().onAuthStateChanged(function (user) {
           if (user) {
-            console.log('[Auth] User authenticated:', user.email);
-            
-            // Session Persistence
-            sessionStorage.setItem('veritas_session_token', user.uid);
-            sessionStorage.setItem('veritas_teacher_email', user.email);
+            var startTime = Date.now();
+            console.log('[Auth] User authenticated:', user.email, '| UID:', user.uid);
 
-            // UI Updates
-            if (window.LoginManager) window.LoginManager.hide();
-            renderLogoutButton(user);
+            // Check if user is an authorized teacher via Firebase Function
+            const verifyTeacher = firebase.functions().httpsCallable('verifyTeacher');
+            verifyTeacher()
+              .then(function (result) {
+                var duration = Date.now() - startTime;
+                const isTeacher = result.data.isTeacher;
 
-            // Data Loading
-            // Prevent double loading if multiple auth state changes occur rapidly
-            if (!window.DATA_LOAD_INITIATED) {
-               window.DATA_LOAD_INITIATED = true;
-               loadInitialData();
-               loadDashboardSummary();
-            }
+                if (isTeacher) {
+                  console.log('[Auth] Teacher authorized:', user.email, '(Verified in ' + duration + 'ms)');
+
+                  // Session Persistence
+                  sessionStorage.setItem('veritas_session_token', user.uid);
+                  sessionStorage.setItem('veritas_teacher_email', user.email);
+                  // Also sync to localStorage for better cross-tab persistence if needed
+                  localStorage.setItem('veritas_teacher_email', user.email);
+
+                  // Update Global State
+                  window.SESSION_TOKEN = user.uid;
+                  window.TEACHER_EMAIL = user.email;
+
+                  // UI Updates
+                  if (window.LoginManager) window.LoginManager.hide();
+                  renderLogoutButton(user);
+
+                  // Data Loading
+                  if (!window.DATA_LOAD_INITIATED) {
+                    window.DATA_LOAD_INITIATED = true;
+                    loadInitialData();
+                    loadDashboardSummary();
+                  }
+                } else {
+                  console.warn('[Auth] Unauthorized teacher access attempt:', user.email, result.data.reason || '');
+                  firebase.auth().signOut();
+                  if (window.LoginManager) {
+                    window.LoginManager.setError('Unauthorized account. Please use your teacher email.');
+                    window.LoginManager.show();
+                  }
+                }
+              })
+              .catch(function (err) {
+                console.error('[Auth] Failed to verify teacher status:', err);
+                showToast('error', 'Authorization Error', 'Failed to verify teacher status.');
+              });
           } else {
             console.log('[Auth] No teacher session found. Initiating Login Flow.');
             if (window.LoginManager) {
-               window.LoginManager.show();
+              window.LoginManager.show();
             } else {
-               // Fallback if LoginManager not ready yet
-               console.warn('[Auth] LoginManager not found, retrying...');
-               setTimeout(function() {
-                 if (window.LoginManager) window.LoginManager.show();
-               }, 500);
+              setTimeout(function () {
+                if (window.LoginManager) window.LoginManager.show();
+              }, 500);
             }
           }
         });
       } catch (e) {
         console.error('[Auth] Error setting up auth listener:', e);
-         // Graceful degradation or retry could go here
+        showToast('error', 'Auth Setup Failed', 'Please refresh the page.');
       }
     }
 

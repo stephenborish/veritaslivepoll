@@ -1312,10 +1312,13 @@
             var startTime = Date.now();
             console.log('[Auth] User authenticated:', user.email, '| UID:', user.uid);
 
-            // Check if user is an authorized teacher via server call
-            google.script.run
-              .withSuccessHandler(function (isTeacher) {
+            // Check if user is an authorized teacher via Firebase Function
+            const verifyTeacher = firebase.functions().httpsCallable('verifyTeacher');
+            verifyTeacher()
+              .then(function (result) {
                 var duration = Date.now() - startTime;
+                const isTeacher = result.data.isTeacher;
+
                 if (isTeacher) {
                   console.log('[Auth] Teacher authorized:', user.email, '(Verified in ' + duration + 'ms)');
 
@@ -1340,7 +1343,7 @@
                     loadDashboardSummary();
                   }
                 } else {
-                  console.warn('[Auth] Unauthorized teacher access attempt:', user.email);
+                  console.warn('[Auth] Unauthorized teacher access attempt:', user.email, result.data.reason || '');
                   firebase.auth().signOut();
                   if (window.LoginManager) {
                     window.LoginManager.setError('Unauthorized account. Please use your teacher email.');
@@ -1348,11 +1351,10 @@
                   }
                 }
               })
-              .withFailureHandler(function (err) {
+              .catch(function (err) {
                 console.error('[Auth] Failed to verify teacher status:', err);
                 showToast('error', 'Authorization Error', 'Failed to verify teacher status.');
-              })
-              .isTeacherEmail_(user.email);
+              });
           } else {
             console.log('[Auth] No teacher session found. Initiating Login Flow.');
             if (window.LoginManager) {

@@ -978,3 +978,37 @@ exports.submitExam = onCall({ cors: true }, async (request) => {
   return { success: true };
 });
 
+
+/**
+ * Verify if the authenticated user is an authorized teacher.
+ * Replaces google.script.run.isTeacherEmail_
+ */
+exports.verifyTeacher = onCall({ cors: true }, async (request) => {
+  // Check if user is authenticated via Firebase Auth
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "User must be authenticated.");
+  }
+
+  const email = request.auth.token.email;
+  if (!email) {
+    return { isTeacher: false, reason: "No email associated with account." };
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+
+  // Authorized Teacher List (Ported from Core_Config.gs)
+  const authorizedTeachers = [
+    "sborish@malvernprep.org",
+    // Add additional teachers here
+  ];
+
+  const isAuthorized = authorizedTeachers.includes(normalizedEmail);
+
+  if (isAuthorized) {
+    logger.info(`Teacher Authorized: ${normalizedEmail}`);
+    return { isTeacher: true };
+  } else {
+    logger.warn(`Unauthorized Access Attempt: ${normalizedEmail}`);
+    return { isTeacher: false };
+  }
+});

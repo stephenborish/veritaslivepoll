@@ -2850,7 +2850,7 @@
     </div>
   </main>
   <style>
-    /* Login Screen Styles */
+    /* Login Screen Styles - Premium Glassmorphism */
     #login-overlay {
         position: fixed !important;
         top: 0 !important;
@@ -2860,71 +2860,90 @@
         margin: 0 !important;
         padding: 0 !important;
         z-index: 2147483647 !important;
-        /* Max Z-Index */
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        background: radial-gradient(circle at top right, #1e293b, #0f172a);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-family: 'Inter', sans-serif;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
         box-sizing: border-box !important;
+        backdrop-filter: blur(8px);
     }
 
     .login-card {
-        background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-        border-radius: 24px;
-        padding: 48px;
+        background: rgba(30, 41, 59, 0.7);
+        backdrop-filter: blur(24px) saturate(180%);
+        -webkit-backdrop-filter: blur(24px) saturate(180%);
+        border: 1px solid rgba(255, 255, 255, 0.125);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+        border-radius: 28px;
+        padding: 56px;
         width: 100%;
-        max-width: 420px;
+        max-width: 440px;
         text-align: center;
-        animation: loginSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        animation: loginFadeInUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        position: relative;
+        overflow: hidden;
     }
 
-    @keyframes loginSlideUp {
+    .login-card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(251, 191, 36, 0.05) 0%, transparent 70%);
+        pointer-events: none;
+    }
+
+    @keyframes loginFadeInUp {
         from {
             opacity: 0;
-            transform: translateY(20px);
+            transform: translateY(30px) scale(0.98);
         }
-
         to {
             opacity: 1;
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
         }
     }
 
     .login-logo {
-        width: 64px;
-        height: 64px;
-        margin: 0 auto 24px;
+        width: 72px;
+        height: 72px;
+        margin: 0 auto 32px;
         background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
-        border-radius: 16px;
+        border-radius: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 0 30px rgba(251, 191, 36, 0.3);
+        box-shadow: 0 12px 24px -6px rgba(217, 119, 6, 0.4);
+        transform: rotate(-3deg);
+        transition: transform 0.3s ease;
+    }
+
+    .login-logo:hover {
+        transform: rotate(0deg) scale(1.05);
     }
 
     .login-logo span {
-        font-size: 32px;
+        font-size: 36px;
         color: white;
     }
 
     .login-title {
         color: white;
-        font-size: 24px;
-        font-weight: 700;
-        margin-bottom: 8px;
-        letter-spacing: -0.02em;
+        font-size: 32px;
+        font-weight: 800;
+        margin-bottom: 12px;
+        letter-spacing: -0.04em;
     }
 
     .login-subtitle {
         color: #94a3b8;
-        font-size: 15px;
-        margin-bottom: 32px;
-        line-height: 1.5;
+        font-size: 16px;
+        margin-bottom: 40px;
+        line-height: 1.6;
+        font-weight: 400;
     }
 
     .login-btn {
@@ -2932,23 +2951,23 @@
         background: white;
         color: #0f172a;
         border: none;
-        padding: 14px;
-        border-radius: 12px;
+        padding: 16px;
+        border-radius: 14px;
         font-size: 16px;
         font-weight: 600;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 12px;
-        transition: all 0.2s ease;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        gap: 14px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
     }
 
     .login-btn:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        background: #f8fafc;
+        transform: translateY(-2px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+        background: #fdfdfd;
     }
 
     .login-btn:active {
@@ -2956,42 +2975,36 @@
     }
 
     .login-btn-icon {
-        width: 20px;
-        height: 20px;
+        width: 24px;
+        height: 24px;
     }
 
     .login-error {
-        margin-top: 16px;
-        padding: 12px;
+        margin-top: 24px;
+        padding: 14px;
         background: rgba(239, 68, 68, 0.15);
-        border: 1px solid rgba(239, 68, 68, 0.3);
-        border-radius: 8px;
+        border: 1px solid rgba(239, 68, 68, 0.25);
+        border-radius: 12px;
         color: #fca5a5;
-        font-size: 13px;
+        font-size: 14px;
+        font-weight: 500;
         display: none;
-        animation: shake 0.4s ease-in-out;
+        animation: loginShake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
     }
 
-    @keyframes shake {
-
-        0%,
-        100% {
-            transform: translateX(0);
-        }
-
-        25% {
-            transform: translateX(-4px);
-        }
-
-        75% {
-            transform: translateX(4px);
-        }
+    @keyframes loginShake {
+        10%, 90% { transform: translate3d(-1px, 0, 0); }
+        20%, 80% { transform: translate3d(2px, 0, 0); }
+        30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+        40%, 60% { transform: translate3d(4px, 0, 0); }
     }
 
     .login-footer {
-        margin-top: 32px;
+        margin-top: 48px;
         color: #64748b;
-        font-size: 12px;
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 0.02em;
     }
 </style>
 
@@ -3001,18 +3014,17 @@
             <span class="material-symbols-outlined">school</span>
         </div>
         <h1 class="login-title">Veritas Live</h1>
-        <p class="login-subtitle">Sign in to access your classroom polls and assessments.</p>
+        <p class="login-subtitle">Secure Teacher Dashboard Access</p>
 
         <button id="google-login-btn" class="login-btn">
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="login-btn-icon"
-                alt="Google">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="login-btn-icon" alt="Google">
             Sign in with Google
         </button>
 
         <div id="login-error" class="login-error"></div>
 
         <div class="login-footer">
-            &copy; 2024 Veritas Education. Secure & Private.
+            &copy; 2024 Veritas Education. Professional Grade.
         </div>
     </div>
 </div>
@@ -3023,7 +3035,12 @@
         window.LoginManager = {
             show: function () {
                 var el = document.getElementById('login-overlay');
-                if (el) el.style.display = 'flex';
+                if (el) {
+                    el.style.display = 'flex';
+                    // Reset errors when showing
+                    var errEl = document.getElementById('login-error');
+                    if (errEl) errEl.style.display = 'none';
+                }
             },
             hide: function () {
                 var el = document.getElementById('login-overlay');
@@ -3040,8 +3057,12 @@
                 var btn = document.getElementById('google-login-btn');
                 if (btn) {
                     btn.addEventListener('click', function () {
+                        // Show loading state on button
+                        var originalHtml = btn.innerHTML;
+                        btn.innerHTML = '<span>Signing in...</span>';
+                        btn.disabled = true;
+
                         var provider = new firebase.auth.GoogleAuthProvider();
-                        // Force account selection
                         provider.setCustomParameters({
                             prompt: 'select_account'
                         });
@@ -3051,20 +3072,24 @@
                                 var user = result.user;
                                 console.log('[Auth] Signed in as:', user.email);
 
-                                // Persist session
-                                sessionStorage.setItem('veritas_session_token', user.uid); // Using UID as token for now
-                                sessionStorage.setItem('veritas_student_email', user.email);
+                                // Persist session for teachers
+                                sessionStorage.setItem('veritas_session_token', user.uid);
+                                sessionStorage.setItem('veritas_teacher_email', user.email);
 
                                 // Update Global State
                                 window.SESSION_TOKEN = user.uid;
-                                window.STUDENT_EMAIL = user.email;
+                                window.TEACHER_EMAIL = user.email;
 
                                 LoginManager.hide();
                                 if (onSuccess) onSuccess(user);
                             })
                             .catch(function (error) {
                                 console.error('[Auth] Login failed:', error);
-                                LoginManager.setError(error.message);
+                                LoginManager.setError(error.message || 'Authentication failed. Please try again.');
+                            })
+                            .finally(function() {
+                                btn.innerHTML = originalHtml;
+                                btn.disabled = false;
                             });
                     });
                 }

@@ -12390,26 +12390,20 @@
         return;
       }
 
-      // FIREBASE MIGRATION: Save Roster Class
+      // FIREBASE MIGRATION: Save Roster Class via Cloud Function
+      if (!firebaseFunctions) {
+        // Fallback if somehow not init
+        if (firebase && firebase.functions) firebaseFunctions = firebase.functions();
+      }
 
-      var db = firebase.database();
+      var manageRoster = firebaseFunctions.httpsCallable('manageRoster');
 
-      // Update specific class path
-      var updates = {};
-      updates['rosters/rosters/' + selectedRosterClass] = entries;
-      updates['rosters/updatedAt'] = firebase.database.ServerValue.TIMESTAMP;
-
-      db.ref().update(updates)
-        .then(function () {
-          // Also ensure class is in the classes list
-          db.ref('rosters/classes').transaction(function (classes) {
-            if (!classes) return [selectedRosterClass];
-            if (!classes.includes(selectedRosterClass)) {
-              classes.push(selectedRosterClass);
-            }
-            return classes;
-          });
-
+      manageRoster({
+        action: 'SAVE',
+        className: selectedRosterClass,
+        students: entries
+      })
+        .then(function (result) {
           // Success response
           saveRosterBtn.disabled = false;
           rosterStatus.textContent = 'Roster saved.';
@@ -12494,31 +12488,33 @@
         return;
       }
 
-      var db = firebase.database();
-      var rostersRef = db.ref('rosters');
+      // FIREBASE MIGRATION: Bulk Add via Cloud Function
+      if (!firebaseFunctions) {
+        if (firebase && firebase.functions) firebaseFunctions = firebase.functions();
+      }
 
-      rostersRef.once('value').then(function (snapshot) {
-        var data = snapshot.val() || { classes: [], rosters: {} };
-        if (!data.rosters) data.rosters = {};
+      var manageRoster = firebaseFunctions.httpsCallable('manageRoster');
 
-        var currentRoster = data.rosters[selectedRosterClass] || [];
-        data.rosters[selectedRosterClass] = currentRoster.concat(entries);
+      manageRoster({
+        action: 'BULK_ADD',
+        className: selectedRosterClass,
+        students: entries
+      })
+        .then(function (result) {
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = 'Add Students';
+          closeBulkAddStudentsModal();
+          rosterDirty = false;
 
-        return rostersRef.set(data);
-      }).then(function () {
-        confirmBtn.disabled = false;
-        confirmBtn.textContent = 'Add Students';
-        closeBulkAddStudentsModal();
-        rosterDirty = false;
-
-        // Re-load to sync UI
-        loadRosterData();
-        showToast('success', 'Students added', 'Successfully added ' + entries.length + ' students.');
-      }).catch(function (error) {
-        confirmBtn.disabled = false;
-        confirmBtn.textContent = 'Add Students';
-        handleError(error);
-      });
+          // Re-load to sync UI
+          loadRosterData();
+          showToast('success', 'Students added', 'Successfully added ' + entries.length + ' students.');
+        })
+        .catch(function (error) {
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = 'Add Students';
+          handleError(error);
+        });
     }
 
     async function onAddClass() {
@@ -19638,9 +19634,12 @@
         } else {
           debugInfo.success = true; // Already initialized
         }
-        // Store firebaseDb reference for later use
-        if (!firebaseDb && firebase.apps.length > 0) {
+        // Store firebaseDb and firebaseFunctions reference for later use
+        if (firebase.apps.length > 0) {
           firebaseDb = firebase.database();
+          if (firebase.functions) {
+            firebaseFunctions = firebase.functions();
+          }
         }
         debugInfo.appsLengthAfter = firebase.apps.length;
       } else {

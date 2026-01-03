@@ -3218,6 +3218,7 @@
         var bodyEl = document.body;
         var secureCloseTimer = null;
         var firebaseDb = null;
+        var firebaseFunctions = null;
         var firebaseRef = null;
         var studentKey = null;
 
@@ -3285,6 +3286,9 @@
 
             if (typeof firebase !== 'undefined') {
                 firebaseDb = firebase.database();
+                if (firebase.functions) {
+                    firebaseFunctions = firebase.functions();
+                }
                 // Deterministic key generation
                 studentKey = await window.VeritasShared.generateStudentKey(studentEmail, pollId);
                 currentFirebasePollId = pollId; // Store for debug HUD

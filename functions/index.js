@@ -490,7 +490,8 @@ exports.updatePoll = onCall({ cors: true }, async (request) => {
 exports.manageRoster = onCall({ cors: true }, async (request) => {
   const { action, className, newClassName, students, pollId } = request.data;
 
-  if (!action || !className) {
+  // GET_DATA is the only action that doesn't strictly require a className
+  if (!action || (!className && action !== 'GET_DATA')) {
     throw new HttpsError("invalid-argument", "Missing required fields");
   }
 

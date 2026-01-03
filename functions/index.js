@@ -11,6 +11,7 @@ const admin = require("firebase-admin");
 admin.initializeApp();
 
 const analyticsEngine = require("./analytics_engine");
+const emailService = require("./email_service");
 
 /**
  * Update the Live Session State (The "Next Question" Signal).
@@ -1011,4 +1012,148 @@ exports.verifyTeacher = onCall({ cors: true }, async (request) => {
     logger.warn(`Unauthorized Access Attempt: ${normalizedEmail}`);
     return { isTeacher: false };
   }
+});
+
+/**
+ * NEW EXAM LOGIC (Firestore Based)
+ */
+
+/**
+ * Create a new Exam Session (Teacher Action)
+ * Creates a document in Firestore /sessions with status 'WAITING' and a random 6-digit access code.
+ */
+exports.createExamSession = onCall({ cors: true }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "User must be authenticated.");
+  }
+
+  const { examId } = request.data;
+  if (!examId) {
+    throw new HttpsError("invalid-argument", "Missing examId");
+  }
+
+  const db = admin.firestore();
+  const accessCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+  const sessionData = {
+    examId,
+    teacherId: request.auth.uid,
+    accessCode,
+    status: 'WAITING',
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+
+  const sessionRef = await db.collection("sessions").add(sessionData);
+
+  return {
+    success: true,
+    sessionId: sessionRef.id,
+    accessCode,
+  };
+});
+
+/**
+ * Join an Exam Session (Student Action)
+ * Finds the session by accessCode and creates a student document.
+ */
+exports.joinSession = onCall({ cors: true }, async (request) => {
+  const { accessCode, studentName } = request.data;
+  if (!accessCode || !studentName) {
+    throw new HttpsError("invalid-argument", "Missing accessCode or studentName");
+  }
+
+  const db = admin.firestore();
+  const sessionSnap = await db.collection("sessions")
+    .where("accessCode", "==", accessCode)
+    .where("status", "!=", "CLOSED")
+    .limit(1)
+    .get();
+
+  if (sessionSnap.empty) {
+    throw new HttpsError("not-found", "Session not found or already closed.");
+  }
+
+  const sessionDoc = sessionSnap.docs[0];
+  const sessionId = sessionDoc.id;
+
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Student must be authenticated (e.g. Anonymous).");
+  }
+
+  const studentId = request.auth.uid;
+  const studentRef = sessionDoc.ref.collection("students").doc(studentId);
+
+  await studentRef.set({
+    name: studentName,
+    status: "ACTIVE",
+    answers: {},
+    joinedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return {
+    success: true,
+    sessionId,
+    studentId, // acting as the token for further requests
+  };
+});
+
+/**
+ * Send Exam Link (Teacher Action)
+ * Uses the email service to send a direct link to the student.
+ */
+exports.sendExamLink = onCall({ cors: true }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "User must be authenticated.");
+  }
+
+  const { studentEmail, sessionId } = request.data;
+  if (!studentEmail || !sessionId) {
+    throw new HttpsError("invalid-argument", "Missing studentEmail or sessionId");
+  }
+
+  const examLink = `https://veritas.courses/exam/${sessionId}`;
+  const html = `
+    <h1>Your Veritas Exam Link</h1>
+    <p>Please click the link below to join your exam session:</p>
+    <p><a href="${examLink}">${examLink}</a></p>
+  `;
+
+  try {
+    await emailService.sendEmail({
+      to: studentEmail,
+      subject: "Your Veritas Exam Link",
+      html: html,
+    });
+    return { success: true };
+  } catch (error) {
+    logger.error("Failed to send exam link", error);
+    throw new HttpsError("internal", "Failed to send email.");
+  }
+});
+
+/**
+ * Submit Proctor Log (Student Signal)
+ * Updates the student's status to 'LOCKED' on violation.
+ */
+exports.submitProctorLog = onCall({ cors: true }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "User must be authenticated.");
+  }
+
+  const { sessionId, violationType } = request.data;
+  if (!sessionId || !violationType) {
+    throw new HttpsError("invalid-argument", "Missing sessionId or violationType");
+  }
+
+  const db = admin.firestore();
+  const studentId = request.auth.uid;
+  const studentRef = db.collection("sessions").doc(sessionId).collection("students").doc(studentId);
+
+  await studentRef.update({
+    status: "LOCKED",
+    lastViolation: violationType,
+    lastViolationAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return { success: true };
 });

@@ -50,6 +50,7 @@
     var lockToastState = {};
     var firebaseDb = null;
     var firebaseRef = null;
+    var firebaseFunctions = null; // Backend Functions
     var realtimeStatuses = {}; // key -> status
     var realtimeConnected = false;
     var lastQuestionIndex = -1;
@@ -11906,8 +11907,15 @@
           badgeEl.className = 'ml-4 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-700 border border-green-200';
           badgeEl.innerHTML = '<span class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span> Realtime Active';
         } else {
-          badgeEl.className = 'ml-4 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 border border-red-200';
-          badgeEl.innerHTML = '<span class="h-2 w-2 rounded-full bg-red-500"></span> Realtime OFF (Polling mode)';
+          if (typeof window.USING_FALLBACK_CONFIG !== 'undefined' && window.USING_FALLBACK_CONFIG) {
+            badgeEl.className = 'ml-4 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 border border-red-200 cursor-pointer hover:bg-red-200';
+            badgeEl.innerHTML = '<span class="material-symbols-outlined text-sm">warning</span> Setup Required';
+            badgeEl.title = 'Firebase Config Missing. Click for instructions.';
+            badgeEl.onclick = function () { alert('ACTION REQUIRED:\n\nThe app is not connected to a backend because FIREBASE_CONFIG is missing.\n\nPlease refer to the SETUP_GUIDE.md to configure your Script Properties.'); };
+          } else {
+            badgeEl.className = 'ml-4 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 border border-red-200';
+            badgeEl.innerHTML = '<span class="h-2 w-2 rounded-full bg-red-500"></span> Realtime OFF (Polling mode)';
+          }
         }
       }
     }
@@ -12084,23 +12092,46 @@
         return;
       }
       setButtonLoading(startPollBtn, true, 'Starting...');
-      google.script.run
-        .withSuccessHandler(function (view) {
-          // Soft-fail check
-          if (view && (view.success === false || view.error)) {
-            setButtonLoading(startPollBtn, false);
-            var msg = view.message || view.error || 'Unknown error starting session';
-            veritasAlert(msg, { title: 'Unable to Start Session', destructive: true });
-            return;
-          }
-          setButtonLoading(startPollBtn, false);
-          showIndividualTimedView(view);
-        })
-        .withFailureHandler(function (error) {
-          setButtonLoading(startPollBtn, false);
-          handleError(error);
-        })
-        .startIndividualTimedSession(pollId);
+
+      // FIREBASE MIGRATION: Start session via Cloud Function
+      var setLiveSessionState = firebase.functions().httpsCallable('setLiveSessionState');
+      var sessionId = pollId + '::' + Date.now(); // Generate client-side session ID
+
+      // Fetch poll details to get time limit (optional but good for metadata)
+      var poll = pollsData.find(p => p.pollId === pollId) || {};
+      var timeLimit = poll.timeLimitMinutes || 60;
+
+      setLiveSessionState({
+        pollId: pollId,
+        status: 'OPEN',
+        metadata: {
+          reason: 'SECURE_ASSESSMENT_RUNNING',
+          sessionPhase: 'SECURE_ASSESSMENT_RUNNING', // Use explicit string or import config
+          startedAt: new Date().toISOString(),
+          sessionId: sessionId,
+          timeLimitMinutes: timeLimit,
+          isCollecting: true,
+          resultsVisibility: 'HIDDEN'
+        }
+      }).then(function (result) {
+        setButtonLoading(startPollBtn, false);
+        // Construct view object needed for showIndividualTimedView
+        var view = {
+          success: true,
+          pollId: pollId,
+          sessionId: sessionId,
+          pollName: poll.pollName || 'Secure Assessment',
+          className: poll.className || '',
+          timeLimitMinutes: timeLimit,
+          questionCount: poll.questions ? poll.questions.length : 0
+        };
+        showIndividualTimedView(view);
+      }).catch(function (error) {
+        setButtonLoading(startPollBtn, false);
+        // Simple error handling
+        var msg = error.message || 'Unknown error starting session';
+        veritasAlert(msg, { title: 'Unable to Start Session', destructive: true });
+      });
     }
 
     function showIndividualTimedView(view) {
@@ -12430,31 +12461,57 @@
         return;
       }
       setBulkControlsLoading(true, scope);
-      var runner = google.script.run
-        .withSuccessHandler(function (response) {
-          setBulkControlsLoading(false, scope);
-          if (response && response.success) {
-            var audience = scope === 'ALL' ? 'the entire class' : missionControlSelectedEmails.size + ' student(s)';
-            showToast('success', 'Time extended', 'Added ' + minutes + ' minute(s) for ' + audience + '.', 4000);
-            pollIndividualSessionState();
-          } else {
-            veritasAlert('Unable to extend time. Please try again.', { title: 'Extend time failed', destructive: true });
-          }
-        })
-        .withFailureHandler(function (error) {
-          setBulkControlsLoading(false, scope);
-          handleError(error);
-        });
+
+      // FIXED: Use runMissionControlAction (client-side loop) instead of GAS Bulk
+      var targets = [];
       if (scope === 'ALL') {
-        runner.adjustSecureAssessmentTimeForAll(currentMissionControlPollId, currentSecureSessionId, minutes);
+        // Fetch all students active in this session
+        firebase.database().ref('sessions/' + currentMissionControlPollId + '/students').once('value')
+          .then(function (snapshot) {
+            var sMap = snapshot.val() || {};
+            targets = Object.keys(sMap).map(function (k) { return sMap[k].email; });
+            performBulkTimeAdjustment(targets, minutes);
+          });
       } else {
-        runner.adjustSecureAssessmentTimeBulk(
-          currentMissionControlPollId,
-          currentSecureSessionId,
-          Array.from(missionControlSelectedEmails),
-          minutes
-        );
+        targets = Array.from(missionControlSelectedEmails);
+        performBulkTimeAdjustment(targets, minutes);
       }
+
+      function performBulkTimeAdjustment(targetEmails, deltaMinutes) {
+        if (!targetEmails || targetEmails.length === 0) {
+          setBulkControlsLoading(false, scope);
+          return;
+        }
+
+        var promises = targetEmails.map(function (email) {
+          // We reuse runMissionControlAction which now handles direct DB updates
+          // args: [pollId, sessionId, studentEmail, delta]
+          // But runMissionControlAction expects to be called from a button click usually?
+          // No, it's a generic helper.
+          // Line 13073: if (fnName === 'adjustSecureAssessmentTime') ...
+          // Wait, runMissionControlAction is tied to `currentManagedStudent` in some checks?
+          // Let's check line 13062: "if (!currentMissionControlPollId || !currentSecureSessionId || !currentManagedStudent) { return; }"
+          // AH! It REQUIRES currentManagedStudent.
+          // So I CANNOT reuse runMissionControlAction for bulk operations easily without faking currentManagedStudent.
+          // I should simply duplicate the logic here:
+
+          var emailKey = (typeof generateStudentKey === 'function') ? generateStudentKey(email) : email.replace(/[.$#[\]]/g, '_');
+          return firebase.database().ref('sessions/' + currentMissionControlPollId + '/students/' + emailKey + '/timeAdjustment').transaction(function (current) {
+            return (current || 0) + deltaMinutes;
+          });
+        });
+
+        Promise.all(promises).then(function () {
+          setBulkControlsLoading(false, scope);
+          var audience = scope === 'ALL' ? 'the entire class' : targetEmails.length + ' student(s)';
+          showToast('success', 'Time extended', 'Added ' + deltaMinutes + ' minute(s) for ' + audience + '.', 4000);
+          pollIndividualSessionState();
+        }).catch(function (err) {
+          setBulkControlsLoading(false, scope);
+          handleError(err);
+        });
+      }
+
     }
 
     function pollIndividualSessionState() {
@@ -12474,41 +12531,53 @@
         }
       }
 
-      google.script.run
-        .withSuccessHandler(function (view) {
-          // Reset failure count on success
-          missionControlPollFailures = 0;
-          missionControlBackoffMs = 0;
-          renderIndividualStudentCards(view);
-          // Re-apply realtime statuses immediately to prevent flickering
-          updateRealtimeUI();
-        })
-        .withFailureHandler(function (error) {
-          var errorMsg = error && error.message ? error.message : String(error);
+      function pollIndividualSessionState() {
+        if (!currentMissionControlPollId || !currentSecureSessionId) {
+          return;
+        }
 
-          // Check if it is a 429 rate limit error
-          if (errorMsg.includes('429') || errorMsg.includes('Rate limit') || errorMsg.includes('quota')) {
-            missionControlPollFailures++;
-            // Exponential backoff: 5s, 10s, 20s, 40s (max)
-            missionControlBackoffMs = Math.min(5000 * Math.pow(2, missionControlPollFailures - 1), 40000);
-            console.warn('Rate limit hit, backing off for ' + missionControlBackoffMs + 'ms');
+        // FETCH FROM FIREBASE DIRECTLY (Client-Side Aggregation)
+        var pId = currentMissionControlPollId;
+        var sId = currentSecureSessionId;
 
-            // Show a less alarming message to teachers
-            if (missionControlPollFailures === 1) {
-              showToast('warning', 'Slow down', 'Reducing update frequency to prevent rate limits', 3000);
-            }
-          } else {
-            // For other errors, show the error but do not stop polling
-            console.error('Mission control poll error:', error);
-            if (missionControlPollFailures < 3) {
-              // Only show error alert if it persists
-              missionControlPollFailures++;
-            } else {
-              handleError(error);
-            }
-          }
-        })
-        .getIndividualTimedSessionTeacherView(currentMissionControlPollId, currentSecureSessionId);
+        firebase.database().ref('sessions/' + pId + '/students').once('value')
+          .then(function (snapshot) {
+            var studentsMap = snapshot.val() || {};
+            var studentsList = [];
+            Object.keys(studentsMap).forEach(function (key) {
+              var s = studentsMap[key];
+              studentsList.push({
+                email: s.email,
+                name: s.name || s.email,
+                status: s.status,
+                isLocked: s.status === 'LOCKED',
+                lockVersion: s.lockVersion || 0,
+                violations: s.violations || 0,
+                timeAdjustment: s.timeAdjustment || 0,
+                lastActiveAt: s.lastActiveAt ? new Date(s.lastActiveAt) : null,
+                lastViolationReason: s.lastViolationReason,
+                unlockApproved: s.unlockApproved
+              });
+            });
+
+            var view = {
+              success: true,
+              pollId: pId,
+              sessionId: sId,
+              students: studentsList
+            };
+
+            // Reuse existing success handler logic
+            missionControlPollFailures = 0;
+            missionControlBackoffMs = 0;
+            renderIndividualStudentCards(view);
+            updateRealtimeUI();
+          })
+          .catch(function (error) {
+            console.error('Mission Control Fetch Error:', error);
+            // Reuse existing error logic if needed, or simple log
+          });
+      }
     }
 
     function updateMissionControlSummary(summary) {
@@ -12640,21 +12709,53 @@
       error.classList.add('hidden');
 
       // Fetch book view data
-      google.script.run
-        .withSuccessHandler(function (result) {
-          if (result.success) {
-            currentBookViewData = result;
-            renderBookView(result);
-            loading.classList.add('hidden');
-            content.classList.remove('hidden');
-          } else {
-            showBookViewError(result.error || 'Failed to load book view data');
+      // FIREBASE MIGRATION: Use Cloud Function getAnalytics
+      var getAnalytics = firebaseFunctions.httpsCallable('getAnalytics');
+
+      getAnalytics({ pollId: currentMissionControlPollId })
+        .then(function (result) {
+          var data = result.data || result;
+
+          // Adapt getAnalytics structure to Book View structure
+          // Book View expects: { success: true, summary: {}, students: [], questions: [] }
+          // getAnalytics returns: { itemAnalysis: {}, ... }
+
+          var adaptedResult = {
+            success: true,
+            summary: {
+              className: data.className || 'Unknown Class',
+              pollName: data.pollName || 'Unknown Poll',
+              date: new Date().toLocaleDateString(),
+              averageScore: 0 // Placeholder
+            },
+            students: [], // Detailed student rows not yet available in getAnalytics
+            questions: []
+          };
+
+          // Map itemAnalysis to questions array if possible
+          if (data.itemAnalysis) {
+            Object.keys(data.itemAnalysis).forEach(function (qIdx) {
+              var item = data.itemAnalysis[qIdx];
+              adaptedResult.questions.push({
+                index: qIdx,
+                text: "Question " + (parseInt(qIdx) + 1), // Text might be missing in analysis
+                difficulty: item.difficultyIndex,
+                discrimination: item.discriminationIndex,
+                correctCount: item.correctCount,
+                totalCount: item.totalResponseCount
+              });
+            });
           }
+
+          currentBookViewData = adaptedResult;
+          renderBookView(adaptedResult);
+          loading.classList.add('hidden');
+          content.classList.remove('hidden');
         })
-        .withFailureHandler(function (error) {
-          showBookViewError('Error: ' + error.message);
-        })
-        .getSecureAssessmentBookView(currentMissionControlPollId);
+        .catch(function (error) {
+          showBookViewError('Error loading analytics: ' + (error.message || 'Unknown error'));
+        });
+
     }
 
     function closeBookView() {
@@ -13098,18 +13199,20 @@
 
 
 
-    /* LEGACY GAS SAVE REMOVED
-    google.script.run
-      .withSuccessHandler(function (result) {
-        setButtonLoading(saveRosterBtn, false);
-        onRosterSaved(result);
-      })
-      .withFailureHandler(function (error) {
-        setButtonLoading(saveRosterBtn, false);
-        handleError(error);
-      })
-      .saveRosterData(currentClasses, rosterData);
-    */
+
+    // FIXED: Use Cloud Function for Roster Save
+    var manageRoster = firebaseFunctions.httpsCallable('manageRoster');
+    manageRoster({
+      action: 'SAVE',
+      className: currentClasses,
+      roster: rosterData
+    }).then(function (result) {
+      setButtonLoading(saveRosterBtn, false);
+      onRosterSaved(result.data || result);
+    }).catch(function (error) {
+      setButtonLoading(saveRosterBtn, false);
+      handleError(error);
+    });
 
     function handleAdjustStudentTime(deltaMinutes) {
       if (!currentManagedStudent) { return; }
@@ -14099,38 +14202,19 @@
       reader.onload = function (e) {
         var dataUrl = e.target.result;
 
-        google.script.run
-          .withSuccessHandler(function (response) {
-            if (response && response.fileId) {
-              if (optIndex === null) {
-                wizardState.questions[qIndex].questionImageURL = response.url || null;
-                wizardState.questions[qIndex].questionImageFileId = response.fileId;
-              } else {
-                wizardState.questions[qIndex].options[optIndex].imageURL = response.url || null;
-                wizardState.questions[qIndex].options[optIndex].imageFileId = response.fileId;
-              }
-            } else {
-              // Upload failed, reset state
-              if (optIndex === null) {
-                wizardState.questions[qIndex].questionImageURL = null;
-              } else {
-                wizardState.questions[qIndex].options[optIndex].imageURL = null;
-              }
-              alert('Image upload failed: ' + (response.error || 'Unknown error'));
-            }
-            renderWizardQuestions();
-          })
-          .withFailureHandler(function (error) {
-            // Reset state on error
-            if (optIndex === null) {
-              wizardState.questions[qIndex].questionImageURL = null;
-            } else {
-              wizardState.questions[qIndex].options[optIndex].imageURL = null;
-            }
-            alert('Image upload failed: ' + error);
-            renderWizardQuestions();
-          })
-          .uploadImageToDrive(dataUrl, file.name);
+
+        // IMAGE UPLOAD DISABLED FOR MIGRATION
+        veritasAlert('Image upload is temporarily unavailable while we migrate to the new cloud backend.', { title: 'Feature Unavailable' });
+
+        // Reset uploading state
+        if (optIndex === null) {
+          wizardState.questions[qIndex].questionImageURL = null;
+        } else {
+          wizardState.questions[qIndex].options[optIndex].imageURL = null;
+        }
+        renderWizardQuestions();
+
+
       };
       reader.readAsDataURL(file);
     }

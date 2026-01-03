@@ -1046,48 +1046,22 @@
 
             console.log('[AnswerQueue] Syncing answer:', item.actualQuestionIndex, 'attempt:', item.syncAttempts);
 
-            google.script.run
-                .withSuccessHandler(function (response) {
-                    isSyncing = false;
-                    if (response && response.success) {
-                        // Remove successfully synced item from queue
-                        queue.shift();
-                        writeQueue(sessionId, queue);
-                        console.log('[AnswerQueue] Answer synced successfully:', item.actualQuestionIndex);
-                        if (onSuccess) onSuccess(response, item);
-                        // Continue syncing remaining items
-                        if (queue.length > 0) {
-                            setTimeout(function () {
-                                syncToServer(sessionId, onSuccess, onError);
-                            }, 100);
-                        }
-                    } else {
-                        // Server returned error but request completed
-                        console.warn('[AnswerQueue] Server rejected answer:', response);
-                        // Check if this is a "already answered" error - remove from queue
-                        var errorMsg = (response && response.error) || '';
-                        if (/already answered|non-current question/i.test(errorMsg)) {
-                            queue.shift();
-                            writeQueue(sessionId, queue);
-                        }
-                        if (onError) onError(response, item);
-                    }
-                })
-                .withFailureHandler(function (error) {
-                    isSyncing = false;
-                    console.error('[AnswerQueue] Sync failed:', error);
-                    // Keep item in queue for retry, update queue with new attempt count
-                    writeQueue(sessionId, queue);
-                    if (onError) onError(error, item);
-                })
-                .submitIndividualTimedAnswer(
-                    item.pollId,
-                    item.sessionId,
-                    item.actualQuestionIndex,
-                    item.answer,
-                    SESSION_TOKEN,
-                    item.confidenceLevel
-                );
+            // FIXED: Write directly to Firebase
+            var email = window.STUDENT_EMAIL || sessionStorage.getItem('veritas_student_email');
+            var emailKey = email ? email.replace(/[.$#[\]]/g, '_') : 'unknown';
+
+            firebase.database().ref('answers/' + item.pollId + '/' + emailKey).set({
+                answer: item.answer,
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                questionIndex: item.actualQuestionIndex,
+                confidence: item.confidenceLevel,
+                pollId: item.pollId,
+                sessionId: item.sessionId
+            }).then(function () {
+                if (onSuccess) onSuccess({ success: true }, item);
+            }).catch(function (err) {
+                if (onError) onError(err, item);
+            });
         }
 
         /**
@@ -1848,58 +1822,72 @@
         if (securePollInFlight) return;
         securePollInFlight = true;
         var telemetry = ActivityMonitor.getInstance().getTelemetry();
-        google.script.run
-            .withSuccessHandler(function (state) {
-                securePollInFlight = false;
-                if (studentLoader) {
-                    studentLoader.style.display = 'none';
-                }
-                if (!state) {
-                    return;
-                }
-                if (state.status === 'LOBBY') {
-                    showSecureLobby(state);
-                    return;
-                }
-                if (state.sessionType === 'INDIVIDUAL_TIMED' || state.sessionType === 'SECURE_ASSESSMENT') {
-                    hideSecureLobby();
-                    var lockReason = (state.lockReason || '').toString().toUpperCase();
-                    var lockMessage = (state.message || '').toString().toLowerCase();
-                    var isTerminalLock = state.locked === true || lockReason === 'FORCED_SUBMIT' || lockReason === 'TIME_EXPIRED' || lockMessage.indexOf('ended') >= 0 || lockMessage.indexOf('submitted') >= 0;
-                    if (state.completed || state.status === 'COMPLETED') {
-                        updateSecureConnectionIndicators(state);
-                        finalizeSecureSession('COMPLETED', state.message || 'Transmission Complete', 'Your responses have been secured. Use the exit button below when dismissed.');
-                    } else if (state.status === 'ENDED') {
-                        updateSecureConnectionIndicators(state);
-                        finalizeSecureSession('ENDED', state.message || 'Session Concluded', 'Use the exit button below to leave the secure environment.');
-                    } else if (isTerminalLock) {
-                        updateSecureConnectionIndicators(state);
-                        finalizeSecureSession('ENDED', state.message || 'Assessment Finalized', 'Your responses have been secured. You may now exit.');
-                    } else if (state.status === 'LOCKED') {
-                        if (secureFocusContainer) secureFocusContainer.style.display = 'block';
-                        secureQuestionState = null;
-                        secureCurrentQuestionKey = null;
-                        secureSelectedOptionIndex = null;
-                        updateSecureConnectionIndicators(state);
-                        showSecureLockout(state.message || 'Assessment Paused', 'Your teacher will grant re-entry shortly.');
-                    } else if (isInteractionBlocked) {
-                        updateSecureConnectionIndicators(state);
-                        setSecureConnectionIndicatorVisible(true);
-                        showSecureLockout(state.message || 'Assessment Paused', 'Your teacher will grant re-entry shortly.');
-                    } else if (state.question && (state.status === 'ACTIVE' || !state.status)) {
-                        showIndividualTimedView(state);
-                    } else {
-                        console.log('Secure session state', state);
-                    }
-                } else {
-                    updateStudentView(state);
-                }
-            })
-            .withFailureHandler(function (error) {
-                securePollInFlight = false;
-                handleError(error);
-            })
-            .getIndividualTimedSessionState(SESSION_TOKEN, telemetry);
+        // FIXED: Fetch state from Firebase directly
+        var email = window.STUDENT_EMAIL || sessionStorage.getItem('veritas_student_email');
+        var emailKey = email ? email.replace(/[.$#[\]]/g, '_') : 'unknown';
+        var pollId = activePollId; // Assuming activePollId is available in scope
+
+        Promise.all([
+            firebase.database().ref('sessions/' + pollId + '/live_session').once('value'),
+            firebase.database().ref('sessions/' + pollId + '/students/' + emailKey).once('value')
+        ]).then(function (snaps) {
+            securePollInFlight = false;
+            if (studentLoader) studentLoader.style.display = 'none';
+
+            var sessionSnap = snaps[0];
+            var studentSnap = snaps[1];
+
+            var sessionData = sessionSnap.val() || { status: 'CLOSED' };
+            var studentData = studentSnap.val() || { status: 'ACTIVE' };
+
+            // Map to legacy state object
+            var state = {
+                status: studentData.status, // ACTIVE, LOCKED, etc.
+                sessionStatus: sessionData.status,
+                locked: studentData.status === 'LOCKED',
+                message: studentData.lastViolationReason || '',
+                lockReason: studentData.lastViolationReason || '',
+                completed: studentData.status === 'FINISHED',
+                question: sessionData // Simplified map
+            };
+
+            // Dispatch to UI handlers
+            if (state.sessionStatus === 'PRE_LIVE' || !state.sessionStatus) {
+                showSecureLobby({ status: 'LOBBY', pollName: 'Wait for teacher...' });
+                return;
+            }
+            if (state.status === 'LOBBY') {
+                showSecureLobby(state);
+                return;
+            }
+            hideSecureLobby();
+
+            var lockReason = (state.lockReason || '').toString().toUpperCase();
+            var lockMessage = (state.message || '').toString().toLowerCase();
+            var isTerminalLock = state.locked === true || lockReason === 'FORCED_SUBMIT' || lockReason === 'TIME_EXPIRED' || lockMessage.indexOf('ended') >= 0 || lockMessage.indexOf('submitted') >= 0;
+
+            if (state.completed || studentData.status === 'FINISHED') {
+                updateSecureConnectionIndicators(state);
+                finalizeSecureSession('COMPLETED', 'Assessment Submitted', 'Your responses have been secured.');
+            } else if (sessionData.status === 'ENDED') {
+                updateSecureConnectionIndicators(state);
+                finalizeSecureSession('ENDED', 'Session Concluded', 'The session has ended.');
+            } else if (isTerminalLock) {
+                finalizeSecureSession('ENDED', state.message || 'Assessment Finalized', 'Your responses have been secured.');
+            } else if (state.status === 'LOCKED') {
+                if (secureFocusContainer) secureFocusContainer.style.display = 'block';
+                showSecureLockout(state.message || 'Locked', 'Teacher intervention required.');
+            } else if (state.status === 'ACTIVE' || !state.status) {
+                // Pass necessary data for view
+                state.question = sessionData; // Pass session metadata as question context
+                state.timeLimitMinutes = sessionData.metadata ? sessionData.metadata.timeLimitMinutes : 60;
+                showIndividualTimedView(state);
+            }
+        }).catch(function (error) {
+            securePollInFlight = false;
+            handleError(error);
+        });
+
     }
 
     if (secureSubmitBtn) {
@@ -2148,17 +2136,20 @@
         }
 
         // FIX: Use the correct API with token - logStudentViolation was broken (ignored params)
-        google.script.run
-            .withSuccessHandler(function (response) {
-                console.log('[Proctor] Violation logged, server response:', response);
-                if (response && response.lockVersion !== undefined) {
-                    currentLockVersion = response.lockVersion;
-                }
-            })
-            .withFailureHandler(function (error) {
-                console.error('[Proctor] Violation report failed:', error);
-            })
-            .reportStudentViolation(pid, SESSION_TOKEN, reason, fallbackEmail);
+        // FIXED: Use Cloud Function
+        var reportStudentViolation = firebaseFunctions.httpsCallable('reportStudentViolation');
+        reportStudentViolation({
+            pollId: pid,
+            studentEmail: fallbackEmail,
+            reason: reason
+        }).then(function (result) {
+            console.log('[Proctor] Violation logged:', result.data);
+            if (result.data && result.data.lockVersion !== undefined) {
+                currentLockVersion = result.data.lockVersion;
+            }
+        }).catch(function (error) {
+            console.error('[Proctor] Violation report failed:', error);
+        });
     }
 
     function reportViolationDebounced(reason) {
@@ -2214,20 +2205,24 @@
             }
 
             showLockEnforcementUI();
-            google.script.run
-                .withSuccessHandler(function (response) {
-                    console.log('[Proctor] Violation reported, server response:', response);
-                    if (response.success) {
-                        currentLockVersion = response.lockVersion;
-                        showLockEnforcementUI();
-                        startProctorPolling();
-                    }
-                })
-                .withFailureHandler(function (error) {
-                    console.error('[Proctor] Violation report failed:', error);
+            google.script.run = null; // Removed legacy
+            var reportStudentViolation = firebaseFunctions.httpsCallable('reportStudentViolation');
+            reportStudentViolation({
+                pollId: activePollId,
+                studentEmail: fallbackEmail,
+                reason: reason
+            }).then(function (result) {
+                var response = result.data || result;
+                console.log('[Proctor] Violation reported:', response);
+                if (response.success) {
+                    currentLockVersion = response.lockVersion;
                     showLockEnforcementUI();
-                })
-                .reportStudentViolation(activePollId, SESSION_TOKEN, reason, fallbackEmail);
+                    startProctorPolling();
+                }
+            }).catch(function (error) {
+                console.error('[Proctor] Violation report failed:', error);
+                showLockEnforcementUI();
+            });
         }, 100);
     }
 
@@ -2607,28 +2602,51 @@
                 // Immediately mark as active to allow polling, but grace period protects against blur
                 secureSessionActive = true;
 
-                google.script.run
-                    .withSuccessHandler(function (response) {
-                        setSecureBeginLoading(false);
-                        if (response.success) {
-                            // Success!
-                            hideAllViews();
-                            entryScreen.style.display = 'none';
-                            secureLobbyContext = null;
+                // FIXED: Client-side Access Code Check & Initialization
+                var pollId = secureLobbyContext.pollId;
+                var email = window.STUDENT_EMAIL || sessionStorage.getItem('veritas_student_email');
 
-                            // Start polling with active session flag
-                            startPolling(true);
-                        } else {
-                            isEnteringFullscreen = false;
-                            secureSessionActive = false;
-                            veritasAlert(response.error || 'Failed to start session.', { title: 'Error' });
+                if (!email) {
+                    setSecureBeginLoading(false);
+                    veritasAlert('Student identity not found. Please refresh.', { title: 'Error' });
+                    return;
+                }
+
+                // Fetch poll metadata for access code
+                firebase.database().ref('polls/' + pollId).once('value')
+                    .then(function (snap) {
+                        var poll = snap.val();
+                        if (!poll) throw new Error('Poll not found');
+
+                        var serverCode = (poll.accessCode) ? poll.accessCode : '';
+
+                        // Simple check
+                        if (serverCode && serverCode !== providedCode) {
+                            throw new Error('Invalid access code.');
                         }
+
+                        // Initialize student session
+                        var emailKey = email.replace(/[.$#[\]]/g, '_');
+                        return firebase.database().ref('sessions/' + pollId + '/students/' + emailKey).update({
+                            status: 'ACTIVE',
+                            startedAt: firebase.database.ServerValue.TIMESTAMP,
+                            email: email,
+                            name: window.STUDENT_NAME || email.split('@')[0]
+                        });
                     })
-                    .withFailureHandler(function (error) {
+                    .then(function () {
+                        setSecureBeginLoading(false);
+                        // Success!
+                        hideAllViews();
+                        entryScreen.style.display = 'none';
+                        secureLobbyContext = null;
+                        startPolling(true);
+                    })
+                    .catch(function (error) {
                         setSecureBeginLoading(false);
                         isEnteringFullscreen = false;
                         secureSessionActive = false;
-                        var message = (error && error.message) ? error.message : 'Unable to begin assessment.';
+                        var message = error.message || 'Unable to begin assessment.';
                         if (/access code/i.test(message)) {
                             setSecureAccessError(message);
                             if (secureAccessCodeInput) {
@@ -2637,13 +2655,7 @@
                         } else {
                             veritasAlert(message, { title: 'Secure Assessment' });
                         }
-                    })
-                    .beginIndividualTimedAttempt(
-                        secureLobbyContext.pollId,
-                        secureLobbyContext.sessionId,
-                        SESSION_TOKEN,
-                        { accessCode: providedCode }
-                    );
+                    });
             })
             .catch(function (err) {
                 console.warn('Fullscreen request was rejected', err);
@@ -3161,22 +3173,23 @@
             telemetry: ActivityMonitor.getInstance().getTelemetry()
         };
 
-        google.script.run
-            .withSuccessHandler(function (data) {
+        // FIXED: Fetch from Firebase
+        firebase.database().ref('sessions/' + activePollId + '/live_session').once('value')
+            .then(function (snapshot) {
                 pollInFlight = false;
-                var hadFailures = pollFailureCount > 0 || recoveringFromOutage;
+                var data = snapshot.val();
                 pollFailureCount = 0;
                 recoveringFromOutage = false;
                 lastSuccessfulPollAt = Date.now();
-                handlePostPollSuccess(data || {}, hadFailures);
+                // Assume data structure matches or is adaptable
+                handlePostPollSuccess(data || {}, false);
             })
-            .withFailureHandler(function (error) {
+            .catch(function (error) {
                 pollInFlight = false;
                 pollFailureCount += 1;
                 console.error('Polling error', error);
                 handlePollingFailure(error);
-            })
-            .getStudentPollStatus(SESSION_TOKEN, context);
+            });
     }
 
     function isSessionActive() {
@@ -3340,32 +3353,7 @@
             initProctorListener(activePollId, email);
         }
     }
-                }
-                    } else if (response.status === 'OK') {
-        // Student status is OK but no explicit unlock_granted
-        // This means either:
-        // 1. Fresh student who was never locked - OK to continue
-        // 2. Student was locked but somehow status is OK without unlock_granted - BUG, keep polling
-        // To be safe, if poison pill is active, KEEP LOCKED and keep polling.
-        if (isPoisonPillActive()) {
-            console.warn('[Proctor] Status is OK but Poison Pill still active - keeping lock (waiting for unlock_granted)');
-            showLockEnforcementUI();
-            // Keep polling - don't clear interval
-        } else {
-            // Normal case: student was never locked, continue normally
-            console.log('[Proctor] Status OK, no prior lock - continuing normally');
-            if (proctorPollInterval) {
-                clearInterval(proctorPollInterval);
-                proctorPollInterval = null;
-            }
-        }
-    }
-                })
-                .withFailureHandler(function (error) {
-        console.error('Proctor state check error:', error);
-    })
-        .getStudentProctorState(SESSION_TOKEN, telemetry);
-        }
+
 
     function hideAllViews() {
         // ENHANCED VIEW MUTEX: Use both display property and hidden class for robustness

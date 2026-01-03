@@ -1,7 +1,5 @@
 {
   "projects": {
     "default": "classroomproctor"
-  },
-  "targets": {},
-  "etags": {}
+  }
 }

@@ -47,6 +47,15 @@ function processTemplateVars(content, context = {}) {
     // Replace JSON.stringify(firebaseConfig || {})
     content = content.replace(/<\?!=\s*JSON\.stringify\(firebaseConfig\s*\|\|\s*\{\}\)\s*\?>/g, JSON.stringify(context.firebaseConfig || {}));
 
+    // Replace Veritas.Config.DEBUG_FIREBASE
+    content = content.replace(/<\?!=\s*Veritas\.Config\.DEBUG_FIREBASE\s*\?\s*'true'\s*:\s*'false'\s*\?>/g, 'false');
+
+    // Replace sessionToken with empty string (client logic must handle missing token)
+    content = content.replace(/<\?=\s*sessionToken\s*\?>/g, '');
+
+    // Replace studentEmail with empty string
+    content = content.replace(/<\?=\s*studentEmail\s*\?>/g, '');
+
     // Replace basic <?= var ?> for specific known vars
     content = content.replace(/<\?=\s*Session\.getActiveUser\(\)\.getEmail\(\)\s*\?>/g, "teacher@demo.com"); // Stub
     content = content.replace(/<\?=\s*examConfig\.examName\s*\?>/g, "Demo Exam"); // Stub if caught in template

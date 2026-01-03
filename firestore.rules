@@ -1,8 +1,38 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    // Teachers: Only the specific teacher can read/write their own record
+    match /teachers/{teacherId} {
+      allow read, write: if request.auth != null && request.auth.uid == teacherId;
+    }
+
+    // Exams: Owned by teachers
+    match /exams/{examId} {
+      allow read, write: if request.auth != null && request.resource.data.teacherId == request.auth.uid;
+      allow read, update, delete: if request.auth != null && resource.data.teacherId == request.auth.uid;
+    }
+
+    // Sessions: Live instances of exams
+    match /sessions/{sessionId} {
+      // Teachers can manage their own sessions
+      allow read, write: if request.auth != null && (
+        (request.method == 'create' && request.resource.data.teacherId == request.auth.uid) ||
+        (resource.data.teacherId == request.auth.uid)
+      );
+      
+      // Public/Students can read a session IF they have the correct accessCode
+      // This is a simplified rule; usually, you'd check this via a query or a specific field
+      allow read: if request.query.limit <= 1 && request.query.filters[0].op == '==' && request.query.filters[0].field == 'accessCode';
+    }
+
+    // Students sub-collection within Sessions
+    match /sessions/{sessionId}/students/{studentId} {
+      // Students can only read/write their own document
+      // We assume students are authenticated (possibly anonymously)
+      allow read, write: if request.auth != null && request.auth.uid == studentId;
+      
+      // Teachers can read all student data in their sessions
+      allow read: if request.auth != null && get(/databases/$(database)/documents/sessions/$(sessionId)).data.teacherId == request.auth.uid;
     }
   }
 }

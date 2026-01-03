@@ -2680,47 +2680,49 @@
     }
 
     function loadDashboardSummary() {
-      // FIREBASE MIGRATION: Load Polls directly from RTDB
-      // This replaces google.script.run.getDashboardSummary()
+      // FIREBASE MIGRATION: Load Polls directly from Firestore
+      var db = firebase.firestore();
+      var user = firebase.auth().currentUser;
 
-      var db = firebase.database();
-      var pollsRef = db.ref('polls');
+      if (!user) {
+        console.warn('[Firebase] No user logged in yet, skipping dashboard load.');
+        return;
+      }
 
-      // Listen for poll updates (realtime dashboard)
-      pollsRef.on('value', function (snapshot) {
-        var pollsObj = snapshot.val();
-        var pollsList = [];
+      // Realtime listener for teacher's polls
+      db.collection('polls')
+        .where('teacherId', '==', user.uid)
+        .onSnapshot(function (snapshot) {
+          var pollsList = [];
 
-        if (pollsObj) {
-          // Convert object to array
-          Object.keys(pollsObj).forEach(function (key) {
-            var p = pollsObj[key];
-            p.pollId = key; // Ensure ID is present
-            pollsList.push(p);
+          snapshot.forEach(function (doc) {
+            var data = doc.data();
+            data.pollId = doc.id;
+            pollsList.push(data);
           });
 
           // Sort by createdAt desc (newest first)
           pollsList.sort(function (a, b) {
-            return (b.createdAt || 0) - (a.createdAt || 0);
+            var dateA = a.createdAt ? (a.createdAt.seconds || 0) : 0;
+            var dateB = b.createdAt ? (b.createdAt.seconds || 0) : 0;
+            return dateB - dateA;
           });
-        }
 
-        // Construct equivalent dashboard summary object
-        dashboardSummary = {
-          polls: pollsList,
-          totalPolls: pollsList.length,
-          // Legacy/Placeholder stats (can be enriched later)
-          activeSessions: 0,
-          totalResponses: 0
-        };
+          // Construct equivalent dashboard summary object
+          dashboardSummary = {
+            polls: pollsList,
+            totalPolls: pollsList.length,
+            activeSessions: 0, // Placeholder
+            totalResponses: 0  // Placeholder
+          };
 
-        console.log('[Firebase] Dashboard polls loaded:', pollsList.length);
-        renderDashboardSummary();
+          console.log('[Firestore] Dashboard polls loaded:', pollsList.length);
+          renderDashboardSummary();
 
-      }, function (error) {
-        console.error('[Firebase] Dashboard Poll Load Error:', error);
-        // Fallback or error state
-      });
+        }, function (error) {
+          console.error('[Firestore] Dashboard Poll Load Error:', error);
+          showUserFriendlyError({ code: 'permission-denied' });
+        });
     }
 
     function renderDashboardSummary() {
@@ -3714,7 +3716,8 @@
       clone.createdAt = Date.now();
       clone.updatedAt = clone.createdAt;
 
-      firebase.functions().httpsCallable('createPoll')({
+      // Build Payload for Cloud Function
+      var payload = {
         pollName: clone.pollName,
         className: clone.className,
         questions: clone.questions,
@@ -3724,11 +3727,17 @@
         availableFrom: clone.availableFrom || '',
         dueBy: clone.dueBy || '',
         secureSettings: clone.secureSettings || {}
-      }).then(function (result) {
+      };
+
+      // Call Cloud Function to create a new poll (copy)
+      var createPollFn = firebase.functions().httpsCallable('createPoll');
+
+      createPollFn(payload).then(function (result) {
         if (result.data && result.data.success) {
           veritasAlert('Poll copied successfully.', { title: 'Success' });
+          // The dashboard listener will automatically refresh ALL_POLLS
         } else {
-          throw new Error('Failed to copy poll');
+          throw new Error(result.data ? result.data.message : 'Failed to copy poll');
         }
       }).catch(function (error) {
         handleError(error);
@@ -14032,6 +14041,40 @@
     }
 
     // Image upload handler for wizard
+    /**
+     * Upload Image Helper using Firebase Storage
+     */
+    function uploadImage(file) {
+      return new Promise(function (resolve, reject) {
+        var user = firebase.auth().currentUser;
+        if (!user) {
+          reject('User not authenticated');
+          return;
+        }
+
+        var timestamp = Date.now();
+        var path = 'poll_images/' + user.uid + '/' + timestamp + '_' + file.name;
+        var storageRef = firebase.storage().ref().child(path);
+
+        var uploadTask = storageRef.put(file);
+
+        uploadTask.on('state_changed',
+          function (snapshot) {
+            // Optional: Progress updates
+          },
+          function (error) {
+            console.error('Upload failed:', error);
+            reject(error);
+          },
+          function () {
+            uploadTask.snapshot.ref.getDownloadURL().then(function (downloadURL) {
+              resolve(downloadURL);
+            });
+          }
+        );
+      });
+    }
+
     function handleWizardImageUpload(file, qIndex, optIndex) {
       if (!file) return;
 
@@ -14055,15 +14098,16 @@
       }
       renderWizardQuestions();
 
-      // Convert to data URL and upload
-      var reader = new FileReader();
-      reader.onload = function (e) {
-        var dataUrl = e.target.result;
-
-
-        // IMAGE UPLOAD DISABLED FOR MIGRATION
-        veritasAlert('Image upload is temporarily unavailable while we migrate to the new cloud backend.', { title: 'Feature Unavailable' });
-
+      // Upload to Firebase Storage
+      uploadImage(file).then(function (downloadURL) {
+        if (optIndex === null) {
+          wizardState.questions[qIndex].questionImageURL = downloadURL;
+        } else {
+          wizardState.questions[qIndex].options[optIndex].imageURL = downloadURL;
+        }
+        renderWizardQuestions();
+      }).catch(function (error) {
+        alert('Image upload failed. Please try again.');
         // Reset uploading state
         if (optIndex === null) {
           wizardState.questions[qIndex].questionImageURL = null;
@@ -14071,10 +14115,7 @@
           wizardState.questions[qIndex].options[optIndex].imageURL = null;
         }
         renderWizardQuestions();
-
-
-      };
-      reader.readAsDataURL(file);
+      });
     }
 
     // Expose new functions globally

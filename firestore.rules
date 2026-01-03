@@ -34,5 +34,18 @@ service cloud.firestore {
       // Teachers can read all student data in their sessions
       allow read: if request.auth != null && get(/databases/$(database)/documents/sessions/$(sessionId)).data.teacherId == request.auth.uid;
     }
+
+    // Polls: Metadata and Settings
+    match /polls/{pollId} {
+      allow read, write: if request.auth != null && (
+        (request.method == 'create' && request.resource.data.teacherId == request.auth.uid) ||
+        (resource.data.teacherId == request.auth.uid)
+      );
+
+      // Questions sub-collection
+      match /questions/{questionId} {
+        allow read, write: if request.auth != null && get(/databases/$(database)/documents/polls/$(pollId)).data.teacherId == request.auth.uid;
+      }
+    }
   }
 }

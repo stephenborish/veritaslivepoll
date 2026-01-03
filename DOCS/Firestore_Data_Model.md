@@ -34,12 +34,29 @@ Root collection for live exam instances.
     - `status`: `string` (`'WAITING'`, `'LIVE'`, `'CLOSED'`)
     - `createdAt`: `timestamp`
 
-### `sessions/{sessionId}/students`
-Sub-collection for student participation in a session.
-- **Document ID**: `studentId` (Auth UID, often anonymous)
+### `polls`
+Root collection for poll templates and settings.
+- **Document ID**: `pollId` (Auto-generated or provided)
 - **Fields**:
-    - `name`: `string`
-    - `status`: `string` (`'ACTIVE'`, `'LOCKED'`, `'FINISHED'`)
-    - `answers`: `map`
-        - `{questionId}`: `mixed` (Student's selected answer)
-    - `joinedAt`: `timestamp`
+    - `teacherId`: `string` (Owner UID)
+    - `sessionType`: `string` (`'LIVE_POLL'`, `'SECURE_ASSESSMENT'`)
+    - `settings`: `map`
+        - `timeLimitMinutes`: `number`
+        - `accessCode`: `string`
+        - `calculatorEnabled`: `boolean`
+        - `proctorMode`: `string` (`'soft'`, `'hard'`)
+    - `metacognitionEnabled`: `boolean`
+    - `createdAt`: `timestamp`
+    - `updatedAt`: `timestamp`
+
+### `polls/{pollId}/questions`
+Sub-collection for questions within a poll.
+- **Document ID**: `questionId` (Auto-generated or provided)
+- **Fields**:
+    - `stemHtml`: `string`
+    - `options`: `array` of `objects`
+        - `text`: `string`
+        - `imageUrl`: `string`
+    - `correctAnswer`: `mixed`
+    - `points`: `number`
+    - `order`: `number`

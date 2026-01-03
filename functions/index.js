@@ -1157,3 +1157,104 @@ exports.submitProctorLog = onCall({ cors: true }, async (request) => {
 
   return { success: true };
 });
+
+/**
+ * POLL CREATOR BACKEND (Rebuilt)
+ */
+
+/**
+ * Generate a Signed URL for Image Upload (Teacher Action)
+ * Assets are stored in poll_assets/{teacherId}/{timestamp}.{extension}
+ */
+exports.getUploadSignedUrl = onCall({ cors: true }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "User must be authenticated.");
+  }
+
+  const { extension, contentType } = request.data;
+  if (!extension || !contentType) {
+    throw new HttpsError("invalid-argument", "Missing extension or contentType");
+  }
+
+  const bucket = admin.storage().bucket();
+  const fileName = `poll_assets/${request.auth.uid}/${Date.now()}.${extension}`;
+  const file = bucket.file(fileName);
+
+  // Generate a signed URL for a direct upload (PUT)
+  const [url] = await file.getSignedUrl({
+    version: 'v4',
+    action: 'write',
+    expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+    contentType,
+  });
+
+  return {
+    success: true,
+    uploadUrl: url,
+    fileUrl: `https://storage.googleapis.com/${bucket.name}/${fileName}`,
+  };
+});
+
+/**
+ * Save Poll (Teacher Action)
+ * Uses a Firestore Batch to write the poll metadata and all questions atomically.
+ */
+exports.savePoll = onCall({ cors: true }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "User must be authenticated.");
+  }
+
+  const { pollId: providedPollId, sessionType, settings, questions, metacognitionEnabled } = request.data;
+
+  // Validation
+  if (sessionType === 'SECURE_ASSESSMENT' && (!settings || !settings.timeLimitMinutes)) {
+    throw new HttpsError("invalid-argument", "SECURE_ASSESSMENT requires a timeLimitMinutes setting.");
+  }
+
+  if (!questions || !Array.isArray(questions)) {
+    throw new HttpsError("invalid-argument", "A poll must have an array of questions.");
+  }
+
+  const db = admin.firestore();
+  const batch = db.batch();
+  const pollId = providedPollId || db.collection("polls").doc().id;
+  const pollRef = db.collection("polls").doc(pollId);
+
+  // 1. Save Poll Metadata
+  const pollData = {
+    teacherId: request.auth.uid,
+    sessionType: sessionType || 'LIVE_POLL',
+    settings: settings || {},
+    metacognitionEnabled: !!metacognitionEnabled,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+
+  if (!providedPollId) {
+    pollData.createdAt = admin.firestore.FieldValue.serverTimestamp();
+  }
+
+  batch.set(pollRef, pollData, { merge: true });
+
+  // 2. Save Questions in Sub-collection
+  // Note: Batch limit is 500 operations. If questions > 499, this will need chunking.
+  // For this context, we assume a reasonable number of questions.
+  questions.forEach((q, index) => {
+    const questionId = q.id || `q_${index}`; // Use provided ID or generate one
+    const questionRef = pollRef.collection("questions").doc(questionId);
+
+    batch.set(questionRef, {
+      stemHtml: q.stemHtml || "",
+      options: q.options || [], // Array of { text, imageUrl }
+      correctAnswer: q.correctAnswer !== undefined ? q.correctAnswer : null,
+      points: q.points || 1,
+      order: index,
+    }, { merge: true });
+  });
+
+  await batch.commit();
+
+  return {
+    success: true,
+    pollId,
+  };
+});

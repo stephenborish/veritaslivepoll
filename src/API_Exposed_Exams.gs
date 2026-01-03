@@ -7,27 +7,33 @@
 
 // Question Bank
 function getBankQuestions(filters) {
+  Veritas.Security.assertTeacher();
   return Veritas.QuestionBankService.getQuestions(filters);
 }
 
 function saveBankQuestion(questionData) {
+  Veritas.Security.assertTeacher();
   return Veritas.QuestionBankService.saveQuestion(questionData);
 }
 
 function deleteBankQuestion(questionId) {
+  Veritas.Security.assertTeacher();
   return Veritas.QuestionBankService.deleteQuestion(questionId);
 }
 
 // Exam Management
 function createExam(examData) {
+  Veritas.Security.assertTeacher();
   return Veritas.ExamService.createExam(examData);
 }
 
 function getExams(classId) {
+  Veritas.Security.assertTeacher();
   return Veritas.ExamService.getExams(classId);
 }
 
 function setExamStatus(examId, isOpen) {
+  Veritas.Security.assertTeacher();
   return Veritas.ExamService.setExamStatus(examId, isOpen);
 }
 
@@ -54,10 +60,12 @@ function submitExamAnswers(examId, studentId, answers) {
 
 // Teacher Monitor
 function unlockExamStudent(examId, studentEmail) {
+  Veritas.Security.assertTeacher();
   return Veritas.ExamProctoringService.unlockExamStudent(examId, studentEmail);
 }
 
 function reportManualExamLock(examId, studentEmail, reason) {
+   Veritas.Security.assertTeacher();
    // Wrapper to reuse violation reporting
    // Look up display name? Or just pass 'Teacher Lock'
    return Veritas.ExamProctoringService.reportExamViolation(examId, studentEmail, 'Student', reason);

@@ -1227,47 +1227,61 @@
     const PREVIEW_MODE = false;
 
     // === Auth & Backend Initialization ===
-    
+
     // Global Logout Function
-    window.logout = function() {
-      if (firebase.auth()) {
-        firebase.auth().signOut().then(function() {
-          console.log('[Auth] Signed out successfully.');
-          sessionStorage.removeItem('veritas_session_token');
-          sessionStorage.removeItem('veritas_teacher_email');
-          window.location.reload();
-        }).catch(function(error) {
-          console.error('[Auth] Sign out error:', error);
-          alert('Failed to sign out: ' + error.message);
-        });
-      }
-    };
-
     function renderLogoutButton(user) {
-      if (document.getElementById('header-logout-btn')) return; // Already exists
-
-      var headerRight = document.querySelector('header .ml-auto');
-      if (headerRight) {
+      console.log('[Auth] Rendering Logout button for:', user.email);
+      var headerRight = document.querySelector('.header-right');
+      if (headerRight && !document.getElementById('teacher-logout-btn')) {
         var logoutBtn = document.createElement('button');
-        logoutBtn.id = 'header-logout-btn';
-        logoutBtn.className = 'flex items-center gap-2 h-9 px-3 ml-2 rounded bg-white/10 text-white text-sm font-semibold hover:bg-white/15 transition-colors border border-white/10';
+        logoutBtn.id = 'teacher-logout-btn';
+        logoutBtn.className = 'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400';
         logoutBtn.innerHTML = `
-          <span class="material-symbols-outlined text-sm">logout</span>
-          <span>Logout</span>
+          <span class="material-symbols-outlined text-[18px]">logout</span>
+          <span class="hidden sm:inline">Logout</span>
         `;
-        logoutBtn.onclick = window.logout;
-        
-        // Add user email tooltip or label if space permits, for now just button
+        logoutBtn.onclick = function () {
+          logoutTeacher();
+        };
+
+        // Add user email tooltip
         logoutBtn.title = 'Signed in as ' + (user.email || 'Teacher');
 
         headerRight.insertBefore(logoutBtn, headerRight.firstChild);
       }
     }
 
+    function logoutTeacher() {
+      if (confirm('Are you sure you want to log out?')) {
+        console.log('[Auth] Initiating logout...');
+        firebase.auth().signOut().then(function () {
+          console.log('[Auth] Signed out from Firebase.');
+
+          // Clear session/local storage
+          sessionStorage.removeItem('veritas_session_token');
+          sessionStorage.removeItem('veritas_teacher_email');
+          localStorage.removeItem('veritas_teacher_email');
+
+          // Clear global state
+          window.SESSION_TOKEN = null;
+          window.TEACHER_EMAIL = null;
+          window.DATA_LOAD_INITIATED = false;
+
+          // Reload page to reset all states securely
+          window.location.reload();
+        }).catch(function (error) {
+          console.error('[Auth] Logout failed:', error);
+          showToast('error', 'Logout Failed', error.message);
+        });
+      }
+    }
+
+    // Map global logout to the new function
+    window.logout = logoutTeacher;
+
     function initializeBackend() {
       console.log('[Veritas] Initializing Firebase backend...');
 
-      // 1. Centralized Initialization with Retry
       if (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG) {
         if (typeof firebase === 'undefined') {
           console.error('[Firebase] SDK not loaded! Retrying in 500ms...');
@@ -1281,53 +1295,78 @@
             console.log('[Firebase] App initialized successfully.');
           } catch (e) {
             console.error('[Firebase] Initialization error:', e);
-            alert('Critical Error: Failed to initialize backend. Please refresh.');
+            showToast('error', 'Critical Error', 'Failed to initialize backend. Please refresh.');
             return;
           }
         }
       } else {
-        console.error('[Firebase] FIREBASE_CONFIG missing! Backend features may fail.');
-        alert('Configuration Error: Backend config missing.');
+        console.error('[Firebase] FIREBASE_CONFIG missing!');
+        showToast('error', 'Configuration Error', 'Backend config missing.');
         return;
       }
 
-      // 2. Auth-Bound Data Loading and State Management
+      // Auth-Bound Data Loading and State Management
       try {
         firebase.auth().onAuthStateChanged(function (user) {
           if (user) {
-            console.log('[Auth] User authenticated:', user.email);
-            
-            // Session Persistence
-            sessionStorage.setItem('veritas_session_token', user.uid);
-            sessionStorage.setItem('veritas_teacher_email', user.email);
+            var startTime = Date.now();
+            console.log('[Auth] User authenticated:', user.email, '| UID:', user.uid);
 
-            // UI Updates
-            if (window.LoginManager) window.LoginManager.hide();
-            renderLogoutButton(user);
+            // Check if user is an authorized teacher via server call
+            google.script.run
+              .withSuccessHandler(function (isTeacher) {
+                var duration = Date.now() - startTime;
+                if (isTeacher) {
+                  console.log('[Auth] Teacher authorized:', user.email, '(Verified in ' + duration + 'ms)');
 
-            // Data Loading
-            // Prevent double loading if multiple auth state changes occur rapidly
-            if (!window.DATA_LOAD_INITIATED) {
-               window.DATA_LOAD_INITIATED = true;
-               loadInitialData();
-               loadDashboardSummary();
-            }
+                  // Session Persistence
+                  sessionStorage.setItem('veritas_session_token', user.uid);
+                  sessionStorage.setItem('veritas_teacher_email', user.email);
+                  // Also sync to localStorage for better cross-tab persistence if needed
+                  localStorage.setItem('veritas_teacher_email', user.email);
+
+                  // Update Global State
+                  window.SESSION_TOKEN = user.uid;
+                  window.TEACHER_EMAIL = user.email;
+
+                  // UI Updates
+                  if (window.LoginManager) window.LoginManager.hide();
+                  renderLogoutButton(user);
+
+                  // Data Loading
+                  if (!window.DATA_LOAD_INITIATED) {
+                    window.DATA_LOAD_INITIATED = true;
+                    loadInitialData();
+                    loadDashboardSummary();
+                  }
+                } else {
+                  console.warn('[Auth] Unauthorized teacher access attempt:', user.email);
+                  firebase.auth().signOut();
+                  if (window.LoginManager) {
+                    window.LoginManager.setError('Unauthorized account. Please use your teacher email.');
+                    window.LoginManager.show();
+                  }
+                }
+              })
+              .withFailureHandler(function (err) {
+                console.error('[Auth] Failed to verify teacher status:', err);
+                showToast('error', 'Authorization Error', 'Failed to verify teacher status.');
+              })
+              .isTeacherEmail_(user.email);
           } else {
             console.log('[Auth] No teacher session found. Initiating Login Flow.');
             if (window.LoginManager) {
-               window.LoginManager.show();
+              window.LoginManager.show();
             } else {
-               // Fallback if LoginManager not ready yet
-               console.warn('[Auth] LoginManager not found, retrying...');
-               setTimeout(function() {
-                 if (window.LoginManager) window.LoginManager.show();
-               }, 500);
+              setTimeout(function () {
+                if (window.LoginManager) window.LoginManager.show();
+              }, 500);
             }
           }
         });
       } catch (e) {
         console.error('[Auth] Error setting up auth listener:', e);
-         // Graceful degradation or retry could go here
+        showToast('error', 'Auth Setup Failed', 'Please refresh the page.');
       }
     }
 

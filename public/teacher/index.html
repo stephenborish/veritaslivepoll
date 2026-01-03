@@ -22432,27 +22432,25 @@
 
       console.log(actionText + ' poll:', wizardState.pollName, wizardState.className, apiQuestions, metadata);
 
-      // FIREBASE MIGRATION: Write definitions directly to RTDB (Source of Truth)
-      // Remove dependency on Google Sheets for poll storage.
-      var dbRef = firebase.database().ref('polls');
+      // FIREBASE MIGRATION: Use Cloud Functions for secure writes
+      var functions = firebase.functions();
 
       if (wizardState.isEditMode && wizardState.pollId) {
         // UPDATE EXISTING POLL
         var pollId = wizardState.pollId;
-        var existingPollRef = dbRef.child(pollId);
-
-        // Construct updated payload
         var updatePayload = {
+          pollId: pollId,
           pollName: wizardState.pollName.trim(),
           className: wizardState.className.trim(),
           questions: apiQuestions,
-          metadata: metadata,
-          updatedAt: firebase.database.ServerValue.TIMESTAMP
+          metadata: metadata
         };
 
-        existingPollRef.update(updatePayload)
-          .then(async function () {
-            console.log('Poll updated in Firebase:', pollId);
+        var updatePoll = functions.httpsCallable('updatePoll');
+
+        updatePoll(updatePayload)
+          .then(async function (result) {
+            console.log('Poll updated via Cloud Function:', result.data);
             await veritasAlert('Poll updated successfully!', { title: 'Success' });
 
             // Synthesize a response object compatible with legacy dashboard expectations
@@ -22467,8 +22465,8 @@
             completeWizardPublish(response);
           })
           .catch(async function (error) {
-            console.error('Firebase Update Error:', error);
-            await veritasAlert('Failed to update: ' + error.message, { title: 'Error', destructive: true });
+            console.error('Cloud Function Update Error:', error);
+            await veritasAlert('Failed to update: ' + (error.message || 'Unknown error'), { title: 'Error', destructive: true });
             if (publishBtn) {
               publishBtn.disabled = false;
               publishBtn.innerHTML = '<span class="material-symbols-outlined">' + actionIcon + '</span> Update Poll';
@@ -22477,37 +22475,33 @@
 
       } else {
         // CREATE NEW POLL
-        var newPollRef = dbRef.push(); // Generate ID
-        var newPollId = newPollRef.key;
-
-        var newPollPayload = {
-          pollId: newPollId,
+        var createPayload = {
           pollName: wizardState.pollName.trim(),
           className: wizardState.className.trim(),
           questions: apiQuestions,
-          metadata: metadata,
-          createdAt: firebase.database.ServerValue.TIMESTAMP,
-          ownerId: 'TEACHER' // Phase 1: Single user assumption
+          metadata: metadata
         };
 
-        newPollRef.set(newPollPayload)
-          .then(async function () {
-            console.log('Poll created in Firebase:', newPollId);
+        var createPoll = functions.httpsCallable('createPoll');
+
+        createPoll(createPayload)
+          .then(async function (result) {
+            console.log('Poll created via Cloud Function:', result.data);
             await veritasAlert('Poll published successfully!', { title: 'Success' });
 
             var response = {
-              pollId: newPollId,
-              pollName: newPollPayload.pollName,
-              className: newPollPayload.className,
-              questions: newPollPayload.questions,
-              metadata: newPollPayload.metadata,
+              pollId: result.data.pollId,
+              pollName: createPayload.pollName,
+              className: createPayload.className,
+              questions: createPayload.questions,
+              metadata: createPayload.metadata,
               success: true
             };
             completeWizardPublish(response);
           })
           .catch(async function (error) {
-            console.error('Firebase Create Error:', error);
-            await veritasAlert('Failed to publish: ' + error.message, { title: 'Error', destructive: true });
+            console.error('Cloud Function Create Error:', error);
+            await veritasAlert('Failed to publish: ' + (error.message || 'Unknown error'), { title: 'Error', destructive: true });
             if (publishBtn) {
               publishBtn.disabled = false;
               publishBtn.innerHTML = '<span class="material-symbols-outlined">' + actionIcon + '</span> Publish Poll';
@@ -22525,13 +22519,109 @@
     window.wizardGoNext = wizardGoNext;
     window.wizardGoBack = wizardGoBack;
     window.goToWizardStep = goToWizardStep;
+    window.goToWizardStep = goToWizardStep;
     window.addWizardQuestion = addWizardQuestion;
     window.removeWizardQuestion = removeWizardQuestion;
+    window.endSession = endSession; // Expose endSession globally
     window.publishWizardPoll = publishWizardPoll;
     window.filterStudentsByFlag = filterStudentsByFlag;
     window.clearStudentFilter = clearStudentFilter;
     window.sortStudentsBy = sortStudentsBy;
     window.updateLiveView = updateLiveView;
+    window.endSession = endSession;
+
+    // Bind Stop Buttons
+    bindClick('header-stop-btn', function () {
+      if (CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId) {
+        endSession(CURRENT_POLL_DATA.pollId);
+      }
+    });
+
+    bindClick('fab-stop-btn', function () {
+      if (CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId) {
+        endSession(CURRENT_POLL_DATA.pollId);
+      }
+    });
+
+    bindClick('mobile-stop-btn', function () {
+      if (CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId) {
+        endSession(CURRENT_POLL_DATA.pollId);
+      }
+    });
+
+    // ========== SESSION MANAGEMENT ========== //
+
+    /**
+     * End the current live session securely via Cloud Function.
+     * @param {string} pollId - The ID of the poll/session to end.
+     */
+    async function endSession(pollId) {
+      if (!pollId) {
+        console.error('endSession called without pollId');
+        return;
+      }
+
+      if (!confirm('Are you sure you want to end this session? This will stop all student activity and finalize the results.')) {
+        return;
+      }
+
+      var btn = document.getElementById('header-stop-btn');
+      var fabBtn = document.getElementById('fab-stop-btn');
+      var mobileBtn = document.getElementById('mobile-stop-btn');
+
+      var btns = [btn, fabBtn, mobileBtn].filter(Boolean);
+
+      btns.forEach(function (b) {
+        b.disabled = true;
+        b.innerHTML = '<span class="material-symbols-outlined animate-spin">hourglass_empty</span> Ending...';
+      });
+
+      try {
+        var finalizeSession = firebase.functions().httpsCallable('finalizeSession');
+        var result = await finalizeSession({ pollId: pollId });
+
+        console.log('Session finalized:', result.data);
+
+        await veritasAlert('Session ended successfully. Results have been saved to history.', { title: 'Session Ended' });
+
+        // Reset UI state
+        var liveView = document.getElementById('live-view');
+        var liveHeader = document.getElementById('header-live');
+        var defaultHeader = document.getElementById('header-default');
+
+        if (liveView) liveView.style.display = 'none';
+        if (liveHeader) liveHeader.style.display = 'none';
+        if (defaultHeader) defaultHeader.style.display = 'flex';
+
+        // Hide FAB container if visible
+        var fabContainer = document.getElementById('fab-container');
+        if (fabContainer) fabContainer.style.display = 'none';
+
+        // Refresh dashboard
+        if (typeof showDashboard === 'function') {
+          showDashboard();
+        } else {
+          window.location.reload();
+        }
+
+      } catch (error) {
+        console.error('Failed to end session:', error);
+        await veritasAlert('Failed to end session: ' + (error.message || 'Unknown error'), { title: 'Error', destructive: true });
+
+        // Re-enable buttons
+        btns.forEach(function (b) {
+          b.disabled = false;
+          // Restore original content
+          if (b.id === 'fab-stop-btn') {
+            b.innerHTML = '<span class="material-symbols-outlined">stop</span>';
+          } else if (b.id === 'mobile-stop-btn') {
+            b.innerHTML = '<span class="material-symbols-outlined text-base">stop_circle</span><span>End</span>';
+          } else {
+            b.innerHTML = '<span class="material-symbols-outlined text-base">stop_circle</span> End Session';
+          }
+        });
+      }
+    }
 
     // OPTIMIZATION: Handle lightweight updates from server (2025)
     // Synthesizes a "full" view update from cached poll definitions

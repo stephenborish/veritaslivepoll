@@ -16,6 +16,18 @@
 
   <script>
     var FIREBASE_CONFIG = <?!= JSON.stringify(firebaseConfig) ?>;
+    if (!FIREBASE_CONFIG) {
+      console.warn('FIREBASE_CONFIG missing, using default fallback.');
+      FIREBASE_CONFIG = {
+        apiKey: "AIzaSyAv0bCe5KIuQx_sou8toBy5DG2PYaB_pBM",
+        authDomain: "classroomproctor.firebaseapp.com",
+        databaseURL: "https://classroomproctor-default-rtdb.firebaseio.com",
+        projectId: "classroomproctor",
+        storageBucket: "classroomproctor.firebasestorage.app",
+        messagingSenderId: "600627073908",
+        appId: "1:600627073908:web:935970f5849b28f6ad5221"
+      };
+    }
     var Veritas = Veritas || {};
     Veritas.Config = Veritas.Config || {};
     Veritas.Config.DEBUG_FIREBASE = <?!= Veritas.Config.DEBUG_FIREBASE ? 'true' : 'false' ?>;

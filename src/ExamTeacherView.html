@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <base target="_top">
   <?!= include('Common_Head') ?>
@@ -11,12 +12,25 @@
 
   <title>Veritas - Exam Monitor</title>
 </head>
+
 <body class="bg-gray-100 min-h-screen text-gray-900 font-sans">
 
   <!-- Config Data -->
   <script>
     var EXAM_CONFIG = <?!= JSON.stringify(examConfig) ?>;
     var FIREBASE_CONFIG = <?!= JSON.stringify(firebaseConfig) ?>;
+    if (!FIREBASE_CONFIG) {
+      console.warn('FIREBASE_CONFIG missing, using default fallback.');
+      FIREBASE_CONFIG = {
+        apiKey: "AIzaSyAv0bCe5KIuQx_sou8toBy5DG2PYaB_pBM",
+        authDomain: "classroomproctor.firebaseapp.com",
+        databaseURL: "https://classroomproctor-default-rtdb.firebaseio.com",
+        projectId: "classroomproctor",
+        storageBucket: "classroomproctor.firebasestorage.app",
+        messagingSenderId: "600627073908",
+        appId: "1:600627073908:web:935970f5849b28f6ad5221"
+      };
+    }
     var ROSTER_MAP = <?!= JSON.stringify(rosterMap) ?>; // studentKey -> {name, email}
   </script>
 
@@ -26,11 +40,11 @@
       <div class="flex justify-between h-16">
         <div class="flex items-center space-x-4">
           <div class="flex-shrink-0 flex items-center">
-             <span class="material-symbols-outlined text-gold mr-2 text-3xl">school</span>
-             <span class="font-serif text-xl font-bold tracking-wide">Veritas Monitor</span>
+            <span class="material-symbols-outlined text-gold mr-2 text-3xl">school</span>
+            <span class="font-serif text-xl font-bold tracking-wide">Veritas Monitor</span>
           </div>
           <div class="ml-4 text-sm bg-blue-900/50 px-3 py-1 rounded">
-             <?= examConfig.examName ?>
+            <?= examConfig.examName ?>
           </div>
         </div>
         <div class="flex items-center space-x-3">
@@ -75,14 +89,14 @@
     let dbRef = null;
 
     // --- FIREBASE INIT ---
-    (function() {
+    (function () {
       if (FIREBASE_CONFIG) {
         firebase.initializeApp(FIREBASE_CONFIG);
         window.VERITAS_FIREBASE_DB = firebase.database();
       }
     })();
 
-    window.onload = function() {
+    window.onload = function () {
       initFirebaseSession();
     };
 
@@ -103,7 +117,7 @@
       const grid = document.getElementById('studentGrid');
 
       // Update stats
-      let active=0, locked=0, finished=0, discon=0;
+      let active = 0, locked = 0, finished = 0, discon = 0;
 
       // Ensure we have tiles for all rostered students, even if not in Firebase yet
       // Combine Roster Keys + Firebase Keys
@@ -111,7 +125,7 @@
 
       allKeys.forEach(key => {
         const status = data[key] || 'OFFLINE';
-        const info = ROSTER_MAP[key] || { name: 'Unknown ('+key+')' };
+        const info = ROSTER_MAP[key] || { name: 'Unknown (' + key + ')' };
 
         let tile = document.getElementById(`tile-${key}`);
         if (!tile) {
@@ -163,16 +177,16 @@
       let borderClass = 'border-gray-200';
       let buttons = '';
 
-      switch(status) {
+      switch (status) {
         case 'ACTIVE':
           badgeClass = 'bg-green-100 text-green-800';
           borderClass = 'border-green-500';
-          buttons = `<button onclick="setStatus('${tile.id.replace('tile-','')}', 'LOCKED')" class="btn-secondary w-full text-red-600 border-red-200 hover:bg-red-50">Lock Student</button>`;
+          buttons = `<button onclick="setStatus('${tile.id.replace('tile-', '')}', 'LOCKED')" class="btn-secondary w-full text-red-600 border-red-200 hover:bg-red-50">Lock Student</button>`;
           break;
         case 'LOCKED':
           badgeClass = 'bg-red-100 text-red-800 animate-pulse';
           borderClass = 'border-red-600 bg-red-50';
-          buttons = `<button onclick="setStatus('${tile.id.replace('tile-','')}', 'ACTIVE')" class="btn-primary w-full bg-green-600 hover:bg-green-700">Unlock</button>`;
+          buttons = `<button onclick="setStatus('${tile.id.replace('tile-', '')}', 'ACTIVE')" class="btn-primary w-full bg-green-600 hover:bg-green-700">Unlock</button>`;
           break;
         case 'FINISHED':
           badgeClass = 'bg-blue-100 text-blue-800';
@@ -208,12 +222,13 @@
       const studentEmail = ROSTER_MAP[studentKey].email;
 
       if (newStatus === 'ACTIVE') {
-         google.script.run.unlockExamStudent(EXAM_CONFIG.examId, studentEmail);
+        google.script.run.unlockExamStudent(EXAM_CONFIG.examId, studentEmail);
       } else if (newStatus === 'LOCKED') {
-         google.script.run.reportExamViolation(EXAM_CONFIG.examId, studentEmail, ROSTER_MAP[studentKey].name, 'Manual Teacher Lock');
+        google.script.run.reportExamViolation(EXAM_CONFIG.examId, studentEmail, ROSTER_MAP[studentKey].name, 'Manual Teacher Lock');
       }
     }
 
   </script>
 </body>
+
 </html>

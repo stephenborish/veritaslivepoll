@@ -9,6 +9,7 @@
   <!-- Firebase SDKs (compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-functions-compat.js"></script>
 
   <style>
     .proctor-overlay {
@@ -212,10 +213,12 @@
     let dbRef = null;
 
     // --- FIREBASE INIT ---
+    var functions;
     (function () {
       if (FIREBASE_CONFIG) {
         firebase.initializeApp(FIREBASE_CONFIG);
         window.VERITAS_FIREBASE_DB = firebase.database();
+        functions = firebase.functions();
       }
     })();
 
@@ -237,7 +240,13 @@
         initProctoring();
 
         // 6. Report Start
-        google.script.run.reportExamStart(EXAM_CONFIG.examId, STUDENT_INFO.id, STUDENT_INFO.displayName);
+        var manageExamSession = functions.httpsCallable('manageExamSession');
+        manageExamSession({
+          action: 'START',
+          examId: EXAM_CONFIG.examId,
+          studentId: STUDENT_INFO.id,
+          studentName: STUDENT_INFO.displayName
+        }).catch(err => console.error('Report Start Failed', err));
       }).catch(err => {
         alert('Fullscreen is required. Please allow fullscreen to proceed.');
         console.error(err);
@@ -300,12 +309,15 @@
       if (dbRef) dbRef.set('LOCKED');
 
       // 3. Report to Server (Canonical)
-      google.script.run.reportExamViolation(
-        EXAM_CONFIG.examId,
-        STUDENT_INFO.id,
-        STUDENT_INFO.displayName,
-        reason
-      );
+      // 3. Report to Server (Canonical)
+      var manageExamSession = functions.httpsCallable('manageExamSession');
+      manageExamSession({
+        action: 'VIOLATION',
+        examId: EXAM_CONFIG.examId,
+        studentId: STUDENT_INFO.id,
+        studentName: STUDENT_INFO.displayName,
+        reason: reason
+      }).catch(console.error);
     }
 
     function triggerLock(reason, isRemote) {
@@ -343,20 +355,31 @@
         if (dbRef) dbRef.set('ACTIVE');
 
         // 3. Notify Server (Clear Locked flag in Sheet)
-        google.script.run.reportExamResume(EXAM_CONFIG.examId, STUDENT_INFO.id);
+        var manageExamSession = functions.httpsCallable('manageExamSession');
+        manageExamSession({ action: 'RESUME', examId: EXAM_CONFIG.examId, studentId: STUDENT_INFO.id });
       }).catch(err => {
         alert('You must return to fullscreen.');
       });
     }
 
     // --- EXAM LOGIC ---
+    // --- EXAM LOGIC ---
     function loadQuestions() {
-      google.script.run.withSuccessHandler(qs => {
-        questions = qs;
-        renderNav();
-        renderQuestion(0);
-        startTimer();
-      }).getExamQuestions(EXAM_CONFIG.examId);
+      var manageExamSession = functions.httpsCallable('manageExamSession');
+      manageExamSession({ action: 'GET_QUESTIONS', examId: EXAM_CONFIG.examId, studentId: STUDENT_INFO.id })
+        .then(result => {
+          questions = result.data.questions || [];
+          if (questions.length === 0) {
+            console.warn('No questions found.');
+            // alert('No questions loaded. Contact teacher.');
+          }
+          renderNav();
+          renderQuestion(0);
+          startTimer();
+        }).catch(err => {
+          console.error('Failed to load questions', err);
+          alert('Failed to load exam questions. Please refresh or contact proctor.');
+        });
     }
 
     function renderNav() {
@@ -493,11 +516,14 @@
          </div>
        `;
 
-      google.script.run.withSuccessHandler(res => {
-        // Set final status in Sidecar
-        if (dbRef) dbRef.set('FINISHED');
+      var submitExamFn = functions.httpsCallable('submitExam');
+      submitExamFn({ examId: EXAM_CONFIG.examId, studentId: STUDENT_INFO.id, answers: payload })
+        .then(resData => {
+          var res = resData.data;
+          // Set final status in Sidecar
+          if (dbRef) dbRef.set('FINISHED');
 
-        document.body.innerHTML = `
+          document.body.innerHTML = `
             <div class="min-h-screen flex flex-col items-center justify-center bg-green-50 p-4 text-center">
               <span class="material-symbols-outlined text-8xl text-green-600 mb-6">check_circle</span>
               <h1 class="text-4xl font-bold text-gray-900 mb-2">Exam Submitted</h1>
@@ -506,59 +532,60 @@
               <button onclick="window.close()" class="mt-8 btn-primary">Close Window</button>
             </div>
           `;
-        document.exitFullscreen().catch(() => { });
-      }).withFailureHandler(err => {
-        // CRITICAL FIX: Proper error handling to prevent data loss
-        console.error('Exam submission failed:', err);
+          document.exitFullscreen().catch(() => { });
 
-        // Backup answers to localStorage in case of failure
-        try {
-          const backupKey = 'exam_backup_' + EXAM_CONFIG.examId + '_' + STUDENT_INFO.id;
-          localStorage.setItem(backupKey, JSON.stringify({
-            examId: EXAM_CONFIG.examId,
-            studentId: STUDENT_INFO.id,
-            answers: payload,
-            timestamp: new Date().toISOString(),
-            error: err && err.message ? err.message : String(err)
-          }));
-        } catch (storageErr) {
-          console.error('Could not backup answers:', storageErr);
-        }
+        }).catch(err => {
+          // CRITICAL FIX: Proper error handling to prevent data loss
+          console.error('Exam submission failed:', err);
 
-        // Sanitize error message to prevent XSS
-        const errorMsg = err && err.message ? err.message : 'Network error - please try again';
-        const safeErrorMsg = String(errorMsg).replace(/[<>&"']/g, function (c) {
-          return { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c];
+          // Backup answers to localStorage in case of failure
+          try {
+            const backupKey = 'exam_backup_' + EXAM_CONFIG.examId + '_' + STUDENT_INFO.id;
+            localStorage.setItem(backupKey, JSON.stringify({
+              examId: EXAM_CONFIG.examId,
+              studentId: STUDENT_INFO.id,
+              answers: payload,
+              timestamp: new Date().toISOString(),
+              error: err && err.message ? err.message : String(err)
+            }));
+          } catch (storageErr) {
+            console.error('Could not backup answers:', storageErr);
+          }
+
+          // Sanitize error message to prevent XSS
+          const errorMsg = err && err.message ? err.message : 'Network error - please try again';
+          const safeErrorMsg = String(errorMsg).replace(/[<>&"']/g, function (c) {
+            return { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c];
+          });
+
+          // Show error UI with retry option
+          document.getElementById('examInterface').innerHTML = `
+             <div class="flex flex-col items-center justify-center h-full p-8">
+               <span class="material-symbols-outlined text-8xl text-red-600 mb-6">error</span>
+               <h2 class="text-3xl font-bold text-gray-900 mb-4">Submission Failed</h2>
+               <p class="text-lg text-gray-700 mb-2 max-w-md text-center">
+                 Your answers could not be submitted due to a network error.
+               </p>
+               <p class="text-sm text-gray-600 mb-6 max-w-md text-center bg-red-50 p-3 rounded border border-red-200">
+                 ${safeErrorMsg}
+               </p>
+               <p class="text-sm text-green-700 mb-8 max-w-md text-center bg-green-50 p-3 rounded border border-green-200">
+                 ✓ Your answers have been saved locally as a backup.
+               </p>
+               <div class="flex gap-4">
+                 <button onclick="submitExam(true)" class="px-6 py-3 bg-veritas-navy text-white rounded-lg hover:bg-blue-900 font-semibold transition-colors">
+                   Retry Submission
+                 </button>
+                 <button onclick="location.reload()" class="px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-semibold transition-colors">
+                   Reload Page
+                 </button>
+               </div>
+               <p class="text-xs text-gray-500 mt-6 max-w-md text-center">
+                 If the problem persists, contact your teacher. Your answers are saved in your browser.
+               </p>
+             </div>
+           `;
         });
-
-        // Show error UI with retry option
-        document.getElementById('examInterface').innerHTML = `
-            <div class="flex flex-col items-center justify-center h-full p-8">
-              <span class="material-symbols-outlined text-8xl text-red-600 mb-6">error</span>
-              <h2 class="text-3xl font-bold text-gray-900 mb-4">Submission Failed</h2>
-              <p class="text-lg text-gray-700 mb-2 max-w-md text-center">
-                Your answers could not be submitted due to a network error.
-              </p>
-              <p class="text-sm text-gray-600 mb-6 max-w-md text-center bg-red-50 p-3 rounded border border-red-200">
-                ${safeErrorMsg}
-              </p>
-              <p class="text-sm text-green-700 mb-8 max-w-md text-center bg-green-50 p-3 rounded border border-green-200">
-                ✓ Your answers have been saved locally as a backup.
-              </p>
-              <div class="flex gap-4">
-                <button onclick="submitExam(true)" class="px-6 py-3 bg-veritas-navy text-white rounded-lg hover:bg-blue-900 font-semibold transition-colors">
-                  Retry Submission
-                </button>
-                <button onclick="location.reload()" class="px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-semibold transition-colors">
-                  Reload Page
-                </button>
-              </div>
-              <p class="text-xs text-gray-500 mt-6 max-w-md text-center">
-                If the problem persists, contact your teacher. Your answers are saved in your browser.
-              </p>
-            </div>
-          `;
-      }).submitExamAnswers(EXAM_CONFIG.examId, STUDENT_INFO.id, payload);
     }
   </script>
 </body>

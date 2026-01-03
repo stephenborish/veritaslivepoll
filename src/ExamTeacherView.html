@@ -9,6 +9,7 @@
   <!-- Firebase SDKs (compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-functions-compat.js"></script>
 
   <title>Veritas - Exam Monitor</title>
 </head>
@@ -90,10 +91,12 @@
     let dbRef = null;
 
     // --- FIREBASE INIT ---
+    var functions;
     (function () {
       if (FIREBASE_CONFIG) {
         firebase.initializeApp(FIREBASE_CONFIG);
         window.VERITAS_FIREBASE_DB = firebase.database();
+        functions = firebase.functions();
       }
     })();
 
@@ -170,6 +173,8 @@
     function updateTile(tile, status) {
       const badge = tile.querySelector('.status-badge');
       const overlay = tile.querySelector('.action-overlay');
+      const studentKey = tile.id.replace('tile-', '');
+      const studentName = ROSTER_MAP[studentKey] ? ROSTER_MAP[studentKey].name : 'Unknown Student';
 
       // Reset classes
       tile.className = 'bg-white rounded-lg shadow border-l-4 p-4 transition-all relative overflow-hidden group';
@@ -182,12 +187,12 @@
         case 'ACTIVE':
           badgeClass = 'bg-green-100 text-green-800';
           borderClass = 'border-green-500';
-          buttons = `<button onclick="setStatus('${tile.id.replace('tile-', '')}', 'LOCKED')" class="btn-secondary w-full text-red-600 border-red-200 hover:bg-red-50">Lock Student</button>`;
+          buttons = `<button onclick="setStatus('${studentKey}', 'LOCKED')" class="btn-secondary w-full text-red-600 border-red-200 hover:bg-red-50">Lock Student</button>`;
           break;
         case 'LOCKED':
           badgeClass = 'bg-red-100 text-red-800 animate-pulse';
           borderClass = 'border-red-600 bg-red-50';
-          buttons = `<button onclick="setStatus('${tile.id.replace('tile-', '')}', 'ACTIVE')" class="btn-primary w-full bg-green-600 hover:bg-green-700">Unlock</button>`;
+          buttons = `<button onclick="setStatus('${studentKey}', 'ACTIVE')" class="btn-primary w-full bg-green-600 hover:bg-green-700">Unlock</button>`;
           break;
         case 'FINISHED':
           badgeClass = 'bg-blue-100 text-blue-800';
@@ -217,16 +222,47 @@
       dbRef.child(studentKey).set(newStatus);
 
       // 2. Server (Canonical)
-      // Resolve studentID from key (reverse lookup or passed in key)
-      // Here key is likely ID-safe string. Server needs original ID/Email.
-      // ROSTER_MAP[key].email
-      const studentEmail = ROSTER_MAP[studentKey].email;
+      const studentName = ROSTER_MAP[studentKey].name;
 
       if (newStatus === 'ACTIVE') {
-        google.script.run.unlockExamStudent(EXAM_CONFIG.examId, studentEmail);
+        unlockStudent(studentKey, studentName);
       } else if (newStatus === 'LOCKED') {
-        google.script.run.reportExamViolation(EXAM_CONFIG.examId, studentEmail, ROSTER_MAP[studentKey].name, 'Manual Teacher Lock');
+        markViolation(studentKey, studentName);
       }
+    }
+
+    function unlockStudent(studentKey, studentName) {
+      if (!confirm(`Unlock exam for ${studentName}?`)) return;
+
+      var manageExamSession = functions.httpsCallable('manageExamSession');
+      manageExamSession({
+        action: 'UNLOCK',
+        examId: EXAM_CONFIG.examId,
+        studentId: studentKey // Assuming Key is ID here, or need map.
+        // The key in Students map is usually safe-key. studentId needs to be reconstructed or passed.
+        // Wait, studentKey in map is email replaced.
+        // manageExamSession expects 'studentId'.
+        // If I pass the key as studentId, logic: const studentKey = studentId.replace...
+        // If it's already a key (dots replaced), safe to pass as ID?
+        // replace(/[.$#[\]]/g, "_") is idempotent if no dots.
+        // So passing key is fine.
+      }).then(() => {
+        // Success handled by RTDB listener
+      }).catch(err => alert('Unlock failed: ' + err.message));
+    }
+
+    function markViolation(studentKey, studentName) {
+      const reason = prompt(`Report violation for ${studentName}:`);
+      if (!reason) return;
+
+      var manageExamSession = functions.httpsCallable('manageExamSession');
+      manageExamSession({
+        action: 'VIOLATION',
+        examId: EXAM_CONFIG.examId,
+        studentId: studentKey,
+        studentName: studentName,
+        reason: reason
+      }).catch(err => alert('Action failed: ' + err.message));
     }
 
   </script>

@@ -3,8 +3,8 @@
  * Migrated from Google Apps Script to run essentially "at the edge".
  */
 
-const {onCall, HttpsError} = require("firebase-functions/v2/https");
-const {onValueWritten} = require("firebase-functions/v2/database");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onValueWritten } = require("firebase-functions/v2/database");
 const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
 
@@ -23,7 +23,7 @@ const analyticsEngine = require("./analytics_engine");
  *   questionIndex: 1
  * });
  */
-exports.setLiveSessionState = onCall({cors: true}, async (request) => {
+exports.setLiveSessionState = onCall({ cors: true }, async (request) => {
   // 1. Auth Check (Phase 1: trust caller with ID, Todo: Auth context)
   // const uid = request.auth.uid;
 
@@ -33,8 +33,8 @@ exports.setLiveSessionState = onCall({cors: true}, async (request) => {
 
   if (!pollId) {
     throw new HttpsError(
-        "invalid-argument",
-        "The function must be called with a pollId.",
+      "invalid-argument",
+      "The function must be called with a pollId.",
     );
   }
 
@@ -72,7 +72,7 @@ exports.setLiveSessionState = onCall({cors: true}, async (request) => {
 
   await sessionRef.set(payload);
 
-  return {success: true, timestamp: Date.now()};
+  return { success: true, timestamp: Date.now() };
 });
 
 /**
@@ -84,69 +84,69 @@ exports.setLiveSessionState = onCall({cors: true}, async (request) => {
  * 2. Atomic: Server updates student list.
  */
 exports.onAnswerSubmitted = onValueWritten(
-    {
-      ref: "/answers/{pollId}/{studentEmailKey}",
-    },
-    async (event) => {
-      const data = event.data.after.val(); // The answer object
-      const pollId = event.params.pollId;
-      const studentEmailKey = event.params.studentEmailKey;
+  {
+    ref: "/answers/{pollId}/{studentEmailKey}",
+  },
+  async (event) => {
+    const data = event.data.after.val(); // The answer object
+    const pollId = event.params.pollId;
+    const studentEmailKey = event.params.studentEmailKey;
 
-      // Ignore deletions
-      if (!data) return;
+    // Ignore deletions
+    if (!data) return;
 
-      logger.info(`Answer: Poll ${pollId} from ${studentEmailKey}`, data);
+    logger.info(`Answer: Poll ${pollId} from ${studentEmailKey}`, data);
 
-      // 1. Fetch Correct Answer from Secure Key Store
-      let isCorrect = null;
-      if (data.questionIndex !== undefined) {
-        const keyPath = `sessions/${pollId}/answers_key/${data.questionIndex}`;
-        const keyRef = admin.database().ref(keyPath);
-        const keySnap = await keyRef.once("value");
-        const correctVal = keySnap.val();
+    // 1. Fetch Correct Answer from Secure Key Store
+    let isCorrect = null;
+    if (data.questionIndex !== undefined) {
+      const keyPath = `sessions/${pollId}/answers_key/${data.questionIndex}`;
+      const keyRef = admin.database().ref(keyPath);
+      const keySnap = await keyRef.once("value");
+      const correctVal = keySnap.val();
 
-        if (correctVal !== null && data.answer) {
+      if (correctVal !== null && data.answer) {
         // Simple string comparison for now.
         // TODO: Enhance for multi-select arrays if needed.
-          const ansStr = String(data.answer).trim().toLowerCase();
-          const keyStr = String(correctVal).trim().toLowerCase();
-          isCorrect = (ansStr === keyStr);
-        }
+        const ansStr = String(data.answer).trim().toLowerCase();
+        const keyStr = String(correctVal).trim().toLowerCase();
+        isCorrect = (ansStr === keyStr);
       }
+    }
 
-      // 2. Update Teacher Dashboard View
-      // Ideally, the 'answers' node should rely on the *studentKey*, not email.
-      // For this migration, we assume client sends studentKey.
+    // 2. Update Teacher Dashboard View
+    // Ideally, the 'answers' node should rely on the *studentKey*, not email.
+    // For this migration, we assume client sends studentKey.
 
-      const studentStatusPath =
+    const studentStatusPath =
       `sessions/${pollId}/students/${studentEmailKey}`;
-      const studentStatusRef = admin.database().ref(studentStatusPath);
+    const studentStatusRef = admin.database().ref(studentStatusPath);
 
-      // Check current status to avoid overwriting LOCKED state?
-      // For now, simple set to FINISHED is consistent with legacy behavior.
-      // We update status AND payload the correctness result if available
-      const updatePayload = {
-        status: "FINISHED",
-        lastAnswerTimestamp: admin.database.ServerValue.TIMESTAMP,
-      };
+    // Check current status to avoid overwriting LOCKED state?
+    // For now, simple set to FINISHED is consistent with legacy behavior.
+    // We update status AND payload the correctness result if available
+    const updatePayload = {
+      status: "FINISHED",
+      lastAnswerTimestamp: admin.database.ServerValue.TIMESTAMP,
+    };
 
-      if (isCorrect !== null) {
-        updatePayload.lastAnswerCorrect = isCorrect;
-      }
+    if (isCorrect !== null) {
+      updatePayload.lastAnswerCorrect = isCorrect;
+    }
 
-      await studentStatusRef.update(updatePayload);
-      logger.info(
-          `Student ${studentEmailKey} marked FINISHED (Correct: ${isCorrect})`,
-      );
-    });
+    await studentStatusRef.update(updatePayload);
+    logger.info(
+      `Student ${studentEmailKey} marked FINISHED (Correct: ${isCorrect})`,
+    );
+  });
 /**
  * Finalize Session (The "End Poll" Signal).
  * 1. Reads all answers for the poll.
  * 2. Writes a permanent history record.
  * 3. Clears the live session state.
  */
-exports.finalizeSession = onCall({cors: true}, async (request) => {
-  const {pollId} = request.data;
+exports.finalizeSession = onCall({ cors: true }, async (request) => {
+  const { pollId } = request.data;
   if (!pollId) {
     throw new HttpsError("invalid-argument", "Missing pollId");
   }
@@ -195,15 +195,15 @@ exports.finalizeSession = onCall({cors: true}, async (request) => {
   });
 
   logger.info(`Session Finalized: ${pollId} -> ${sessionId}`);
-  return {success: true, sessionId: sessionId};
+  return { success: true, sessionId: sessionId };
 });
 
 /**
  * Get Comprehensive Analytics (The "Analytics Hub" Signal).
  * Consolidates multiple legacy GAS endpoints into one powerful engine.
  */
-exports.getAnalytics = onCall({cors: true}, async (request) => {
-  const {className, pollId, studentEmail} = request.data;
+exports.getAnalytics = onCall({ cors: true }, async (request) => {
+  const { className, pollId, studentEmail } = request.data;
   const db = admin.database();
 
   logger.info(`Analytics Request: class=${className}, ` +
@@ -229,15 +229,15 @@ exports.getAnalytics = onCall({cors: true}, async (request) => {
     const pollHistory = historyData[pollId] || {};
     // For post-poll analysis, we usually look at the latest session
     const sessions = Object.values(pollHistory)
-        .sort((a, b) => b.timestamp - a.timestamp);
+      .sort((a, b) => b.timestamp - a.timestamp);
     const latestSession = sessions[0];
 
     if (!latestSession) {
-      return {success: false, error: "No history found for this poll"};
+      return { success: false, error: "No history found for this poll" };
     }
 
     const itemAnalysis = analyticsEngine.computeItemAnalysis(
-        latestSession, latestSession.answers || {});
+      latestSession, latestSession.answers || {});
 
     return {
       success: true,
@@ -264,8 +264,8 @@ exports.getAnalytics = onCall({cors: true}, async (request) => {
     });
 
     const insights = analyticsEngine.computeStudentInsights(
-        allSessions, student ? [student] : []);
-    return {success: true, studentEmail, insights: insights[0]};
+      allSessions, student ? [student] : []);
+    return { success: true, studentEmail, insights: insights[0] };
   }
 
   // Default: Dashboard / Overview Analytics
@@ -280,8 +280,8 @@ exports.getAnalytics = onCall({cors: true}, async (request) => {
  * Manage Proctoring Status (Teacher Actions).
  * Handles UNLOCK, BLOCK, UNBLOCK with atomic transactions.
  */
-exports.manageProctoring = onCall({cors: true}, async (request) => {
-  const {pollId, studentEmail, action, expectedLockVersion} = request.data;
+exports.manageProctoring = onCall({ cors: true }, async (request) => {
+  const { pollId, studentEmail, action, expectedLockVersion } = request.data;
   // TODO: Auth check for teacher role
 
   if (!pollId || !studentEmail || !action) {
@@ -318,7 +318,7 @@ exports.manageProctoring = onCall({cors: true}, async (request) => {
   });
 
   if (result.committed) {
-    return {success: true, status: result.snapshot.val().status};
+    return { success: true, status: result.snapshot.val().status };
   } else {
     return {
       success: false,
@@ -332,8 +332,8 @@ exports.manageProctoring = onCall({cors: true}, async (request) => {
  * Report Student Violation (Student Signal).
  * Implements the "Poison Pill" logic and increments lockVersion.
  */
-exports.reportStudentViolation = onCall({cors: true}, async (request) => {
-  const {pollId, studentEmail, reason} = request.data;
+exports.reportStudentViolation = onCall({ cors: true }, async (request) => {
+  const { pollId, studentEmail, reason } = request.data;
 
   if (!pollId || !studentEmail) {
     throw new HttpsError("invalid-argument", "Missing required parameters");
@@ -381,8 +381,8 @@ exports.reportStudentViolation = onCall({cors: true}, async (request) => {
  * Create a new poll
  * Replaces google.script.run.createNewPoll
  */
-exports.createPoll = onCall({cors: true}, async (request) => {
-  const {pollName, className, questions, metadata} = request.data;
+exports.createPoll = onCall({ cors: true }, async (request) => {
+  const { pollName, className, questions, metadata } = request.data;
 
   if (!pollName || !className || !questions) {
     throw new HttpsError("invalid-argument", "Missing required fields");
@@ -424,8 +424,8 @@ exports.createPoll = onCall({cors: true}, async (request) => {
  * Update an existing poll
  * Replaces google.script.run.updatePoll
  */
-exports.updatePoll = onCall({cors: true}, async (request) => {
-  const {pollId, pollName, className, questions, metadata} = request.data;
+exports.updatePoll = onCall({ cors: true }, async (request) => {
+  const { pollId, pollName, className, questions, metadata } = request.data;
 
   if (!pollId) {
     throw new HttpsError("invalid-argument", "Missing pollId");
@@ -487,8 +487,8 @@ exports.updatePoll = onCall({cors: true}, async (request) => {
  * Replaces google.script.run.saveRoster, bulkAddStudentsToRoster,
  * renameClass, deleteClassRecord
  */
-exports.manageRoster = onCall({cors: true}, async (request) => {
-  const {action, className, newClassName, students, pollId} = request.data;
+exports.manageRoster = onCall({ cors: true }, async (request) => {
+  const { action, className, newClassName, students, pollId } = request.data;
 
   if (!action || !className) {
     throw new HttpsError("invalid-argument", "Missing required fields");
@@ -522,17 +522,17 @@ exports.manageRoster = onCall({cors: true}, async (request) => {
       const existingSnapshot = await rosterRef.once("value");
       const existingRoster = existingSnapshot.val() || [];
       const existingEmails = new Set(
-          existingRoster.map((s) => s.email.toLowerCase()),
+        existingRoster.map((s) => s.email.toLowerCase()),
       );
 
       const newStudents = students.filter(
-          (s) => !existingEmails.has(s.email.toLowerCase()),
+        (s) => !existingEmails.has(s.email.toLowerCase()),
       );
       const updatedRoster = [...existingRoster, ...newStudents];
 
       await rosterRef.set(updatedRoster);
       logger.info(
-          `Roster bulk add: ${className} (+${newStudents.length} students)`,
+        `Roster bulk add: ${className} (+${newStudents.length} students)`,
       );
 
       return {
@@ -560,8 +560,8 @@ exports.manageRoster = onCall({cors: true}, async (request) => {
       const newSnapshot = await newRosterRef.once("value");
       if (newSnapshot.exists()) {
         throw new HttpsError(
-            "already-exists",
-            "A class with that name already exists",
+          "already-exists",
+          "A class with that name already exists",
         );
       }
 
@@ -624,35 +624,35 @@ exports.manageRoster = onCall({cors: true}, async (request) => {
       const existingTokens = existingTokensSnapshot.val() || {};
 
       const links = await Promise.all(
-          roster.map(async (student) => {
-            const studentEmail = student.email.toLowerCase();
-            let token = existingTokens[studentEmail.replace(/\./g, "_")];
+        roster.map(async (student) => {
+          const studentEmail = student.email.toLowerCase();
+          let token = existingTokens[studentEmail.replace(/\./g, "_")];
 
-            if (!token) {
+          if (!token) {
             // Generate new token if not exists
-              token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-              const expiryDate = new Date();
-              expiryDate.setDate(expiryDate.getDate() + 30); // 30 days expiry
+            token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+            const expiryDate = new Date();
+            expiryDate.setDate(expiryDate.getDate() + 30); // 30 days expiry
 
-              await tokensRef.child(token).set({
-                email: student.email,
-                className: className,
-                created: Date.now(),
-                expires: expiryDate.getTime(),
-              });
-
-              await tokensLinksIndexRef.child(studentEmail.replace(/\./g, "_")).set(token);
-            }
-
-            // In a real environment, we might call a URL shortener here.
-            // For now, we return the structured link data.
-            return {
-              name: student.name,
+            await tokensRef.child(token).set({
               email: student.email,
-              token: token,
-              hasActiveLink: true,
-            };
-          }),
+              className: className,
+              created: Date.now(),
+              expires: expiryDate.getTime(),
+            });
+
+            await tokensLinksIndexRef.child(studentEmail.replace(/\./g, "_")).set(token);
+          }
+
+          // In a real environment, we might call a URL shortener here.
+          // For now, we return the structured link data.
+          return {
+            name: student.name,
+            email: student.email,
+            token: token,
+            hasActiveLink: true,
+          };
+        }),
       );
 
       return {
@@ -675,12 +675,12 @@ exports.manageRoster = onCall({cors: true}, async (request) => {
       // Prepare email data and return to client to use a mail bridge
       // This ensures token logic is in CF, while GAS only handles the actual 'send'
       const res = await exports.manageRoster.run({
-        data: {action: "GET_LINKS", className: className},
+        data: { action: "GET_LINKS", className: className },
       });
       const studentLinks = res.links;
 
       const pollSnapshot = await db.ref(`polls/${pollId}`).once("value");
-      const pollData = pollSnapshot.val() || {pollName: "Veritas Poll"};
+      const pollData = pollSnapshot.val() || { pollName: "Veritas Poll" };
 
       const emailDate = new Date().toLocaleDateString("en-US", {
         month: "long",
@@ -710,8 +710,8 @@ exports.manageRoster = onCall({cors: true}, async (request) => {
  * Resets student status from 'AWAITING_FULLSCREEN' to 'ACTIVE'
  * if lockVersion matches.
  */
-exports.confirmFullscreen = onCall({cors: true}, async (request) => {
-  const {pollId, studentEmail, lockVersion} = request.data;
+exports.confirmFullscreen = onCall({ cors: true }, async (request) => {
+  const { pollId, studentEmail, lockVersion } = request.data;
 
   if (!pollId || !studentEmail || lockVersion === undefined) {
     throw new HttpsError("invalid-argument", "Missing required parameters");
@@ -745,7 +745,7 @@ exports.confirmFullscreen = onCall({cors: true}, async (request) => {
       timestamp: admin.database.ServerValue.TIMESTAMP,
     });
 
-    return {success: true};
+    return { success: true };
   } else {
     return {
       success: false,
@@ -758,8 +758,8 @@ exports.confirmFullscreen = onCall({cors: true}, async (request) => {
  * Simulated Email Sending (Migration Stub).
  * Replace this with SendGrid/SMTP logic when ready.
  */
-exports.sendEmail = onCall({cors: true}, async (request) => {
-  const {recipientEmail, subject, body, students} = request.data;
+exports.sendEmail = onCall({ cors: true }, async (request) => {
+  const { recipientEmail, subject, body, students } = request.data;
 
   // Batch Mode
   if (students && Array.isArray(students)) {
@@ -771,7 +771,7 @@ exports.sendEmail = onCall({cors: true}, async (request) => {
         sentCount++;
       }
     });
-    return {success: true, sentCount: sentCount, simulated: true};
+    return { success: true, sentCount: sentCount, simulated: true };
   }
 
   // Single Mode
@@ -785,6 +785,195 @@ exports.sendEmail = onCall({cors: true}, async (request) => {
   // In a real implementation:
   // await sendGrid.send({ to: recipientEmail, subject, html: body });
 
-  return {success: true, simulated: true};
+  return { success: true, simulated: true };
+});
+
+/**
+ * Exam Management Functions
+ * Handles CRUD for Exams, Student Sessions, and Submissions.
+ */
+
+/**
+ * Manage Exams (Teacher Actions)
+ * Actions: CREATE, UPDATE_STATUS, GET_ALL
+ */
+exports.manageExams = onCall({ cors: true }, async (request) => {
+  const { action, examId, data } = request.data;
+
+  const db = admin.database();
+
+  if (action === "CREATE") {
+    if (!data || !data.examName || !data.classId) {
+      throw new HttpsError("invalid-argument", "Missing exam data");
+    }
+    const newExamId = Date.now().toString();
+    const examData = {
+      examId: newExamId,
+      ...data,
+      createdAt: admin.database.ServerValue.TIMESTAMP,
+      isOpen: data.isOpen || false
+    };
+
+    // Populate questions if Poll Source
+    if (data.sourceType === 'Poll' && data.sourcePollId) {
+      const pollSnap = await db.ref(`polls/${data.sourcePollId}`).once('value');
+      if (pollSnap.exists()) {
+        const poll = pollSnap.val();
+        examData.questions = poll.questions || [];
+        examData.questionCount = (poll.questions || []).length;
+      }
+    } else if (data.sourceType === 'QuestionBank') {
+      // TODO: Support Question Bank Source (requires QB migration)
+      // For now, empty questions array
+      examData.questions = [];
+      examData.questionCount = 0;
+    }
+
+    // Store in exams path
+    await db.ref(`exams/${newExamId}`).set(examData);
+
+    // Index by class if needed, for now just returning success
+    return { success: true, examId: newExamId };
+
+  } else if (action === "UPDATE_STATUS") {
+    if (!examId || data.isOpen === undefined) {
+      throw new HttpsError("invalid-argument", "Missing examId or isOpen status");
+    }
+    await db.ref(`exams/${examId}/isOpen`).set(data.isOpen);
+    return { success: true };
+
+  } else if (action === "GET_ALL") {
+    // Phase 1: Return all exams. TODO: Filter by teacher/class
+    const snapshot = await db.ref('exams').once('value');
+    const examsObj = snapshot.val() || {};
+    // Convert to array
+    const exams = Object.values(examsObj).sort((a, b) => b.createdAt - a.createdAt);
+    return { success: true, exams };
+
+  } else if (action === "GET_CLASSES") {
+    const snapshot = await db.ref('rosters/rosters').once('value');
+    const classesObj = snapshot.val() || {};
+    return { success: true, classes: Object.keys(classesObj) };
+
+  } else if (action === "GET_POLLS") {
+    const snapshot = await db.ref('polls').once('value');
+    const pollsObj = snapshot.val() || {};
+    // Return simplified list for selector
+    const polls = Object.values(pollsObj).map(p => ({
+      pollId: p.pollId,
+      pollName: p.pollName,
+      questionCount: p.questionCount || 0
+    }));
+    return { success: true, polls };
+  }
+
+  throw new HttpsError("invalid-argument", "Unknown action");
+});
+
+/**
+ * Manage Exam Session (Student/Teacher Actions)
+ * Actions: START, VIOLATION, UNLOCK, RESUME
+ */
+exports.manageExamSession = onCall({ cors: true }, async (request) => {
+  const { action, examId, studentId, studentName, reason } = request.data;
+
+  if (!examId || !studentId) {
+    throw new HttpsError("invalid-argument", "Missing required params");
+  }
+
+  const db = admin.database();
+  // Use studentId directly if it's safe, or hash/clean it. 
+  // For consistency with Polls, we might want to sanitize email if used as ID.
+  // Assuming studentId is a safe string or email.
+  const studentKey = studentId.replace(/[.$#[\]]/g, "_");
+  const sessionRef = db.ref(`sessions/${examId}/students/${studentKey}`);
+
+  if (action === "START") {
+    await sessionRef.set({
+      status: "ACTIVE",
+      studentId,
+      studentName,
+      startedAt: admin.database.ServerValue.TIMESTAMP,
+      lastActivity: admin.database.ServerValue.TIMESTAMP
+    });
+    return { success: true };
+
+  } else if (action === "VIOLATION") {
+    await sessionRef.update({
+      status: "LOCKED",
+      lastViolation: reason,
+      lastViolationAt: admin.database.ServerValue.TIMESTAMP,
+      violationCount: admin.database.ServerValue.increment(1)
+    });
+    // Start Log Trace
+    await db.ref(`sessions/${examId}/logs/${studentKey}`).push({
+      type: "VIOLATION",
+      reason,
+      timestamp: admin.database.ServerValue.TIMESTAMP
+    });
+    return { success: true };
+
+  } else if (action === "UNLOCK") {
+    await sessionRef.update({
+      status: "ACTIVE",
+      unlockedAt: admin.database.ServerValue.TIMESTAMP
+    });
+    await db.ref(`sessions/${examId}/logs/${studentKey}`).push({
+      type: "UNLOCK",
+      by: "Teacher", // TODO: Add teacher auth info
+      timestamp: admin.database.ServerValue.TIMESTAMP
+    });
+    return { success: true };
+
+  } else if (action === "RESUME") {
+    // Student resuming (Soft Lock)
+    await sessionRef.update({
+      status: "ACTIVE",
+      resumedAt: admin.database.ServerValue.TIMESTAMP
+    });
+    return { success: true };
+
+  } else if (action === "GET_QUESTIONS") {
+    const examSnap = await db.ref(`exams/${examId}`).once('value');
+    if (!examSnap.exists()) return { success: false, questions: [] };
+    const exam = examSnap.val();
+    // Secure: Maybe remove answers? 
+    // For now return raw questions as stored (like Polls)
+    return { success: true, questions: exam.questions || [] };
+  }
+
+  throw new HttpsError("invalid-argument", "Unknown action");
+});
+
+/**
+ * Submit Exam Answers
+ */
+exports.submitExam = onCall({ cors: true }, async (request) => {
+  const { examId, studentId, answers } = request.data;
+
+  if (!examId || !studentId || !answers) {
+    throw new HttpsError("invalid-argument", "Missing params");
+  }
+
+  const studentKey = studentId.replace(/[.$#[\]]/g, "_");
+  const db = admin.database();
+
+  // 1. Save Answers
+  await db.ref(`exams/${examId}/submissions/${studentKey}`).set({
+    answers,
+    submittedAt: admin.database.ServerValue.TIMESTAMP
+  });
+
+  // 2. Update Status
+  await db.ref(`sessions/${examId}/students/${studentKey}`).update({
+    status: "FINISHED",
+    submittedAt: admin.database.ServerValue.TIMESTAMP
+  });
+
+  // 3. (Optional) Auto-Grade if key exists?
+  // For now, return basic success. 
+  // Could calculate score here if we had the key.
+
+  return { success: true };
 });
 

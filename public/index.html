@@ -9320,7 +9320,32 @@
 
     function initializeBackend() {
       console.log('[Veritas] Initializing Firebase backend...');
-      loadInitialData();
+
+      // 1. Centralized Initialization
+      if (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG) {
+        if (!firebase.apps.length) {
+          firebase.initializeApp(FIREBASE_CONFIG);
+          console.log('[Firebase] App initialized successfully.');
+        }
+      } else {
+        console.error('[Firebase] FIREBASE_CONFIG missing! Backend features may fail.');
+      }
+
+      // 2. Auth-Bound Data Loading
+      firebase.auth().onAuthStateChanged(function (user) {
+        if (user) {
+          console.log('[Auth] User authenticated:', user.email);
+          // Hide login if visible (though usually handled by LoginManager)
+          if (window.LoginManager) window.LoginManager.hide();
+
+          // Trigger initial data load AFTER auth is confirmed
+          loadInitialData();
+          loadDashboardSummary();
+        } else {
+          console.log('[Auth] No teacher session found. Initiating Login Flow.');
+          if (window.LoginManager) window.LoginManager.show();
+        }
+      });
     }
 
 
@@ -10634,7 +10659,6 @@
       // FIREBASE MIGRATION: Load Polls directly from RTDB
       // This replaces google.script.run.getDashboardSummary()
 
-      if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
       var db = firebase.database();
       var pollsRef = db.ref('polls');
 
@@ -19359,7 +19383,6 @@
       if (typeof firebase !== 'undefined' && FIREBASE_CONFIG) {
         if (!firebase.apps.length) {
           try {
-            firebase.initializeApp(FIREBASE_CONFIG);
             debugInfo.initCalled = true;
             debugInfo.success = true;
           } catch (e) {
@@ -19407,8 +19430,6 @@
       // This is the "Gold Standard" - single authority, fast, logged.
       if (firebase && firebase.functions) {
         try {
-          if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-
           var setLiveSessionState = firebase.functions().httpsCallable('setLiveSessionState');
           console.log('[Firebase] Calling Cloud Function: setLiveSessionState...');
 
@@ -19492,8 +19513,7 @@
       // Firebase app should already be initialized by initFirebaseEagerly()
       // But check again just in case
       if (typeof firebase !== 'undefined' && !firebase.apps.length) {
-        firebase.initializeApp(FIREBASE_CONFIG);
-        console.log('[Firebase] Late init in initFirebaseMissionControl');
+        console.warn('[Firebase] Late init triggered in initFirebaseMissionControl - this should be rare.');
       }
 
       if (typeof firebase !== 'undefined') {

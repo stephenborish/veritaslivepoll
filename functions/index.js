@@ -4,6 +4,7 @@
  */
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const functions = require("firebase-functions");
 const { onValueWritten } = require("firebase-functions/v2/database");
 const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
@@ -488,8 +489,13 @@ exports.updatePoll = onCall({ cors: true }, async (request) => {
  * Replaces google.script.run.saveRoster, bulkAddStudentsToRoster,
  * renameClass, deleteClassRecord
  */
-exports.manageRoster = onCall({ cors: true }, async (request) => {
-  const { action, className, newClassName, students, pollId } = request.data;
+exports.manageRoster = functions.https.onCall(async (data, context) => {
+  // 0. Auth Check
+  if (!context.auth) {
+    throw new HttpsError("unauthenticated", "User must be authenticated.");
+  }
+
+  const { action, className, newClassName, students, pollId } = data;
 
   // GET_DATA is the only action that doesn't strictly require a className
   if (!action || (!className && action !== 'GET_DATA')) {

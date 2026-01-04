@@ -429,12 +429,12 @@
               <div class="inline-block p-4 bg-veritas-navy/10 rounded-full mb-4">
                 <span class="material-symbols-outlined text-5xl text-veritas-navy dark:text-veritas-gold">school</span>
               </div>
-              <h3 class="text-2xl font-bold text-veritas-navy dark:text-white mb-2">Welcome to Your Poll Library</h3>
-              <p class="text-gray-600 dark:text-gray-400 mb-6">This is where your polls will live. Create your first
-                interactive poll to engage your students and gather real-time feedback.</p>
-              <button onclick="openPollCreator()" class="dashboard-cta-button primary">
+              <h3 class="text-2xl font-bold text-veritas-navy dark:text-white mb-2">Poll Library</h3>
+              <p class="text-gray-600 dark:text-gray-400 mb-6">Create and manage your interactive polls and secure
+                assessments here.</p>
+              <button onclick="initWizardState(); openPollWizard()" class="dashboard-cta-button primary">
                 <span class="material-symbols-outlined">add_circle</span>
-                <span>Create Your First Poll</span>
+                <span>Create New Poll</span>
               </button>
             </div>
           </div>
@@ -1948,168 +1948,7 @@
 
 
 
-  <!-- Poll Creator Modal -->
-  <div id="poll-creator-modal"
-    class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-    <div
-      class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
-      <div class="sticky top-0 bg-primary px-6 py-4 border-b border-primary/20 z-10 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <img alt="Malvern Prep Logo" class="h-8 w-auto"
-            src="https://raw.githubusercontent.com/stephenborish/veritasassets/f0a824864d7d66637a13b822bff99fa6830e6123/mplogo.png" />
-          <input type="text" id="new-poll-name" placeholder="Chapter 5 Quiz"
-            class="bg-transparent text-brand-white text-xl font-bold border-none focus:ring-0 p-0 placeholder-brand-white/70 min-w-[300px]" />
-        </div>
-        <div class="flex items-center gap-2">
-          <span id="save-status" class="text-sm text-brand-white/80 mr-2">All changes saved</span>
-          <button id="close-modal-btn"
-            class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-brand-white/20 text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-brand-white/30 transition-colors">
-            <span class="truncate">Cancel</span>
-          </button>
-          <button id="save-poll-btn"
-            class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-brand-white text-primary text-sm font-bold leading-normal tracking-[0.015em] hover:bg-brand-light-gray transition-colors">
-            <span class="truncate">Publish Poll</span>
-          </button>
-        </div>
-      </div>
 
-      <div class="flex flex-grow overflow-hidden">
-        <!-- Question Navigator Sidebar -->
-        <aside
-          class="w-64 flex-shrink-0 border-r border-solid border-brand-light-gray dark:border-brand-dark-gray/20 bg-brand-white dark:bg-background-dark overflow-y-auto">
-          <div class="flex h-full flex-col justify-between p-4">
-            <div class="mb-4">
-              <p
-                class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-dark-gray/60 dark:text-brand-white/60 mb-2">
-                Question Order</p>
-              <div class="flex items-start justify-between gap-2">
-                <p id="question-sort-help"
-                  class="flex-1 text-xs leading-relaxed text-brand-dark-gray/60 dark:text-brand-white/60">Drag questions
-                  to reorder them manually.</p>
-                <button id="question-sort-reset-btn" type="button"
-                  class="h-9 px-3 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 bg-brand-white dark:bg-brand-dark-gray/30 text-xs font-semibold text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray/40 dark:hover:bg-brand-dark-gray/50 transition-colors">Reset
-                  order</button>
-              </div>
-            </div>
-            <div id="question-navigator" class="flex flex-col gap-2">
-              <!-- Question items will be added dynamically -->
-            </div>
-            <button id="add-question-btn"
-              class="flex w-full items-center justify-center gap-2 rounded-lg h-10 px-4 bg-primary/20 dark:bg-primary/30 text-primary dark:text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/30 dark:hover:bg-primary/40 transition-colors mt-4">
-              <span class="truncate">+ Add Question</span>
-            </button>
-            <!-- NEW FEATURE: Import from Question Bank -->
-            <button id="import-from-bank-btn"
-              class="flex w-full items-center justify-center gap-2 rounded-lg h-10 px-4 bg-amber-500/20 dark:bg-amber-500/30 text-amber-700 dark:text-amber-200 text-sm font-semibold leading-normal tracking-[0.015em] hover:bg-amber-500/30 dark:hover:bg-amber-500/40 transition-colors mt-2">
-              <span class="material-symbols-outlined text-base">inventory_2</span>
-              <span class="truncate">Import from Bank</span>
-            </button>
-            <!-- AP BIOLOGY 2025 TOPIC TAGGER -->
-            <button id="ai-suggest-btn"
-              class="flex w-full items-center justify-center gap-2 rounded-lg h-10 px-4 bg-green-500/20 dark:bg-green-500/30 text-green-700 dark:text-green-200 text-sm font-semibold leading-normal tracking-[0.015em] hover:bg-green-500/30 dark:hover:bg-green-500/40 transition-colors mt-2">
-              <span class="material-symbols-outlined text-base">science</span>
-              <span class="truncate">🧬 AP Bio Topics</span>
-            </button>
-            <!-- NEW FEATURE: Stimulus/Passage for grouped questions -->
-            <button id="add-stimulus-btn"
-              class="flex w-full items-center justify-center gap-2 rounded-lg h-10 px-4 bg-emerald-500/20 dark:bg-emerald-500/30 text-emerald-700 dark:text-emerald-200 text-sm font-semibold leading-normal tracking-[0.015em] hover:bg-emerald-500/30 dark:hover:bg-emerald-500/40 transition-colors mt-2">
-              <span class="material-symbols-outlined text-base">article</span>
-              <span class="truncate">Add Stimulus/Passage</span>
-            </button>
-          </div>
-        </aside>
-
-        <!-- Editing Workspace -->
-        <main class="flex-1 p-8 overflow-y-auto">
-          <div class="form-group mb-6">
-            <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white"
-              for="class-select">Class</label>
-            <select id="class-select"
-              class="w-full max-w-md rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
-              <option value="">-- Select Class --</option>
-            </select>
-          </div>
-
-          <div
-            class="bg-brand-white dark:bg-brand-dark-gray/20 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm mb-6">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <p
-                  class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-dark-gray/60 dark:text-brand-white/60">
-                  Session Mode</p>
-                <h3 class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white mt-1">Choose how students will
-                  experience this activity</h3>
-                <p class="text-sm text-brand-dark-gray/70 dark:text-brand-white/70 mt-2">Use Live Poll for synchronous,
-                  teacher-paced checks. Secure Assessment enables timed, randomized, proctored exams.</p>
-              </div>
-              <div
-                class="inline-flex rounded-full border border-brand-light-gray dark:border-brand-dark-gray/50 overflow-hidden">
-                <button type="button" id="builder-mode-live" data-session-type="LIVE_POLL"
-                  class="builder-session-toggle px-4 py-2 text-sm font-semibold transition-colors focus:outline-none">Live
-                  Poll</button>
-                <button type="button" id="builder-mode-secure" data-session-type="SECURE_ASSESSMENT"
-                  class="builder-session-toggle px-4 py-2 text-sm font-semibold transition-colors focus:outline-none">Secure
-                  Assessment</button>
-              </div>
-            </div>
-
-            <div id="secure-assessment-settings" class="mt-5 hidden">
-              <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <div>
-                  <label for="secure-time-limit-input"
-                    class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Time Limit
-                    (minutes)</label>
-                  <input id="secure-time-limit-input" type="number" min="5" step="5" placeholder="60"
-                    class="mt-2 w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-                  <p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-2">Required for Secure
-                    Assessments. Each student receives a personal countdown.</p>
-                </div>
-                <div>
-                  <label for="secure-access-code-input"
-                    class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Access Code
-                    (optional)</label>
-                  <input id="secure-access-code-input" type="text" maxlength="24" placeholder="BIO101"
-                    class="mt-2 w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 uppercase tracking-[0.2em]" />
-                  <p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-2">Students must enter this code
-                    before the exam begins.</p>
-                </div>
-                <div>
-                  <label for="secure-available-input"
-                    class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Available From</label>
-                  <input id="secure-available-input" type="datetime-local"
-                    class="mt-2 w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-                  <p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-2">Students cannot start before
-                    this window opens.</p>
-                </div>
-                <div>
-                  <label for="secure-due-input"
-                    class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Due By</label>
-                  <input id="secure-due-input" type="datetime-local"
-                    class="mt-2 w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-                  <p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-2">Sessions end automatically
-                    after this deadline.</p>
-                </div>
-              </div>
-
-              <div
-                class="mt-5 flex items-start gap-3 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
-                <span class="material-symbols-outlined text-blue-600 dark:text-blue-300">shield_lock</span>
-                <div>
-                  <p class="text-sm font-semibold text-blue-900 dark:text-blue-200">Secure Assessment requirements</p>
-                  <p class="text-sm text-blue-900/80 dark:text-blue-100/70 mt-1">Students must stay in fullscreen, avoid
-                    tab switching, and will appear in Mission Control for live monitoring.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-
-          <div id="question-builder-workspace">
-            <!-- Question editing workspace will be populated dynamically -->
-          </div>
-      </div>
-    </div>
-  </div>
 
   <!-- NEW FEATURE: Question Bank Import Modal -->
   <div id="question-bank-modal"
@@ -2614,4 +2453,5 @@
     </div>
   </div>
 
-  <!-- Poll Creation Wizard View --></div>
+  <!-- Poll Creation Wizard View -->
+</div>

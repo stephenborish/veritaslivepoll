@@ -9474,6 +9474,16 @@
 
     // --- Poll Creator Modal ---
     function openPollCreator(existingPoll) {
+      console.warn("Legacy openPollCreator called. Redirecting to Wizard.");
+      if (typeof initWizardState === 'function') {
+        initWizardState();
+        openPollWizard(existingPoll);
+      } else {
+        console.error("New Wizard not found.");
+      }
+      return;
+
+
       console.log('openPollCreator called', existingPoll ? 'with existing poll' : 'for new poll');
       try {
         // Defensive check: ensure modal exists

@@ -1465,34 +1465,108 @@ exports.getUploadSignedUrl = onCall({ cors: true }, async (request) => {
 /**
  * Save Poll (Teacher Action)
  * Uses a Firestore Batch to write the poll metadata and all questions atomically.
+ *
+ * Validation Schema:
+ * - Title must not be empty
+ * - Must have at least 1 question
+ * - Every question must have text AND a marked correct answer
+ *
+ * Write Strategy (Batch):
+ * - Generate a new pollId
+ * - Operation A: Set the polls/{pollId} document (Metadata + Settings)
+ * - Operation B: Iterate through questions array, save each as unique document in polls/{pollId}/questions sub-collection
+ *
+ * Why Sub-collections? To ensure we can scale to 100+ questions without hitting Firestore document size limits.
  */
 exports.savePoll = onCall({ cors: true }, async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "User must be authenticated.");
   }
 
-  const { pollId: providedPollId, sessionType, settings, questions, metacognitionEnabled } = request.data;
+  const {
+    pollId: providedPollId,
+    title,
+    classId,
+    sessionType,
+    settings,
+    questions,
+    metacognitionEnabled
+  } = request.data;
 
-  // Validation
+  // ============================================================================
+  // VALIDATION SCHEMA
+  // ============================================================================
+
+  // 1. Title must not be empty
+  if (!title || title.trim() === "") {
+    throw new HttpsError("invalid-argument", "Poll title is required and cannot be empty.");
+  }
+
+  // 2. Must have at least 1 question
+  if (!questions || !Array.isArray(questions) || questions.length === 0) {
+    throw new HttpsError("invalid-argument", "A poll must have at least one question.");
+  }
+
+  // 3. Every question must have text AND a marked correct answer
+  for (let i = 0; i < questions.length; i++) {
+    const q = questions[i];
+
+    // Check question has text (stemHtml)
+    if (!q.stemHtml || q.stemHtml.trim() === "" || q.stemHtml === "<p><br></p>") {
+      throw new HttpsError(
+        "invalid-argument",
+        `Question ${i + 1} must have question text.`
+      );
+    }
+
+    // Check correct answer is marked
+    if (q.correctAnswer === null || q.correctAnswer === undefined) {
+      throw new HttpsError(
+        "invalid-argument",
+        `Question ${i + 1} must have a correct answer marked.`
+      );
+    }
+
+    // Check options exist and correct answer is valid
+    if (!q.options || !Array.isArray(q.options) || q.options.length === 0) {
+      throw new HttpsError(
+        "invalid-argument",
+        `Question ${i + 1} must have answer options.`
+      );
+    }
+
+    if (q.correctAnswer < 0 || q.correctAnswer >= q.options.length) {
+      throw new HttpsError(
+        "invalid-argument",
+        `Question ${i + 1} has an invalid correct answer index.`
+      );
+    }
+  }
+
+  // Additional validation for Secure Assessments
   if (sessionType === 'SECURE_ASSESSMENT' && (!settings || !settings.timeLimitMinutes)) {
     throw new HttpsError("invalid-argument", "SECURE_ASSESSMENT requires a timeLimitMinutes setting.");
   }
 
-  if (!questions || !Array.isArray(questions)) {
-    throw new HttpsError("invalid-argument", "A poll must have an array of questions.");
-  }
+  // ============================================================================
+  // WRITE STRATEGY (BATCH)
+  // ============================================================================
 
   const db = admin.firestore();
   const batch = db.batch();
   const pollId = providedPollId || db.collection("polls").doc().id;
   const pollRef = db.collection("polls").doc(pollId);
 
-  // 1. Save Poll Metadata
+  // Operation A: Set the polls/{pollId} document (Metadata + Settings)
   const pollData = {
+    pollId: pollId,
+    title: title.trim(),
+    classId: classId || null,
     teacherId: request.auth.uid,
     sessionType: sessionType || 'LIVE_POLL',
     settings: settings || {},
     metacognitionEnabled: !!metacognitionEnabled,
+    questionCount: questions.length,
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   };
 
@@ -1502,23 +1576,29 @@ exports.savePoll = onCall({ cors: true }, async (request) => {
 
   batch.set(pollRef, pollData, { merge: true });
 
-  // 2. Save Questions in Sub-collection
+  // Operation B: Iterate through questions array, save each as unique document
+  // in polls/{pollId}/questions sub-collection
   // Note: Batch limit is 500 operations. If questions > 499, this will need chunking.
-  // For this context, we assume a reasonable number of questions.
+  // For typical use cases, we assume a reasonable number of questions (<100).
   questions.forEach((q, index) => {
     const questionId = q.id || `q_${index}`; // Use provided ID or generate one
     const questionRef = pollRef.collection("questions").doc(questionId);
 
     batch.set(questionRef, {
-      stemHtml: q.stemHtml || "",
+      stemHtml: q.stemHtml,
+      mediaUrl: q.mediaUrl || null,
       options: q.options || [], // Array of { text, imageUrl }
-      correctAnswer: q.correctAnswer !== undefined ? q.correctAnswer : null,
+      correctAnswer: q.correctAnswer,
       points: q.points || 1,
       order: index,
+      metacognitionEnabled: q.metacognitionEnabled || false,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
   });
 
   await batch.commit();
+
+  logger.info(`Poll saved: ${pollId} - "${title}" by ${request.auth.uid} (${questions.length} questions)`);
 
   return {
     success: true,

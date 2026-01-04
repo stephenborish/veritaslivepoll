@@ -9609,6 +9609,12 @@
 
             // UI Updates
             if (window.LoginManager) window.LoginManager.hide();
+
+            // Show Dashboard
+            var dashboardRoot = document.getElementById('dashboard-root');
+            if (dashboardRoot) dashboardRoot.style.display = 'flex';
+            if (mainLoader) mainLoader.style.display = 'none';
+
             renderLogoutButton(user);
 
             // Optimistic Data Loading (Decoupled from verifyTeacher)
@@ -9640,6 +9646,12 @@
 
           } else {
             console.log('[Auth] No teacher session found. Initiating Login Flow.');
+            if (mainLoader) mainLoader.style.display = 'none';
+
+            // Hide Dashboard (redundant but safe)
+            var dashboardRoot = document.getElementById('dashboard-root');
+            if (dashboardRoot) dashboardRoot.style.display = 'none';
+
             if (window.LoginManager) {
               window.LoginManager.show();
             } else {

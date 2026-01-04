@@ -2,7 +2,7 @@
 <html class="light" lang="en">
 
 <head>
-  <!-- =============================================================================
+<!-- =============================================================================
      VERITAS LIVE POLL - SHARED HEAD ELEMENTS
      =============================================================================
      Purpose: Common <head> elements for all pages
@@ -21,10 +21,9 @@
 
 <!-- Material Symbols -->
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
-
   <title>Veritas Live Poll - Teacher Dashboard</title>
 
-  <!-- =============================================================================
+<!-- =============================================================================
      VERITAS LIVE POLL - SHARED TAILWIND CONFIGURATION
      =============================================================================
      Purpose: Centralized Tailwind CSS configuration for design system consistency
@@ -109,8 +108,7 @@
       }
     }
   };
-</script>
-  <script>
+</script><script>
 (function (global) {
   'use strict';
 
@@ -313,7 +311,6 @@
 })(this);
 </script>
 
-
   <!-- Firebase SDKs (compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
@@ -323,20 +320,15 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 
   <script>
-    var FIREBASE_CONFIG = {"apiKey":"AIzaSyAv0bCe5KIuQx_sou8toBy5DG2PYaB_pBM","authDomain":"classroomproctor.firebaseapp.com","databaseURL":"https://classroomproctor-default-rtdb.firebaseio.com","projectId":"classroomproctor","storageBucket":"classroomproctor.firebasestorage.app","messagingSenderId":"600627073908","appId":"1:600627073908:web:935970f5849b28f6ad5221"};
-    if (!FIREBASE_CONFIG) {
-      console.warn('FIREBASE_CONFIG missing, using default fallback.');
-      FIREBASE_CONFIG = {
-        apiKey: "AIzaSyAv0bCe5KIuQx_sou8toBy5DG2PYaB_pBM",
-        authDomain: "classroomproctor.firebaseapp.com",
-        databaseURL: "https://classroomproctor-default-rtdb.firebaseio.com",
-        projectId: "classroomproctor",
-        storageBucket: "classroomproctor.firebasestorage.app",
-        messagingSenderId: "600627073908",
-        appId: "1:600627073908:web:935970f5849b28f6ad5221"
-      };
-      window.USING_FALLBACK_CONFIG = true;
-    }
+    var FIREBASE_CONFIG = {
+      apiKey: "AIzaSyAv0bCe5KIuQx_sou8toBy5DG2PYaB_pBM",
+      authDomain: "classroomproctor.firebaseapp.com",
+      databaseURL: "https://classroomproctor-default-rtdb.firebaseio.com",
+      projectId: "classroomproctor",
+      storageBucket: "classroomproctor.firebasestorage.app",
+      messagingSenderId: "600627073908",
+      appId: "1:600627073908:web:935970f5849b28f6ad5221"
+    };
     var Veritas = Veritas || {};
     Veritas.Config = Veritas.Config || {};
     Veritas.Config.DEBUG_FIREBASE = false;
@@ -345,7 +337,7 @@
   <!-- Google Charts -->
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 
-  <!-- =============================================================================
+<!-- =============================================================================
      VERITAS LIVE POLL - SHARED CSS CUSTOM PROPERTIES
      =============================================================================
      Purpose: Centralized CSS variables for design system consistency
@@ -474,8 +466,7 @@
     --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
     --ease-in-out: cubic-bezier(0.4, 0, 0.6, 1);
   }
-</style>
-  <style type="text/tailwindcss">
+</style><style type="text/tailwindcss">
   @layer utilities {
       .correct-answer-bg {
         background-image: repeating-linear-gradient(
@@ -5137,11 +5128,10 @@
 </style>
 </head>
 
-<body class="font-display bg-background-light dark:bg-background-dark text-brand-dark-gray dark:text-brand-white">
-</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-brand-dark-gray dark:text-brand-white"></head>
 
 <body class="light">
-  <!-- 🎯 Ambient State Overlay - Provides visual feedback for system states -->
+<!-- 🎯 Ambient State Overlay - Provides visual feedback for system states -->
 <div id="ambient-state-overlay" class="ambient-state-overlay state-normal"></div>
 
 <!-- 🔔 Toast Notification Container - For elegant, non-intrusive alerts -->
@@ -7597,8 +7587,7 @@
   </div>
 
   <!-- Poll Creation Wizard View -->
-</div>
-  <style>
+</div><style>
     /* Login Screen Styles - Premium Glassmorphism */
     #login-overlay {
         position: fixed !important;
@@ -7973,8 +7962,7 @@
             }
         };
     })();
-</script>
-  <script>
+</script><script>
 (function(global) {
   'use strict';
 
@@ -8093,8 +8081,7 @@
 
 })(this);
 </script>
-
-  <script>
+<script>
   (function () {
     // --- Main App State ---
     var mainLoader = document.getElementById('loader');
@@ -22738,8 +22725,7 @@
 
 
   })();
-</script>
-  <script>
+</script><script>
     /**
      * Veritas Theme Manager
      * Handles Dark Mode persistence, system preference detection, and UI toggling.
@@ -22847,7 +22833,6 @@
         transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
         transition-duration: 300ms;
     }
-</style>
-</body>
+</style></body>
 
 </html>

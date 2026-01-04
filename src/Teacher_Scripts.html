@@ -2984,18 +2984,20 @@
       ALL_CLASSES = Array.from(classSet).sort();
       window.ALL_CLASSES = ALL_CLASSES; // Expose for Poll Wizard
 
-      var previousSelection = classSelect.value;
-      classSelect.innerHTML = '<option value="">-- Select Class --</option>';
-      ALL_CLASSES.forEach(function (className) {
-        var opt = document.createElement('option');
-        opt.value = className;
-        opt.textContent = className;
-        classSelect.appendChild(opt);
-      });
-      if (previousSelection && ALL_CLASSES.indexOf(previousSelection) !== -1) {
-        classSelect.value = previousSelection;
-      } else {
-        classSelect.value = '';
+      if (classSelect) {
+        var previousSelection = classSelect.value;
+        classSelect.innerHTML = '<option value="">-- Select Class --</option>';
+        ALL_CLASSES.forEach(function (className) {
+          var opt = document.createElement('option');
+          opt.value = className;
+          opt.textContent = className;
+          classSelect.appendChild(opt);
+        });
+        if (previousSelection && ALL_CLASSES.indexOf(previousSelection) !== -1) {
+          classSelect.value = previousSelection;
+        } else {
+          classSelect.value = '';
+        }
       }
 
       updateClassFilters();

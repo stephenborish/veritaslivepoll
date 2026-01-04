@@ -1618,3 +1618,184 @@ exports.manageQuestionBank = onCall({ cors: true }, async (request) => {
 
   throw new HttpsError("invalid-argument", "Valid action required (SAVE, DELETE, SEARCH).");
 });
+
+// ============================================================================
+// CLASS MANAGER FUNCTIONS (Firestore Based)
+// ============================================================================
+
+/**
+ * Create a new Class
+ * @typedef {Object} CreateClassRequest
+ * @property {string} className - The name of the class
+ *
+ * @typedef {Object} CreateClassResponse
+ * @property {boolean} success - Whether the operation succeeded
+ * @property {string} classId - The ID of the created class
+ * @property {string} [message] - Optional error or success message
+ */
+exports.createClass = onCall({ cors: true }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "User must be authenticated.");
+  }
+
+  const { className } = request.data;
+
+  if (!className || className.trim() === "") {
+    throw new HttpsError("invalid-argument", "className is required and cannot be empty.");
+  }
+
+  const db = admin.firestore();
+  const teacherId = request.auth.uid;
+
+  // Check for duplicate class name for this teacher
+  const existingClassQuery = await db.collection("classes")
+    .where("teacherId", "==", teacherId)
+    .where("className", "==", className.trim())
+    .limit(1)
+    .get();
+
+  if (!existingClassQuery.empty) {
+    throw new HttpsError(
+      "already-exists",
+      "A class with this name already exists for your account."
+    );
+  }
+
+  // Create the class document
+  const classRef = db.collection("classes").doc();
+  const classData = {
+    classId: classRef.id,
+    className: className.trim(),
+    teacherId: teacherId,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+
+  await classRef.set(classData);
+
+  logger.info(`Class created: ${classRef.id} - ${className} by ${teacherId}`);
+
+  return {
+    success: true,
+    classId: classRef.id,
+    message: `Class "${className}" created successfully.`,
+  };
+});
+
+/**
+ * Bulk Add Students to a Class
+ * @typedef {Object} BulkAddStudentsRequest
+ * @property {string} classId - The ID of the class
+ * @property {Array<{name: string, email: string}>} students - Array of students to add
+ *
+ * @typedef {Object} BulkAddStudentsResponse
+ * @property {boolean} success - Whether the operation succeeded
+ * @property {number} addedCount - Number of students successfully added
+ * @property {number} skippedCount - Number of students skipped (duplicates)
+ * @property {string} [message] - Optional error or success message
+ */
+exports.bulkAddStudents = onCall({ cors: true }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "User must be authenticated.");
+  }
+
+  const { classId, students } = request.data;
+
+  // Validation
+  if (!classId || !students || !Array.isArray(students)) {
+    throw new HttpsError("invalid-argument", "classId and students array are required.");
+  }
+
+  if (students.length === 0) {
+    throw new HttpsError("invalid-argument", "Students array cannot be empty.");
+  }
+
+  const db = admin.firestore();
+  const teacherId = request.auth.uid;
+
+  // Verify class exists and belongs to the teacher
+  const classRef = db.collection("classes").doc(classId);
+  const classDoc = await classRef.get();
+
+  if (!classDoc.exists) {
+    throw new HttpsError("not-found", "Class not found.");
+  }
+
+  const classData = classDoc.data();
+  if (classData.teacherId !== teacherId) {
+    throw new HttpsError(
+      "permission-denied",
+      "You do not have permission to modify this class."
+    );
+  }
+
+  // Get existing students to check for duplicates
+  const studentsCollectionRef = classRef.collection("students");
+  const existingStudentsSnap = await studentsCollectionRef.get();
+  const existingEmails = new Set(
+    existingStudentsSnap.docs.map(doc => doc.data().email.toLowerCase())
+  );
+
+  // Prepare batch write (Firestore batch limit is 500 operations)
+  const batch = db.batch();
+  let addedCount = 0;
+  let skippedCount = 0;
+
+  for (const student of students) {
+    if (!student.name || !student.email) {
+      logger.warn(`Skipping invalid student entry: ${JSON.stringify(student)}`);
+      skippedCount++;
+      continue;
+    }
+
+    const email = student.email.trim().toLowerCase();
+    const name = student.name.trim();
+
+    // Skip duplicates
+    if (existingEmails.has(email)) {
+      logger.info(`Skipping duplicate student: ${email}`);
+      skippedCount++;
+      continue;
+    }
+
+    // Create email hash (MD5 equivalent using crypto)
+    const crypto = require("crypto");
+    const emailHash = crypto.createHash("md5").update(email).digest("hex");
+
+    // Create student document
+    const studentRef = studentsCollectionRef.doc();
+    const studentData = {
+      studentId: studentRef.id,
+      name: name,
+      email: email,
+      emailHash: emailHash,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    batch.set(studentRef, studentData);
+    existingEmails.add(email); // Prevent duplicates within the same batch
+    addedCount++;
+
+    // Firestore batch limit check
+    if (addedCount >= 500) {
+      logger.warn("Batch limit reached (500 operations). Consider chunking large imports.");
+      break;
+    }
+  }
+
+  // Commit the batch
+  if (addedCount > 0) {
+    await batch.commit();
+  }
+
+  logger.info(
+    `Bulk add students to class ${classId}: Added ${addedCount}, Skipped ${skippedCount}`
+  );
+
+  return {
+    success: true,
+    addedCount,
+    skippedCount,
+    message: `Successfully added ${addedCount} student(s). Skipped ${skippedCount} duplicate(s).`,
+  };
+});

@@ -105,3 +105,5 @@ ensureDir(OUT_DIR);
 buildFile('Student_View.html', 'index.html'); // Student view is index
 buildFile('Teacher_View.html', 'teacher.html');
 buildFile('Teacher_View.html', 'teacher/index.html'); // Also support /teacher/ folder style
+buildFile('QuestionBankView.html', 'teacher/question_bank.html');
+buildFile('ExamManagerView.html', 'teacher/exams.html');

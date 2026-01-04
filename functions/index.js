@@ -1596,3 +1596,98 @@ exports.savePoll = onCall({ cors: true }, async (request) => {
     pollId,
   };
 });
+
+/**
+ * QUESTION BANK MANAGEMENT (Teacher Action)
+ * Supports SAVE, DELETE, and SEARCH operations for questions.
+ */
+exports.manageQuestionBank = onCall({ cors: true }, async (request) => {
+    if (!request.auth) {
+        throw new HttpsError("unauthenticated", "User must be authenticated.");
+    }
+
+    const { action, questionData, filters, limit: limitVal } = request.data;
+    const db = admin.firestore();
+    const bankRef = db.collection("question_bank");
+
+    // 1. SAVE QUESTION
+    if (action === 'SAVE') {
+        const { id, text, options, correctAnswer, tags, difficulty } = questionData;
+
+        if (!text || !options) {
+            throw new HttpsError("invalid-argument", "Missing required question fields.");
+        }
+
+        const docId = id || bankRef.doc().id;
+        const docRef = bankRef.doc(docId);
+
+        // Verify ownership if updating
+        if (id) {
+            const snap = await docRef.get();
+            if (snap.exists && snap.data().teacherId !== request.auth.uid) {
+                throw new HttpsError("permission-denied", "You can only edit your own questions.");
+            }
+        }
+
+        await docRef.set({
+            teacherId: request.auth.uid,
+            text,
+            options, // Array of { text, imageURL }
+            correctAnswer,
+            tags: tags || [],
+            difficulty: difficulty || 'medium',
+            createdAt: id ? undefined : admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        return { success: true, questionId: docId };
+    }
+
+    // 2. DELETE QUESTION
+    if (action === 'DELETE') {
+        const { id } = questionData;
+        if (!id) throw new HttpsError("invalid-argument", "Missing question ID.");
+
+        const docRef = bankRef.doc(id);
+        const snap = await docRef.get();
+
+        if (!snap.exists) return { success: true }; // Idempotent
+
+        if (snap.data().teacherId !== request.auth.uid) {
+            throw new HttpsError("permission-denied", "You can only delete your own questions.");
+        }
+
+        await docRef.delete();
+        return { success: true };
+    }
+
+    // 3. SEARCH / LIST QUESTIONS
+    if (action === 'SEARCH' || action === 'GET') {
+        let query = bankRef.where('teacherId', '==', request.auth.uid);
+
+        // Apply Filters
+        if (filters) {
+            if (filters.difficulty) {
+                query = query.where('difficulty', '==', filters.difficulty);
+            }
+            if (filters.tags && filters.tags.length > 0) {
+                // Firestore 'array-contains-any' limitation: can only use one
+                query = query.where('tags', 'array-contains-any', filters.tags);
+            }
+        }
+
+        // Default Order
+        query = query.orderBy('updatedAt', 'desc');
+
+        // Limit
+        const fetchLimit = limitVal && limitVal <= 50 ? limitVal : 20;
+        query = query.limit(fetchLimit);
+
+        const snapshot = await query.get();
+        const questions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        return { success: true, questions };
+    }
+
+    throw new HttpsError("invalid-argument", "Valid action required (SAVE, DELETE, SEARCH).");
+});

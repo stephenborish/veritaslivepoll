@@ -13172,24 +13172,16 @@
   // ===========================
 
   function openPollWizard(pollData) {
+    initWizardState(); // Reset state
     var isEdit = !!pollData;
 
-    wizardState = {
-      currentStep: 1,
-      mode: null,
-      pollName: '',
-      className: '',
-      timeLimitMinutes: null,
-      accessCode: '',
-      availabilityStart: null,
-      availabilityEnd: null,
-      calculatorEnabled: false,
-      proctoringRules: ['FULLSCREEN_REQUIRED', 'DETECT_TAB_SWITCH'],
-      questions: [],
-      showResultsImmediately: false,
-      pollId: isEdit ? pollData.pollId : null,
-      isEditMode: isEdit
-    };
+    // Reset State
+    initWizardState();
+
+    // Override if editing
+    wizardState.pollId = isEdit ? pollData.pollId : null;
+    wizardState.isEditMode = isEdit;
+    wizardState.currentStep = 1;
     wizardQuestionIdCounter = 0;
     wizardEditingQuestionIndex = null;
 

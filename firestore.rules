@@ -1,70 +1,149 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Teachers: Only the specific teacher can read/write their own record
+
+    // ============================================================================
+    // HELPER FUNCTIONS
+    // ============================================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // ============================================================================
+    // TEACHERS COLLECTION
+    // Path: /teachers/{uid}
+    // Fields: uid, email, displayName, createdAt, updatedAt
+    // ============================================================================
+
     match /teachers/{teacherId} {
-      allow read, write: if request.auth != null && request.auth.uid == teacherId;
+      allow read, write: if isOwner(teacherId);
     }
 
-    // Exams: Owned by teachers
-    match /exams/{examId} {
-      allow read, write: if request.auth != null && request.resource.data.teacherId == request.auth.uid;
-      allow read, update, delete: if request.auth != null && resource.data.teacherId == request.auth.uid;
-    }
+    // ============================================================================
+    // CLASSES COLLECTION
+    // Path: /classes/{classId}
+    // Fields: classId, className, teacherId, createdAt, updatedAt
+    // ============================================================================
 
-    // Sessions: Live instances of exams
-    match /sessions/{sessionId} {
-      // Teachers can manage their own sessions
-      allow read, write: if request.auth != null && (
+    match /classes/{classId} {
+      // Teachers can read, create, update, delete their own classes
+      allow read, write: if isAuthenticated() && (
         (request.method == 'create' && request.resource.data.teacherId == request.auth.uid) ||
         (resource.data.teacherId == request.auth.uid)
       );
-      
-      // Public/Students can read a session IF they have the correct accessCode
-      // This is a simplified rule; usually, you'd check this via a query or a specific field
-      allow read: if request.query.limit <= 1 && request.query.filters[0].op == '==' && request.query.filters[0].field == 'accessCode';
+
+      // Students sub-collection
+      // Path: /classes/{classId}/students/{studentId}
+      // Fields: studentId, name, email, emailHash, createdAt
+      match /students/{studentId} {
+        allow read, write: if isAuthenticated() &&
+                              get(/databases/$(database)/documents/classes/$(classId)).data.teacherId == request.auth.uid;
+      }
     }
 
-    // Students sub-collection within Sessions
-    match /sessions/{sessionId}/students/{studentId} {
-      // Students can only read/write their own document
-      // We assume students are authenticated (possibly anonymously)
-      allow read, write: if request.auth != null && request.auth.uid == studentId;
-      
-      // Teachers can read all student data in their sessions
-      allow read: if request.auth != null && get(/databases/$(database)/documents/sessions/$(sessionId)).data.teacherId == request.auth.uid;
-    }
+    // ============================================================================
+    // POLLS COLLECTION
+    // Path: /polls/{pollId}
+    // Fields: pollId, pollName, teacherId, questions[], createdAt, updatedAt
+    // ============================================================================
 
-    // Polls: Metadata and Settings
     match /polls/{pollId} {
-      allow read, write: if request.auth != null && (
+      allow read, write: if isAuthenticated() && (
         (request.method == 'create' && request.resource.data.teacherId == request.auth.uid) ||
         (resource.data.teacherId == request.auth.uid)
       );
 
       // Questions sub-collection
       match /questions/{questionId} {
-        allow read, write: if request.auth != null && get(/databases/$(database)/documents/polls/$(pollId)).data.teacherId == request.auth.uid;
+        allow read, write: if isAuthenticated() &&
+                              get(/databases/$(database)/documents/polls/$(pollId)).data.teacherId == request.auth.uid;
       }
     }
 
-    // Classes: Metadata and Roosters
-    match /classes/{classId} {
-      allow read, write: if request.auth != null && (
+    // ============================================================================
+    // SESSIONS COLLECTION
+    // Path: /sessions/{sessionId}
+    // Fields: sessionId, pollId, teacherId, status, accessCode, createdAt
+    // ============================================================================
+
+    match /sessions/{sessionId} {
+      // Teachers can manage their own sessions
+      allow read, write: if isAuthenticated() && (
         (request.method == 'create' && request.resource.data.teacherId == request.auth.uid) ||
         (resource.data.teacherId == request.auth.uid)
       );
 
-      // Students sub-collection
-      match /students/{studentEmail} {
-        allow read, write: if request.auth != null && get(/databases/$(database)/documents/classes/$(classId)).data.teacherId == request.auth.uid;
+      // Students can read active sessions (for joining via access code)
+      allow read: if isAuthenticated();
+
+      // Students sub-collection within Sessions
+      match /students/{studentId} {
+        // Students can read/write their own document
+        allow read, write: if isOwner(studentId);
+
+        // Teachers can read all student data in their sessions
+        allow read: if isAuthenticated() &&
+                       get(/databases/$(database)/documents/sessions/$(sessionId)).data.teacherId == request.auth.uid;
+
+        // Teachers can update student data (for proctoring/unlocking)
+        allow update: if isAuthenticated() &&
+                         get(/databases/$(database)/documents/sessions/$(sessionId)).data.teacherId == request.auth.uid;
+      }
+
+      // Responses sub-collection
+      match /responses/{responseId} {
+        // Teachers can read all responses
+        allow read: if isAuthenticated() &&
+                       get(/databases/$(database)/documents/sessions/$(sessionId)).data.teacherId == request.auth.uid;
+
+        // Students can create their own responses
+        allow create: if isAuthenticated() &&
+                         request.resource.data.studentId == request.auth.uid;
+
+        // No updates allowed (immutable)
+        allow update: if false;
       }
     }
 
-    // Reports: Analytics Output
-    match /reports/{sessionId} {
-      allow read: if request.auth != null; // Teachers can read reports
+    // ============================================================================
+    // EXAMS COLLECTION
+    // Path: /exams/{examId}
+    // ============================================================================
+
+    match /exams/{examId} {
+      allow read, write: if isAuthenticated() && (
+        (request.method == 'create' && request.resource.data.teacherId == request.auth.uid) ||
+        (resource.data.teacherId == request.auth.uid)
+      );
+    }
+
+    // ============================================================================
+    // QUESTION BANK COLLECTION
+    // Path: /question_bank/{questionId}
+    // ============================================================================
+
+    match /question_bank/{questionId} {
+      allow read, write: if isAuthenticated() && (
+        (request.method == 'create' && request.resource.data.teacherId == request.auth.uid) ||
+        (resource.data.teacherId == request.auth.uid)
+      );
+    }
+
+    // ============================================================================
+    // REPORTS COLLECTION
+    // Path: /reports/{reportId}
+    // ============================================================================
+
+    match /reports/{reportId} {
+      allow read: if isAuthenticated();
       allow write: if false; // Only Cloud Functions can write reports
     }
   }
 }
+

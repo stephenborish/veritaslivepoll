@@ -1,0 +1,65 @@
+rules_version = '2';
+
+// Firebase Storage Security Rules
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ============================================================================
+    // HELPER FUNCTIONS
+    // ============================================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidImage() {
+      return request.resource.size < 10 * 1024 * 1024 // 10MB max
+             && request.resource.contentType.matches('image/.*');
+    }
+
+    // ============================================================================
+    // POLL IMAGES
+    // Path: poll-images/{teacherId}/{imageFile}
+    // Uploaded by teachers when creating polls
+    // ============================================================================
+
+    match /poll-images/{teacherId}/{imageFile} {
+      // Teachers can upload images to their own folder
+      allow create: if isOwner(teacherId) && isValidImage();
+
+      // Teachers can read their own images
+      allow read: if isAuthenticated();
+
+      // Teachers can delete their own images
+      allow delete: if isOwner(teacherId);
+    }
+
+    // ============================================================================
+    // POLL ASSETS (Alternative path used in older code)
+    // Path: poll_assets/{teacherId}/{imageFile}
+    // ============================================================================
+
+    match /poll_assets/{teacherId}/{imageFile} {
+      // Teachers can upload images to their own folder
+      allow create: if isOwner(teacherId) && isValidImage();
+
+      // Teachers can read their own images
+      allow read: if isAuthenticated();
+
+      // Teachers can delete their own images
+      allow delete: if isOwner(teacherId);
+    }
+
+    // ============================================================================
+    // DEFAULT DENY
+    // ============================================================================
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

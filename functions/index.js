@@ -1296,7 +1296,9 @@ exports.gradeResponse = onDocumentCreated("sessions/{sessionId}/responses/{respo
   }
 
   const response = snapshot.data();
-  const { sessionId, questionId, answer } = response;
+  // Extract sessionId from the document path, not from response data
+  const sessionId = event.params.sessionId;
+  const { questionId, answer } = response;
 
   if (response.isGraded) return; // Already graded
 
@@ -1469,34 +1471,108 @@ exports.getUploadSignedUrl = onCall({ cors: true }, async (request) => {
 /**
  * Save Poll (Teacher Action)
  * Uses a Firestore Batch to write the poll metadata and all questions atomically.
+ *
+ * Validation Schema:
+ * - Title must not be empty
+ * - Must have at least 1 question
+ * - Every question must have text AND a marked correct answer
+ *
+ * Write Strategy (Batch):
+ * - Generate a new pollId
+ * - Operation A: Set the polls/{pollId} document (Metadata + Settings)
+ * - Operation B: Iterate through questions array, save each as unique document in polls/{pollId}/questions sub-collection
+ *
+ * Why Sub-collections? To ensure we can scale to 100+ questions without hitting Firestore document size limits.
  */
 exports.savePoll = onCall({ cors: true }, async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "User must be authenticated.");
   }
 
-  const { pollId: providedPollId, sessionType, settings, questions, metacognitionEnabled } = request.data;
+  const {
+    pollId: providedPollId,
+    title,
+    classId,
+    sessionType,
+    settings,
+    questions,
+    metacognitionEnabled
+  } = request.data;
 
-  // Validation
+  // ============================================================================
+  // VALIDATION SCHEMA
+  // ============================================================================
+
+  // 1. Title must not be empty
+  if (!title || title.trim() === "") {
+    throw new HttpsError("invalid-argument", "Poll title is required and cannot be empty.");
+  }
+
+  // 2. Must have at least 1 question
+  if (!questions || !Array.isArray(questions) || questions.length === 0) {
+    throw new HttpsError("invalid-argument", "A poll must have at least one question.");
+  }
+
+  // 3. Every question must have text AND a marked correct answer
+  for (let i = 0; i < questions.length; i++) {
+    const q = questions[i];
+
+    // Check question has text (stemHtml)
+    if (!q.stemHtml || q.stemHtml.trim() === "" || q.stemHtml === "<p><br></p>") {
+      throw new HttpsError(
+        "invalid-argument",
+        `Question ${i + 1} must have question text.`
+      );
+    }
+
+    // Check correct answer is marked
+    if (q.correctAnswer === null || q.correctAnswer === undefined) {
+      throw new HttpsError(
+        "invalid-argument",
+        `Question ${i + 1} must have a correct answer marked.`
+      );
+    }
+
+    // Check options exist and correct answer is valid
+    if (!q.options || !Array.isArray(q.options) || q.options.length === 0) {
+      throw new HttpsError(
+        "invalid-argument",
+        `Question ${i + 1} must have answer options.`
+      );
+    }
+
+    if (q.correctAnswer < 0 || q.correctAnswer >= q.options.length) {
+      throw new HttpsError(
+        "invalid-argument",
+        `Question ${i + 1} has an invalid correct answer index.`
+      );
+    }
+  }
+
+  // Additional validation for Secure Assessments
   if (sessionType === 'SECURE_ASSESSMENT' && (!settings || !settings.timeLimitMinutes)) {
     throw new HttpsError("invalid-argument", "SECURE_ASSESSMENT requires a timeLimitMinutes setting.");
   }
 
-  if (!questions || !Array.isArray(questions)) {
-    throw new HttpsError("invalid-argument", "A poll must have an array of questions.");
-  }
+  // ============================================================================
+  // WRITE STRATEGY (BATCH)
+  // ============================================================================
 
   const db = admin.firestore();
   const batch = db.batch();
   const pollId = providedPollId || db.collection("polls").doc().id;
   const pollRef = db.collection("polls").doc(pollId);
 
-  // 1. Save Poll Metadata
+  // Operation A: Set the polls/{pollId} document (Metadata + Settings)
   const pollData = {
+    pollId: pollId,
+    title: title.trim(),
+    classId: classId || null,
     teacherId: request.auth.uid,
     sessionType: sessionType || 'LIVE_POLL',
     settings: settings || {},
     metacognitionEnabled: !!metacognitionEnabled,
+    questionCount: questions.length,
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   };
 
@@ -1506,23 +1582,29 @@ exports.savePoll = onCall({ cors: true }, async (request) => {
 
   batch.set(pollRef, pollData, { merge: true });
 
-  // 2. Save Questions in Sub-collection
+  // Operation B: Iterate through questions array, save each as unique document
+  // in polls/{pollId}/questions sub-collection
   // Note: Batch limit is 500 operations. If questions > 499, this will need chunking.
-  // For this context, we assume a reasonable number of questions.
+  // For typical use cases, we assume a reasonable number of questions (<100).
   questions.forEach((q, index) => {
     const questionId = q.id || `q_${index}`; // Use provided ID or generate one
     const questionRef = pollRef.collection("questions").doc(questionId);
 
     batch.set(questionRef, {
-      stemHtml: q.stemHtml || "",
+      stemHtml: q.stemHtml,
+      mediaUrl: q.mediaUrl || null,
       options: q.options || [], // Array of { text, imageUrl }
-      correctAnswer: q.correctAnswer !== undefined ? q.correctAnswer : null,
+      correctAnswer: q.correctAnswer,
       points: q.points || 1,
       order: index,
+      metacognitionEnabled: q.metacognitionEnabled || false,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
   });
 
   await batch.commit();
+
+  logger.info(`Poll saved: ${pollId} - "${title}" by ${request.auth.uid} (${questions.length} questions)`);
 
   return {
     success: true,
@@ -1623,4 +1705,185 @@ exports.manageQuestionBank = onCall({ cors: true }, async (request) => {
   }
 
   throw new HttpsError("invalid-argument", "Valid action required (SAVE, DELETE, SEARCH).");
+});
+
+// ============================================================================
+// CLASS MANAGER FUNCTIONS (Firestore Based)
+// ============================================================================
+
+/**
+ * Create a new Class
+ * @typedef {Object} CreateClassRequest
+ * @property {string} className - The name of the class
+ *
+ * @typedef {Object} CreateClassResponse
+ * @property {boolean} success - Whether the operation succeeded
+ * @property {string} classId - The ID of the created class
+ * @property {string} [message] - Optional error or success message
+ */
+exports.createClass = onCall({ cors: true }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "User must be authenticated.");
+  }
+
+  const { className } = request.data;
+
+  if (!className || className.trim() === "") {
+    throw new HttpsError("invalid-argument", "className is required and cannot be empty.");
+  }
+
+  const db = admin.firestore();
+  const teacherId = request.auth.uid;
+
+  // Check for duplicate class name for this teacher
+  const existingClassQuery = await db.collection("classes")
+    .where("teacherId", "==", teacherId)
+    .where("className", "==", className.trim())
+    .limit(1)
+    .get();
+
+  if (!existingClassQuery.empty) {
+    throw new HttpsError(
+      "already-exists",
+      "A class with this name already exists for your account."
+    );
+  }
+
+  // Create the class document
+  const classRef = db.collection("classes").doc();
+  const classData = {
+    classId: classRef.id,
+    className: className.trim(),
+    teacherId: teacherId,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+
+  await classRef.set(classData);
+
+  logger.info(`Class created: ${classRef.id} - ${className} by ${teacherId}`);
+
+  return {
+    success: true,
+    classId: classRef.id,
+    message: `Class "${className}" created successfully.`,
+  };
+});
+
+/**
+ * Bulk Add Students to a Class
+ * @typedef {Object} BulkAddStudentsRequest
+ * @property {string} classId - The ID of the class
+ * @property {Array<{name: string, email: string}>} students - Array of students to add
+ *
+ * @typedef {Object} BulkAddStudentsResponse
+ * @property {boolean} success - Whether the operation succeeded
+ * @property {number} addedCount - Number of students successfully added
+ * @property {number} skippedCount - Number of students skipped (duplicates)
+ * @property {string} [message] - Optional error or success message
+ */
+exports.bulkAddStudents = onCall({ cors: true }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "User must be authenticated.");
+  }
+
+  const { classId, students } = request.data;
+
+  // Validation
+  if (!classId || !students || !Array.isArray(students)) {
+    throw new HttpsError("invalid-argument", "classId and students array are required.");
+  }
+
+  if (students.length === 0) {
+    throw new HttpsError("invalid-argument", "Students array cannot be empty.");
+  }
+
+  const db = admin.firestore();
+  const teacherId = request.auth.uid;
+
+  // Verify class exists and belongs to the teacher
+  const classRef = db.collection("classes").doc(classId);
+  const classDoc = await classRef.get();
+
+  if (!classDoc.exists) {
+    throw new HttpsError("not-found", "Class not found.");
+  }
+
+  const classData = classDoc.data();
+  if (classData.teacherId !== teacherId) {
+    throw new HttpsError(
+      "permission-denied",
+      "You do not have permission to modify this class."
+    );
+  }
+
+  // Get existing students to check for duplicates
+  const studentsCollectionRef = classRef.collection("students");
+  const existingStudentsSnap = await studentsCollectionRef.get();
+  const existingEmails = new Set(
+    existingStudentsSnap.docs.map(doc => doc.data().email.toLowerCase())
+  );
+
+  // Prepare batch write (Firestore batch limit is 500 operations)
+  const batch = db.batch();
+  let addedCount = 0;
+  let skippedCount = 0;
+
+  for (const student of students) {
+    if (!student.name || !student.email) {
+      logger.warn(`Skipping invalid student entry: ${JSON.stringify(student)}`);
+      skippedCount++;
+      continue;
+    }
+
+    const email = student.email.trim().toLowerCase();
+    const name = student.name.trim();
+
+    // Skip duplicates
+    if (existingEmails.has(email)) {
+      logger.info(`Skipping duplicate student: ${email}`);
+      skippedCount++;
+      continue;
+    }
+
+    // Create email hash (MD5 equivalent using crypto)
+    const crypto = require("crypto");
+    const emailHash = crypto.createHash("md5").update(email).digest("hex");
+
+    // Create student document
+    const studentRef = studentsCollectionRef.doc();
+    const studentData = {
+      studentId: studentRef.id,
+      name: name,
+      email: email,
+      emailHash: emailHash,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    batch.set(studentRef, studentData);
+    existingEmails.add(email); // Prevent duplicates within the same batch
+    addedCount++;
+
+    // Firestore batch limit check
+    if (addedCount >= 500) {
+      logger.warn("Batch limit reached (500 operations). Consider chunking large imports.");
+      break;
+    }
+  }
+
+  // Commit the batch
+  if (addedCount > 0) {
+    await batch.commit();
+  }
+
+  logger.info(
+    `Bulk add students to class ${classId}: Added ${addedCount}, Skipped ${skippedCount}`
+  );
+
+  return {
+    success: true,
+    addedCount,
+    skippedCount,
+    message: `Successfully added ${addedCount} student(s). Skipped ${skippedCount} duplicate(s).`,
+  };
 });

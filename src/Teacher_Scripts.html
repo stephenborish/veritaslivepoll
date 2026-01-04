@@ -13158,6 +13158,27 @@
       isEditMode: false // Track if we're editing
     };
 
+    function initWizardState() {
+      wizardState = {
+        currentStep: 1,
+        mode: null,
+        pollName: '',
+        className: '',
+        timeLimitMinutes: null,
+        accessCode: '',
+        availabilityStart: null,
+        availabilityEnd: null,
+        calculatorEnabled: false,
+        proctoringRules: [],
+        questions: [],
+        showResultsImmediately: false,
+        pollId: null,
+        isEditMode: false
+      };
+      wizardQuestionIdCounter = 0;
+      wizardEditingQuestionIndex = null;
+    }
+
     var wizardQuestionIdCounter = 0;
     var wizardDraggedIndex = null; // For drag-and-drop
     var wizardEditingQuestionIndex = null; // Track which question is being edited

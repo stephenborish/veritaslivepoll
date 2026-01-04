@@ -1,6 +1,81 @@
 {
   "rules": {
     ".read": "auth != null",
-    ".write": "auth != null"
+    ".write": "auth != null",
+
+    "polls": {
+      "$pollId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+
+    "rosters": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "rosters": {
+        "$className": {
+          ".read": "auth != null",
+          ".write": "auth != null"
+        }
+      },
+      "classes": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+
+    "sessions": {
+      "$sessionId": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "students": {
+          "$studentId": {
+            ".read": "auth != null",
+            ".write": "auth != null"
+          }
+        },
+        "live_session": {
+          ".read": "auth != null",
+          ".write": "auth != null"
+        },
+        "answers_key": {
+          ".read": "auth != null",
+          ".write": "auth != null"
+        },
+        "activities": {
+          ".read": "auth != null",
+          ".write": "auth != null"
+        }
+      }
+    },
+
+    "answers": {
+      "$pollId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+
+    "history": {
+      "$pollId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+
+    "tokens": {
+      "$token": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+
+    "tokens_index": {
+      "$className": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    }
   }
 }

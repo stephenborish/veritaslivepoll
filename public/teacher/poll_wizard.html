@@ -40,7 +40,7 @@
 
     // Store globally
     window.firebaseApp = { auth, db, functions, storage };
-    window.firebaseModules = { ref, uploadBytes, getDownloadURL, collection, query, where, getDocs };
+    window.firebaseModules = { ref, uploadBytes, getDownloadURL, collection, query, where, getDocs, httpsCallable };
 
     // Authentication State Management
     onAuthStateChanged(auth, async (user) => {
@@ -838,6 +838,7 @@
         saveBtn.textContent = 'Saving...';
 
         const { functions, auth } = window.firebaseApp;
+        const { httpsCallable } = window.firebaseModules;
         const savePollFn = httpsCallable(functions, 'savePoll');
 
         const pollData = {

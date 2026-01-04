@@ -8238,9 +8238,7 @@
     }
 
     function initAuth() {
-        // CLIENT-SIDE AUTH CHECK
-        // If we are in "static mode" (hosting) and have no injected email, perform login.
-        if (!window.STUDENT_EMAIL) {
+        function showLoginFlow() {
             console.log('[Auth] No student email found. Initiating Login Flow.');
 
             // Hide main content to prevent flash
@@ -8260,6 +8258,65 @@
                 console.error('LoginManager not loaded!');
                 alert('Authentication system missing. Please contact support.');
             }
+        }
+
+        // CLIENT-SIDE AUTH CHECK
+        // Students access via URL token - no login required
+        if (window.SESSION_TOKEN && window.SESSION_TOKEN.length > 0) {
+            console.log('[Auth] Session token found in URL. Proceeding without login.');
+            // Set a placeholder email based on token (for compatibility)
+            window.STUDENT_EMAIL = 'student_' + window.SESSION_TOKEN.substring(0, 8) + '@session.local';
+            try {
+                sessionStorage.setItem('veritas_student_email', window.STUDENT_EMAIL);
+            } catch (e) { /* storage may be blocked */ }
+
+            if (typeof firebase === 'undefined') {
+                console.error('[Auth] Firebase SDK not available. Falling back to login flow.');
+                showLoginFlow();
+                return;
+            }
+
+            if (!firebase.apps.length) {
+                try {
+                    firebase.initializeApp(FIREBASE_CONFIG);
+                } catch (initError) {
+                    console.error('[Auth] Failed to initialize Firebase:', initError);
+                    showLoginFlow();
+                    return;
+                }
+            }
+
+            if (!firebase.auth) {
+                console.error('[Auth] Firebase Auth not available. Falling back to login flow.');
+                showLoginFlow();
+                return;
+            }
+
+            var auth = firebase.auth();
+            var proceed = function () {
+                console.log('[Auth] Anonymous Firebase session established for token entry.');
+                startApp();
+            };
+
+            if (auth.currentUser) {
+                proceed();
+                return;
+            }
+
+            auth.signInAnonymously()
+                .then(function () {
+                    proceed();
+                })
+                .catch(function (error) {
+                    console.error('[Auth] Anonymous sign-in failed for token-based entry:', error);
+                    showLoginFlow();
+                });
+            return;
+        }
+
+        // If we are in "static mode" (hosting) and have no injected email, perform login.
+        if (!window.STUDENT_EMAIL) {
+            showLoginFlow();
         } else {
             // Already authenticated (or GAS mode)
             console.log('[Auth] Authenticated as:', window.STUDENT_EMAIL);

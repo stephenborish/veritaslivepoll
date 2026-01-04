@@ -2901,6 +2901,7 @@
             opacity: 0;
             transform: translateY(30px) scale(0.98);
         }
+
         to {
             opacity: 1;
             transform: translateY(0) scale(1);
@@ -2993,10 +2994,27 @@
     }
 
     @keyframes loginShake {
-        10%, 90% { transform: translate3d(-1px, 0, 0); }
-        20%, 80% { transform: translate3d(2px, 0, 0); }
-        30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-        40%, 60% { transform: translate3d(4px, 0, 0); }
+
+        10%,
+        90% {
+            transform: translate3d(-1px, 0, 0);
+        }
+
+        20%,
+        80% {
+            transform: translate3d(2px, 0, 0);
+        }
+
+        30%,
+        50%,
+        70% {
+            transform: translate3d(-4px, 0, 0);
+        }
+
+        40%,
+        60% {
+            transform: translate3d(4px, 0, 0);
+        }
     }
 
     .login-footer {
@@ -3016,8 +3034,29 @@
         <h1 class="login-title">Veritas Live</h1>
         <p class="login-subtitle">Secure Teacher Dashboard Access</p>
 
+        <div style="margin-bottom: 24px; text-align: left;">
+            <label style="color: #94a3b8; font-size: 14px; margin-bottom: 8px; display: block;">Username</label>
+            <input type="text" id="login-username" placeholder="Enter username"
+                style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: white; margin-bottom: 16px; font-size: 16px;">
+
+            <label style="color: #94a3b8; font-size: 14px; margin-bottom: 8px; display: block;">Password</label>
+            <input type="password" id="login-password" placeholder="Enter password"
+                style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: white; margin-bottom: 16px; font-size: 16px;">
+
+            <button id="simple-login-btn" class="login-btn" style="background: #3b82f6; color: white;">
+                Sign In
+            </button>
+        </div>
+
+        <div style="display: flex; align-items: center; margin: 24px 0; color: #64748b;">
+            <hr style="flex: 1; border-color: rgba(255,255,255,0.1);">
+            <span style="padding: 0 12px; font-size: 14px;">OR</span>
+            <hr style="flex: 1; border-color: rgba(255,255,255,0.1);">
+        </div>
+
         <button id="google-login-btn" class="login-btn">
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="login-btn-icon" alt="Google">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="login-btn-icon"
+                alt="Google">
             Sign in with Google
         </button>
 
@@ -3087,9 +3126,76 @@
                                 console.error('[Auth] Login failed:', error);
                                 LoginManager.setError(error.message || 'Authentication failed. Please try again.');
                             })
-                            .finally(function() {
+                            .finally(function () {
                                 btn.innerHTML = originalHtml;
                                 btn.disabled = false;
+                            });
+                    });
+                }
+
+                // Simple Login Logic
+                var simpleBtn = document.getElementById('simple-login-btn');
+                if (simpleBtn) {
+                    simpleBtn.addEventListener('click', function () {
+                        var username = document.getElementById('login-username').value.trim();
+                        var password = document.getElementById('login-password').value.trim();
+
+                        if (!username || !password) {
+                            LoginManager.setError('Please enter username and password.');
+                            return;
+                        }
+
+                        // Override Button State
+                        var originalText = simpleBtn.innerText;
+                        simpleBtn.innerText = 'Verifying...';
+                        simpleBtn.disabled = true;
+
+                        // Magic Credential Mapping
+                        var targetEmail = '';
+                        var targetPwd = '';
+
+                        if (username.toLowerCase() === 'teacher' && password === '1234') {
+                            targetEmail = 'teacher@veritas.app'; // Internal System Account
+                            targetPwd = 'password1234';          // Meets min 6 char requirement
+                        } else {
+                            LoginManager.setError('Invalid username or password.');
+                            simpleBtn.innerText = originalText;
+                            simpleBtn.disabled = false;
+                            return;
+                        }
+
+                        // Attempt Login
+                        firebase.auth().signInWithEmailAndPassword(targetEmail, targetPwd)
+                            .then(function (result) {
+                                console.log('[Auth] Simple login success:', result.user.email);
+                                LoginManager.hide();
+                                if (onSuccess) onSuccess(result.user);
+                            })
+                            .catch(function (error) {
+                                // If user not found, auto-create (Lazy Registration for Demo)
+                                if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-login-credentials' || error.code === 'auth/wrong-password') {
+                                    console.log('[Auth] User or Credential issue, attempting auto-create/recovery for demo...');
+                                    // Try creating if not found
+                                    return firebase.auth().createUserWithEmailAndPassword(targetEmail, targetPwd)
+                                        .then(function (result) {
+                                            console.log('[Auth] Demo account created:', result.user.email);
+                                            LoginManager.hide();
+                                            if (onSuccess) onSuccess(result.user);
+                                        });
+                                }
+                                throw error;
+                            })
+                            .catch(function (finalError) {
+                                console.error('[Auth] Login failed:', finalError);
+                                // Nicer error for wrong password on existing account
+                                if (finalError.code === 'auth/email-already-in-use') {
+                                    // This shouldn't happen in the catch chain unless create failed, but just in case
+                                    LoginManager.setError('Account exists but login failed.');
+                                } else {
+                                    LoginManager.setError(finalError.message);
+                                }
+                                simpleBtn.innerText = originalText;
+                                simpleBtn.disabled = false;
                             });
                     });
                 }

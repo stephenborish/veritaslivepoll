@@ -3971,6 +3971,11 @@
 
       // FIREBASE MIGRATION: Roster Management
       // We use the manageRoster Cloud Function to fetch all class and student data.
+      if (!firebase.auth().currentUser) {
+        console.warn('[Firebase] loadRosterData skipped: No user logged in.');
+        rosterStatus.textContent = '';
+        return;
+      }
 
       firebase.functions().httpsCallable('manageRoster')({
         action: 'GET_DATA'
@@ -4165,6 +4170,12 @@
       }
 
       // FIREBASE MIGRATION: Save Roster Class via Cloud Function
+      if (!firebase.auth().currentUser) {
+        veritasAlert('You must be logged in to save rosters.', { title: 'Authentication Required' });
+        saveRosterBtn.disabled = false;
+        return;
+      }
+
       if (!firebaseFunctions) {
         // Fallback if somehow not init
         if (firebase && firebase.functions) firebaseFunctions = firebase.functions();
@@ -4361,6 +4372,7 @@
       }
 
       // Use manageRoster Cloud Function
+      if (!firebase.auth().currentUser) return;
       var manageRosterFn = firebase.functions().httpsCallable('manageRoster');
       manageRosterFn({
         action: 'RENAME',
@@ -4414,6 +4426,7 @@
       }
 
       // Use manageRoster Cloud Function
+      if (!firebase.auth().currentUser) return;
       var manageRosterFn = firebase.functions().httpsCallable('manageRoster');
       manageRosterFn({
         action: 'DELETE',
@@ -4462,8 +4475,12 @@
         return;
       }
 
-      var db = firebase.database();
-      var historyRef = db.ref('history');
+      console.warn('[Firebase] loadArchivedPolls: Legacy RTDB history disabled.');
+      archivedStatus.textContent = 'Archived polls are temporarily unavailable.';
+      return;
+
+      // var db = firebase.database();
+      // var historyRef = db.ref('history');
 
       historyRef.once('value').then(function (snapshot) {
         var fbHistory = snapshot.val() || {};

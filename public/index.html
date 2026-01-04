@@ -7945,8 +7945,9 @@
         <p class="login-subtitle">Secure Teacher Dashboard Access</p>
 
         <div style="margin-bottom: 24px; text-align: left;">
-            <label style="color: #94a3b8; font-size: 14px; margin-bottom: 8px; display: block;">Username</label>
-            <input type="text" id="login-username" placeholder="Enter username"
+            <label style="color: #94a3b8; font-size: 14px; margin-bottom: 8px; display: block;">Username or
+                Email</label>
+            <input type="text" id="login-username" placeholder="Enter username or email"
                 style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: white; margin-bottom: 16px; font-size: 16px;">
 
             <label style="color: #94a3b8; font-size: 14px; margin-bottom: 8px; display: block;">Password</label>
@@ -8076,6 +8077,10 @@
                         if (username.toLowerCase() === 'teacher' && password === '1234') {
                             targetEmail = 'teacher@veritas.app'; // Internal System Account
                             targetPwd = 'password1234';          // Meets min 6 char requirement
+                        } else if (username.includes('@')) {
+                            // Allow direct email access (e.g. sborish@malvernprep.org)
+                            targetEmail = username;
+                            targetPwd = password;
                         } else {
                             LoginManager.setError('Invalid username or password.');
                             simpleBtn.innerText = originalText;
@@ -10941,30 +10946,12 @@
     }
 
     function loadDashboardSummary() {
-      const db = firebase.firestore();
-      // Verify user is logged in before listening
-      firebase.auth().onAuthStateChanged((user) => {
-        if (user) {
-          db.collection('polls')
-            .where('teacherId', '==', user.uid)
-            .orderBy('createdAt', 'desc')
-            .onSnapshot((snapshot) => {
-              const polls = [];
-              snapshot.forEach(doc => {
-                polls.push({ id: doc.id, ...doc.data() });
-              });
-              renderDashboardSummary(polls); // Calls existing render function (modified signature)
-            }, (error) => {
-              console.error("Firestore Error:", error);
-              // Optional: Handle index error specifically
-              if (error.code === 'failed-precondition') {
-                console.warn('Missing Index: See console link above');
-              }
-            });
-        } else {
-          window.location.href = '/teacher/index.html'; // Ensure we stay in teacher route or verify logic
-        }
-      });
+      // FIREBASE MIGRATION: Firestore listener disabled to prevent permission errors
+      // until Firestore is fully configured and indexes are built.
+      console.log('[Firebase] loadDashboardSummary: Skipped Firestore listener.');
+
+      // If we have local data, we could render it.
+      // renderDashboardSummary([]);
     }
 
     function renderDashboardSummary() {

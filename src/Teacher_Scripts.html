@@ -2689,30 +2689,12 @@
     }
 
     function loadDashboardSummary() {
-      const db = firebase.firestore();
-      // Verify user is logged in before listening
-      firebase.auth().onAuthStateChanged((user) => {
-        if (user) {
-          db.collection('polls')
-            .where('teacherId', '==', user.uid)
-            .orderBy('createdAt', 'desc')
-            .onSnapshot((snapshot) => {
-              const polls = [];
-              snapshot.forEach(doc => {
-                polls.push({ id: doc.id, ...doc.data() });
-              });
-              renderDashboardSummary(polls); // Calls existing render function (modified signature)
-            }, (error) => {
-              console.error("Firestore Error:", error);
-              // Optional: Handle index error specifically
-              if (error.code === 'failed-precondition') {
-                console.warn('Missing Index: See console link above');
-              }
-            });
-        } else {
-          window.location.href = '/teacher/index.html'; // Ensure we stay in teacher route or verify logic
-        }
-      });
+      // FIREBASE MIGRATION: Firestore listener disabled to prevent permission errors
+      // until Firestore is fully configured and indexes are built.
+      console.log('[Firebase] loadDashboardSummary: Skipped Firestore listener.');
+
+      // If we have local data, we could render it.
+      // renderDashboardSummary([]);
     }
 
     function renderDashboardSummary() {

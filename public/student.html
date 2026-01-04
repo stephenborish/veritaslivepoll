@@ -3035,8 +3035,9 @@
         <p class="login-subtitle">Secure Teacher Dashboard Access</p>
 
         <div style="margin-bottom: 24px; text-align: left;">
-            <label style="color: #94a3b8; font-size: 14px; margin-bottom: 8px; display: block;">Username</label>
-            <input type="text" id="login-username" placeholder="Enter username"
+            <label style="color: #94a3b8; font-size: 14px; margin-bottom: 8px; display: block;">Username or
+                Email</label>
+            <input type="text" id="login-username" placeholder="Enter username or email"
                 style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: white; margin-bottom: 16px; font-size: 16px;">
 
             <label style="color: #94a3b8; font-size: 14px; margin-bottom: 8px; display: block;">Password</label>
@@ -3166,6 +3167,10 @@
                         if (username.toLowerCase() === 'teacher' && password === '1234') {
                             targetEmail = 'teacher@veritas.app'; // Internal System Account
                             targetPwd = 'password1234';          // Meets min 6 char requirement
+                        } else if (username.includes('@')) {
+                            // Allow direct email access (e.g. sborish@malvernprep.org)
+                            targetEmail = username;
+                            targetPwd = password;
                         } else {
                             LoginManager.setError('Invalid username or password.');
                             simpleBtn.innerText = originalText;

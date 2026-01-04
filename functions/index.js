@@ -1290,7 +1290,9 @@ exports.gradeResponse = onDocumentCreated("sessions/{sessionId}/responses/{respo
   }
 
   const response = snapshot.data();
-  const { sessionId, questionId, answer } = response;
+  // Extract sessionId from the document path, not from response data
+  const sessionId = event.params.sessionId;
+  const { questionId, answer } = response;
 
   if (response.isGraded) return; // Already graded
 

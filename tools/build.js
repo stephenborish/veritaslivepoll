@@ -101,9 +101,11 @@ function buildFile(sourceName, destName) {
 }
 
 // Main Build
+// Main Build
 ensureDir(OUT_DIR);
-buildFile('Student_View.html', 'index.html'); // Student view is index
-buildFile('Teacher_View.html', 'teacher.html');
+buildFile('Teacher_View.html', 'index.html'); // Main Landing/Dashboard
+buildFile('Student_View.html', 'student.html'); // Student View
+buildFile('Teacher_View.html', 'teacher.html'); // Legacy/Direct Access
 buildFile('Teacher_View.html', 'teacher/index.html'); // Also support /teacher/ folder style
 buildFile('QuestionBankView.html', 'teacher/question_bank.html');
 buildFile('ExamManagerView.html', 'teacher/exams.html');

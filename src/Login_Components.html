@@ -242,6 +242,12 @@
                 }
             },
             init: function (onSuccess) {
+                // Buffer onSuccess to handle multiple triggers
+                var handleSuccess = function (user) {
+                    if (onSuccess) onSuccess(user);
+                };
+
+                // Google Login Logic
                 var btn = document.getElementById('google-login-btn');
                 if (btn) {
                     btn.addEventListener('click', function () {
@@ -269,7 +275,7 @@
                                 window.TEACHER_EMAIL = user.email;
 
                                 LoginManager.hide();
-                                if (onSuccess) onSuccess(user);
+                                handleSuccess(user);
                             })
                             .catch(function (error) {
                                 console.error('[Auth] Login failed:', error);
@@ -282,12 +288,15 @@
                     });
                 }
 
-                // Simple Login Logic
+                // Simple Login Logic (Teacher/1234)
                 var simpleBtn = document.getElementById('simple-login-btn');
                 if (simpleBtn) {
                     simpleBtn.addEventListener('click', function () {
-                        var username = document.getElementById('login-username').value.trim();
-                        var password = document.getElementById('login-password').value.trim();
+                        var usernameInput = document.getElementById('login-username');
+                        var passwordInput = document.getElementById('login-password');
+
+                        var username = usernameInput ? usernameInput.value.trim() : '';
+                        var password = passwordInput ? passwordInput.value.trim() : '';
 
                         if (!username || !password) {
                             LoginManager.setError('Please enter username and password.');
@@ -318,18 +327,25 @@
                             .then(function (result) {
                                 console.log('[Auth] Simple login success:', result.user.email);
                                 LoginManager.hide();
-                                if (onSuccess) onSuccess(result.user);
+                                handleSuccess(result.user);
                             })
                             .catch(function (error) {
                                 // If user not found, auto-create (Lazy Registration for Demo)
-                                if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-login-credentials' || error.code === 'auth/wrong-password') {
+                                var isAuthError = (
+                                    error.code === 'auth/user-not-found' ||
+                                    error.code === 'auth/invalid-login-credentials' ||
+                                    error.code === 'auth/wrong-password' ||
+                                    error.code === 'auth/invalid-credential' // New Firebase error
+                                );
+
+                                if (isAuthError) {
                                     console.log('[Auth] User or Credential issue, attempting auto-create/recovery for demo...');
                                     // Try creating if not found
                                     return firebase.auth().createUserWithEmailAndPassword(targetEmail, targetPwd)
                                         .then(function (result) {
                                             console.log('[Auth] Demo account created:', result.user.email);
                                             LoginManager.hide();
-                                            if (onSuccess) onSuccess(result.user);
+                                            handleSuccess(result.user);
                                         });
                                 }
                                 throw error;
@@ -339,7 +355,8 @@
                                 // Nicer error for wrong password on existing account
                                 if (finalError.code === 'auth/email-already-in-use') {
                                     // This shouldn't happen in the catch chain unless create failed, but just in case
-                                    LoginManager.setError('Account exists but login failed.');
+                                    // Try signing in again? No, we likely have wrong password for existing user
+                                    LoginManager.setError('Incorrect password for existing demo account.');
                                 } else {
                                     LoginManager.setError(finalError.message);
                                 }

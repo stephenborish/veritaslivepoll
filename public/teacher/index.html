@@ -5147,7 +5147,7 @@
 <!-- 🔔 Toast Notification Container - For elegant, non-intrusive alerts -->
 <div id="toast-container" class="toast-container"></div>
 
-<div class="flex h-screen w-full flex-col">
+<div id="dashboard-root" style="display: none;" class="flex h-screen w-full flex-col">
   <!-- Header - Default State -->
   <header id="header-default"
     class="flex flex-wrap items-center gap-4 border-b border-solid border-veritas-navy/80 bg-veritas-navy px-6 py-4 shadow-md">
@@ -5160,7 +5160,7 @@
       <div class="flex items-center gap-4 cursor-pointer hover:opacity-80 transition-opacity" onclick="showDashboard()"
         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showDashboard();}" role="button"
         tabindex="0">
-        <img alt="Malvern Prep Logo" class="h-12 w-auto"
+        <img alt="Veritas Logo" class="h-12 w-auto"
           src="https://raw.githubusercontent.com/stephenborish/veritasassets/f0a824864d7d66637a13b822bff99fa6830e6123/mplogo.png" />
         <div class="flex flex-col">
           <h1 class="text-brand-white text-xl font-bold tracking-wide uppercase" style="letter-spacing: 0.15em;">Veritas
@@ -7757,7 +7757,8 @@
     </div>
   </div>
 
-  <!-- Poll Creation Wizard View -->
+  <!-- Poll Creation Wizard View --></div>
+
   <style>
     /* Login Screen Styles - Premium Glassmorphism */
     #login-overlay {
@@ -8002,6 +8003,12 @@
                 }
             },
             init: function (onSuccess) {
+                // Buffer onSuccess to handle multiple triggers
+                var handleSuccess = function (user) {
+                    if (onSuccess) onSuccess(user);
+                };
+
+                // Google Login Logic
                 var btn = document.getElementById('google-login-btn');
                 if (btn) {
                     btn.addEventListener('click', function () {
@@ -8029,7 +8036,7 @@
                                 window.TEACHER_EMAIL = user.email;
 
                                 LoginManager.hide();
-                                if (onSuccess) onSuccess(user);
+                                handleSuccess(user);
                             })
                             .catch(function (error) {
                                 console.error('[Auth] Login failed:', error);
@@ -8042,12 +8049,15 @@
                     });
                 }
 
-                // Simple Login Logic
+                // Simple Login Logic (Teacher/1234)
                 var simpleBtn = document.getElementById('simple-login-btn');
                 if (simpleBtn) {
                     simpleBtn.addEventListener('click', function () {
-                        var username = document.getElementById('login-username').value.trim();
-                        var password = document.getElementById('login-password').value.trim();
+                        var usernameInput = document.getElementById('login-username');
+                        var passwordInput = document.getElementById('login-password');
+
+                        var username = usernameInput ? usernameInput.value.trim() : '';
+                        var password = passwordInput ? passwordInput.value.trim() : '';
 
                         if (!username || !password) {
                             LoginManager.setError('Please enter username and password.');
@@ -8078,18 +8088,25 @@
                             .then(function (result) {
                                 console.log('[Auth] Simple login success:', result.user.email);
                                 LoginManager.hide();
-                                if (onSuccess) onSuccess(result.user);
+                                handleSuccess(result.user);
                             })
                             .catch(function (error) {
                                 // If user not found, auto-create (Lazy Registration for Demo)
-                                if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-login-credentials' || error.code === 'auth/wrong-password') {
+                                var isAuthError = (
+                                    error.code === 'auth/user-not-found' ||
+                                    error.code === 'auth/invalid-login-credentials' ||
+                                    error.code === 'auth/wrong-password' ||
+                                    error.code === 'auth/invalid-credential' // New Firebase error
+                                );
+
+                                if (isAuthError) {
                                     console.log('[Auth] User or Credential issue, attempting auto-create/recovery for demo...');
                                     // Try creating if not found
                                     return firebase.auth().createUserWithEmailAndPassword(targetEmail, targetPwd)
                                         .then(function (result) {
                                             console.log('[Auth] Demo account created:', result.user.email);
                                             LoginManager.hide();
-                                            if (onSuccess) onSuccess(result.user);
+                                            handleSuccess(result.user);
                                         });
                                 }
                                 throw error;
@@ -8099,7 +8116,8 @@
                                 // Nicer error for wrong password on existing account
                                 if (finalError.code === 'auth/email-already-in-use') {
                                     // This shouldn't happen in the catch chain unless create failed, but just in case
-                                    LoginManager.setError('Account exists but login failed.');
+                                    // Try signing in again? No, we likely have wrong password for existing user
+                                    LoginManager.setError('Incorrect password for existing demo account.');
                                 } else {
                                     LoginManager.setError(finalError.message);
                                 }
@@ -8290,6 +8308,43 @@
     var lastQuestionIndex = -1;
     var currentMainSection = 'dashboard';
     var activeMobilePanel = 'question';
+
+    // === Landing Page / Auth Logic ===
+    // Listen for auth state changes to toggle between Landing Page and Dashboard
+    if (typeof firebase !== 'undefined' && firebase.auth) {
+      firebase.auth().onAuthStateChanged(function (user) {
+        var dashboardRoot = document.getElementById('dashboard-root');
+
+        if (user) {
+          console.log('[Auth] User detected:', user.email);
+          // User is signed in.
+          if (window.LoginManager) window.LoginManager.hide();
+          // Restore dashboard visibility (was flex)
+          if (dashboardRoot) dashboardRoot.style.display = 'flex';
+
+          // Ensure global state is set for legacy scripts
+          window.SESSION_TOKEN = user.uid;
+          window.TEACHER_EMAIL = user.email;
+
+          // Persist session (redundant with LoginManager but safe)
+          sessionStorage.setItem('veritas_session_token', user.uid);
+          sessionStorage.setItem('veritas_teacher_email', user.email);
+
+        } else {
+          console.log('[Auth] No user signed in. Showing landing page.');
+          // No user is signed in.
+          if (dashboardRoot) dashboardRoot.style.display = 'none';
+          // Show Login Overlay (Landing Page)
+          if (window.LoginManager) window.LoginManager.show();
+        }
+
+        // Hide initial loader if it exists
+        if (mainLoader) mainLoader.style.display = 'none';
+      });
+    } else {
+      console.warn('[Auth] Firebase Auth not available. Dashboard state may be inconsistent.');
+    }
+
 
 
     // OPTIMIZATION: Adaptive polling with backoff (like student view)

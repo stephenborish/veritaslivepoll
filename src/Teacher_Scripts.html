@@ -57,6 +57,43 @@
     var currentMainSection = 'dashboard';
     var activeMobilePanel = 'question';
 
+    // === Landing Page / Auth Logic ===
+    // Listen for auth state changes to toggle between Landing Page and Dashboard
+    if (typeof firebase !== 'undefined' && firebase.auth) {
+      firebase.auth().onAuthStateChanged(function (user) {
+        var dashboardRoot = document.getElementById('dashboard-root');
+
+        if (user) {
+          console.log('[Auth] User detected:', user.email);
+          // User is signed in.
+          if (window.LoginManager) window.LoginManager.hide();
+          // Restore dashboard visibility (was flex)
+          if (dashboardRoot) dashboardRoot.style.display = 'flex';
+
+          // Ensure global state is set for legacy scripts
+          window.SESSION_TOKEN = user.uid;
+          window.TEACHER_EMAIL = user.email;
+
+          // Persist session (redundant with LoginManager but safe)
+          sessionStorage.setItem('veritas_session_token', user.uid);
+          sessionStorage.setItem('veritas_teacher_email', user.email);
+
+        } else {
+          console.log('[Auth] No user signed in. Showing landing page.');
+          // No user is signed in.
+          if (dashboardRoot) dashboardRoot.style.display = 'none';
+          // Show Login Overlay (Landing Page)
+          if (window.LoginManager) window.LoginManager.show();
+        }
+
+        // Hide initial loader if it exists
+        if (mainLoader) mainLoader.style.display = 'none';
+      });
+    } else {
+      console.warn('[Auth] Firebase Auth not available. Dashboard state may be inconsistent.');
+    }
+
+
 
     // OPTIMIZATION: Adaptive polling with backoff (like student view)
     var pollFailureCount = 0;

@@ -4,7 +4,7 @@
 <!-- 🔔 Toast Notification Container - For elegant, non-intrusive alerts -->
 <div id="toast-container" class="toast-container"></div>
 
-<div class="flex h-screen w-full flex-col">
+<div id="dashboard-root" style="display: none;" class="flex h-screen w-full flex-col">
   <!-- Header - Default State -->
   <header id="header-default"
     class="flex flex-wrap items-center gap-4 border-b border-solid border-veritas-navy/80 bg-veritas-navy px-6 py-4 shadow-md">
@@ -17,7 +17,7 @@
       <div class="flex items-center gap-4 cursor-pointer hover:opacity-80 transition-opacity" onclick="showDashboard()"
         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showDashboard();}" role="button"
         tabindex="0">
-        <img alt="Malvern Prep Logo" class="h-12 w-auto"
+        <img alt="Veritas Logo" class="h-12 w-auto"
           src="https://raw.githubusercontent.com/stephenborish/veritasassets/f0a824864d7d66637a13b822bff99fa6830e6123/mplogo.png" />
         <div class="flex flex-col">
           <h1 class="text-brand-white text-xl font-bold tracking-wide uppercase" style="letter-spacing: 0.15em;">Veritas
@@ -2614,4 +2614,4 @@
     </div>
   </div>
 
-  <!-- Poll Creation Wizard View -->
+  <!-- Poll Creation Wizard View --></div>

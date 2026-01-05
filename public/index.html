@@ -16718,7 +16718,8 @@
         return;
       }
 
-      var baseUrl = window.location.href.split('?')[0];
+      // FIX: Ensure links point to the student view, not the teacher dashboard
+      var baseUrl = window.location.origin + '/student.html';
 
       callManageRoster({
         action: 'SEND_EMAILS',
@@ -16821,7 +16822,8 @@
         return;
       }
 
-      var baseUrl = window.location.href.split('?')[0];
+      // FIX: Ensure links point to the student view, not the teacher dashboard
+      var baseUrl = window.location.origin + '/student.html';
 
       callManageRoster({
         action: 'GET_LINKS',

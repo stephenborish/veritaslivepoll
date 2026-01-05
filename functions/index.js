@@ -802,14 +802,12 @@ exports.sendEmail = onCall({ cors: true }, async (request) => {
   const nodemailer = require('nodemailer');
 
   // SMTP Configuration
-  // Note: Password must be set via CLI: firebase functions:config:set veritas.smtp_password="YOUR_PASSWORD"
-  const smtpConfig = functions.config().veritas || {};
-  const smtpPassword = smtpConfig.smtp_password || process.env.SMTP_PASSWORD;
+  // Note: Password must be set via .env file or Secret Manager (Gen 2 requirement)
+  const smtpPassword = process.env.SMTP_PASSWORD;
 
   if (!smtpPassword) {
-    logger.error("[Email Service] SMTP Password not found in functions.config().veritas.smtp_password or process.env.SMTP_PASSWORD");
-    // Don't throw INTERNAL, throw explicit error to client
-    throw new HttpsError('failed-precondition', 'SMTP Configuration missing. Please set veritas.smtp_password');
+    logger.error("[Email Service] SMTP Password not found in process.env.SMTP_PASSWORD");
+    throw new HttpsError('failed-precondition', 'SMTP Configuration missing. Please check .env file or secrets.');
   }
 
   const transporter = nodemailer.createTransport({

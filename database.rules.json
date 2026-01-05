@@ -1,81 +1,106 @@
 {
   "rules": {
-    ".read": "auth != null",
-    ".write": "auth != null",
-
+    // Helper Functions
+    // Check if user is a Teacher (Authenticated via Provider, not Anonymous)
+    // Note: This relies on the assumption that only Teachers log in via Google/Email/Phone.
+    ".read": false,
+    ".write": false,
     "polls": {
+      // Teachers can write to polls (Create/Update)
+      // Anyone authenticated (Students) can read polls to load the exam
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
       "$pollId": {
         ".read": "auth != null",
-        ".write": "auth != null"
+        ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'"
       }
     },
-
     "rosters": {
-      ".read": "auth != null",
-      ".write": "auth != null",
+      // Only Teachers can access rosters
+      ".read": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
+      ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
       "rosters": {
         "$className": {
-          ".read": "auth != null",
-          ".write": "auth != null"
+          ".read": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
+          ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'"
         }
       },
       "classes": {
-        ".read": "auth != null",
-        ".write": "auth != null"
+        ".read": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
+        ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'"
       }
     },
-
     "sessions": {
-      "$sessionId": {
-        ".read": "auth != null",
-        ".write": "auth != null",
+      "$pollId": {
+        "live_session": {
+          // Students need to read the live session state (current question, status)
+          // Only Teachers update the session state
+          ".read": "auth != null",
+          ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'"
+        },
         "students": {
-          "$studentId": {
-            ".read": "auth != null",
+          // Students write their own status (heartbeat, etc.)
+          // Teachers read all students to monitor progress
+          // Note: Ideally strict on auth.uid, but using emailKey for now.
+          ".read": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
+          "$studentKey": {
+            // Allow student to write their own record (or anyone authenticated if we can't match key)
+            // We allow 'auth != null' for write to support the current anonymous flow where ID isn't linked to key.
+            // This is narrower than "global write" but still permissive within this node.
+            // In future: ".write": "auth != null && $studentKey === auth.uid" (if we migrated keys)
             ".write": "auth != null"
           }
         },
-        "live_session": {
-          ".read": "auth != null",
-          ".write": "auth != null"
-        },
         "answers_key": {
-          ".read": "auth != null",
-          ".write": "auth != null"
+          // STRICT SECURITY: Only Teachers can read/write the correct answers
+          ".read": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
+          ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'"
         },
         "activities": {
-          ".read": "auth != null",
+          // Logs/Violations
+          ".read": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
+          ".write": "auth != null" // Students can write (report violation)
+        },
+        "violations": {
+          ".read": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
           ".write": "auth != null"
         }
       }
     },
-
     "answers": {
       "$pollId": {
-        ".read": "auth != null",
-        ".write": "auth != null"
+        // Teachers read aggregated answers
+        ".read": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
+        // Students submit answers
+        "$studentKey": {
+          ".write": "auth != null"
+        }
       }
     },
-
     "history": {
-      "$pollId": {
-        ".read": "auth != null",
-        ".write": "auth != null"
-      }
+      // Archives - Teacher Only
+      ".read": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
+      ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'"
     },
-
     "tokens": {
+      // Tokens are for authentication/linking - Teacher Only to manage
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
       "$token": {
+        // A student needs to read their token to validate it? code says: firebase.database().ref('tokens/' + token).once('value')
         ".read": "auth != null",
-        ".write": "auth != null"
+        ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'"
       }
     },
-
     "tokens_index": {
-      "$className": {
-        ".read": "auth != null",
-        ".write": "auth != null"
-      }
+      // Mapping email -> token. Teacher Only.
+      ".read": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
+      ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'"
+    },
+    "exams": {
+      // Exam configurations (similar to polls)
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'"
     }
   }
 }

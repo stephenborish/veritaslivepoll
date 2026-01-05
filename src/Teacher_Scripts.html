@@ -13224,6 +13224,14 @@
 
     function refreshWizardClasses(selectEl, desiredClass) {
       if (PREVIEW_MODE) return;
+      // Auth guard: Don't attempt to fetch classes if user is not authenticated
+      if (!firebase.auth().currentUser) {
+        console.warn('[Wizard] Cannot refresh classes: User not authenticated');
+        if (selectEl) {
+          selectEl.innerHTML = '<option value="" disabled>Please sign in to load classes</option>';
+        }
+        return;
+      }
       callManageRoster({ action: 'GET_DATA' })
         .then(function (result) {
           if (result.data && result.data.success) {

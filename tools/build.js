@@ -93,6 +93,7 @@ function buildFile(sourceName, destName) {
     // Specific config injection logic that regex might miss
     content = content.replace(/<\?!=\s*JSON\.stringify\(firebaseConfig\)\s*\?>/g, JSON.stringify(FIREBASE_CONFIG));
     content = content.replace(/<\?!=\s*Veritas\.Config\.DEBUG_FIREBASE\s*\?\s*'true'\s*:\s*'false'\s*\?>/g, 'false');
+    content = processReplacements(content);
 
     // Write output
     ensureDir(path.dirname(destPath));

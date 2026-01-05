@@ -5170,41 +5170,6 @@
       </div>
     </div>
 
-    <!-- Wizard Progress Steps in Header (shown only during wizard) -->
-    <div id="header-wizard-progress" class="hidden items-center gap-1 ml-4">
-      <div class="progress-step active flex items-center gap-1" data-step="1">
-        <div
-          class="progress-circle h-6 w-6 rounded-full bg-white/20 text-white text-xs font-bold flex items-center justify-center">
-          1</div>
-        <span class="progress-label text-white/80 text-xs font-medium hidden md:inline">Mode</span>
-      </div>
-      <div class="progress-connector w-4 h-0.5 bg-white/30"></div>
-
-      <div class="progress-step flex items-center gap-1" data-step="2">
-        <div
-          class="progress-circle h-6 w-6 rounded-full bg-white/20 text-white/70 text-xs font-bold flex items-center justify-center">
-          2</div>
-        <span class="progress-label text-white/60 text-xs font-medium hidden md:inline">Configure</span>
-      </div>
-      <div class="progress-connector w-4 h-0.5 bg-white/30"></div>
-
-      <div class="progress-step flex items-center gap-1" data-step="3">
-        <div
-          class="progress-circle h-6 w-6 rounded-full bg-white/20 text-white/70 text-xs font-bold flex items-center justify-center">
-          3</div>
-        <span class="progress-label text-white/60 text-xs font-medium hidden md:inline">Questions</span>
-      </div>
-      <div class="progress-connector w-4 h-0.5 bg-white/30"></div>
-
-      <div class="progress-step flex items-center gap-1" data-step="4">
-        <div
-          class="progress-circle h-6 w-6 rounded-full bg-white/20 text-white/70 text-xs font-bold flex items-center justify-center">
-          4</div>
-        <span class="progress-label text-white/60 text-xs font-medium hidden md:inline">Review</span>
-      </div>
-    </div>
-
-
     <div id="header-session-controls" class="flex flex-1 flex-wrap items-center justify-center gap-3 text-sm">
       <div class="min-w-[220px]">
         <label for="poll-select" class="sr-only">Select Poll to Start Session</label>
@@ -5424,7 +5389,7 @@
   <div class="flex flex-grow overflow-hidden min-h-0">
     <!-- Left Navigation Sidebar -->
     <aside id="dashboard-sidebar"
-      class="hidden lg:flex h-full w-64 flex-shrink-0 flex-col border-r border-veritas-navy/25 bg-veritas-navy p-4 text-brand-white shadow-lg">
+      class="h-full w-64 flex flex-shrink-0 flex-col border-r border-veritas-navy/25 bg-veritas-navy p-4 text-brand-white shadow-lg transition-all duration-300 ease-in-out overflow-hidden">
       <div class="mb-4 px-1">
         <p class="text-xs font-semibold uppercase tracking-[0.32em] text-brand-white/60">Navigation</p>
       </div>
@@ -5474,7 +5439,7 @@
     </aside>
 
     <!-- Main Content Area -->
-    <main class="flex-1 min-h-0 overflow-y-auto pb-6">
+  <main class="flex-1 min-h-0 overflow-y-auto">
       <!-- Dashboard View (Default) - Redesigned -->
       <div id="dashboard" class="p-8 max-w-7xl mx-auto">
         <!-- Poll Library & Session Management (Combined) -->
@@ -5575,7 +5540,7 @@
               <h3 class="text-2xl font-bold text-veritas-navy dark:text-white mb-2">Poll Library</h3>
               <p class="text-gray-600 dark:text-gray-400 mb-6">Create and manage your interactive polls and secure
                 assessments here.</p>
-              <button onclick="initWizardState(); openPollWizard()" class="dashboard-cta-button primary">
+              <button onclick="Wizard.init()" class="dashboard-cta-button primary">
                 <span class="material-symbols-outlined">add_circle</span>
                 <span>Create New Poll</span>
               </button>
@@ -6083,7 +6048,7 @@
 
   <!-- End of Live Poll View Redesign -->
   <!-- Roster Manager View -->
-  <div id="roster-manager" class="p-6 grid grid-cols-1 lg:grid-cols-4 gap-6" style="display: none;">
+  <div id="roster-manager" class="pt-0 px-6 pb-6 grid grid-cols-1 lg:grid-cols-4 gap-6" style="display: none; margin-top: -2rem;">
     <div
       class="lg:col-span-1 bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-5 shadow-sm flex flex-col">
       <div class="flex items-center justify-between mb-4">
@@ -6539,7 +6504,7 @@
   </div>
 
   <!-- Poll Creation Wizard View - Compact Design -->
-  <div id="create-poll-view" class="hidden h-full flex flex-col bg-white dark:bg-brand-dark-gray">
+  <div id="create-poll-view" class="hidden h-full flex flex-col bg-white dark:bg-brand-dark-gray pt-0">
 
     <!-- Compact Header with Inline Progress -->
     <div
@@ -6801,12 +6766,12 @@
     <div
       class="wizard-footer bg-white dark:bg-brand-dark-gray border-t border-brand-light-gray dark:border-brand-dark-gray/40 px-8 py-4 flex items-center justify-between">
       <button type="button"
-        class="btn-secondary h-12 px-6 rounded-lg font-bold text-brand-dark-gray hover:bg-brand-light-gray/50 transition-colors disabled:opacity-50"
-        id="wizard-back-btn" onclick="wizardGoBack()" disabled>Back</button>
+        class="btn-secondary h-12 px-6 rounded-lg font-bold text-red-600 hover:bg-red-50 transition-colors"
+        onclick="closePollWizard()">Cancel</button>
       <div class="flex items-center gap-3">
         <button type="button"
-          class="btn-secondary h-12 px-6 rounded-lg font-bold text-red-600 hover:bg-red-50 transition-colors"
-          onclick="closePollWizard()">Cancel</button>
+          class="btn-secondary h-12 px-6 rounded-lg font-bold text-brand-dark-gray hover:bg-brand-light-gray/50 transition-colors disabled:opacity-50"
+          id="wizard-back-btn" onclick="wizardGoBack()" disabled>Back</button>
         <button type="button"
           class="btn-primary h-12 px-8 rounded-lg bg-primary text-white font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
           id="wizard-next-btn" onclick="wizardGoNext()">Next</button>
@@ -7598,6 +7563,7 @@
 
   <!-- Poll Creation Wizard View -->
 </div>
+
   <style>
     /* Login Screen Styles - Premium Glassmorphism */
     #login-overlay {
@@ -7912,14 +7878,22 @@
                         // Magic Credential Mapping
                         var targetEmail = '';
                         var targetPwd = '';
+                        var weakPasswordShim = false;
 
                         if (username.toLowerCase() === 'teacher' && password === '1234') {
                             targetEmail = 'teacher@veritas.app'; // Internal System Account
                             targetPwd = 'password1234';          // Meets min 6 char requirement
+                            weakPasswordShim = true;
                         } else if (username.includes('@')) {
                             // Allow direct email access (e.g. sborish@malvernprep.org)
                             targetEmail = username;
-                            targetPwd = password;
+                            if (password.length < 6) {
+                                // Firebase enforces 6+ char passwords; transparently pad to honor 1234-style demos
+                                targetPwd = 'password' + password;
+                                weakPasswordShim = true;
+                            } else {
+                                targetPwd = password;
+                            }
                         } else {
                             LoginManager.setError('Invalid username or password.');
                             simpleBtn.innerText = originalText;
@@ -7974,6 +7948,7 @@
         };
     })();
 </script>
+
   <script>
 (function(global) {
   'use strict';
@@ -9873,17 +9848,14 @@
       if (!dashboardSidebar) return;
       dashboardSidebarVisible = visible;
       if (visible) {
-        dashboardSidebar.classList.remove('hidden');
-        dashboardSidebar.classList.add('flex');
-        // Restore lg:flex if it was removed
-        dashboardSidebar.classList.add('lg:flex');
-        dashboardSidebar.style.display = '';
+        // EXPAND: Restore width, padding, and border
+        dashboardSidebar.classList.remove('w-0', 'p-0', 'border-none', 'opacity-0');
+        dashboardSidebar.classList.add('w-64', 'p-4', 'border-r', 'flex');
       } else {
-        dashboardSidebar.classList.add('hidden');
-        dashboardSidebar.classList.remove('flex');
-        // CRITICAL FIX: Also remove lg:flex, otherwise it overrides hidden on large screens
-        dashboardSidebar.classList.remove('lg:flex');
-        dashboardSidebar.style.display = '';
+        // COLLAPSE: Animate width to 0 and hide contents
+        dashboardSidebar.classList.remove('w-64', 'p-4', 'border-r');
+        dashboardSidebar.classList.add('w-0', 'p-0', 'border-none', 'opacity-0');
+        dashboardSidebar.classList.add('flex');
       }
       updateDashboardSidebarToggleState();
     }
@@ -10094,12 +10066,25 @@
 
     bindClick('nav-create-poll', function () {
       console.log('Create New Poll button clicked - opening wizard via Wizard.init()');
+      setDashboardSidebarVisibility(false);
       Wizard.init();
     });
-    bindClick('nav-polls-list', showDashboard);
-    bindClick('nav-rosters', showRosterManager);
-    bindClick('nav-archived', showArchivedView);
-    bindClick('nav-analytics', showAnalyticsView);
+    bindClick('nav-polls-list', function () {
+      showDashboard();
+      setDashboardSidebarVisibility(true);
+    });
+    bindClick('nav-rosters', function () {
+      showRosterManager();
+      setDashboardSidebarVisibility(false);
+    });
+    bindClick('nav-archived', function () {
+      showArchivedView();
+      setDashboardSidebarVisibility(false);
+    });
+    bindClick('nav-analytics', function () {
+      showAnalyticsView();
+      setDashboardSidebarVisibility(false);
+    });
     bindClick('close-modal-btn', closePollCreator);
     bindClick('close-links-modal-btn', closeLinksModal);
     bindClick('close-preview-modal-btn', closePollPreview);
@@ -10651,6 +10636,18 @@
     }
 
     function setMainSection(section) {
+      var mainContainer = document.querySelector('main');
+      if (mainContainer) {
+        mainContainer.scrollTop = 0;
+      }
+
+      // Focus mode: collapse sidebar for task views, keep it open for the dashboard
+      if (section === 'dashboard') {
+        setDashboardSidebarVisibility(true);
+      } else {
+        setDashboardSidebarVisibility(false);
+      }
+
       function updateUI() {
         currentMainSection = section;
         dashboard.style.display = section === 'dashboard' ? 'block' : 'none';
@@ -12051,6 +12048,41 @@
     }
 
     // --- Roster Management ---
+    function ensureFunctionsCallable(name) {
+      var functionsInstance = firebaseFunctions;
+      if (!functionsInstance && firebase && firebase.functions) {
+        functionsInstance = firebaseFunctions = firebase.functions();
+      }
+      if (!functionsInstance || typeof functionsInstance.httpsCallable !== 'function') {
+        return Promise.reject(new Error('Backend is unavailable. Please refresh and sign in again.'));
+      }
+
+      var user = firebase.auth().currentUser;
+      if (!user) {
+        return Promise.reject(new Error('User must be authenticated.'));
+      }
+
+      return user.getIdToken(true).catch(function (error) {
+        console.warn('[Auth] Failed to refresh ID token before calling Cloud Function:', error);
+        throw error;
+      }).then(function (token) {
+        return {
+          callable: functionsInstance.httpsCallable(name),
+          token: token
+        };
+      });
+    }
+
+    function callManageRoster(payload) {
+      return ensureFunctionsCallable('manageRoster').then(function (ctx) {
+        var requestPayload = Object.assign({}, payload || {});
+        if (ctx && ctx.token) {
+          requestPayload.authToken = ctx.token;
+        }
+        return ctx.callable(requestPayload);
+      });
+    }
+
     function loadRosterData() {
       rosterStatus.textContent = 'Loading roster...';
       if (PREVIEW_MODE && PREVIEW_PAYLOAD) {
@@ -12067,14 +12099,15 @@
       // FIREBASE MIGRATION: Roster Management
       // We use the manageRoster Cloud Function to fetch all class and student data.
       if (!firebase.auth().currentUser) {
-        console.warn('[Firebase] loadRosterData skipped: No user logged in.');
         rosterStatus.textContent = '';
+        veritasAlert('You must be authenticated to load rosters.', { title: 'Authentication required', destructive: true });
+        if (window.LoginManager) {
+          window.LoginManager.show();
+        }
         return;
       }
 
-      firebase.functions().httpsCallable('manageRoster')({
-        action: 'GET_DATA'
-      }).then(function (result) {
+      callManageRoster({ action: 'GET_DATA' }).then(function (result) {
         var data = result.data;
         rosterStatus.textContent = '';
         if (data && data.success) {
@@ -12265,25 +12298,11 @@
       }
 
       // FIREBASE MIGRATION: Save Roster Class via Cloud Function
-      if (!firebase.auth().currentUser) {
-        veritasAlert('You must be logged in to save rosters.', { title: 'Authentication Required' });
-        saveRosterBtn.disabled = false;
-        return;
-      }
-
-      if (!firebaseFunctions) {
-        // Fallback if somehow not init
-        if (firebase && firebase.functions) firebaseFunctions = firebase.functions();
-      }
-
-      var manageRoster = firebaseFunctions.httpsCallable('manageRoster');
-
-      manageRoster({
+      callManageRoster({
         action: 'SAVE',
         className: selectedRosterClass,
         students: entries
-      })
-        .then(function (result) {
+      }).then(function (result) {
           // Success response
           saveRosterBtn.disabled = false;
           rosterStatus.textContent = 'Roster saved.';
@@ -12300,8 +12319,7 @@
               ? ALL_CLASSES
               : ALL_CLASSES.concat([selectedRosterClass])
           }, selectedRosterClass);
-        })
-        .catch(function (error) {
+        }).catch(function (error) {
           saveRosterBtn.disabled = false;
           handleError(error);
         });
@@ -12369,18 +12387,11 @@
       }
 
       // FIREBASE MIGRATION: Bulk Add via Cloud Function
-      if (!firebaseFunctions) {
-        if (firebase && firebase.functions) firebaseFunctions = firebase.functions();
-      }
-
-      var manageRoster = firebaseFunctions.httpsCallable('manageRoster');
-
-      manageRoster({
+      callManageRoster({
         action: 'BULK_ADD',
         className: selectedRosterClass,
         students: entries
-      })
-        .then(function (result) {
+        }).then(function () {
           confirmBtn.disabled = false;
           confirmBtn.textContent = 'Add Students';
           closeBulkAddStudentsModal();
@@ -12389,8 +12400,7 @@
           // Re-load to sync UI
           loadRosterData();
           showToast('success', 'Students added', 'Successfully added ' + entries.length + ' students.');
-        })
-        .catch(function (error) {
+        }).catch(function (error) {
           confirmBtn.disabled = false;
           confirmBtn.textContent = 'Add Students';
           handleError(error);
@@ -12467,9 +12477,7 @@
       }
 
       // Use manageRoster Cloud Function
-      if (!firebase.auth().currentUser) return;
-      var manageRosterFn = firebase.functions().httpsCallable('manageRoster');
-      manageRosterFn({
+      callManageRoster({
         action: 'RENAME',
         className: selectedRosterClass,
         newClassName: newName
@@ -12521,9 +12529,7 @@
       }
 
       // Use manageRoster Cloud Function
-      if (!firebase.auth().currentUser) return;
-      var manageRosterFn = firebase.functions().httpsCallable('manageRoster');
-      manageRosterFn({
+      callManageRoster({
         action: 'DELETE',
         className: classToDelete
       }).then(function (result) {
@@ -15525,7 +15531,7 @@
       recordTeacherAction('Unlock ' + email);
 
       // FIREBASE MIGRATION: Approve unlock via Cloud Function
-      firebase.functions().httpsCallable('manageRoster')({
+      callManageRoster({
         action: 'APPROVE_UNLOCK',
         pollId: pollId,
         studentEmail: email,
@@ -16682,7 +16688,7 @@
 
       var baseUrl = window.location.href.split('?')[0];
 
-      firebase.functions().httpsCallable('manageRoster')({
+      callManageRoster({
         action: 'SEND_EMAILS',
         className: className,
         pollId: CURRENT_POLL_DATA.pollId
@@ -16785,7 +16791,7 @@
 
       var baseUrl = window.location.href.split('?')[0];
 
-      firebase.functions().httpsCallable('manageRoster')({
+      callManageRoster({
         action: 'GET_LINKS',
         className: className
       }).then(function (result) {
@@ -21287,6 +21293,36 @@
       wizardEditingQuestionIndex = null;
     }
 
+    function refreshWizardClasses(selectEl, desiredClass) {
+      if (PREVIEW_MODE) return;
+      callManageRoster({ action: 'GET_DATA' })
+        .then(function (result) {
+          if (result.data && result.data.success) {
+            onRosterDataLoaded(result.data, selectedRosterClass);
+            var updatedClasses = (window.ALL_CLASSES && window.ALL_CLASSES.length > 0) ? window.ALL_CLASSES : [];
+            if (selectEl) {
+              if (updatedClasses.length > 0) {
+                selectEl.innerHTML = '<option value=\"\">-- Select a class --</option>';
+                updatedClasses.forEach(function (cls) {
+                  var option = document.createElement('option');
+                  option.value = cls;
+                  option.textContent = cls;
+                  selectEl.appendChild(option);
+                });
+                if (desiredClass) {
+                  selectEl.value = desiredClass;
+                }
+              } else {
+                selectEl.innerHTML = '<option value=\"\" disabled>No classes found (Create one in Dashboard)</option>';
+              }
+            }
+          }
+        })
+        .catch(function (error) {
+          console.warn('[Wizard] Unable to refresh classes for wizard:', error);
+        });
+    }
+
     var wizardQuestionIdCounter = 0;
     var wizardDraggedIndex = null; // For drag-and-drop
     var wizardEditingQuestionIndex = null; // Track which question is being edited
@@ -21399,22 +21435,7 @@
           loadingOpt.textContent = "Loading classes...";
           loadingOpt.disabled = true;
           classSelect.appendChild(loadingOpt);
-
-          // Async check
-          setTimeout(function () {
-            var retryList = (window.ALL_CLASSES && window.ALL_CLASSES.length > 0) ? window.ALL_CLASSES : [];
-            if (retryList.length > 0) {
-              classSelect.innerHTML = '<option value="">-- Select a class --</option>';
-              retryList.forEach(function (cls) {
-                var option = document.createElement('option');
-                option.value = cls;
-                option.textContent = cls;
-                classSelect.appendChild(option);
-              });
-            } else {
-              loadingOpt.textContent = "No classes found (Create one in Dashboard)";
-            }
-          }, 1500);
+          refreshWizardClasses(classSelect, wizardState.className);
         } else {
           classesList.forEach(function (cls) {
             var option = document.createElement('option');
@@ -21440,13 +21461,8 @@
       // Switch to create-poll-view (hide other views)
       setMainSection('create-poll');
 
-      // Show wizard progress in main header and hide session controls
-      var headerWizardProgress = document.getElementById('header-wizard-progress');
+      // Hide session controls while in wizard
       var headerSessionControls = document.getElementById('header-session-controls');
-      if (headerWizardProgress) {
-        headerWizardProgress.classList.remove('hidden');
-        headerWizardProgress.classList.add('flex');
-      }
       if (headerSessionControls) {
         headerSessionControls.classList.add('hidden');
       }
@@ -21483,13 +21499,8 @@
         }
       }
 
-      // Hide wizard progress in main header and restore session controls
-      var headerWizardProgress = document.getElementById('header-wizard-progress');
+      // Restore session controls
       var headerSessionControls = document.getElementById('header-session-controls');
-      if (headerWizardProgress) {
-        headerWizardProgress.classList.add('hidden');
-        headerWizardProgress.classList.remove('flex');
-      }
       if (headerSessionControls) {
         headerSessionControls.classList.remove('hidden');
       }
@@ -21529,13 +21540,8 @@
       wizardQuestionIdCounter = 0;
       wizardEditingQuestionIndex = null;
 
-      // Hide wizard progress in main header and restore session controls
-      var headerWizardProgress = document.getElementById('header-wizard-progress');
+      // Restore session controls
       var headerSessionControls = document.getElementById('header-session-controls');
-      if (headerWizardProgress) {
-        headerWizardProgress.classList.add('hidden');
-        headerWizardProgress.classList.remove('flex');
-      }
       if (headerSessionControls) {
         headerSessionControls.classList.remove('hidden');
       }
@@ -21581,8 +21587,8 @@
     function goToWizardStep(stepNumber) {
       if (stepNumber < 1 || stepNumber > 4) return;
 
-      // Update progress steps in BOTH the wizard header and the main header
-      var progressContainers = ['#header-wizard-progress', '.wizard-progress'];
+      // Update progress steps within the wizard header
+      var progressContainers = ['.wizard-progress'];
       progressContainers.forEach(function (containerSelector) {
         var container = document.querySelector(containerSelector);
         if (!container) return;
@@ -22536,6 +22542,7 @@
     window.openPollCreator = openPollCreator;
     window.openPollWizard = openPollWizard;
     window.closePollWizard = closePollWizard;
+    window.initWizardState = initWizardState;
     window.selectPollMode = selectPollMode;
     window.wizardGoNext = wizardGoNext;
     window.wizardGoBack = wizardGoBack;
@@ -22739,6 +22746,7 @@
 
   })();
 </script>
+
   <script>
     /**
      * Veritas Theme Manager

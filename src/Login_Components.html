@@ -312,14 +312,22 @@
                         // Magic Credential Mapping
                         var targetEmail = '';
                         var targetPwd = '';
+                        var weakPasswordShim = false;
 
                         if (username.toLowerCase() === 'teacher' && password === '1234') {
                             targetEmail = 'teacher@veritas.app'; // Internal System Account
                             targetPwd = 'password1234';          // Meets min 6 char requirement
+                            weakPasswordShim = true;
                         } else if (username.includes('@')) {
                             // Allow direct email access (e.g. sborish@malvernprep.org)
                             targetEmail = username;
-                            targetPwd = password;
+                            if (password.length < 6) {
+                                // Firebase enforces 6+ char passwords; transparently pad to honor 1234-style demos
+                                targetPwd = 'password' + password;
+                                weakPasswordShim = true;
+                            } else {
+                                targetPwd = password;
+                            }
                         } else {
                             LoginManager.setError('Invalid username or password.');
                             simpleBtn.innerText = originalText;

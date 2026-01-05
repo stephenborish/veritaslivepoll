@@ -2889,29 +2889,46 @@
       missionControlBackoffMs = 0;
       missionControlHeartbeat.stop();
 
-      // FIREBASE MIGRATION: Roster data is usually loaded via showRosterManager
-      // But we can pre-fetch it here if needed, or just let the app load polls.
-      // The polls are already being loaded via loadDashboardSummary() which uses the RTDB listener.
+      console.log('[Firebase] loadInitialData: Fetching polls and classes from RTDB...');
 
-      console.log('[Firebase] loadInitialData: Relying on RTDB listeners for polls.');
+      var db = firebase.database();
 
-      // We still need to load Classes for the dropdowns
-      // We still need to load Classes for the dropdowns
-      // var db = firebase.database();
-      // db.ref('rosters/classes').once('value').then(function (snapshot) {
-      //   var classes = snapshot.val() || [];
-      //   onDashboardDataLoaded({
-      //     polls: dashboardSummary ? dashboardSummary.polls : [],
-      //     classes: classes
-      //   });
-      // });
+      // Fetch both Polls and Classes in parallel
+      Promise.all([
+        db.ref('polls').once('value'),
+        db.ref('rosters/classes').once('value')
+      ]).then(function (snapshots) {
+        var pollsSnap = snapshots[0];
+        var classesSnap = snapshots[1];
 
-      // Bypass RTDB for now
-      onDashboardDataLoaded({
-        polls: dashboardSummary ? (dashboardSummary.polls || []) : [],
-        classes: []
+        var pollsObj = pollsSnap.val() || {};
+        var classesArr = classesSnap.val() || [];
+
+        // Convert polls object to array for current frontend format
+        // Expected format: array of poll objects
+        var pollsArray = Object.keys(pollsObj).map(function (key) {
+          var p = pollsObj[key];
+          p.id = key; // Ensure ID is set
+          return p;
+        });
+
+        // Sort by updatedAt descending
+        pollsArray.sort(function (a, b) {
+          return (b.updatedAt || 0) - (a.updatedAt || 0);
+        });
+
+        console.log('[Firebase] Loaded ' + pollsArray.length + ' polls and ' + classesArr.length + ' classes.');
+
+        onDashboardDataLoaded({
+          polls: pollsArray,
+          classes: classesArr
+        });
+      }).catch(function (error) {
+        console.error('[Firebase] Failed to load initial data:', error);
+        showToast('error', 'Data Load Error', 'Failed to load polls. Please refresh.');
       });
     }
+
 
     function onDashboardDataLoaded(data) {
       // Defensive check: ensure data object exists

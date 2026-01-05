@@ -606,12 +606,12 @@ exports.manageRoster = onCall({ cors: true }, async (request) => {
     case "DELETE":
       // Delete class roster
       const deleteSnapshot = await rosterRef.once("value");
-      if (!deleteSnapshot.exists()) {
-        throw new HttpsError("not-found", "Class not found");
+      if (deleteSnapshot.exists()) {
+        await rosterRef.remove();
+        logger.info(`Class deleted: ${className}`);
+      } else {
+        logger.info(`Class delete requested but not found (already deleted): ${className}`);
       }
-
-      await rosterRef.remove();
-      logger.info(`Class deleted: ${className}`);
 
       return {
         success: true,
@@ -710,7 +710,7 @@ exports.manageRoster = onCall({ cors: true }, async (request) => {
             const exp = new Date();
             exp.setDate(exp.getDate() + 30);
             await tokRef.child(token).set({
-               email: student.email, className, created: Date.now(), expires: exp.getTime()
+              email: student.email, className, created: Date.now(), expires: exp.getTime()
             });
             await tokIdxRef.child(sEmail.replace(/\./g, "_")).set(token);
           }

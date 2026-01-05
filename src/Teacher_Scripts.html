@@ -8615,6 +8615,82 @@
     }
 
     // --- Student Link Controls ---
+
+    /**
+     * Generates the HTML email body for a student.
+     */
+    function generateEmailHtml(studentName, link, isSecure, studentEmail) {
+      var titleText = isSecure ? "Secure Assessment Session" : "Live Poll Session";
+      var introText = isSecure ?
+        "Your personalized link for today's secure assessment is ready. Please click the button below to begin." :
+        "Your personalized link for today's live poll is ready. Please click the button below to begin.";
+
+      // Template provided by user
+      return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"> 
+    <title>VERITAS Live Poll</title>
+    <style>
+        /* BASE STYLES */
+        body { margin: 0; padding: 0; width: 100% !important; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f3f4f6; color: #333333; line-height: 1.6; }
+        .container { max-width: 600px; margin: 40px auto; padding: 0; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .content-padding { padding: 30px; }
+        /* TYPOGRAPHY */
+        h1, p, li, span, div, a { font-size: 16px; }
+        h1 { margin: 0 0 16px 0; font-weight: 700; color: #12385d; letter-spacing: -0.5px; }
+        p { margin: 0 0 16px 0; }
+        /* BUTTON */
+        .btn { display: inline-block; background-color: #12385d; color: #ffffff !important; text-decoration: none; padding: 14px 35px; border-radius: 4px; font-weight: 600; margin: 10px 0; }
+        .btn:hover { background-color: #0f2f4d; }
+        /* UTILS */
+        .divider { height: 1px; background-color: #e5e7eb; margin: 20px 0; border: none; }
+        .text-muted { color: #6b7280; }
+        .footer { font-size: 12px; color: #9ca3af; margin-top: 30px; text-align: center; }
+        .instructions-list { padding-left: 18px; color: #4b5563; margin-bottom: 0; }
+        .instructions-list li { margin-bottom: 8px; }
+        /* RESPONSIVE */
+        @media screen and (max-width: 600px) {
+            .container { margin: 0; border-radius: 0; }
+            .content-padding { padding: 20px; }
+            .btn { display: block; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <div style="background-color: #12385d; padding: 20px 30px;">
+            <span style="font-weight: 700; font-size: 26px; color: #ffffff;">VERITAS</span> 
+            <span style="color: #c5a05a; margin: 0 8px; font-size: 26px;">|</span>
+            <span style="color: #e5e7eb; font-size: 22px;">${titleText}</span>
+        </div>
+        <div class="content-padding">
+            <p>Hello <strong>${studentName}</strong>,</p>
+            <p>${introText}</p>
+            <div style="text-align: center;">
+                <a href="${link}" class="btn">Begin Session</a>
+            </div>
+            <hr class="divider">
+            <div style="background-color: #ffdcdc; padding: 20px; border-radius: 6px; border: 1px solid #fed7d7;">
+                <p style="font-weight: 600; margin-bottom: 12px; margin-top: 0; color: #c53030;">Important Instructions:</p>
+                <ul class="instructions-list" style="margin: 0;">
+                    <li>You must remain in fullscreen mode throughout the entire session.</li>
+                    <li>Don't navigate to other tabs or applications.</li>
+                    <li>Do not refresh the browser to prevent disconnection.</li>
+                </ul>
+            </div>
+            <div class="footer">
+                <p style="margin-bottom: 8px;">🔒 This is a unique link for <strong>${studentEmail}</strong>. Do not share it.</p>
+                <p style="margin-bottom: 0;">&copy; 2025 VERITAS</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>`;
+    }
     async function onSendLink() {
       var btn = sendLinkBtn;
       if (!btn) {
@@ -8661,10 +8737,22 @@
         // Add the base URL for the bridge to build full links
         payload.baseUrl = baseUrl;
 
-        // FIX: sendEmail expects 'students', but manageRoster returns 'links'
-        payload.students = payload.links;
+        // GENERATE HTML FOR EACH STUDENT
+        // Map payload.links to payload.students with generated bodies
+        var isSecure = (CURRENT_POLL_DATA.sessionType || "").toUpperCase().includes("SECURE");
 
-        // FIREBASE MIGRATION: Send emails via Cloud Function (Simulated)
+        payload.students = payload.links.map(function (s) {
+          var fullLink = baseUrl + '?token=' + s.token;
+          var htmlBody = generateEmailHtml(s.name, fullLink, isSecure, s.email);
+          return {
+            email: s.email,
+            name: s.name,
+            subject: payload.subject, // Use the subject from manageRoster
+            body: htmlBody
+          };
+        });
+
+        // FIREBASE MIGRATION: Send emails via Cloud Function
         return firebase.functions().httpsCallable('sendEmail')(payload)
           .then(function (result) {
             var response = result.data;
@@ -8677,7 +8765,7 @@
             }
 
             if (response.success) {
-              veritasAlert('Emails processed (SIMULATED) for ' + response.sentCount + ' students.\n(Note: See Cloud Logging for details)', { title: 'Emails Processed' });
+              veritasAlert('Emails processed for ' + response.sentCount + ' students.', { title: 'Emails Processed' });
             } else {
               var msg = 'Sent: ' + (response.sentCount || 0) + ', Failed: ' + (response.failedCount || 0) + '.';
               if (response.failures && response.failures.length > 0) {

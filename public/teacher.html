@@ -5439,7 +5439,7 @@
     </aside>
 
     <!-- Main Content Area -->
-  <main class="flex-1 min-h-0 overflow-y-auto bg-gray-50 dark:bg-brand-dark-gray/10">
+  <main class="flex-1 min-h-0 overflow-y-auto bg-gray-50 dark:bg-brand-dark-gray/10 flex flex-col">
       <!-- Dashboard View (Default) - Redesigned -->
       <div id="dashboard" class="p-8 max-w-7xl mx-auto">
         <!-- Poll Library & Session Management (Combined) -->
@@ -6504,7 +6504,7 @@
   </div>
 
   <!-- Poll Creation Wizard View - Compact Design -->
-  <div id="create-poll-view" class="hidden h-full flex flex-col bg-white dark:bg-brand-dark-gray pt-0">
+  <div id="create-poll-view" class="hidden flex-1 flex flex-col bg-white dark:bg-brand-dark-gray">
 
     <!-- Compact Header with Inline Progress -->
     <div
@@ -9380,6 +9380,9 @@
       }
 
       // Auth-Bound Data Loading and State Management
+      // AUTH_READY flag ensures token is validated before allowing API calls
+      window.AUTH_READY = false;
+
       try {
         firebase.auth().onAuthStateChanged(function (user) {
           if (user) {
@@ -9402,12 +9405,21 @@
 
             renderLogoutButton(user);
 
-            // Optimistic Data Loading (Decoupled from verifyTeacher)
-            if (!window.DATA_LOAD_INITIATED) {
-              window.DATA_LOAD_INITIATED = true;
-              loadInitialData();
-              loadDashboardSummary();
-            }
+            // Validate token before allowing API calls
+            user.getIdToken().then(function() {
+              window.AUTH_READY = true;
+              console.log('[Auth] Token validated - API calls enabled');
+
+              // Optimistic Data Loading (Decoupled from verifyTeacher)
+              if (!window.DATA_LOAD_INITIATED) {
+                window.DATA_LOAD_INITIATED = true;
+                loadInitialData();
+                loadDashboardSummary();
+              }
+            }).catch(function(error) {
+              console.error('[Auth] Token validation failed:', error);
+              window.AUTH_READY = false;
+            });
 
             // Verify Teacher Role (Background Check)
             const verifyTeacher = firebase.functions().httpsCallable('verifyTeacher');
@@ -9431,6 +9443,8 @@
 
           } else {
             console.log('[Auth] No teacher session found. Initiating Login Flow.');
+            window.AUTH_READY = false;
+            window.DATA_LOAD_INITIATED = false;
             if (mainLoader) mainLoader.style.display = 'none';
 
             // Hide Dashboard (redundant but safe)
@@ -12098,11 +12112,18 @@
 
       // FIREBASE MIGRATION: Roster Management
       // We use the manageRoster Cloud Function to fetch all class and student data.
-      if (!firebase.auth().currentUser) {
+      // Check AUTH_READY flag to ensure token is validated before making API calls
+      if (!firebase.auth().currentUser || !window.AUTH_READY) {
         rosterStatus.textContent = '';
-        veritasAlert('You must be authenticated to load rosters.', { title: 'Authentication required', destructive: true });
-        if (window.LoginManager) {
-          window.LoginManager.show();
+        if (!firebase.auth().currentUser) {
+          veritasAlert('You must be authenticated to load rosters.', { title: 'Authentication required', destructive: true });
+          if (window.LoginManager) {
+            window.LoginManager.show();
+          }
+        } else {
+          // Auth in progress - retry after a short delay
+          console.log('[Firebase] Auth token not ready, retrying loadRosterData in 500ms...');
+          setTimeout(loadRosterData, 500);
         }
         return;
       }
@@ -21295,11 +21316,19 @@
 
     function refreshWizardClasses(selectEl, desiredClass) {
       if (PREVIEW_MODE) return;
-      // Auth guard: Don't attempt to fetch classes if user is not authenticated
-      if (!firebase.auth().currentUser) {
-        console.warn('[Wizard] Cannot refresh classes: User not authenticated');
+      // Auth guard: Don't attempt to fetch classes if user is not authenticated or token not ready
+      if (!firebase.auth().currentUser || !window.AUTH_READY) {
+        console.warn('[Wizard] Cannot refresh classes: Auth not ready');
         if (selectEl) {
-          selectEl.innerHTML = '<option value="" disabled>Please sign in to load classes</option>';
+          if (!firebase.auth().currentUser) {
+            selectEl.innerHTML = '<option value="" disabled>Please sign in to load classes</option>';
+          } else {
+            // Token not ready yet - retry after delay
+            selectEl.innerHTML = '<option value="" disabled>Loading classes...</option>';
+            setTimeout(function() {
+              refreshWizardClasses(selectEl, desiredClass);
+            }, 500);
+          }
         }
         return;
       }

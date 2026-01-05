@@ -501,7 +501,27 @@
     --text-muted: #6b7280;
     --text-on-navy: #ffffff;
 
-    /* Semantic Colors */
+    /* FORCE HIDE LOGIN for Students - Default State */
+    --login-display: none;
+  }
+
+  /* Specific Override for Student View */
+  #login-overlay {
+    display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Only show if explicitly enabled by JS class on body */
+  body.auth-required #login-overlay {
+    display: flex !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    visibility: visible !important;
+  }
+
+  :root {
     --success-green: #1b5e20;
     --success-bg: #e8f5ec;
     --error-red: #c62828;
@@ -8321,6 +8341,9 @@
     }
 
     function showLoginScreen() {
+        // Show overlay by adding class (CSS handles visibility)
+        document.body.classList.add('auth-required');
+
         // Hide main content to prevent flash
         var appContainer = document.getElementById('student-container');
         var entryScreen = document.getElementById('entry-screen');
@@ -8328,6 +8351,10 @@
         if (entryScreen) entryScreen.style.display = 'none';
 
         if (window.LoginManager) {
+            // Update UI for Student Context
+            var subtitle = document.querySelector('.login-subtitle');
+            if (subtitle) subtitle.textContent = 'Student Access';
+
             LoginManager.init(function (user) {
                 // On Success
                 console.log('[Auth] Login successful. Reloading to initialize session.');

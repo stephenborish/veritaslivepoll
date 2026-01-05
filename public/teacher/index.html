@@ -16732,6 +16732,9 @@
         // Add the base URL for the bridge to build full links
         payload.baseUrl = baseUrl;
 
+        // FIX: sendEmail expects 'students', but manageRoster returns 'links'
+        payload.students = payload.links;
+
         // FIREBASE MIGRATION: Send emails via Cloud Function (Simulated)
         return firebase.functions().httpsCallable('sendEmail')(payload)
           .then(function (result) {

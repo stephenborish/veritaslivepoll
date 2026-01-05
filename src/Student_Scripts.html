@@ -4965,6 +4965,9 @@
     }
 
     function showLoginScreen() {
+        // Show overlay by adding class (CSS handles visibility)
+        document.body.classList.add('auth-required');
+
         // Hide main content to prevent flash
         var appContainer = document.getElementById('student-container');
         var entryScreen = document.getElementById('entry-screen');
@@ -4972,6 +4975,10 @@
         if (entryScreen) entryScreen.style.display = 'none';
 
         if (window.LoginManager) {
+            // Update UI for Student Context
+            var subtitle = document.querySelector('.login-subtitle');
+            if (subtitle) subtitle.textContent = 'Student Access';
+
             LoginManager.init(function (user) {
                 // On Success
                 console.log('[Auth] Login successful. Reloading to initialize session.');

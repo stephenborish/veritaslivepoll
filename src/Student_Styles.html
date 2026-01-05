@@ -19,7 +19,27 @@
     --text-muted: #6b7280;
     --text-on-navy: #ffffff;
 
-    /* Semantic Colors */
+    /* FORCE HIDE LOGIN for Students - Default State */
+    --login-display: none;
+  }
+
+  /* Specific Override for Student View */
+  #login-overlay {
+    display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Only show if explicitly enabled by JS class on body */
+  body.auth-required #login-overlay {
+    display: flex !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    visibility: visible !important;
+  }
+
+  :root {
     --success-green: #1b5e20;
     --success-bg: #e8f5ec;
     --error-red: #c62828;

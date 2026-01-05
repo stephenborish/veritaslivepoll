@@ -799,32 +799,70 @@ exports.confirmFullscreen = onCall({ cors: true }, async (request) => {
  */
 exports.sendEmail = onCall({ cors: true }, async (request) => {
   const { recipientEmail, subject, body, students } = request.data;
+  const nodemailer = require('nodemailer');
 
-  // Batch Mode
-  if (students && Array.isArray(students)) {
-    logger.info(`[Email Simulation] Processing batch of ${students.length} emails`);
-    let sentCount = 0;
-    students.forEach((s) => {
-      if (s.email) {
-        logger.info(`[Email Simulation] To: ${s.email}, Subject: ${s.subject || subject}`);
-        sentCount++;
+  // SMTP Configuration
+  // Note: Password must be set via CLI: firebase functions:config:set veritas.smtp_password="YOUR_PASSWORD"
+  const transporter = nodemailer.createTransport({
+    host: "mail.spacemail.com",
+    port: 465,
+    secure: true, // SSL
+    auth: {
+      user: "email@veritas.courses",
+      pass: functions.config().veritas ? functions.config().veritas.smtp_password : process.env.SMTP_PASSWORD
+    }
+  });
+
+  const mailOptions = {
+    from: '"Veritas Live" <email@veritas.courses>',
+  };
+
+  try {
+    // Batch Mode
+    if (students && Array.isArray(students)) {
+      logger.info(`[Email Service] Processing batch of ${students.length} emails`);
+      let sentCount = 0;
+      let errors = [];
+
+      // Process sequentially to avoid rate limits
+      for (const s of students) {
+        if (s.email) {
+          try {
+            await transporter.sendMail({
+              ...mailOptions,
+              to: s.email,
+              subject: s.subject || subject,
+              html: s.body || body // Support per-student body if needed
+            });
+            sentCount++;
+          } catch (err) {
+            logger.error(`[Email Service] Failed to send to ${s.email}:`, err);
+            errors.push({ email: s.email, error: err.message });
+          }
+        }
       }
+      return { success: true, sentCount, errors };
+    }
+
+    // Single Mode
+    if (!recipientEmail || !subject || !body) {
+      throw new HttpsError("invalid-argument", "Missing email fields");
+    }
+
+    const info = await transporter.sendMail({
+      ...mailOptions,
+      to: recipientEmail,
+      subject: subject,
+      html: body
     });
-    return { success: true, sentCount: sentCount, simulated: true };
+
+    logger.info(`[Email Service] Sent to: ${recipientEmail}, MessageID: ${info.messageId}`);
+    return { success: true, messageId: info.messageId };
+
+  } catch (error) {
+    logger.error("[Email Service] Fatal Error:", error);
+    throw new HttpsError("internal", "Failed to send email", error);
   }
-
-  // Single Mode
-  if (!recipientEmail || !subject || !body) {
-    throw new HttpsError("invalid-argument", "Missing email fields");
-  }
-
-  logger.info(`[Email Simulation] To: ${recipientEmail}, Subject: ${subject}`);
-  logger.info(`[Email Simulation] Body length: ${body.length}`);
-
-  // In a real implementation:
-  // await sendGrid.send({ to: recipientEmail, subject, html: body });
-
-  return { success: true, simulated: true };
 });
 
 /**

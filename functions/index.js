@@ -489,13 +489,14 @@ exports.updatePoll = onCall({ cors: true }, async (request) => {
  * Replaces google.script.run.saveRoster, bulkAddStudentsToRoster,
  * renameClass, deleteClassRecord
  */
-exports.manageRoster = functions.https.onCall(async (data, context) => {
+exports.manageRoster = onCall({ cors: true }, async (request) => {
   // 0. Auth Check
-  if (!context.auth) {
+  if (!request.auth) {
     throw new HttpsError("unauthenticated", "User must be authenticated.");
   }
 
-  const { action, className, newClassName, students, pollId } = data;
+  const { action, className, newClassName, students, pollId } = request.data;
+  const uid = request.auth.uid; // Available if needed for personalized rosters
 
   // GET_DATA is the only action that doesn't strictly require a className
   if (!action || (!className && action !== 'GET_DATA')) {
@@ -513,7 +514,7 @@ exports.manageRoster = functions.https.onCall(async (data, context) => {
       }
 
       await rosterRef.set(students);
-      logger.info(`Roster saved: ${className} (${students.length} students)`);
+      logger.info(`Roster saved: ${className} (${students.length} students) by ${uid}`);
 
       return {
         success: true,
@@ -682,10 +683,40 @@ exports.manageRoster = functions.https.onCall(async (data, context) => {
     case "SEND_EMAILS":
       // Prepare email data and return to client to use a mail bridge
       // This ensures token logic is in CF, while GAS only handles the actual 'send'
-      const res = await exports.manageRoster.run({
-        data: { action: "GET_LINKS", className: className },
-      });
-      const studentLinks = res.links;
+
+      // RECURSIVE CALL FIX: Call the 'GET_LINKS' logic directly instead of invoking the function again
+      // to avoid context issues or recursion limits.
+      // We can just call manageRoster logic again by creating a "virtual request" if we wanted,
+      // but simpler is to extract the logic or just duplicate the few lines for now.
+      // Better yet, let's just use the same logic flow above if we refactored, but since we are inside the function,
+      // we can't easily self-invoke onCall handlers properly without network.
+      // So detailed implementation of GET_LINKS logic here matches best practice.
+
+      // Duplicate GET_LINKS logic for safety and speed:
+      const snapE = await rosterRef.once("value");
+      if (!snapE.exists()) throw new HttpsError("not-found", "Class not found");
+      const rosE = snapE.val() || [];
+      const tokRef = db.ref("tokens");
+      const tokIdxRef = db.ref(`tokens_index/${className}`);
+      const exTokSnap = await tokIdxRef.once("value");
+      const exTok = exTokSnap.val() || {};
+
+      const studentLinks = await Promise.all(
+        rosE.map(async (student) => {
+          const sEmail = student.email.toLowerCase();
+          let token = exTok[sEmail.replace(/\./g, "_")];
+          if (!token) {
+            token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+            const exp = new Date();
+            exp.setDate(exp.getDate() + 30);
+            await tokRef.child(token).set({
+               email: student.email, className, created: Date.now(), expires: exp.getTime()
+            });
+            await tokIdxRef.child(sEmail.replace(/\./g, "_")).set(token);
+          }
+          return { name: student.name, email: student.email, token, hasActiveLink: true };
+        })
+      );
 
       const pollSnapshot = await db.ref(`polls/${pollId}`).once("value");
       const pollData = pollSnapshot.val() || { pollName: "Veritas Poll" };

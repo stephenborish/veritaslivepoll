@@ -9406,7 +9406,7 @@
             renderLogoutButton(user);
 
             // Validate token before allowing API calls
-            user.getIdToken().then(function() {
+            user.getIdToken().then(function () {
               window.AUTH_READY = true;
               console.log('[Auth] Token validated - API calls enabled');
 
@@ -9416,7 +9416,7 @@
                 loadInitialData();
                 loadDashboardSummary();
               }
-            }).catch(function(error) {
+            }).catch(function (error) {
               console.error('[Auth] Token validation failed:', error);
               window.AUTH_READY = false;
             });
@@ -12064,36 +12064,30 @@
     // --- Roster Management ---
     function ensureFunctionsCallable(name) {
       var functionsInstance = firebaseFunctions;
-      if (!functionsInstance && firebase && firebase.functions) {
-        functionsInstance = firebaseFunctions = firebase.functions();
+
+      if (!functionsInstance) {
+        // Try to initialize if missing
+        try {
+          functionsInstance = firebaseFunctions = firebase.functions();
+        } catch (e) {
+          console.error('[Firebase] Functions SDK not initialized:', e);
+        }
       }
-      if (!functionsInstance || typeof functionsInstance.httpsCallable !== 'function') {
+
+      if (!functionsInstance) {
         return Promise.reject(new Error('Backend is unavailable. Please refresh and sign in again.'));
       }
 
-      var user = firebase.auth().currentUser;
-      if (!user) {
-        return Promise.reject(new Error('User must be authenticated.'));
-      }
-
-      return user.getIdToken(true).catch(function (error) {
-        console.warn('[Auth] Failed to refresh ID token before calling Cloud Function:', error);
-        throw error;
-      }).then(function (token) {
-        return {
-          callable: functionsInstance.httpsCallable(name),
-          token: token
-        };
+      // V2 SDK handles auth token automatically if user is signed in
+      return Promise.resolve({
+        callable: functionsInstance.httpsCallable(name)
       });
     }
 
     function callManageRoster(payload) {
       return ensureFunctionsCallable('manageRoster').then(function (ctx) {
-        var requestPayload = Object.assign({}, payload || {});
-        if (ctx && ctx.token) {
-          requestPayload.authToken = ctx.token;
-        }
-        return ctx.callable(requestPayload);
+        // No need to inject authToken manualy for V2 callables
+        return ctx.callable(payload || {});
       });
     }
 
@@ -12324,26 +12318,26 @@
         className: selectedRosterClass,
         students: entries
       }).then(function (result) {
-          // Success response
-          saveRosterBtn.disabled = false;
-          rosterStatus.textContent = 'Roster saved.';
-          rosterDirty = false;
+        // Success response
+        saveRosterBtn.disabled = false;
+        rosterStatus.textContent = 'Roster saved.';
+        rosterDirty = false;
 
-          // Update local data cache
-          if (!rosterData) rosterData = {};
-          rosterData[selectedRosterClass] = entries;
+        // Update local data cache
+        if (!rosterData) rosterData = {};
+        rosterData[selectedRosterClass] = entries;
 
-          // Re-render (pass current data)
-          onRosterDataLoaded({
-            rosters: rosterData,
-            classes: ALL_CLASSES.includes(selectedRosterClass)
-              ? ALL_CLASSES
-              : ALL_CLASSES.concat([selectedRosterClass])
-          }, selectedRosterClass);
-        }).catch(function (error) {
-          saveRosterBtn.disabled = false;
-          handleError(error);
-        });
+        // Re-render (pass current data)
+        onRosterDataLoaded({
+          rosters: rosterData,
+          classes: ALL_CLASSES.includes(selectedRosterClass)
+            ? ALL_CLASSES
+            : ALL_CLASSES.concat([selectedRosterClass])
+        }, selectedRosterClass);
+      }).catch(function (error) {
+        saveRosterBtn.disabled = false;
+        handleError(error);
+      });
     }
 
     async function openBulkAddStudentsModal() {
@@ -12412,20 +12406,20 @@
         action: 'BULK_ADD',
         className: selectedRosterClass,
         students: entries
-        }).then(function () {
-          confirmBtn.disabled = false;
-          confirmBtn.textContent = 'Add Students';
-          closeBulkAddStudentsModal();
-          rosterDirty = false;
+      }).then(function () {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Add Students';
+        closeBulkAddStudentsModal();
+        rosterDirty = false;
 
-          // Re-load to sync UI
-          loadRosterData();
-          showToast('success', 'Students added', 'Successfully added ' + entries.length + ' students.');
-        }).catch(function (error) {
-          confirmBtn.disabled = false;
-          confirmBtn.textContent = 'Add Students';
-          handleError(error);
-        });
+        // Re-load to sync UI
+        loadRosterData();
+        showToast('success', 'Students added', 'Successfully added ' + entries.length + ' students.');
+      }).catch(function (error) {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Add Students';
+        handleError(error);
+      });
     }
 
     async function onAddClass() {
@@ -21325,7 +21319,7 @@
           } else {
             // Token not ready yet - retry after delay
             selectEl.innerHTML = '<option value="" disabled>Loading classes...</option>';
-            setTimeout(function() {
+            setTimeout(function () {
               refreshWizardClasses(selectEl, desiredClass);
             }, 500);
           }
@@ -22783,7 +22777,6 @@
 
   })();
 </script>
-
   <script>
     /**
      * Veritas Theme Manager

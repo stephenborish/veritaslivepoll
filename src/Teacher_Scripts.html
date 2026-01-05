@@ -1777,17 +1777,14 @@
       if (!dashboardSidebar) return;
       dashboardSidebarVisible = visible;
       if (visible) {
-        dashboardSidebar.classList.remove('hidden');
-        dashboardSidebar.classList.add('flex');
-        // Restore lg:flex if it was removed
-        dashboardSidebar.classList.add('lg:flex');
-        dashboardSidebar.style.display = '';
+        // EXPAND: Restore width, padding, and border
+        dashboardSidebar.classList.remove('w-0', 'p-0', 'border-none', 'opacity-0');
+        dashboardSidebar.classList.add('w-64', 'p-4', 'border-r', 'flex');
       } else {
-        dashboardSidebar.classList.add('hidden');
-        dashboardSidebar.classList.remove('flex');
-        // CRITICAL FIX: Also remove lg:flex, otherwise it overrides hidden on large screens
-        dashboardSidebar.classList.remove('lg:flex');
-        dashboardSidebar.style.display = '';
+        // COLLAPSE: Animate width to 0 and hide contents
+        dashboardSidebar.classList.remove('w-64', 'p-4', 'border-r');
+        dashboardSidebar.classList.add('w-0', 'p-0', 'border-none', 'opacity-0');
+        dashboardSidebar.classList.add('flex');
       }
       updateDashboardSidebarToggleState();
     }
@@ -1998,12 +1995,25 @@
 
     bindClick('nav-create-poll', function () {
       console.log('Create New Poll button clicked - opening wizard via Wizard.init()');
+      setDashboardSidebarVisibility(false);
       Wizard.init();
     });
-    bindClick('nav-polls-list', showDashboard);
-    bindClick('nav-rosters', showRosterManager);
-    bindClick('nav-archived', showArchivedView);
-    bindClick('nav-analytics', showAnalyticsView);
+    bindClick('nav-polls-list', function () {
+      showDashboard();
+      setDashboardSidebarVisibility(true);
+    });
+    bindClick('nav-rosters', function () {
+      showRosterManager();
+      setDashboardSidebarVisibility(false);
+    });
+    bindClick('nav-archived', function () {
+      showArchivedView();
+      setDashboardSidebarVisibility(false);
+    });
+    bindClick('nav-analytics', function () {
+      showAnalyticsView();
+      setDashboardSidebarVisibility(false);
+    });
     bindClick('close-modal-btn', closePollCreator);
     bindClick('close-links-modal-btn', closeLinksModal);
     bindClick('close-preview-modal-btn', closePollPreview);
@@ -2555,6 +2565,18 @@
     }
 
     function setMainSection(section) {
+      var mainContainer = document.querySelector('main');
+      if (mainContainer) {
+        mainContainer.scrollTop = 0;
+      }
+
+      // Focus mode: collapse sidebar for task views, keep it open for the dashboard
+      if (section === 'dashboard') {
+        setDashboardSidebarVisibility(true);
+      } else {
+        setDashboardSidebarVisibility(false);
+      }
+
       function updateUI() {
         currentMainSection = section;
         dashboard.style.display = section === 'dashboard' ? 'block' : 'none';
@@ -3955,6 +3977,41 @@
     }
 
     // --- Roster Management ---
+    function ensureFunctionsCallable(name) {
+      var functionsInstance = firebaseFunctions;
+      if (!functionsInstance && firebase && firebase.functions) {
+        functionsInstance = firebaseFunctions = firebase.functions();
+      }
+      if (!functionsInstance || typeof functionsInstance.httpsCallable !== 'function') {
+        return Promise.reject(new Error('Backend is unavailable. Please refresh and sign in again.'));
+      }
+
+      var user = firebase.auth().currentUser;
+      if (!user) {
+        return Promise.reject(new Error('User must be authenticated.'));
+      }
+
+      return user.getIdToken(true).catch(function (error) {
+        console.warn('[Auth] Failed to refresh ID token before calling Cloud Function:', error);
+        throw error;
+      }).then(function (token) {
+        return {
+          callable: functionsInstance.httpsCallable(name),
+          token: token
+        };
+      });
+    }
+
+    function callManageRoster(payload) {
+      return ensureFunctionsCallable('manageRoster').then(function (ctx) {
+        var requestPayload = Object.assign({}, payload || {});
+        if (ctx && ctx.token) {
+          requestPayload.authToken = ctx.token;
+        }
+        return ctx.callable(requestPayload);
+      });
+    }
+
     function loadRosterData() {
       rosterStatus.textContent = 'Loading roster...';
       if (PREVIEW_MODE && PREVIEW_PAYLOAD) {
@@ -3971,14 +4028,15 @@
       // FIREBASE MIGRATION: Roster Management
       // We use the manageRoster Cloud Function to fetch all class and student data.
       if (!firebase.auth().currentUser) {
-        console.warn('[Firebase] loadRosterData skipped: No user logged in.');
         rosterStatus.textContent = '';
+        veritasAlert('You must be authenticated to load rosters.', { title: 'Authentication required', destructive: true });
+        if (window.LoginManager) {
+          window.LoginManager.show();
+        }
         return;
       }
 
-      firebase.functions().httpsCallable('manageRoster')({
-        action: 'GET_DATA'
-      }).then(function (result) {
+      callManageRoster({ action: 'GET_DATA' }).then(function (result) {
         var data = result.data;
         rosterStatus.textContent = '';
         if (data && data.success) {
@@ -4169,25 +4227,11 @@
       }
 
       // FIREBASE MIGRATION: Save Roster Class via Cloud Function
-      if (!firebase.auth().currentUser) {
-        veritasAlert('You must be logged in to save rosters.', { title: 'Authentication Required' });
-        saveRosterBtn.disabled = false;
-        return;
-      }
-
-      if (!firebaseFunctions) {
-        // Fallback if somehow not init
-        if (firebase && firebase.functions) firebaseFunctions = firebase.functions();
-      }
-
-      var manageRoster = firebaseFunctions.httpsCallable('manageRoster');
-
-      manageRoster({
+      callManageRoster({
         action: 'SAVE',
         className: selectedRosterClass,
         students: entries
-      })
-        .then(function (result) {
+      }).then(function (result) {
           // Success response
           saveRosterBtn.disabled = false;
           rosterStatus.textContent = 'Roster saved.';
@@ -4204,8 +4248,7 @@
               ? ALL_CLASSES
               : ALL_CLASSES.concat([selectedRosterClass])
           }, selectedRosterClass);
-        })
-        .catch(function (error) {
+        }).catch(function (error) {
           saveRosterBtn.disabled = false;
           handleError(error);
         });
@@ -4273,18 +4316,11 @@
       }
 
       // FIREBASE MIGRATION: Bulk Add via Cloud Function
-      if (!firebaseFunctions) {
-        if (firebase && firebase.functions) firebaseFunctions = firebase.functions();
-      }
-
-      var manageRoster = firebaseFunctions.httpsCallable('manageRoster');
-
-      manageRoster({
+      callManageRoster({
         action: 'BULK_ADD',
         className: selectedRosterClass,
         students: entries
-      })
-        .then(function (result) {
+        }).then(function () {
           confirmBtn.disabled = false;
           confirmBtn.textContent = 'Add Students';
           closeBulkAddStudentsModal();
@@ -4293,8 +4329,7 @@
           // Re-load to sync UI
           loadRosterData();
           showToast('success', 'Students added', 'Successfully added ' + entries.length + ' students.');
-        })
-        .catch(function (error) {
+        }).catch(function (error) {
           confirmBtn.disabled = false;
           confirmBtn.textContent = 'Add Students';
           handleError(error);
@@ -4371,9 +4406,7 @@
       }
 
       // Use manageRoster Cloud Function
-      if (!firebase.auth().currentUser) return;
-      var manageRosterFn = firebase.functions().httpsCallable('manageRoster');
-      manageRosterFn({
+      callManageRoster({
         action: 'RENAME',
         className: selectedRosterClass,
         newClassName: newName
@@ -4425,9 +4458,7 @@
       }
 
       // Use manageRoster Cloud Function
-      if (!firebase.auth().currentUser) return;
-      var manageRosterFn = firebase.functions().httpsCallable('manageRoster');
-      manageRosterFn({
+      callManageRoster({
         action: 'DELETE',
         className: classToDelete
       }).then(function (result) {
@@ -7429,7 +7460,7 @@
       recordTeacherAction('Unlock ' + email);
 
       // FIREBASE MIGRATION: Approve unlock via Cloud Function
-      firebase.functions().httpsCallable('manageRoster')({
+      callManageRoster({
         action: 'APPROVE_UNLOCK',
         pollId: pollId,
         studentEmail: email,
@@ -8586,7 +8617,7 @@
 
       var baseUrl = window.location.href.split('?')[0];
 
-      firebase.functions().httpsCallable('manageRoster')({
+      callManageRoster({
         action: 'SEND_EMAILS',
         className: className,
         pollId: CURRENT_POLL_DATA.pollId
@@ -8689,7 +8720,7 @@
 
       var baseUrl = window.location.href.split('?')[0];
 
-      firebase.functions().httpsCallable('manageRoster')({
+      callManageRoster({
         action: 'GET_LINKS',
         className: className
       }).then(function (result) {
@@ -13191,6 +13222,36 @@
       wizardEditingQuestionIndex = null;
     }
 
+    function refreshWizardClasses(selectEl, desiredClass) {
+      if (PREVIEW_MODE) return;
+      callManageRoster({ action: 'GET_DATA' })
+        .then(function (result) {
+          if (result.data && result.data.success) {
+            onRosterDataLoaded(result.data, selectedRosterClass);
+            var updatedClasses = (window.ALL_CLASSES && window.ALL_CLASSES.length > 0) ? window.ALL_CLASSES : [];
+            if (selectEl) {
+              if (updatedClasses.length > 0) {
+                selectEl.innerHTML = '<option value=\"\">-- Select a class --</option>';
+                updatedClasses.forEach(function (cls) {
+                  var option = document.createElement('option');
+                  option.value = cls;
+                  option.textContent = cls;
+                  selectEl.appendChild(option);
+                });
+                if (desiredClass) {
+                  selectEl.value = desiredClass;
+                }
+              } else {
+                selectEl.innerHTML = '<option value=\"\" disabled>No classes found (Create one in Dashboard)</option>';
+              }
+            }
+          }
+        })
+        .catch(function (error) {
+          console.warn('[Wizard] Unable to refresh classes for wizard:', error);
+        });
+    }
+
     var wizardQuestionIdCounter = 0;
     var wizardDraggedIndex = null; // For drag-and-drop
     var wizardEditingQuestionIndex = null; // Track which question is being edited
@@ -13303,22 +13364,7 @@
           loadingOpt.textContent = "Loading classes...";
           loadingOpt.disabled = true;
           classSelect.appendChild(loadingOpt);
-
-          // Async check
-          setTimeout(function () {
-            var retryList = (window.ALL_CLASSES && window.ALL_CLASSES.length > 0) ? window.ALL_CLASSES : [];
-            if (retryList.length > 0) {
-              classSelect.innerHTML = '<option value="">-- Select a class --</option>';
-              retryList.forEach(function (cls) {
-                var option = document.createElement('option');
-                option.value = cls;
-                option.textContent = cls;
-                classSelect.appendChild(option);
-              });
-            } else {
-              loadingOpt.textContent = "No classes found (Create one in Dashboard)";
-            }
-          }, 1500);
+          refreshWizardClasses(classSelect, wizardState.className);
         } else {
           classesList.forEach(function (cls) {
             var option = document.createElement('option');
@@ -13344,13 +13390,8 @@
       // Switch to create-poll-view (hide other views)
       setMainSection('create-poll');
 
-      // Show wizard progress in main header and hide session controls
-      var headerWizardProgress = document.getElementById('header-wizard-progress');
+      // Hide session controls while in wizard
       var headerSessionControls = document.getElementById('header-session-controls');
-      if (headerWizardProgress) {
-        headerWizardProgress.classList.remove('hidden');
-        headerWizardProgress.classList.add('flex');
-      }
       if (headerSessionControls) {
         headerSessionControls.classList.add('hidden');
       }
@@ -13387,13 +13428,8 @@
         }
       }
 
-      // Hide wizard progress in main header and restore session controls
-      var headerWizardProgress = document.getElementById('header-wizard-progress');
+      // Restore session controls
       var headerSessionControls = document.getElementById('header-session-controls');
-      if (headerWizardProgress) {
-        headerWizardProgress.classList.add('hidden');
-        headerWizardProgress.classList.remove('flex');
-      }
       if (headerSessionControls) {
         headerSessionControls.classList.remove('hidden');
       }
@@ -13433,13 +13469,8 @@
       wizardQuestionIdCounter = 0;
       wizardEditingQuestionIndex = null;
 
-      // Hide wizard progress in main header and restore session controls
-      var headerWizardProgress = document.getElementById('header-wizard-progress');
+      // Restore session controls
       var headerSessionControls = document.getElementById('header-session-controls');
-      if (headerWizardProgress) {
-        headerWizardProgress.classList.add('hidden');
-        headerWizardProgress.classList.remove('flex');
-      }
       if (headerSessionControls) {
         headerSessionControls.classList.remove('hidden');
       }
@@ -13485,8 +13516,8 @@
     function goToWizardStep(stepNumber) {
       if (stepNumber < 1 || stepNumber > 4) return;
 
-      // Update progress steps in BOTH the wizard header and the main header
-      var progressContainers = ['#header-wizard-progress', '.wizard-progress'];
+      // Update progress steps within the wizard header
+      var progressContainers = ['.wizard-progress'];
       progressContainers.forEach(function (containerSelector) {
         var container = document.querySelector(containerSelector);
         if (!container) return;
@@ -14440,6 +14471,7 @@
     window.openPollCreator = openPollCreator;
     window.openPollWizard = openPollWizard;
     window.closePollWizard = closePollWizard;
+    window.initWizardState = initWizardState;
     window.selectPollMode = selectPollMode;
     window.wizardGoNext = wizardGoNext;
     window.wizardGoBack = wizardGoBack;

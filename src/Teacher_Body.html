@@ -27,41 +27,6 @@
       </div>
     </div>
 
-    <!-- Wizard Progress Steps in Header (shown only during wizard) -->
-    <div id="header-wizard-progress" class="hidden items-center gap-1 ml-4">
-      <div class="progress-step active flex items-center gap-1" data-step="1">
-        <div
-          class="progress-circle h-6 w-6 rounded-full bg-white/20 text-white text-xs font-bold flex items-center justify-center">
-          1</div>
-        <span class="progress-label text-white/80 text-xs font-medium hidden md:inline">Mode</span>
-      </div>
-      <div class="progress-connector w-4 h-0.5 bg-white/30"></div>
-
-      <div class="progress-step flex items-center gap-1" data-step="2">
-        <div
-          class="progress-circle h-6 w-6 rounded-full bg-white/20 text-white/70 text-xs font-bold flex items-center justify-center">
-          2</div>
-        <span class="progress-label text-white/60 text-xs font-medium hidden md:inline">Configure</span>
-      </div>
-      <div class="progress-connector w-4 h-0.5 bg-white/30"></div>
-
-      <div class="progress-step flex items-center gap-1" data-step="3">
-        <div
-          class="progress-circle h-6 w-6 rounded-full bg-white/20 text-white/70 text-xs font-bold flex items-center justify-center">
-          3</div>
-        <span class="progress-label text-white/60 text-xs font-medium hidden md:inline">Questions</span>
-      </div>
-      <div class="progress-connector w-4 h-0.5 bg-white/30"></div>
-
-      <div class="progress-step flex items-center gap-1" data-step="4">
-        <div
-          class="progress-circle h-6 w-6 rounded-full bg-white/20 text-white/70 text-xs font-bold flex items-center justify-center">
-          4</div>
-        <span class="progress-label text-white/60 text-xs font-medium hidden md:inline">Review</span>
-      </div>
-    </div>
-
-
     <div id="header-session-controls" class="flex flex-1 flex-wrap items-center justify-center gap-3 text-sm">
       <div class="min-w-[220px]">
         <label for="poll-select" class="sr-only">Select Poll to Start Session</label>
@@ -281,7 +246,7 @@
   <div class="flex flex-grow overflow-hidden min-h-0">
     <!-- Left Navigation Sidebar -->
     <aside id="dashboard-sidebar"
-      class="hidden lg:flex h-full w-64 flex-shrink-0 flex-col border-r border-veritas-navy/25 bg-veritas-navy p-4 text-brand-white shadow-lg">
+      class="h-full w-64 flex flex-shrink-0 flex-col border-r border-veritas-navy/25 bg-veritas-navy p-4 text-brand-white shadow-lg transition-all duration-300 ease-in-out overflow-hidden">
       <div class="mb-4 px-1">
         <p class="text-xs font-semibold uppercase tracking-[0.32em] text-brand-white/60">Navigation</p>
       </div>
@@ -331,7 +296,7 @@
     </aside>
 
     <!-- Main Content Area -->
-    <main class="flex-1 min-h-0 overflow-y-auto pb-6">
+  <main class="flex-1 min-h-0 overflow-y-auto">
       <!-- Dashboard View (Default) - Redesigned -->
       <div id="dashboard" class="p-8 max-w-7xl mx-auto">
         <!-- Poll Library & Session Management (Combined) -->
@@ -432,7 +397,7 @@
               <h3 class="text-2xl font-bold text-veritas-navy dark:text-white mb-2">Poll Library</h3>
               <p class="text-gray-600 dark:text-gray-400 mb-6">Create and manage your interactive polls and secure
                 assessments here.</p>
-              <button onclick="initWizardState(); openPollWizard()" class="dashboard-cta-button primary">
+              <button onclick="Wizard.init()" class="dashboard-cta-button primary">
                 <span class="material-symbols-outlined">add_circle</span>
                 <span>Create New Poll</span>
               </button>
@@ -940,7 +905,7 @@
 
   <!-- End of Live Poll View Redesign -->
   <!-- Roster Manager View -->
-  <div id="roster-manager" class="p-6 grid grid-cols-1 lg:grid-cols-4 gap-6" style="display: none;">
+  <div id="roster-manager" class="pt-0 px-6 pb-6 grid grid-cols-1 lg:grid-cols-4 gap-6" style="display: none; margin-top: -2rem;">
     <div
       class="lg:col-span-1 bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-5 shadow-sm flex flex-col">
       <div class="flex items-center justify-between mb-4">
@@ -1396,7 +1361,7 @@
   </div>
 
   <!-- Poll Creation Wizard View - Compact Design -->
-  <div id="create-poll-view" class="hidden h-full flex flex-col bg-white dark:bg-brand-dark-gray">
+  <div id="create-poll-view" class="hidden h-full flex flex-col bg-white dark:bg-brand-dark-gray pt-0">
 
     <!-- Compact Header with Inline Progress -->
     <div
@@ -1658,12 +1623,12 @@
     <div
       class="wizard-footer bg-white dark:bg-brand-dark-gray border-t border-brand-light-gray dark:border-brand-dark-gray/40 px-8 py-4 flex items-center justify-between">
       <button type="button"
-        class="btn-secondary h-12 px-6 rounded-lg font-bold text-brand-dark-gray hover:bg-brand-light-gray/50 transition-colors disabled:opacity-50"
-        id="wizard-back-btn" onclick="wizardGoBack()" disabled>Back</button>
+        class="btn-secondary h-12 px-6 rounded-lg font-bold text-red-600 hover:bg-red-50 transition-colors"
+        onclick="closePollWizard()">Cancel</button>
       <div class="flex items-center gap-3">
         <button type="button"
-          class="btn-secondary h-12 px-6 rounded-lg font-bold text-red-600 hover:bg-red-50 transition-colors"
-          onclick="closePollWizard()">Cancel</button>
+          class="btn-secondary h-12 px-6 rounded-lg font-bold text-brand-dark-gray hover:bg-brand-light-gray/50 transition-colors disabled:opacity-50"
+          id="wizard-back-btn" onclick="wizardGoBack()" disabled>Back</button>
         <button type="button"
           class="btn-primary h-12 px-8 rounded-lg bg-primary text-white font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
           id="wizard-next-btn" onclick="wizardGoNext()">Next</button>

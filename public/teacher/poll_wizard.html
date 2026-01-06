@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,9 @@
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- MathLive for math formulas -->
+  <script src="//unpkg.com/mathlive"></script>
 
   <!-- Quill Rich Text Editor -->
   <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
@@ -19,6 +23,10 @@
     import { getFirestore, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
     import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
     import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+    import { richTextManager } from './RichTextManager.js';
+
+    // Make available globally
+    window.richTextManager = richTextManager;
 
     // Firebase Configuration
     const firebaseConfig = {
@@ -119,6 +127,7 @@
     }
   </style>
 </head>
+
 <body class="bg-gray-50 min-h-screen pb-24">
 
   <!-- Authentication Section -->
@@ -128,15 +137,17 @@
         <h1 class="text-3xl font-bold text-gray-900 mb-2 text-center">Veritas Poll Wizard</h1>
         <p class="text-gray-600 text-center mb-8">Sign in to create your poll</p>
 
-        <button
-          onclick="signInWithGoogle()"
-          class="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm bg-white text-gray-700 hover:bg-gray-50 transition-colors font-medium"
-        >
+        <button onclick="signInWithGoogle()"
+          class="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm bg-white text-gray-700 hover:bg-gray-50 transition-colors font-medium">
           <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            <path fill="#4285F4"
+              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+            <path fill="#34A853"
+              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+            <path fill="#FBBC05"
+              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+            <path fill="#EA4335"
+              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
           </svg>
           Sign in with Google
         </button>
@@ -146,29 +157,10 @@
 
   <!-- Main Content -->
   <div id="main-content" class="hidden">
-    <!-- Header -->
-    <header class="bg-white shadow sticky top-0 z-40">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div class="flex justify-between items-center">
-          <div>
-            <h1 class="text-2xl font-bold text-gray-900">Poll Wizard</h1>
-            <p class="text-sm text-gray-500">Create engaging assessments with ease</p>
-          </div>
-          <div class="flex items-center space-x-4">
-            <span class="text-sm text-gray-600" id="user-info"></span>
-            <button
-              onclick="signOutUser()"
-              class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </div>
-    </header>
+    <!-- Header Removed by Request for Modal integration -->
 
     <!-- Main Poll Builder -->
-    <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
 
       <!-- Header Config Card -->
       <div class="bg-white rounded-lg shadow-md p-6 mb-8">
@@ -179,12 +171,9 @@
           <label for="poll-title" class="block text-sm font-medium text-gray-700 mb-2">
             Poll Title <span class="text-red-500">*</span>
           </label>
-          <input
-            type="text"
-            id="poll-title"
+          <input type="text" id="poll-title"
             class="w-full px-4 py-3 text-lg border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter poll title..."
-          />
+            placeholder="Enter poll title..." />
         </div>
 
         <!-- Target Class -->
@@ -192,10 +181,8 @@
           <label for="target-class" class="block text-sm font-medium text-gray-700 mb-2">
             Target Class <span class="text-red-500">*</span>
           </label>
-          <select
-            id="target-class"
-            class="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
+          <select id="target-class"
+            class="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
             <option value="">Select a class...</option>
           </select>
         </div>
@@ -207,23 +194,15 @@
             <label for="timer-minutes" class="block text-sm font-medium text-gray-700 mb-2">
               Timer (minutes)
             </label>
-            <input
-              type="number"
-              id="timer-minutes"
+            <input type="number" id="timer-minutes"
               class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="0 = No timer"
-              min="0"
-              value="0"
-            />
+              placeholder="0 = No timer" min="0" value="0" />
           </div>
 
           <!-- Shuffle Questions -->
           <div class="flex items-center pt-8">
-            <input
-              type="checkbox"
-              id="shuffle-questions"
-              class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
+            <input type="checkbox" id="shuffle-questions"
+              class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
             <label for="shuffle-questions" class="ml-3 text-sm font-medium text-gray-700">
               Shuffle Questions
             </label>
@@ -251,10 +230,8 @@
     <div class="floating-action-bar">
       <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div class="flex justify-between items-center">
-          <button
-            onclick="addQuestion()"
-            class="px-6 py-3 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors font-medium flex items-center"
-          >
+          <button onclick="addQuestion()"
+            class="px-6 py-3 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors font-medium flex items-center">
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
@@ -263,11 +240,8 @@
 
           <div class="flex items-center space-x-3">
             <span id="question-count" class="text-sm text-gray-600">0 questions</span>
-            <button
-              onclick="savePoll()"
-              id="save-btn"
-              class="px-8 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium shadow-lg"
-            >
+            <button onclick="savePoll()" id="save-btn"
+              class="px-8 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium shadow-lg">
               Save & Publish
             </button>
           </div>
@@ -432,12 +406,12 @@
           <label class="block text-sm font-medium text-gray-700 mb-2">
             Answer Options <span class="text-red-500">*</span>
           </label>
-          <div id="options-${question.id}" class="space-y-2">
+          <div id="options-${question.id}" class="space-y-4">
             <!-- Options will be rendered here -->
           </div>
           <button
             onclick="addOption('${question.id}')"
-            class="mt-2 px-4 py-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
+            class="mt-4 px-4 py-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
             id="add-option-btn-${question.id}"
           >
             + Add Option (${question.options.length}/6)
@@ -461,69 +435,57 @@
 
       container.appendChild(questionCard);
 
-      // Initialize Quill editor
-      initializeQuill(question.id);
+      // Initialize Quill editor for Stem
+      const quill = window.richTextManager.initialize(`editor-${question.id}`, 'stem', 'Enter your question text...');
+      if (quill) {
+        if (question.stemHtml) {
+          window.richTextManager.setContent(`editor-${question.id}`, question.stemHtml);
+        }
+
+        quill.on('text-change', () => {
+          question.stemHtml = window.richTextManager.getContent(`editor-${question.id}`);
+        });
+      }
 
       // Render options
       renderOptions(question.id);
     }
 
-    function initializeQuill(questionId) {
-      const quill = new Quill(`#editor-${questionId}`, {
-        theme: 'snow',
-        placeholder: 'Enter your question text...',
-        modules: {
-          toolbar: [
-            ['bold', 'italic', 'underline'],
-            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-            ['link'],
-            ['clean']
-          ]
-        }
-      });
-
-      // Store the instance
-      quillInstances[questionId] = quill;
-
-      // Update question data on change
-      quill.on('text-change', () => {
-        const question = questions.find(q => q.id === questionId);
-        if (question) {
-          question.stemHtml = quill.root.innerHTML;
-        }
-      });
-    }
 
     function renderOptions(questionId) {
       const question = questions.find(q => q.id === questionId);
       const container = document.getElementById(`options-${questionId}`);
 
+      // We need to preserve existing editor contents if we are re-rendering simply to add/remove an option.
+      // However, Quill editors on DOM nodes that are removed will be destroyed.
+      // Easiest strategy: Re-render HTML structure, then re-initialize editors and populate them from data model.
+
       container.innerHTML = '';
 
       question.options.forEach((option, index) => {
         const optionDiv = document.createElement('div');
-        optionDiv.className = 'flex items-center space-x-3';
+        optionDiv.className = 'flex items-start space-x-3'; // items-start for multiline editor
         optionDiv.innerHTML = `
-          <input
-            type="radio"
-            name="correct-${questionId}"
-            id="correct-${questionId}-${index}"
-            class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300"
-            onchange="setCorrectAnswer('${questionId}', ${index})"
-            ${question.correctAnswer === index ? 'checked' : ''}
-          />
-          <input
-            type="text"
-            id="option-text-${questionId}-${index}"
-            class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Option ${index + 1}"
-            value="${option.text}"
-            oninput="updateOptionText('${questionId}', ${index}, this.value)"
-          />
+          <div class="pt-2"> <!-- Padding to align radio with first line of text -->
+            <input
+                type="radio"
+                name="correct-${questionId}"
+                id="correct-${questionId}-${index}"
+                class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300"
+                onchange="setCorrectAnswer('${questionId}', ${index})"
+                ${question.correctAnswer === index ? 'checked' : ''}
+            />
+          </div>
+          
+          <div class="flex-1">
+             <!-- Editor Container -->
+             <div id="option-editor-${questionId}-${index}" class="bg-white border border-gray-300 rounded-md" style="min-height: 60px;"></div>
+          </div>
+
           ${question.options.length > 2 ? `
             <button
               onclick="removeOption('${questionId}', ${index})"
-              class="text-red-600 hover:text-red-800 transition-colors"
+              class="text-red-600 hover:text-red-800 transition-colors pt-2"
               title="Remove option"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -533,6 +495,20 @@
           ` : '<div class="w-5"></div>'}
         `;
         container.appendChild(optionDiv);
+
+        // Initialize Quill for this option
+        const editorId = `option-editor-${questionId}-${index}`;
+        const quill = window.richTextManager.initialize(editorId, 'option', `Option ${index + 1}`);
+
+        if (quill) {
+          if (option.text) { // "text" is actually holding HTML now
+            window.richTextManager.setContent(editorId, option.text);
+          }
+
+          quill.on('text-change', () => {
+            option.text = window.richTextManager.getContent(editorId);
+          });
+        }
       });
 
       // Update add option button
@@ -605,6 +581,9 @@
         }
       }
     }
+
+    // updateOptionText function removed as it is no longer used (Quill handles updates)
+
 
     function renumberQuestions() {
       questions.forEach((question, index) => {
@@ -808,8 +787,8 @@
         for (let i = 0; i < questions.length; i++) {
           const q = questions[i];
 
-          // Check question text
-          const stemText = quillInstances[q.id].getText().trim();
+          // Check question text using RichTextManager
+          const stemText = window.richTextManager.getText(`editor-${q.id}`).trim();
           if (!stemText) {
             alert(`❌ Question ${i + 1} must have text`);
             document.getElementById(`question-${q.id}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -825,7 +804,10 @@
 
           // Check all options have text
           for (let j = 0; j < q.options.length; j++) {
-            if (!q.options[j].text.trim()) {
+            const editorId = `option-editor-${q.id}-${j}`;
+            const optionText = window.richTextManager.getText(editorId).trim();
+
+            if (!optionText) {
               alert(`❌ Question ${i + 1}, Option ${j + 1} cannot be empty`);
               document.getElementById(`question-${q.id}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
               return;
@@ -900,4 +882,5 @@
   </script>
 
 </body>
+
 </html>

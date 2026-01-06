@@ -11,17 +11,19 @@
      Phase: 3A - Shared Components
      ============================================================================= -->
 
-<base target="_top">
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- Google Fonts -->
-<link href="https://fonts.googleapis.com" rel="preconnect"/>
-<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet" />
 
-<!-- Material Symbols -->
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+  <!-- Material Symbols -->
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
 
   <!-- =============================================================================
      VERITAS LIVE POLL - SHARED CSS CUSTOM PROPERTIES
@@ -31,128 +33,128 @@
      Phase: 3A - Shared Components
      ============================================================================= -->
 
-<style>
-  /* Veritas Design System - CSS Custom Properties */
-  :root {
-    /* Brand Colors */
-    --veritas-navy: #12385d;
-    --veritas-gold: #c5a05a;
-    --brand-white: #ffffff;
-    --brand-light-gray: #d9e0e7;
-    --brand-dark-gray: #242424;
+  <style>
+    /* Veritas Design System - CSS Custom Properties */
+    :root {
+      /* Brand Colors */
+      --veritas-navy: #12385d;
+      --veritas-gold: #c5a05a;
+      --brand-white: #ffffff;
+      --brand-light-gray: #d9e0e7;
+      --brand-dark-gray: #242424;
 
-    /* Background Colors */
-    --bg-light: #f7f8fa;
-    --bg-dark: #0f1723;
-    --bg-card: #ffffff;
-    --bg-elevated: #f8fafc;
-    --bg-glass: rgba(255, 255, 255, 0.7);
-    --bg-glass-dark: rgba(15, 23, 42, 0.7);
+      /* Background Colors */
+      --bg-light: #f7f8fa;
+      --bg-dark: #0f1723;
+      --bg-card: #ffffff;
+      --bg-elevated: #f8fafc;
+      --bg-glass: rgba(255, 255, 255, 0.7);
+      --bg-glass-dark: rgba(15, 23, 42, 0.7);
 
-    /* Text Colors */
-    --text-primary: #111111;
-    --text-secondary: #4b5563;
-    --text-muted: #6b7280;
-    --text-on-navy: #ffffff;
+      /* Text Colors */
+      --text-primary: #111111;
+      --text-secondary: #4b5563;
+      --text-muted: #6b7280;
+      --text-on-navy: #ffffff;
 
-    /* Semantic Colors */
-    --success-green: #1b5e20;
-    --success-light: #2e7d32;
-    --success-bg: #e8f5ec;
-    --success-bg-light: #ecfdf5;
-    --error-red: #c62828;
+      /* Semantic Colors */
+      --success-green: #1b5e20;
+      --success-light: #2e7d32;
+      --success-bg: #e8f5ec;
+      --success-bg-light: #ecfdf5;
+      --error-red: #c62828;
 
-    /* Opacity Modifiers */
-    --navy-06: rgba(18, 56, 93, 0.06);
-    --navy-10: rgba(18, 56, 93, 0.1);
-    --navy-12: rgba(18, 56, 93, 0.12);
-    --navy-14: rgba(18, 56, 93, 0.14);
-    --gold-08: rgba(197, 160, 90, 0.08);
+      /* Opacity Modifiers */
+      --navy-06: rgba(18, 56, 93, 0.06);
+      --navy-10: rgba(18, 56, 93, 0.1);
+      --navy-12: rgba(18, 56, 93, 0.12);
+      --navy-14: rgba(18, 56, 93, 0.14);
+      --gold-08: rgba(197, 160, 90, 0.08);
 
-    /* Spacing Scale (following 8px baseline) */
-    --space-xs: 4px;
-    --space-sm: 8px;
-    --space-md: 16px;
-    --space-lg: 24px;
-    --space-xl: 32px;
-    --space-2xl: 48px;
+      /* Spacing Scale (following 8px baseline) */
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 16px;
+      --space-lg: 24px;
+      --space-xl: 32px;
+      --space-2xl: 48px;
 
-    /* Border Radius */
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 14px;
-    --radius-xl: 16px;
-    --radius-2xl: 24px;
-    --radius-full: 9999px;
+      /* Border Radius */
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 14px;
+      --radius-xl: 16px;
+      --radius-2xl: 24px;
+      --radius-full: 9999px;
 
-    /* Depth & Glassmorphism */
-    --glass-blur: blur(12px);
-    --glass-border: rgba(255, 255, 255, 0.2);
-    --glass-border-dark: rgba(255, 255, 255, 0.1);
-    --shadow-glass: 0 8px 32px 0 rgba(18, 56, 93, 0.1);
-    --shadow-premium: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      /* Depth & Glassmorphism */
+      --glass-blur: blur(12px);
+      --glass-border: rgba(255, 255, 255, 0.2);
+      --glass-border-dark: rgba(255, 255, 255, 0.1);
+      --shadow-glass: 0 8px 32px 0 rgba(18, 56, 93, 0.1);
+      --shadow-premium: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 
-    /* Interactive Glows */
-    --glow-navy: 0 0 15px rgba(18, 56, 93, 0.3);
-    --glow-gold: 0 0 15px rgba(197, 160, 90, 0.3);
+      /* Interactive Glows */
+      --glow-navy: 0 0 15px rgba(18, 56, 93, 0.3);
+      --glow-gold: 0 0 15px rgba(197, 160, 90, 0.3);
 
-    /* Enhanced Semantic Colors (WCAG AA Compliant) */
-    --primary: #12385d;
-    --primary-hover: #0f2d4a;
-    --primary-light: #1a4a7a;
-    --secondary: #c5a05a;
-    --secondary-hover: #b08f4d;
+      /* Enhanced Semantic Colors (WCAG AA Compliant) */
+      --primary: #12385d;
+      --primary-hover: #0f2d4a;
+      --primary-light: #1a4a7a;
+      --secondary: #c5a05a;
+      --secondary-hover: #b08f4d;
 
-    /* Status Colors with Better Contrast */
-    --success: #16a34a;
-    --success-bg: #dcfce7;
-    --success-border: #86efac;
-    --warning: #f59e0b;
-    --warning-bg: #fef3c7;
-    --warning-border: #fcd34d;
-    --error: #dc2626;
-    --error-bg: #fee2e2;
-    --error-border: #fca5a5;
-    --info: #3b82f6;
-    --info-bg: #dbeafe;
-    --info-border: #93c5fd;
+      /* Status Colors with Better Contrast */
+      --success: #16a34a;
+      --success-bg: #dcfce7;
+      --success-border: #86efac;
+      --warning: #f59e0b;
+      --warning-bg: #fef3c7;
+      --warning-border: #fcd34d;
+      --error: #dc2626;
+      --error-bg: #fee2e2;
+      --error-border: #fca5a5;
+      --info: #3b82f6;
+      --info-bg: #dbeafe;
+      --info-border: #93c5fd;
 
-    /* Interactive States */
-    --focus-ring: 0 0 0 3px rgba(18, 56, 93, 0.2);
-    --hover-lift: 0 4px 12px rgba(0, 0, 0, 0.1);
-    --active-press: 0 2px 4px rgba(0, 0, 0, 0.1);
+      /* Interactive States */
+      --focus-ring: 0 0 0 3px rgba(18, 56, 93, 0.2);
+      --hover-lift: 0 4px 12px rgba(0, 0, 0, 0.1);
+      --active-press: 0 2px 4px rgba(0, 0, 0, 0.1);
 
-    /* Typography Scale */
-    --text-xs: 0.75rem;
-    /* 12px */
-    --text-sm: 0.875rem;
-    /* 14px */
-    --text-base: 1rem;
-    /* 16px */
-    --text-lg: 1.125rem;
-    /* 18px */
-    --text-xl: 1.25rem;
-    /* 20px */
-    --text-2xl: 1.5rem;
-    /* 24px */
-    --text-3xl: 1.875rem;
-    /* 30px */
-    --text-4xl: 2.25rem;
-    /* 36px */
+      /* Typography Scale */
+      --text-xs: 0.75rem;
+      /* 12px */
+      --text-sm: 0.875rem;
+      /* 14px */
+      --text-base: 1rem;
+      /* 16px */
+      --text-lg: 1.125rem;
+      /* 18px */
+      --text-xl: 1.25rem;
+      /* 20px */
+      --text-2xl: 1.5rem;
+      /* 24px */
+      --text-3xl: 1.875rem;
+      /* 30px */
+      --text-4xl: 2.25rem;
+      /* 36px */
 
-    /* Line Heights */
-    --leading-tight: 1.25;
-    --leading-normal: 1.5;
-    --leading-relaxed: 1.75;
+      /* Line Heights */
+      --leading-tight: 1.25;
+      --leading-normal: 1.5;
+      --leading-relaxed: 1.75;
 
-    /* Animation Timings */
-    --duration-fast: 150ms;
-    --duration-normal: 200ms;
-    --duration-slow: 300ms;
-    --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
-    --ease-in-out: cubic-bezier(0.4, 0, 0.6, 1);
-  }
-</style>
+      /* Animation Timings */
+      --duration-fast: 150ms;
+      --duration-normal: 200ms;
+      --duration-slow: 300ms;
+      --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
+      --ease-in-out: cubic-bezier(0.4, 0, 0.6, 1);
+    }
+  </style>
 
   <!-- Firebase SDKs (compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -212,237 +214,150 @@
       border-color: #12385d;
       box-shadow: 0 0 0 2px #12385d;
     }
-  </style>
-  <title>Veritas - Exam</title>
-</head>
 
-<body class="bg-gray-100 min-h-screen text-gray-900 font-sans select-none">
+    < !-- KaTeX for math formulas --><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"><script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script><title>Veritas - Exam</title></head><body class="bg-gray-100 min-h-screen text-gray-900 font-sans select-none">< !-- Config Data Injection --><script>var EXAM_CONFIG=<? !=JSON.stringify(examConfig) ?>;
+    var STUDENT_INFO=<? !=JSON.stringify(studentInfo) ?>;
 
-  <!-- Config Data Injection -->
-  <script>
-    var EXAM_CONFIG = <?!= JSON.stringify(examConfig) ?>;
-    var STUDENT_INFO = <?!= JSON.stringify(studentInfo) ?>;
-    var FIREBASE_CONFIG = {"apiKey":"AIzaSyAv0bCe5KIuQx_sou8toBy5DG2PYaB_pBM","authDomain":"classroomproctor.firebaseapp.com","databaseURL":"https://classroomproctor-default-rtdb.firebaseio.com","projectId":"classroomproctor","storageBucket":"classroomproctor.firebasestorage.app","messagingSenderId":"600627073908","appId":"1:600627073908:web:935970f5849b28f6ad5221"};
-    if (!FIREBASE_CONFIG) {
-      console.warn('FIREBASE_CONFIG missing, using default fallback.');
-      FIREBASE_CONFIG = {
-        apiKey: "AIzaSyAv0bCe5KIuQx_sou8toBy5DG2PYaB_pBM",
-        authDomain: "classroomproctor.firebaseapp.com",
-        databaseURL: "https://classroomproctor-default-rtdb.firebaseio.com",
-        projectId: "classroomproctor",
-        storageBucket: "classroomproctor.firebasestorage.app",
-        messagingSenderId: "600627073908",
-        appId: "1:600627073908:web:935970f5849b28f6ad5221"
-      };
-      window.USING_FALLBACK_CONFIG = true;
+    var FIREBASE_CONFIG= {
+      "apiKey": "AIzaSyAv0bCe5KIuQx_sou8toBy5DG2PYaB_pBM", "authDomain":"classroomproctor.firebaseapp.com", "databaseURL":"https://classroomproctor-default-rtdb.firebaseio.com", "projectId":"classroomproctor", "storageBucket":"classroomproctor.firebasestorage.app", "messagingSenderId":"600627073908", "appId":"1:600627073908:web:935970f5849b28f6ad5221"
     }
-    var STUDENT_KEY = <?!= JSON.stringify(studentKey) ?>; // Derived key for Firebase
-  </script>
 
-  <!-- Entry Screen -->
-  <div id="entryScreen" class="min-h-screen flex flex-col items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-8 text-center">
-      <div class="mb-6">
-        <span class="material-symbols-outlined text-6xl text-veritas-navy">school</span>
-      </div>
-      <h1 class="text-2xl font-bold text-gray-900 mb-2">
-        Demo Exam
-      </h1>
-      <p class="text-gray-500 mb-6">Duration:
-        <?= examConfig.durationMinutes > 0 ? examConfig.durationMinutes + ' mins' : 'Untimed' ?>
-      </p>
+    ;
 
-      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left text-sm text-blue-800">
-        <h3 class="font-bold mb-2 flex items-center gap-2">
-          <span class="material-symbols-outlined text-base">info</span>
-          Exam Rules:
-        </h3>
-        <ul class="list-disc pl-5 space-y-1">
-          <li>You must remain in fullscreen mode.</li>
-          <li>Do not switch tabs or windows.</li>
-          <li>Your session is monitored in real-time.</li>
-          <? if (examConfig.proctorMode === 'hard') { ?>
-          <li class="font-bold text-red-700">Violations will lock your exam until a teacher unlocks it.</li>
-          <? } ?>
-        </ul>
-      </div>
+    if ( !FIREBASE_CONFIG) {
+      console.warn('FIREBASE_CONFIG missing, using default fallback.');
 
-      <button onclick="startExam()" class="btn-primary w-full justify-center py-3 text-lg">
-        Start Exam
-      </button>
-    </div>
-  </div>
+      FIREBASE_CONFIG= {
+        apiKey: "AIzaSyAv0bCe5KIuQx_sou8toBy5DG2PYaB_pBM",
+          authDomain: "classroomproctor.firebaseapp.com",
+          databaseURL: "https://classroomproctor-default-rtdb.firebaseio.com",
+          projectId: "classroomproctor",
+          storageBucket: "classroomproctor.firebasestorage.app",
+          messagingSenderId: "600627073908",
+          appId: "1:600627073908:web:935970f5849b28f6ad5221"
+      }
 
-  <!-- Exam Interface (Hidden initially) -->
-  <div id="examInterface" class="hidden min-h-screen flex flex-col h-screen">
+      ;
+      window.USING_FALLBACK_CONFIG=true;
+    }
 
-    <!-- Top Bar -->
-    <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 flex-shrink-0">
-      <div class="flex items-center gap-4">
-        <span class="font-bold text-lg text-gray-900">
-          Demo Exam
-        </span>
-        <span class="text-sm text-gray-500 border-l border-gray-300 pl-4">
-          <?= studentInfo.displayName ?>
-        </span>
-      </div>
-      <div class="flex items-center gap-6">
-        <div id="timerContainer" class="flex items-center gap-2 font-mono text-xl font-bold text-gray-700">
-          <span class="material-symbols-outlined">timer</span>
-          <span id="timerDisplay">--:--</span>
-        </div>
-        <button onclick="submitExam()" class="btn-primary bg-green-600 hover:bg-green-700">
-          Submit Exam
-        </button>
-      </div>
-    </header>
+    var STUDENT_KEY=<? !=JSON.stringify(studentKey) ?>; // Derived key for Firebase
 
-    <div class="flex flex-1 overflow-hidden">
-      <!-- Sidebar Navigation -->
-      <aside class="w-72 bg-white border-r border-gray-200 overflow-y-auto p-4 flex-shrink-0">
-        <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Questions</h3>
-        <div id="questionNavGrid" class="grid grid-cols-4 gap-2">
-          <!-- Populated via JS -->
-        </div>
-      </aside>
+    </script>< !-- Entry Screen --><div id="entryScreen" class="min-h-screen flex flex-col items-center justify-center p-4"><div class="bg-white rounded-xl shadow-xl max-w-md w-full p-8 text-center"><div class="mb-6"><span class="material-symbols-outlined text-6xl text-veritas-navy">school</span></div><h1 class="text-2xl font-bold text-gray-900 mb-2">Demo Exam </h1><p class="text-gray-500 mb-6">Duration: <?=examConfig.durationMinutes>0 ? examConfig.durationMinutes+' mins' : 'Untimed' ?></p><div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left text-sm text-blue-800"><h3 class="font-bold mb-2 flex items-center gap-2"><span class="material-symbols-outlined text-base">info</span>Exam Rules: </h3><ul class="list-disc pl-5 space-y-1"><li>You must remain in fullscreen mode.</li><li>Do not switch tabs or windows.</li><li>Your session is monitored in real-time.</li><? if (examConfig.proctorMode==='hard') {
+      ?><li class="font-bold text-red-700">Violations will lock your exam until a teacher unlocks it.</li><?
+    }
 
-      <!-- Main Content -->
-      <main class="flex-1 overflow-y-auto p-8 bg-gray-50">
-        <div class="max-w-3xl mx-auto">
-          <div id="questionContainer">
-            <!-- Question rendered here -->
-          </div>
+    ?></ul></div><button onclick="startExam()" class="btn-primary w-full justify-center py-3 text-lg">Start Exam </button></div></div>< !-- Exam Interface (Hidden initially) --><div id="examInterface" class="hidden min-h-screen flex flex-col h-screen">< !-- Top Bar --><header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 flex-shrink-0"><div class="flex items-center gap-4"><span class="font-bold text-lg text-gray-900">Demo Exam </span><span class="text-sm text-gray-500 border-l border-gray-300 pl-4"><?=studentInfo.displayName ?></span></div><div class="flex items-center gap-6"><div id="timerContainer" class="flex items-center gap-2 font-mono text-xl font-bold text-gray-700"><span class="material-symbols-outlined">timer</span><span id="timerDisplay">--:--</span></div><button onclick="submitExam()" class="btn-primary bg-green-600 hover:bg-green-700">Submit Exam </button></div></header><div class="flex flex-1 overflow-hidden">< !-- Sidebar Navigation --><aside class="w-72 bg-white border-r border-gray-200 overflow-y-auto p-4 flex-shrink-0"><h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Questions</h3><div id="questionNavGrid" class="grid grid-cols-4 gap-2">< !-- Populated via JS --></div></aside>< !-- Main Content --><main class="flex-1 overflow-y-auto p-8 bg-gray-50"><div class="max-w-3xl mx-auto"><div id="questionContainer">< !-- Question rendered here --></div><div class="flex justify-between mt-8 pt-6 border-t border-gray-200"><button onclick="prevQuestion()" id="btnPrev" class="btn-secondary"><span class="material-symbols-outlined">arrow_back</span>Previous </button><button onclick="nextQuestion()" id="btnNext" class="btn-primary">Next <span class="material-symbols-outlined">arrow_forward</span></button></div></div></main></div></div>< !-- Lock Overlay --><div id="lockOverlay" class="proctor-overlay hidden"><span class="material-symbols-outlined text-8xl mb-6">lock</span><h1 class="text-4xl font-bold mb-4">Exam Locked</h1><p class="text-xl mb-8 max-w-lg">A security violation was detected. Your exam has been paused and your teacher notified. </p><div id="lockReason" class="bg-red-800 bg-opacity-50 px-6 py-3 rounded-lg mb-8 font-mono text-sm">Reason: <span id="lockReasonText">Unknown</span></div><div id="softLockControls" class="hidden"><p class="mb-4">Please return to fullscreen to resume.</p><button onclick="attemptResume()"
+    class="bg-white text-red-600 px-6 py-3 rounded-lg font-bold text-lg hover:bg-gray-100 transition-colors">Return to Fullscreen </button></div><div id="hardLockControls" class="hidden"><p class="text-lg font-semibold animate-pulse">Waiting for teacher approval...</p></div></div><script> // --- STATE ---
+    let questions=[]; // Loaded on start
+    let currentIndex=0;
 
-          <div class="flex justify-between mt-8 pt-6 border-t border-gray-200">
-            <button onclick="prevQuestion()" id="btnPrev" class="btn-secondary">
-              <span class="material-symbols-outlined">arrow_back</span> Previous
-            </button>
-            <button onclick="nextQuestion()" id="btnNext" class="btn-primary">
-              Next <span class="material-symbols-outlined">arrow_forward</span>
-            </button>
-          </div>
-        </div>
-      </main>
-    </div>
-  </div>
+    let answers= {}
 
-  <!-- Lock Overlay -->
-  <div id="lockOverlay" class="proctor-overlay hidden">
-    <span class="material-symbols-outlined text-8xl mb-6">lock</span>
-    <h1 class="text-4xl font-bold mb-4">Exam Locked</h1>
-    <p class="text-xl mb-8 max-w-lg">
-      A security violation was detected. Your exam has been paused and your teacher notified.
-    </p>
-    <div id="lockReason" class="bg-red-800 bg-opacity-50 px-6 py-3 rounded-lg mb-8 font-mono text-sm">
-      Reason: <span id="lockReasonText">Unknown</span>
-    </div>
-
-    <div id="softLockControls" class="hidden">
-      <p class="mb-4">Please return to fullscreen to resume.</p>
-      <button onclick="attemptResume()"
-        class="bg-white text-red-600 px-6 py-3 rounded-lg font-bold text-lg hover:bg-gray-100 transition-colors">
-        Return to Fullscreen
-      </button>
-    </div>
-
-    <div id="hardLockControls" class="hidden">
-      <p class="text-lg font-semibold animate-pulse">Waiting for teacher approval...</p>
-    </div>
-  </div>
-
-  <script>
-    // --- STATE ---
-    let questions = []; // Loaded on start
-    let currentIndex = 0;
-    let answers = {}; // { qId: { choice, text, elapsed } }
-    let examStartTime = null;
-    let timerInterval = null;
-    let isLocked = false;
-    let dbRef = null;
+    ; // { qId: { choice, text, elapsed } }
+    let examStartTime=null;
+    let timerInterval=null;
+    let isLocked=false;
+    let dbRef=null;
 
     // --- FIREBASE INIT ---
     var functions;
+
     (function () {
-      if (FIREBASE_CONFIG) {
-        firebase.initializeApp(FIREBASE_CONFIG);
-        window.VERITAS_FIREBASE_DB = firebase.database();
-        functions = firebase.functions();
-      }
-    })();
+        if (FIREBASE_CONFIG) {
+          firebase.initializeApp(FIREBASE_CONFIG);
+          window.VERITAS_FIREBASE_DB=firebase.database();
+          functions=firebase.functions();
+        }
+      })();
 
     // --- INIT ---
     function startExam() {
+
       // 1. Request Fullscreen
-      document.documentElement.requestFullscreen().then(() => {
-        // 2. Init Firebase logic
-        initFirebaseSession();
+      document.documentElement.requestFullscreen().then(()=> {
+          // 2. Init Firebase logic
+          initFirebaseSession();
 
-        // 3. Init UI
-        document.getElementById('entryScreen').classList.add('hidden');
-        document.getElementById('examInterface').classList.remove('hidden');
+          // 3. Init UI
+          document.getElementById('entryScreen').classList.add('hidden');
+          document.getElementById('examInterface').classList.remove('hidden');
 
-        // 4. Load Content
-        loadQuestions();
+          // 4. Load Content
+          loadQuestions();
 
-        // 5. Start Proctoring Listeners
-        initProctoring();
+          // 5. Start Proctoring Listeners
+          initProctoring();
 
-        // 6. Report Start
-        var manageExamSession = functions.httpsCallable('manageExamSession');
-        manageExamSession({
-          action: 'START',
-          examId: EXAM_CONFIG.examId,
-          studentId: STUDENT_INFO.id,
-          studentName: STUDENT_INFO.displayName
-        }).catch(err => console.error('Report Start Failed', err));
-      }).catch(err => {
+          // 6. Report Start
+          var manageExamSession=functions.httpsCallable('manageExamSession');
+
+          manageExamSession({
+            action: 'START',
+            examId: EXAM_CONFIG.examId,
+            studentId: STUDENT_INFO.id,
+            studentName: STUDENT_INFO.displayName
+          }).catch(err=> console.error('Report Start Failed', err));
+
+      }).catch(err=> {
         alert('Fullscreen is required. Please allow fullscreen to proceed.');
         console.error(err);
       });
     }
 
     function initFirebaseSession() {
-      const db = window.VERITAS_FIREBASE_DB;
-      if (!db) return;
+      const db=window.VERITAS_FIREBASE_DB;
+      if ( !db) return;
 
-      dbRef = db.ref(`sessions/${EXAM_CONFIG.examId}/students/${STUDENT_KEY}`);
+      dbRef=db.ref(`sessions/$ {
+          EXAM_CONFIG.examId
+        }
+
+        /students/$ {
+          STUDENT_KEY
+        }
+
+        `);
 
       // Set initial state
       dbRef.set('ACTIVE');
       dbRef.onDisconnect().set('DISCONNECTED');
 
       // Listen for updates (Remote Lock/Unlock)
-      dbRef.on('value', snap => {
-        const status = snap.val();
-        handleRemoteStatus(status);
-      });
+      dbRef.on('value', snap=> {
+          const status=snap.val();
+          handleRemoteStatus(status);
+        });
     }
 
     function handleRemoteStatus(status) {
-      if (status === 'LOCKED') {
+      if (status==='LOCKED') {
         triggerLock('Teacher Remote Lock', true); // True = remote source
-      } else if (status === 'ACTIVE' && isLocked) {
+      }
+
+      else if (status==='ACTIVE' && isLocked) {
         unlockExam();
       }
     }
 
     function initProctoring() {
+
       // Visibility Change (Tab Switch)
-      document.addEventListener('visibilitychange', () => {
-        if (document.hidden) reportViolation('Tab hidden / Switched app');
-      });
+      document.addEventListener('visibilitychange', ()=> {
+          if (document.hidden) reportViolation('Tab hidden / Switched app');
+        });
 
       // Blur (Window Focus Lost)
-      window.addEventListener('blur', () => {
-        reportViolation('Window lost focus');
-      });
+      window.addEventListener('blur', ()=> {
+          reportViolation('Window lost focus');
+        });
 
       // Fullscreen Exit
-      document.addEventListener('fullscreenchange', () => {
-        if (!document.fullscreenElement && !isLocked) {
-          reportViolation('Exited fullscreen');
-        }
-      });
+      document.addEventListener('fullscreenchange', ()=> {
+          if ( !document.fullscreenElement && !isLocked) {
+            reportViolation('Exited fullscreen');
+          }
+        });
     }
 
     function reportViolation(reason) {
@@ -458,7 +373,8 @@
 
       // 3. Report to Server (Canonical)
       // 3. Report to Server (Canonical)
-      var manageExamSession = functions.httpsCallable('manageExamSession');
+      var manageExamSession=functions.httpsCallable('manageExamSession');
+
       manageExamSession({
         action: 'VIOLATION',
         examId: EXAM_CONFIG.examId,
@@ -469,43 +385,50 @@
     }
 
     function triggerLock(reason, isRemote) {
-      isLocked = true;
-      document.getElementById('lockReasonText').textContent = reason;
+      isLocked=true;
+      document.getElementById('lockReasonText').textContent=reason;
       document.getElementById('lockOverlay').classList.remove('hidden');
 
-      if (EXAM_CONFIG.proctorMode === 'hard') {
+      if (EXAM_CONFIG.proctorMode==='hard') {
         document.getElementById('hardLockControls').classList.remove('hidden');
         document.getElementById('softLockControls').classList.add('hidden');
-      } else {
+      }
+
+      else {
         document.getElementById('hardLockControls').classList.add('hidden');
         document.getElementById('softLockControls').classList.remove('hidden');
       }
     }
 
     function unlockExam() {
-      isLocked = false;
+      isLocked=false;
       document.getElementById('lockOverlay').classList.add('hidden');
+
       // Re-request fullscreen just in case
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => { });
+      if ( !document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(()=> {});
       }
     }
 
     function attemptResume() {
       // Only for Soft Lock
-      if (EXAM_CONFIG.proctorMode === 'hard') return;
+      if (EXAM_CONFIG.proctorMode==='hard') return;
 
-      document.documentElement.requestFullscreen().then(() => {
-        // 1. Optimistic unlock UI
-        unlockExam();
+      document.documentElement.requestFullscreen().then(()=> {
+          // 1. Optimistic unlock UI
+          unlockExam();
 
-        // 2. Update Firebase (Sidecar)
-        if (dbRef) dbRef.set('ACTIVE');
+          // 2. Update Firebase (Sidecar)
+          if (dbRef) dbRef.set('ACTIVE');
 
-        // 3. Notify Server (Clear Locked flag in Sheet)
-        var manageExamSession = functions.httpsCallable('manageExamSession');
-        manageExamSession({ action: 'RESUME', examId: EXAM_CONFIG.examId, studentId: STUDENT_INFO.id });
-      }).catch(err => {
+          // 3. Notify Server (Clear Locked flag in Sheet)
+          var manageExamSession=functions.httpsCallable('manageExamSession');
+
+          manageExamSession({
+            action: 'RESUME', examId: EXAM_CONFIG.examId, studentId: STUDENT_INFO.id
+          });
+
+      }).catch(err=> {
         alert('You must return to fullscreen.');
       });
     }
@@ -513,98 +436,146 @@
     // --- EXAM LOGIC ---
     // --- EXAM LOGIC ---
     function loadQuestions() {
-      var manageExamSession = functions.httpsCallable('manageExamSession');
-      manageExamSession({ action: 'GET_QUESTIONS', examId: EXAM_CONFIG.examId, studentId: STUDENT_INFO.id })
-        .then(result => {
-          questions = result.data.questions || [];
-          if (questions.length === 0) {
-            console.warn('No questions found.');
-            // alert('No questions loaded. Contact teacher.');
-          }
-          renderNav();
-          renderQuestion(0);
-          startTimer();
-        }).catch(err => {
-          console.error('Failed to load questions', err);
-          alert('Failed to load exam questions. Please refresh or contact proctor.');
-        });
+      var manageExamSession=functions.httpsCallable('manageExamSession');
+
+      manageExamSession({
+        action: 'GET_QUESTIONS', examId: EXAM_CONFIG.examId, studentId: STUDENT_INFO.id
+
+      }) .then(result=> {
+        questions=result.data.questions || [];
+
+        if (questions.length===0) {
+          console.warn('No questions found.');
+          // alert('No questions loaded. Contact teacher.');
+        }
+
+        renderNav();
+        renderQuestion(0);
+        startTimer();
+
+      }).catch(err=> {
+        console.error('Failed to load questions', err);
+        alert('Failed to load exam questions. Please refresh or contact proctor.');
+      });
     }
 
     function renderNav() {
-      const grid = document.getElementById('questionNavGrid');
-      grid.innerHTML = '';
-      questions.forEach((q, idx) => {
-        const btn = document.createElement('button');
-        btn.className = `question-nav-btn bg-gray-100 hover:bg-gray-200 text-gray-700`;
-        btn.textContent = idx + 1;
-        btn.onclick = () => renderQuestion(idx);
-        btn.id = `navBtn-${idx}`;
-        grid.appendChild(btn);
-      });
+      const grid=document.getElementById('questionNavGrid');
+      grid.innerHTML='';
+
+      questions.forEach((q, idx)=> {
+          const btn=document.createElement('button');
+          btn.className=`question-nav-btn bg-gray-100 hover:bg-gray-200 text-gray-700`;
+          btn.textContent=idx + 1;
+          btn.onclick=()=> renderQuestion(idx);
+
+          btn.id=`navBtn-$ {
+            idx
+          }
+
+          `;
+          grid.appendChild(btn);
+        });
     }
 
     function renderQuestion(idx) {
       // Save current answer first if any? (handled by change listeners)
-      currentIndex = idx;
-      const q = questions[idx];
-      const container = document.getElementById('questionContainer');
-      const ans = answers[q.id] || {};
+      currentIndex=idx;
+      const q=questions[idx];
+      const container=document.getElementById('questionContainer');
+
+      const ans=answers[q.id] || {}
+
+      ;
 
       // Update Nav State
-      document.querySelectorAll('.question-nav-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById(`navBtn-${idx}`)?.classList.add('active');
+      document.querySelectorAll('.question-nav-btn').forEach(b=> b.classList.remove('active'));
+
+      document.getElementById(`navBtn-$ {
+          idx
+        }
+
+        `)?.classList.add('active');
 
       // Build HTML
-      let html = `
-        <div class="mb-6">
-           <span class="text-sm font-bold text-gray-500 uppercase tracking-wide">Question ${idx + 1} of ${questions.length}</span>
-           <div class="mt-2 text-lg text-gray-900 leading-relaxed">${q.stemHtml}</div>
-           ${q.stemImageFileId ? `<img src="https://drive.google.com/thumbnail?id=${q.stemImageFileId}&sz=w800" class="mt-4 rounded-lg border border-gray-200 max-h-96">` : ''}
-           ${q.stemImageUrl ? `<img src="${q.stemImageUrl}" class="mt-4 rounded-lg border border-gray-200 max-h-96">` : ''}
-        </div>
-      `;
-
-      if (q.type === 'MC' || q.questionType === 'MC') { // Handle both keys
-        html += `<div class="space-y-3">`;
-        q.options.forEach((opt, i) => {
-          // Determine letter: A, B, C, D
-          const letters = "ABCD";
-          const letter = letters[i] || "?";
-          const isSelected = (ans.chosenOption === letter);
-
-          html += `
-              <div onclick="selectOption('${q.id}', '${letter}')" class="option-card flex items-center p-4 rounded-lg border border-gray-200 ${isSelected ? 'selected' : ''}">
-                <div class="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full border-2 ${isSelected ? 'border-veritas-navy bg-veritas-navy text-white' : 'border-gray-300 text-gray-500'} font-bold mr-4">
-                  ${letter}
-                </div>
-                <div class="text-gray-900">${opt.text}</div>
-                ${opt.imageFileId ? `<img src="https://drive.google.com/thumbnail?id=${opt.imageFileId}&sz=w200" class="ml-auto h-16 rounded border">` : ''}
-              </div>
-            `;
-        });
-        html += `</div>`;
-      } else if (q.type === 'SA') {
-        html += `
-           <textarea
-             oninput="recordSA('${q.id}', this.value)"
-             class="w-full p-4 border border-gray-300 rounded-lg focus:ring-veritas-navy focus:border-veritas-navy h-40 text-lg"
-             placeholder="Type your answer here..."
-           >${ans.shortAnswerText || ''}</textarea>
-         `;
+      let html=` <div class="mb-6"><span class="text-sm font-bold text-gray-500 uppercase tracking-wide">Question $ {
+        idx+1
       }
 
-      container.innerHTML = html;
+      of $ {
+        questions.length
+      }
+
+      </span><div class="mt-2 text-lg text-gray-900 leading-relaxed">$ {
+        q.stemHtml
+      }
+
+      </div>$ {
+        q.stemImageFileId ? `<img src="https://drive.google.com/thumbnail?id=${q.stemImageFileId}&sz=w800" class="mt-4 rounded-lg border border-gray-200 max-h-96">`: ''
+      }
+
+      $ {
+        q.stemImageUrl ? `<img src="${q.stemImageUrl}" class="mt-4 rounded-lg border border-gray-200 max-h-96">`: ''
+      }
+
+      </div>`;
+
+      if (q.type==='MC' || q.questionType==='MC') {
+        // Handle both keys
+        html+=`<div class="space-y-3">`;
+
+        q.options.forEach((opt, i)=> {
+            // Determine letter: A, B, C, D
+            const letters="ABCD";
+            const letter=letters[i] || "?";
+            const isSelected=(ans.chosenOption===letter);
+
+            html +=` <div onclick="selectOption('${q.id}', '${letter}')" class="option-card flex items-center p-4 rounded-lg border border-gray-200 ${isSelected ? 'selected' : ''}" > <div class="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full border-2 ${isSelected ? 'border-veritas-navy bg-veritas-navy text-white' : 'border-gray-300 text-gray-500'} font-bold mr-4" > $ {
+              letter
+            }
+
+            </div> <div class="text-gray-900" >$ {
+              opt.text
+            }
+
+            </div> $ {
+              opt.imageFileId ? `<img src="https://drive.google.com/thumbnail?id=${opt.imageFileId}&sz=w200" class="ml-auto h-16 rounded border" >` : ''
+            }
+
+            </div> `;
+          });
+        html+=`</div>`;
+      }
+
+      else if (q.type==='SA') {
+        html+=` <textarea oninput="recordSA('${q.id}', this.value)"
+        class="w-full p-4 border border-gray-300 rounded-lg focus:ring-veritas-navy focus:border-veritas-navy h-40 text-lg"
+        placeholder="Type your answer here..."
+
+        >$ {
+          ans.shortAnswerText || ''
+        }
+
+        </textarea>`;
+      }
+
+      container.innerHTML=html;
 
       // Update Buttons
-      document.getElementById('btnPrev').disabled = (idx === 0);
-      document.getElementById('btnNext').style.visibility = (idx === questions.length - 1) ? 'hidden' : 'visible';
+      document.getElementById('btnPrev').disabled=(idx===0);
+      document.getElementById('btnNext').style.visibility=(idx===questions.length - 1) ? 'hidden' : 'visible';
     }
 
     function selectOption(qId, letter) {
       if (isLocked) return;
-      if (!answers[qId]) answers[qId] = { questionId: qId, questionType: 'MC' };
-      answers[qId].chosenOption = letter;
-      answers[qId].elapsedSeconds = (answers[qId].elapsedSeconds || 0) + 1; // Approx tracking
+
+      if ( !answers[qId]) answers[qId]= {
+        questionId: qId, questionType: 'MC'
+      }
+
+      ;
+      answers[qId].chosenOption=letter;
+      answers[qId].elapsedSeconds=(answers[qId].elapsedSeconds || 0)+1; // Approx tracking
 
       // Re-render to update classes
       renderQuestion(currentIndex);
@@ -613,129 +584,140 @@
 
     function recordSA(qId, text) {
       if (isLocked) return;
-      if (!answers[qId]) answers[qId] = { questionId: qId, questionType: 'SA' };
-      answers[qId].shortAnswerText = text;
+
+      if ( !answers[qId]) answers[qId]= {
+        questionId: qId, questionType: 'SA'
+      }
+
+      ;
+      answers[qId].shortAnswerText=text;
       markNavAnswered(currentIndex);
     }
 
     function markNavAnswered(idx) {
-      document.getElementById(`navBtn-${idx}`).classList.add('answered');
+      document.getElementById(`navBtn-$ {
+          idx
+        }
+
+        `).classList.add('answered');
     }
 
-    function nextQuestion() { if (currentIndex < questions.length - 1) renderQuestion(currentIndex + 1); }
-    function prevQuestion() { if (currentIndex > 0) renderQuestion(currentIndex - 1); }
+    function nextQuestion() {
+      if (currentIndex < questions.length - 1) renderQuestion(currentIndex + 1);
+    }
+
+    function prevQuestion() {
+      if (currentIndex > 0) renderQuestion(currentIndex - 1);
+    }
 
     function startTimer() {
-      if (EXAM_CONFIG.durationMinutes <= 0) return;
+      if (EXAM_CONFIG.durationMinutes <=0) return;
 
-      const endMs = Date.now() + (EXAM_CONFIG.durationMinutes * 60 * 1000);
+      const endMs=Date.now()+(EXAM_CONFIG.durationMinutes * 60 * 1000);
 
-      timerInterval = setInterval(() => {
-        const remain = Math.ceil((endMs - Date.now()) / 1000);
-        if (remain <= 0) {
-          clearInterval(timerInterval);
-          document.getElementById('timerDisplay').textContent = "00:00";
-          alert("Time is up! Submitting exam.");
-          submitExam(true);
-          return;
+      timerInterval=setInterval(()=> {
+          const remain=Math.ceil((endMs - Date.now()) / 1000);
+
+          if (remain <=0) {
+            clearInterval(timerInterval);
+            document.getElementById('timerDisplay').textContent="00:00";
+            alert("Time is up! Submitting exam.");
+            submitExam(true);
+            return;
+          }
+
+          const m=Math.floor(remain / 60);
+          const s=remain % 60;
+
+          document.getElementById('timerDisplay').textContent=`$ {
+            m.toString().padStart(2, '0')
+          }
+
+          :$ {
+            s.toString().padStart(2, '0')
+          }
+
+          `;
+
+          if (remain < 300) {
+            // 5 mins
+            document.getElementById('timerContainer').classList.add('text-red-600');
+          }
         }
 
-        const m = Math.floor(remain / 60);
-        const s = remain % 60;
-        document.getElementById('timerDisplay').textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-
-        if (remain < 300) { // 5 mins
-          document.getElementById('timerContainer').classList.add('text-red-600');
-        }
-      }, 1000);
+        , 1000);
     }
 
     function submitExam(force) {
-      if (!force && !confirm('Are you sure you want to submit? You cannot return.')) return;
+      if ( !force && !confirm('Are you sure you want to submit? You cannot return.')) return;
 
       // Convert answers map to array
-      const payload = Object.values(answers);
+      const payload=Object.values(answers);
 
       // Show loading
-      document.getElementById('examInterface').innerHTML = `
-         <div class="flex flex-col items-center justify-center h-full">
-           <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-veritas-navy mb-6"></div>
-           <h2 class="text-2xl font-bold">Submitting your answers...</h2>
-         </div>
-       `;
+      document.getElementById('examInterface').innerHTML=` <div class="flex flex-col items-center justify-center h-full"><div class="animate-spin rounded-full h-16 w-16 border-b-4 border-veritas-navy mb-6"></div><h2 class="text-2xl font-bold">Submitting your answers...</h2></div>`;
 
-      var submitExamFn = functions.httpsCallable('submitExam');
-      submitExamFn({ examId: EXAM_CONFIG.examId, studentId: STUDENT_INFO.id, answers: payload })
-        .then(resData => {
-          var res = resData.data;
-          // Set final status in Sidecar
-          if (dbRef) dbRef.set('FINISHED');
+      var submitExamFn=functions.httpsCallable('submitExam');
 
-          document.body.innerHTML = `
-            <div class="min-h-screen flex flex-col items-center justify-center bg-green-50 p-4 text-center">
-              <span class="material-symbols-outlined text-8xl text-green-600 mb-6">check_circle</span>
-              <h1 class="text-4xl font-bold text-gray-900 mb-2">Exam Submitted</h1>
-              <p class="text-lg text-gray-600">Your responses have been recorded successfully.</p>
-              ${EXAM_CONFIG.showScoreToStudent ? `<p class="mt-6 text-2xl font-bold text-veritas-navy">Score: ${res.score}</p>` : ''}
-              <button onclick="window.close()" class="mt-8 btn-primary">Close Window</button>
-            </div>
-          `;
-          document.exitFullscreen().catch(() => { });
+      submitExamFn({
+        examId: EXAM_CONFIG.examId, studentId: STUDENT_INFO.id, answers: payload
 
-        }).catch(err => {
-          // CRITICAL FIX: Proper error handling to prevent data loss
-          console.error('Exam submission failed:', err);
+      }) .then(resData=> {
+        var res=resData.data;
+        // Set final status in Sidecar
+        if (dbRef) dbRef.set('FINISHED');
 
-          // Backup answers to localStorage in case of failure
-          try {
-            const backupKey = 'exam_backup_' + EXAM_CONFIG.examId + '_' + STUDENT_INFO.id;
-            localStorage.setItem(backupKey, JSON.stringify({
+        document.body.innerHTML=` <div class="min-h-screen flex flex-col items-center justify-center bg-green-50 p-4 text-center" > <span class="material-symbols-outlined text-8xl text-green-600 mb-6" >check_circle</span> <h1 class="text-4xl font-bold text-gray-900 mb-2" >Exam Submitted</h1> <p class="text-lg text-gray-600" >Your responses have been recorded successfully.</p> $ {
+          EXAM_CONFIG.showScoreToStudent ? `<p class="mt-6 text-2xl font-bold text-veritas-navy" >Score: $ {
+            res.score
+          }
+
+          </p>` : ''
+        }
+
+        <button onclick="window.close()" class="mt-8 btn-primary" >Close Window</button> </div> `;
+
+        document.exitFullscreen().catch(()=> {});
+
+      }).catch(err=> {
+        // CRITICAL FIX: Proper error handling to prevent data loss
+        console.error('Exam submission failed:', err);
+
+        // Backup answers to localStorage in case of failure
+        try {
+          const backupKey='exam_backup_' + EXAM_CONFIG.examId + '_' + STUDENT_INFO.id;
+
+          localStorage.setItem(backupKey, JSON.stringify({
               examId: EXAM_CONFIG.examId,
               studentId: STUDENT_INFO.id,
               answers: payload,
               timestamp: new Date().toISOString(),
               error: err && err.message ? err.message : String(err)
             }));
-          } catch (storageErr) {
-            console.error('Could not backup answers:', storageErr);
-          }
+      }
 
-          // Sanitize error message to prevent XSS
-          const errorMsg = err && err.message ? err.message : 'Network error - please try again';
-          const safeErrorMsg = String(errorMsg).replace(/[<>&"']/g, function (c) {
-            return { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c];
-          });
+      catch (storageErr) {
+        console.error('Could not backup answers:', storageErr);
+      }
 
-          // Show error UI with retry option
-          document.getElementById('examInterface').innerHTML = `
-             <div class="flex flex-col items-center justify-center h-full p-8">
-               <span class="material-symbols-outlined text-8xl text-red-600 mb-6">error</span>
-               <h2 class="text-3xl font-bold text-gray-900 mb-4">Submission Failed</h2>
-               <p class="text-lg text-gray-700 mb-2 max-w-md text-center">
-                 Your answers could not be submitted due to a network error.
-               </p>
-               <p class="text-sm text-gray-600 mb-6 max-w-md text-center bg-red-50 p-3 rounded border border-red-200">
-                 ${safeErrorMsg}
-               </p>
-               <p class="text-sm text-green-700 mb-8 max-w-md text-center bg-green-50 p-3 rounded border border-green-200">
-                 ✓ Your answers have been saved locally as a backup.
-               </p>
-               <div class="flex gap-4">
-                 <button onclick="submitExam(true)" class="px-6 py-3 bg-veritas-navy text-white rounded-lg hover:bg-blue-900 font-semibold transition-colors">
-                   Retry Submission
-                 </button>
-                 <button onclick="location.reload()" class="px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-semibold transition-colors">
-                   Reload Page
-                 </button>
-               </div>
-               <p class="text-xs text-gray-500 mt-6 max-w-md text-center">
-                 If the problem persists, contact your teacher. Your answers are saved in your browser.
-               </p>
-             </div>
-           `;
-        });
+      // Sanitize error message to prevent XSS
+      const errorMsg=err && err.message ? err.message : 'Network error - please try again';
+
+      const safeErrorMsg=String(errorMsg).replace(/[<>&"']/g, function (c) {
+ return {
+          '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;'
+        }
+
+        [c];
+      });
+
+    // Show error UI with retry option
+    document.getElementById('examInterface').innerHTML=` <div class="flex flex-col items-center justify-center h-full p-8" > <span class="material-symbols-outlined text-8xl text-red-600 mb-6" >error</span> <h2 class="text-3xl font-bold text-gray-900 mb-4" >Submission Failed</h2> <p class="text-lg text-gray-700 mb-2 max-w-md text-center" > Your answers could not be submitted due to a network error. </p> <p class="text-sm text-gray-600 mb-6 max-w-md text-center bg-red-50 p-3 rounded border border-red-200" > $ {
+      safeErrorMsg
     }
-  </script>
-</body>
 
-</html>
+    </p> <p class="text-sm text-green-700 mb-8 max-w-md text-center bg-green-50 p-3 rounded border border-green-200" > ✓ Your answers have been saved locally as a backup. </p> <div class="flex gap-4" > <button onclick="submitExam(true)" class="px-6 py-3 bg-veritas-navy text-white rounded-lg hover:bg-blue-900 font-semibold transition-colors" > Retry Submission </button> <button onclick="location.reload()" class="px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-semibold transition-colors" > Reload Page </button> </div> <p class="text-xs text-gray-500 mt-6 max-w-md text-center" > If the problem persists, contact your teacher. Your answers are saved in your browser. </p> </div> `;
+    });
+    }
+
+    </script></body></html>

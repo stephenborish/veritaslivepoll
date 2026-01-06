@@ -20,6 +20,8 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap"
     rel="stylesheet" />
+  <!-- Computer Modern Serif -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/computer-modern-typeface@0.7.0/index.css">
 
   <!-- Material Symbols -->
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
@@ -137,6 +139,36 @@
       }
     };
   </script>
+  pulseDot: {
+  '0%, 80%, 100%': { opacity: '0.25', transform: 'scale(0.85)' },
+  '40%': { opacity: '1', transform: 'scale(1)' }
+  }
+  }
+  }
+  }
+  };
+  </script>
+  <style>
+    /* Custom Drag & Drop Styles */
+    .question-card.dragging {
+      opacity: 0.5;
+      border: 2px dashed #c5a05a;
+    }
+
+    .question-card.drag-over {
+      border-top: 2px solid #12385d;
+    }
+
+    /* Font Support for Quill */
+    .ql-font-computer-modern {
+      font-family: 'Computer Modern Serif', serif;
+    }
+
+    /* Ensure resize handles are visible - OVERRIDE overflow-hidden */
+    .ql-editor {
+      overflow-y: visible !important;
+    }
+  </style>
   <script>
     (function (global) {
       'use strict';
@@ -21967,6 +21999,10 @@
         // ===========================
 
         function goToWizardStep(stepNumber) {
+          // If leaving step 3, sync state
+          if (wizardState.currentStep === 3) {
+            syncWizardStateFromDOM();
+          }
           if (stepNumber < 1 || stepNumber > 4) return;
 
           // Update progress steps within the wizard header
@@ -22061,6 +22097,7 @@
         }
 
         function wizardGoNext() {
+          syncWizardStateFromDOM();
           if (!validateWizardStep(wizardState.currentStep)) {
             return;
           }
@@ -22207,7 +22244,35 @@
             return true;
           }
 
+
           return true;
+        }
+
+        function syncWizardStateFromDOM() {
+          if (wizardState.currentStep !== 3) return;
+
+          wizardState.questions.forEach(function (q, idx) {
+            // Sync Stem
+            if (document.getElementById('q-stem-' + idx)) {
+              var stemContent = richTextManager.getContent('q-stem-' + idx);
+              // Only update if we get content back (avoid overwriting with empty if editor not init)
+              // But empty editor returns empty string or <p><br></p>. 
+              // Check if the element exists in DOM first is crucial.
+              if (stemContent !== null && stemContent !== undefined) {
+                q.questionText = stemContent;
+              }
+            }
+
+            // Sync Options
+            q.options.forEach(function (opt, optIdx) {
+              if (document.getElementById('q-opt-' + idx + '-' + optIdx)) {
+                var optContent = richTextManager.getContent('q-opt-' + idx + '-' + optIdx);
+                if (optContent !== null && optContent !== undefined) {
+                  opt.text = optContent;
+                }
+              }
+            });
+          });
         }
 
         // ===========================
@@ -22215,6 +22280,7 @@
         // ===========================
 
         function addWizardQuestion() {
+          syncWizardStateFromDOM();
           var container = document.getElementById('wizard-questions-list');
           if (!container) return;
 
@@ -22246,6 +22312,7 @@
         }
 
         function removeWizardQuestion(index) {
+          syncWizardStateFromDOM();
           if (wizardState.questions.length <= 1) {
             alert('You must have at least one question.');
             return;
@@ -22257,6 +22324,7 @@
         }
 
         function addWizardOption(qIndex) {
+          syncWizardStateFromDOM();
           var q = wizardState.questions[qIndex];
           if (q.options.length >= 6) {
             alert('Maximum 6 answer choices allowed.');
@@ -22267,6 +22335,7 @@
         }
 
         function removeWizardOption(qIndex, optIndex) {
+          syncWizardStateFromDOM();
           var q = wizardState.questions[qIndex];
           if (q.options.length <= 2) {
             alert('Minimum 2 answer choices required.');
@@ -22281,13 +22350,72 @@
         }
 
         function setCorrectAnswer(qIndex, optIndex) {
+          syncWizardStateFromDOM();
           wizardState.questions[qIndex].correctAnswerIndex = optIndex;
+          renderWizardQuestions();
+        }
+
+        /* ===========================
+           DRAG & DROP HANDLERS
+           =========================== */
+        function handleDragStart(e) {
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', this.dataset.qIndex);
+          this.classList.add('dragging');
+        }
+
+        function handleDragOver(e) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          this.classList.add('drag-over');
+          return false;
+        }
+
+        function handleDragLeave(e) {
+          this.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+          e.stopPropagation();
+          e.preventDefault();
+          this.classList.remove('drag-over');
+
+          var fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+          var toIndex = parseInt(this.dataset.qIndex);
+
+          if (fromIndex !== toIndex) {
+            reorderWizardQuestions(fromIndex, toIndex);
+          }
+          return false;
+        }
+
+        function handleDragEnd(e) {
+          this.classList.remove('dragging');
+          this.classList.remove('drag-over');
+          document.querySelectorAll('.question-card').forEach(function (card) {
+            card.classList.remove('drag-over');
+          });
+        }
+
+        function reorderWizardQuestions(fromIndex, toIndex) {
+          syncWizardStateFromDOM(); // CRITICAL: Save state before reordering
+
+          if (fromIndex < 0 || fromIndex >= wizardState.questions.length ||
+            toIndex < 0 || toIndex >= wizardState.questions.length) return;
+
+          var item = wizardState.questions.splice(fromIndex, 1)[0];
+          wizardState.questions.splice(toIndex, 0, item);
+
           renderWizardQuestions();
         }
 
         function renderWizardQuestions() {
           var container = document.getElementById('wizard-questions-list');
           if (!container) return;
+
+          // AUTOSAVE: Sync decoupled to syncWizardStateFromDOM()
+          // This prevents data loss when switching/adding questions
+          // We no longer sync here because the DOM might be stale relative to wizardState modifications
 
           // CLEANUP: Destroy existing Quill instances prevents memory leaks
           for (var i = 0; i < 50; i++) {
@@ -22304,8 +22432,17 @@
             // var questionNumber = qIndex + 1; // Unused in new logic
 
             var questionDiv = document.createElement('div');
-            questionDiv.className = 'question-card bg-white border border-brand-light-gray rounded-xl overflow-hidden shadow-sm transition-all duration-200';
+            // Removed overflow-hidden to allow Resize Handles to appear outside
+            questionDiv.className = 'question-card bg-white border border-brand-light-gray rounded-xl shadow-sm transition-all duration-200 mb-4';
             questionDiv.dataset.qIndex = qIndex;
+
+            // Drag & Drop Attributes
+            questionDiv.setAttribute('draggable', 'true');
+            questionDiv.addEventListener('dragstart', handleDragStart);
+            questionDiv.addEventListener('dragover', handleDragOver);
+            questionDiv.addEventListener('dragleave', handleDragLeave);
+            questionDiv.addEventListener('drop', handleDrop);
+            questionDiv.addEventListener('dragend', handleDragEnd);
 
             // Compact Question Header
             var headerHtml = '<div class="question-card-header flex justify-between items-center px-4 py-2.5 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-brand-light-gray cursor-move" data-drag-handle>' +
@@ -22328,7 +22465,8 @@
               '<div class="flex gap-3">' +
               '<div class="flex-1">' +
               // QUILL REPLACEMENT FOR STEM
-              '<div id="q-stem-' + qIndex + '" class="bg-white rounded-lg border border-brand-light-gray overflow-hidden" style="min-height:80px;"></div>' +
+              // Removed class overflow-hidden
+              '<div id="q-stem-' + qIndex + '" class="bg-white rounded-lg border border-brand-light-gray" style="min-height:80px;"></div>' +
               '</div>' +
               '</div>';
 
@@ -22366,11 +22504,8 @@
               bodyHtml += '<span></span>';
             }
 
-            // Timer
-            bodyHtml += '<div class="flex items-center gap-1.5">' +
-              '<span class="text-xs text-slate-400">Timer:</span>' +
-              '' +
-              '</div></div>'; // end timer row
+            // Timer - REMOVED
+            bodyHtml += '<div class="hidden"></div></div>'; // end timer row
 
             questionDiv.innerHTML = headerHtml + bodyHtml;
             container.appendChild(questionDiv);
@@ -22399,7 +22534,9 @@
           });
 
           // INITIALIZE QUILL - Dynamic with Safety Delay
-          setTimeout(function () {
+          if (window.wizardInitTimeout) clearTimeout(window.wizardInitTimeout);
+
+          window.wizardInitTimeout = setTimeout(function () {
             console.log('Initializing Quill Editors...');
             wizardState.questions.forEach(function (q, qIndex) {
               // Stem
@@ -22436,7 +22573,8 @@
                 }
               });
             });
-          }, 300);
+            window.wizardInitTimeout = null;
+          }, 100);
         }
 
 

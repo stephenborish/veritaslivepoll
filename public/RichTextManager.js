@@ -30,12 +30,21 @@ MathLiveBlot.blotName = 'mathlive'; // format name
 MathLiveBlot.tagName = 'math-field'; // renders as <math-field>
 MathLiveBlot.className = 'math-field-blot'; // optional class
 
-// Register the blot
-Quill.register(MathLiveBlot);
+// Register the blot if not already registered
+if (!Quill.imports['test/mathlive']) {
+    Quill.register(MathLiveBlot);
+}
 
-// Register Image Resize Module
+// Register Font Whitelist
+var Font = Quill.import('formats/font');
+Font.whitelist = ['sans-serif', 'serif', 'monospace', 'computer-modern'];
+Quill.register(Font, true);
+
+// Register Image Resize Module safely
 if (window.ImageResize) {
-    Quill.register('modules/imageResize', window.ImageResize);
+    if (!Quill.imports['modules/imageResize']) {
+        Quill.register('modules/imageResize', window.ImageResize);
+    }
 } else {
     console.warn('ImageResize module not found');
 }
@@ -95,14 +104,15 @@ export class RichTextManager {
 
     getToolbarConfig(type) {
         // Simplified Toolbar - Single Line for both stems and options
-        // Removed: header, blockquote, code-block, indent, direction, video, background
-        // Retained: Bold, Italic, Underline, Strike, Formula, Sub/Super, List, Color, Align, Clean, Link, Image
+        // Removed: header, blockquote, code-block, indent, direction, video
+        // Retained: Font, Bold, Italic, Underline, Strike, Formula, Sub/Super, List, Color, Highlight(Background), Align, Clean, Link, Image
         return [
+            [{ 'font': ['sans-serif', 'serif', 'monospace', 'computer-modern'] }], // Added Font
             ['bold', 'italic', 'underline', 'strike'],
             ['formula'],
             [{ 'script': 'sub' }, { 'script': 'super' }],
             [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-            [{ 'color': [] }],
+            [{ 'color': [] }, { 'background': [] }], // Restored Highlight
             [{ 'align': [] }],
             ['link', 'image'],
             ['clean']
@@ -124,7 +134,7 @@ export class RichTextManager {
         if (quill) {
             // Use clipboard for HTML
             // Note: dangerouslyPasteHTML is standard Quill API (renamed in 2.0 but this is 1.3.6)
-             quill.clipboard.dangerouslyPasteHTML(html);
+            quill.clipboard.dangerouslyPasteHTML(html);
         }
     }
 

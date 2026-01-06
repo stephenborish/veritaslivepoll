@@ -101,6 +101,88 @@
       }
     };
 
+    // === Quill Rich Text Manager ===
+    var QuillManager = {
+      instances: {}, // map id -> quill instance
+
+      // Initialize a new editor
+      init: function (containerId, initialContent, placeholder, onChange) {
+        // Safe check for container
+        var container = document.getElementById(containerId);
+        if (!container) return null;
+
+        // If already initialized, return existing instance
+        // (Though typically we rebuild DOM so this might be a new element with same ID)
+        if (this.instances[containerId]) {
+          // If the element in DOM is different from the one Quill attached to, we must re-init
+          if (this.instances[containerId].container !== container) {
+             delete this.instances[containerId];
+          } else {
+             return this.instances[containerId];
+          }
+        }
+
+        var quill = new Quill('#' + containerId, {
+          theme: 'snow',
+          placeholder: placeholder || 'Enter text...',
+          modules: {
+            toolbar: [
+              ['bold', 'italic', 'underline', 'strike'],
+              ['blockquote', 'code-block'],
+              [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+              [{ 'script': 'sub' }, { 'script': 'super' }],
+              [{ 'color': [] }, { 'background': [] }],
+              ['clean']
+            ]
+          }
+        });
+
+        // Set initial content
+        if (initialContent) {
+          if (typeof initialContent === 'object' && initialContent.ops) {
+            quill.setContents(initialContent);
+          } else {
+            quill.clipboard.dangerouslyPasteHTML(initialContent);
+          }
+        }
+
+        // Bind change event
+        quill.on('text-change', function (delta, oldDelta, source) {
+          if (onChange) {
+            // We use innerHTML of the editor (children of ql-editor)
+            // Quill puts content in .ql-editor
+            var editor = container.querySelector('.ql-editor');
+            var html = editor ? editor.innerHTML : quill.root.innerHTML;
+            var text = quill.getText();
+            var content = quill.getContents();
+            onChange({ html: html, text: text, delta: content });
+          }
+        });
+
+        this.instances[containerId] = quill;
+        return quill;
+      },
+
+      get: function (id) {
+        return this.instances[id];
+      },
+
+      clearAll: function () {
+        this.instances = {};
+      }
+    };
+
+    // UUID Utility
+    function generateUUID() {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+      }
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+
     // Enhanced Error Handling
     var ERROR_MESSAGES = {
       'NetworkError': { title: 'Connection Problem', message: 'Please check your internet and try again.' },
@@ -2051,7 +2133,22 @@
     bindClick('generate-ai-btn', generateAISuggestions);
 
     // NEW FEATURE: Stimulus/Passage
-    bindClick('add-stimulus-btn', openStimulusModal);
+    bindClick('add-stimulus-btn', function() {
+        openStimulusModal();
+        // Initialize Quill for Stimulus content when modal opens
+        // We use a small timeout to ensure the modal is visible (Quill needs dimensions)
+        setTimeout(function() {
+            var existingContent = document.getElementById('stimulus-content-editor').innerHTML;
+            // If empty or just placeholder, maybe init with default?
+            // Actually QuillManager handles idempotency.
+            // Check if we have stored stimulus data in wizardState or similar?
+            // For now, this is a "Create New" flow, so it starts empty.
+            QuillManager.init('stimulus-content-editor', '', 'Enter passage content...', function(content) {
+                // Store temporarily? Or just read on save.
+                // We'll read from QuillManager.get('stimulus-content-editor') on create.
+            });
+        }, 100);
+    });
     bindClick('close-stimulus-modal-btn', closeStimulusModal);
     bindClick('cancel-stimulus-btn', closeStimulusModal);
     bindClick('create-stimulus-btn', createStimulusWithQuestions);
@@ -10306,10 +10403,22 @@
 
     function createStimulusWithQuestions() {
       var title = (document.getElementById('stimulus-title-input').value || '').trim();
-      var content = (document.getElementById('stimulus-content-input').value || '').trim();
+
+      // Get content from Quill
+      var quill = QuillManager.get('stimulus-content-editor');
+      var html = quill ? quill.root.innerHTML : '';
+      var delta = quill ? quill.getContents() : null;
+      var text = quill ? quill.getText() : '';
+
+      // Fallback for non-Quill mode if needed (though we enforced Quill)
+      if (!html) {
+         var input = document.getElementById('stimulus-content-input');
+         if (input) html = input.value;
+      }
+
       var questionCount = parseInt(document.getElementById('stimulus-question-count').value, 10) || 2;
 
-      if (!title && !content) {
+      if (!title && !text.trim()) {
         veritasAlert('Please enter a stimulus title or content.', { title: 'Stimulus Required' });
         return;
       }
@@ -10329,7 +10438,11 @@
           // Stimulus reference
           stimulusId: stimulusId,
           stimulusTitle: title,
-          stimulusContent: content,
+          stimulusHtml: html,
+          stimulusDelta: delta,
+          stimulusText: text,
+          // Legacy support
+          stimulusContent: html,
           isStimulus: i === 0 // First question shows the stimulus
         };
         assignQuestionId(newQuestion);
@@ -13908,12 +14021,14 @@
 
       wizardState.questions.push({
         questionText: '',
+        html: '',
+        delta: null,
         questionImageURL: '',
         options: [
-          { text: '', imageURL: '' },
-          { text: '', imageURL: '' },
-          { text: '', imageURL: '' },
-          { text: '', imageURL: '' }
+          { text: '', html: '', delta: null, imageURL: '', id: generateUUID() },
+          { text: '', html: '', delta: null, imageURL: '', id: generateUUID() },
+          { text: '', html: '', delta: null, imageURL: '', id: generateUUID() },
+          { text: '', html: '', delta: null, imageURL: '', id: generateUUID() }
         ],
         correctAnswerIndex: 0,
         metacognitionEnabled: false,
@@ -13948,7 +14063,7 @@
         alert('Maximum 6 answer choices allowed.');
         return;
       }
-      q.options.push({ text: '', imageURL: '' });
+      q.options.push({ text: '', html: '', delta: null, imageURL: '', id: generateUUID() });
       renderWizardQuestions();
     }
 
@@ -13976,6 +14091,7 @@
       if (!container) return;
 
       container.innerHTML = '';
+      QuillManager.clearAll();
 
       wizardState.questions.forEach(function (q, qIndex) {
         var optionLabels = ['A', 'B', 'C', 'D', 'E', 'F'];
@@ -14000,14 +14116,24 @@
           '<span class="material-symbols-outlined text-lg">delete</span></button>' +
           '</div></div>';
 
+        // METADATA: Custom Metacognition Prompt (Conditional)
+        var metaPromptHtml = '';
+        if (q.metacognitionEnabled) {
+          metaPromptHtml = '<div class="px-4 pt-3 pb-0">' +
+            '<p class="text-xs font-semibold text-slate-500 mb-1">Metacognition Prompt (Optional)</p>' +
+            '<div id="q-meta-' + qIndex + '" class="bg-white" style="height: 80px;"></div>' +
+            '</div>';
+        }
+
         // Compact Question Body
-        var bodyHtml = '<div class="question-card-body p-4 space-y-3">' +
-          // Question Row: Text + Image Upload
+        var bodyHtml = metaPromptHtml + '<div class="question-card-body p-4 space-y-3">' +
+          // Question Row: Rich Text + Image Upload
           '<div class="flex gap-3">' +
-          '<div class="flex-1">' +
-          '<textarea class="wizard-q-text w-full rounded-lg border border-brand-light-gray px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary overflow-hidden min-h-[60px]" style="resize:none;height:auto;" placeholder="Enter question text..." data-q-index="' + qIndex + '">' + escapeHtml(q.questionText || '') + '</textarea>' +
+          '<div class="flex-1 flex flex-col">' +
+          '<label class="text-xs font-semibold text-slate-500 mb-1">Question Stem</label>' +
+          '<div id="q-stem-' + qIndex + '" class="bg-white" style="height: 120px;"></div>' +
           '</div>' +
-          '<div class="shrink-0 flex flex-col items-center gap-1">';
+          '<div class="shrink-0 flex flex-col items-center gap-1 pt-6">';
 
         // Question Image Upload/Preview
         var qImagePreview = getImagePreviewUrl(q.questionImageURL, q.questionImageFileId);
@@ -14032,24 +14158,27 @@
         bodyHtml += '</div></div>';
 
         // Answer Choices - Compact
-        bodyHtml += '<div class="space-y-2">';
+        bodyHtml += '<div class="space-y-3">';
         q.options.forEach(function (opt, optIndex) {
           var isCorrect = q.correctAnswerIndex === optIndex;
-          var correctBorder = isCorrect ? 'border-green-400 bg-green-50/30' : 'border-brand-light-gray/80';
+          var correctBorder = isCorrect ? 'border-green-400 bg-green-50/10' : 'border-brand-light-gray/80';
           var optImagePreview = getImagePreviewUrl(opt.imageURL, opt.imageFileId);
           var optIsUploading = opt.imageURL === 'UPLOADING';
 
-          bodyHtml += '<div class="answer-option flex items-center gap-2 p-2 rounded-lg border ' + correctBorder + ' transition-all">' +
+          bodyHtml += '<div class="answer-option flex items-start gap-2 p-2 rounded-lg border ' + correctBorder + ' transition-all">' +
             // Correct answer radio
-            '<label class="cursor-pointer">' +
+            '<label class="cursor-pointer mt-2">' +
             '<input type="radio" name="correct-' + qIndex + '" class="hidden wizard-correct-radio" data-q-index="' + qIndex + '" data-opt-index="' + optIndex + '" ' + (isCorrect ? 'checked' : '') + '>' +
             '<div class="h-7 w-7 rounded flex items-center justify-center font-bold text-xs transition-all ' +
             (isCorrect ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-primary/10') + '">' + optionLabels[optIndex] + '</div>' +
             '</label>' +
-            // Option text
-            '<input type="text" class="wizard-opt-text flex-1 rounded border border-brand-light-gray/70 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30" placeholder="Answer ' + optionLabels[optIndex] + '..." data-q-index="' + qIndex + '" data-opt-index="' + optIndex + '" value="' + escapeHtml(opt.text || '') + '">';
+            // Option text (Quill)
+            '<div class="flex-1">' +
+            '<div id="q-opt-' + qIndex + '-' + optIndex + '" class="bg-white" style="height: 80px;"></div>' +
+            '</div>';
 
           // Option image upload/preview
+          bodyHtml += '<div class="flex flex-col gap-1 mt-1">';
           if (optIsUploading) {
             bodyHtml += '<div class="h-8 w-10 rounded bg-primary/10 flex items-center justify-center shrink-0">' +
               '<div class="h-3 w-3 animate-spin rounded-full border border-primary border-t-transparent"></div></div>';
@@ -14068,7 +14197,7 @@
           // Remove option
           bodyHtml += '<button type="button" class="p-1 rounded text-slate-300 hover:text-red-500 transition-colors" onclick="removeWizardOption(' + qIndex + ',' + optIndex + ')">' +
             '<span class="material-symbols-outlined text-base">close</span></button>' +
-            '</div>';
+            '</div></div>'; // Close flex col + answer option
         });
         bodyHtml += '</div>';
 
@@ -14090,20 +14219,32 @@
         questionDiv.innerHTML = headerHtml + bodyHtml;
         container.appendChild(questionDiv);
 
-        // Bind event listeners
-        var qTextarea = questionDiv.querySelector('.wizard-q-text');
-        if (qTextarea) {
-          // Auto-resize textarea on load
-          qTextarea.style.height = 'auto';
-          qTextarea.style.height = qTextarea.scrollHeight + 'px';
+        // --- INITIALIZE QUILL ---
 
-          qTextarea.addEventListener('input', function () {
-            wizardState.questions[qIndex].questionText = this.value;
-            // Auto-resize as user types
-            this.style.height = 'auto';
-            this.style.height = this.scrollHeight + 'px';
-          });
+        // 1. Question Stem
+        QuillManager.init('q-stem-' + qIndex, q.delta || q.html || q.questionText, 'Enter question text...', function(content) {
+           wizardState.questions[qIndex].html = content.html;
+           wizardState.questions[qIndex].delta = content.delta;
+           wizardState.questions[qIndex].questionText = content.text; // Plain text fallback
+        });
+
+        // 2. Metacognition Prompt
+        if (q.metacognitionEnabled) {
+           QuillManager.init('q-meta-' + qIndex, q.metaPromptDelta || q.metaPromptHtml || 'How confident are you in your answer?', 'Enter prompt...', function(content) {
+             wizardState.questions[qIndex].metaPromptHtml = content.html;
+             wizardState.questions[qIndex].metaPromptDelta = content.delta;
+             wizardState.questions[qIndex].metaPromptText = content.text;
+           });
         }
+
+        // 3. Options
+        q.options.forEach(function(opt, optIndex) {
+           QuillManager.init('q-opt-' + qIndex + '-' + optIndex, opt.delta || opt.html || opt.text, 'Answer choice...', function(content) {
+             wizardState.questions[qIndex].options[optIndex].html = content.html;
+             wizardState.questions[qIndex].options[optIndex].delta = content.delta;
+             wizardState.questions[qIndex].options[optIndex].text = content.text;
+           });
+        });
 
         // Question image file input
         var qImgInput = questionDiv.querySelector('.wizard-q-img-input');
@@ -14123,14 +14264,6 @@
           });
         }
 
-        // Option text inputs
-        questionDiv.querySelectorAll('.wizard-opt-text').forEach(function (input) {
-          input.addEventListener('input', function () {
-            var qi = parseInt(this.getAttribute('data-q-index'));
-            var oi = parseInt(this.getAttribute('data-opt-index'));
-            wizardState.questions[qi].options[oi].text = this.value;
-          });
-        });
 
         // Option image file inputs
         questionDiv.querySelectorAll('.wizard-opt-img-input').forEach(function (input) {
@@ -14490,20 +14623,33 @@
           correctAnswerText = validOptions[0].text;
         }
 
+        // Get the correct answer ID (by index) - Fallback to index 0 if invalid
+        var correctAnswerIndex = (q.correctAnswerIndex !== undefined && q.correctAnswerIndex < validOptions.length) ? q.correctAnswerIndex : 0;
+        var correctAnswerId = validOptions[correctAnswerIndex].id;
+
         return {
-          questionText: q.questionText.trim(),
+          questionText: q.questionText ? q.questionText.trim() : '',
+          html: q.html || q.questionText || '', // Rich Text HTML
+          delta: q.delta || null, // Quill Delta
           questionImageURL: q.questionImageURL && q.questionImageURL !== 'UPLOADING' ? q.questionImageURL : null,
           questionImageFileId: q.questionImageFileId || null,
           options: validOptions.map(function (opt) {
             return {
-              text: opt.text.trim(),
+              id: opt.id || generateUUID(), // Ensure ID exists
+              text: opt.text ? opt.text.trim() : '',
+              html: opt.html || opt.text || '',
+              delta: opt.delta || null,
               imageURL: opt.imageURL && opt.imageURL !== 'UPLOADING' ? opt.imageURL : null,
               imageFileId: opt.imageFileId || null
             };
           }),
-          correctAnswer: correctAnswerText,
+          correctAnswer: correctAnswerText, // Legacy support
+          correctAnswerId: correctAnswerId, // NEW: ID-based grading
           timerSeconds: q.timerSeconds || null,
-          metacognitionEnabled: !!q.metacognitionEnabled
+          metacognitionEnabled: !!q.metacognitionEnabled,
+          metaPromptHtml: q.metaPromptHtml || null,
+          metaPromptDelta: q.metaPromptDelta || null,
+          metaPromptText: q.metaPromptText || null
         };
       });
 

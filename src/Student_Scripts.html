@@ -50,6 +50,17 @@
             });
         }
 
+        // Rich Text Renderer (Sanitization)
+        function renderRichText(htmlContent) {
+            if (!htmlContent) return '';
+            // Use DOMPurify if available, otherwise fallback to simple text or unsafe (if absolutely necessary, but we have DOMPurify)
+            if (typeof DOMPurify !== 'undefined') {
+                return DOMPurify.sanitize(htmlContent);
+            }
+            console.warn('DOMPurify not loaded - rendering as raw HTML (risk) or text');
+            return htmlContent; // Fallback, assuming teacher content is trusted, but DOMPurify is safer
+        }
+
         async function initFirebaseSidecar(pollId, studentEmail) {
             if (!FIREBASE_CONFIG || !pollId || !studentEmail) return;
 
@@ -213,7 +224,7 @@
         /**
          * Submit answer directly to Firebase (Fast Path)
          */
-        async function submitAnswerToFirebase(pollId, questionIndex, answer, confidence, email) {
+        async function submitAnswerToFirebase(pollId, questionIndex, answer, answerId, confidence, email) {
             if (!firebaseDb) {
                 console.warn('[Firebase] DB not initialized, skipping fast write');
                 return null;
@@ -235,6 +246,7 @@
                     pollId: pollId,
                     questionIndex: questionIndex,
                     answer: answer,
+                    answerId: answerId,
                     studentEmail: studentEmail,
                     confidenceLevel: confidence || null,
                     timestamp: timestamp,
@@ -1329,7 +1341,11 @@
             }
             updateQuestionProgress(progressValue, totalValue);
             if (secureQuestionText) {
-                secureQuestionText.textContent = state.question.questionText || '';
+                // Render HTML if available, otherwise text
+                var html = state.question.html || state.question.questionText || '';
+                secureQuestionText.innerHTML = renderRichText(html);
+                secureQuestionText.className = 'ql-editor'; // Apply Quill styling
+                secureQuestionText.style.padding = '0'; // Reset padding as ql-editor has its own
             }
             if (secureQuestionSubline) {
                 secureQuestionSubline.classList.add('hidden');
@@ -1370,7 +1386,9 @@
             button.dataset.optionIndex = index;
             button.setAttribute('aria-pressed', 'false');
             var displayText = (option && option.text) ? option.text.toString() : '';
-            var cleanText = displayText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            // Rich Text Handling
+            var displayHtml = (option && option.html) ? renderRichText(option.html) : escapeHtml(displayText).replace(/\n/g, '<br>');
+
             var content = '';
             if (option && option.imageURL) {
                 content += '<img src="' + escapeHtml(option.imageURL) + '" alt="Answer ' + letter + '" class="option-image" referrerpolicy="no-referrer">';
@@ -1379,9 +1397,8 @@
             content += '<div class="letter-badge" aria-hidden="true">' + letter + '</div>';
             content += '<div class="option-body">';
             content += '<div class="option-text-wrapper">';
-            if (cleanText) {
-                content += '<p class="option-text">' + escapeHtml(cleanText).replace(/\n/g, '<br>') + '</p>';
-            }
+
+            content += '<div class="option-text ql-editor" style="padding:0;">' + displayHtml + '</div>';
             content += '<span class="result-ribbon"></span>';
             content += '<span class="sr-only secure-selection-announcement"></span>';
             content += '</div>';
@@ -1451,22 +1468,22 @@
             });
         }
 
-        function submitIndividualAnswer(state, answerText, isAutoSubmit) {
+        function submitIndividualAnswer(state, answerText, answerId, isAutoSubmit) {
             if (!state || secureSubmitting) return;
 
             // Check if metacognition is enabled for this question
             // Auto-submits (timeout, forced submission) bypass the confidence prompt
             if (secureMetacognitionEnabled && !isAutoSubmit) {
                 console.log('Metacognition enabled - showing confidence prompt');
-                showSecureConfidencePrompt(answerText);
+                showSecureConfidencePrompt(answerText, answerId);
                 return; // Don't submit yet, wait for confidence selection
             }
 
             // No metacognition or auto-submit, submit directly with null confidence
-            submitIndividualAnswerWithConfidence(state, answerText, null);
+            submitIndividualAnswerWithConfidence(state, answerText, answerId, null);
         }
 
-        function submitIndividualAnswerWithConfidence(state, answerText, confidenceLevel, retryCount) {
+        function submitIndividualAnswerWithConfidence(state, answerText, answerId, confidenceLevel, retryCount) {
             retryCount = retryCount || 0;
             var maxRetries = 3;
 
@@ -1478,6 +1495,7 @@
                 sessionId: state.sessionId,
                 actualQuestionIndex: state.actualQuestionIndex,
                 answer: answerText || '',
+                answerId: answerId || null,
                 confidenceLevel: confidenceLevel
             };
 
@@ -1488,6 +1506,7 @@
                 answerDetails.pollId,
                 answerDetails.actualQuestionIndex,
                 answerDetails.answer,
+                answerDetails.answerId,
                 answerDetails.confidenceLevel,
                 null // let function derive email
             ).then(function (fbResult) {
@@ -1580,10 +1599,13 @@
             scheduleSecureWindowClose(4000);
         }
 
-        function showSecureConfidencePrompt(answerText) {
+        function showSecureConfidencePrompt(answerText, answerId) {
             if (!secureConfidencePrompt) return;
 
             securePendingAnswerText = answerText;
+            // Store pending answer ID globally so we can submit it later
+            // We use a new variable for this scope
+            secureConfidencePrompt.dataset.pendingAnswerId = answerId || '';
 
             // Hide question content, show confidence prompt
             if (secureQuestionText) secureQuestionText.style.display = 'none';
@@ -1621,28 +1643,34 @@
 
             hideSecureConfidencePrompt();
 
+            var answerId = secureConfidencePrompt.dataset.pendingAnswerId || null;
+
             // Submit answer with confidence
             submitIndividualAnswerWithConfidence(
                 secureQuestionState,
                 securePendingAnswerText,
+                answerId,
                 confidenceLevel
             );
 
             // Clear pending state
             securePendingAnswerText = null;
+            secureConfidencePrompt.dataset.pendingAnswerId = '';
         }
 
         function autoSubmitSecureAnswer(forceBlank) {
             if (!secureQuestionState || secureSubmitting) return;
             var answerText = '';
+            var answerId = null;
             if (!forceBlank && typeof secureSelectedOptionIndex === 'number') {
                 var option = (secureQuestionState.question.options || [])[secureSelectedOptionIndex];
-                if (option && typeof option.text === 'string') {
-                    answerText = option.text;
+                if (option) {
+                    answerText = option.text || '';
+                    answerId = option.id;
                 }
             }
             // Pass true for isAutoSubmit to bypass confidence prompt on timeout
-            submitIndividualAnswer(secureQuestionState, answerText, true);
+            submitIndividualAnswer(secureQuestionState, answerText, answerId, true);
         }
 
         function attemptSecureWindowClose() {
@@ -3726,7 +3754,8 @@
                 options.forEach(function (option, index) {
                     var normalized = {
                         text: (typeof option === 'string') ? option : (option.text || ''),
-                        imageURL: (typeof option === 'object') ? (option.imageURL || option.imageUrl || '') : ''
+                        imageURL: (typeof option === 'object') ? (option.imageURL || option.imageUrl || '') : '',
+                        id: (typeof option === 'object') ? (option.id || null) : null
                     };
                     var letter = letters[index] || (index + 1).toString();
                     var btn = createOptionButton(normalized, letter, data.pollId, data.questionIndex);
@@ -3753,7 +3782,7 @@
             }
         }
 
-        function submitAnswer(pollId, questionIndex, answerText) {
+        function submitAnswer(pollId, questionIndex, answerText, answerId) {
             console.log('=== SUBMIT ANSWER CALLED ===');
             console.log('currentMetacognitionEnabled:', currentMetacognitionEnabled);
             console.log('answerText:', answerText);
@@ -3779,6 +3808,9 @@
             if (currentMetacognitionEnabled) {
                 console.log('Metacognition is enabled - showing confidence question');
                 pendingAnswerText = answerText;
+                // Store ID temporarily in the container
+                if (statusContainer) statusContainer.dataset.pendingAnswerId = answerId || '';
+
                 questionContainer.style.display = 'none';
                 showConfidenceQuestion(pollId, questionIndex);
             } else {
@@ -3801,7 +3833,7 @@
                     statusSubMessage.style.display = 'block';
                     statusSubMessage.className = 'text-slate-500 text-sm mt-2 animate-pulse';
                 }
-                submitAnswerToServer(pollId, questionIndex, answerText, null);
+                submitAnswerToServer(pollId, questionIndex, answerText, answerId, null);
             }
         }
 
@@ -3837,7 +3869,8 @@
                     confidenceBtns[i].addEventListener('click', function (event) {
                         event.preventDefault();
                         var confidence = this.dataset.confidence;
-                        submitAnswerWithConfidence(pollId, questionIndex, pendingAnswerText, confidence);
+                        var answerId = statusContainer ? statusContainer.dataset.pendingAnswerId : null;
+                        submitAnswerWithConfidence(pollId, questionIndex, pendingAnswerText, answerId, confidence);
                     });
                 }
             }
@@ -3853,7 +3886,7 @@
             });
         }
 
-        function submitAnswerWithConfidence(pollId, questionIndex, answerText, confidence) {
+        function submitAnswerWithConfidence(pollId, questionIndex, answerText, answerId, confidence) {
             // Track answer submission
             activityTracker.recordAnswerSubmitted(answerText, confidence);
 
@@ -3867,12 +3900,12 @@
                 statusSubMessage.innerHTML = '';
                 statusSubMessage.style.display = 'none';
             }
-            submitAnswerToServer(pollId, questionIndex, answerText, confidence);
+            submitAnswerToServer(pollId, questionIndex, answerText, answerId, confidence);
         }
 
-        function submitAnswerToServer(pollId, questionIndex, answerText, confidence) {
+        function submitAnswerToServer(pollId, questionIndex, answerText, answerId, confidence) {
             // Live Poll - FAST PATH: Firebase First
-            submitAnswerToFirebase(pollId, questionIndex, answerText, confidence)
+            submitAnswerToFirebase(pollId, questionIndex, answerText, answerId, confidence)
                 .then(function (firebaseResult) {
                     if (firebaseResult && firebaseResult.success) {
                         console.log('[Firebase] Fast write successful (Live Poll)');
@@ -3967,7 +4000,7 @@
             var optionIndex = Array.from(btn.parentElement.parentElement.children).indexOf(btn.parentElement);
             activityTracker.recordOptionClick(optionIndex, option.text);
 
-            submitAnswer(pollId, questionIndex, option.text);
+            submitAnswer(pollId, questionIndex, option.text, option.id);
         });
 
         return btn;

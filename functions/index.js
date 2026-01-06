@@ -495,7 +495,7 @@ exports.deletePoll = onCall({ cors: true }, async (request) => {
   }
 
   const db = admin.database();
-  
+
   // Atomic multi-path delete
   const updates = {};
   updates[`polls/${pollId}`] = null;
@@ -620,6 +620,17 @@ exports.manageRoster = onCall({ cors: true }, async (request) => {
         await db.ref().update(updates);
       }
 
+      // Update classes index
+      const classesRef = db.ref("rosters/classes");
+      const classesSnap = await classesRef.once("value");
+      let classes = classesSnap.val() || [];
+
+      classes = classes.filter(c => c !== className);
+      if (!classes.includes(newClassName)) {
+        classes.push(newClassName);
+      }
+      await classesRef.set(classes);
+
       logger.info(`Class renamed: ${className} -> ${newClassName}`);
 
       return {
@@ -637,6 +648,19 @@ exports.manageRoster = onCall({ cors: true }, async (request) => {
         logger.info(`Class deleted: ${className}`);
       } else {
         logger.info(`Class delete requested but not found (already deleted): ${className}`);
+      }
+
+      // Update classes index
+      const classesIndexRef = db.ref("rosters/classes");
+      const classesIndexSnap = await classesIndexRef.once("value");
+      let classesList = classesIndexSnap.val() || [];
+
+      const originalLength = classesList.length;
+      classesList = classesList.filter(c => c !== className);
+
+      if (classesList.length !== originalLength) {
+        await classesIndexRef.set(classesList);
+        logger.info(`Class removed from index: ${className}`);
       }
 
       return {

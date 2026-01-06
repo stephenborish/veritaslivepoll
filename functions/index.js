@@ -485,6 +485,32 @@ exports.updatePoll = onCall({ cors: true }, async (request) => {
 });
 
 /**
+ * Delete a poll and all associated data
+ */
+exports.deletePoll = onCall({ cors: true }, async (request) => {
+  const { pollId } = request.data;
+
+  if (!pollId) {
+    throw new HttpsError("invalid-argument", "Missing pollId");
+  }
+
+  const db = admin.database();
+  
+  // Atomic multi-path delete
+  const updates = {};
+  updates[`polls/${pollId}`] = null;
+  updates[`answers/${pollId}`] = null;
+  updates[`history/${pollId}`] = null;
+  updates[`sessions/${pollId}`] = null;
+
+  await db.ref().update(updates);
+
+  logger.info(`Poll deleted: ${pollId}`);
+
+  return { success: true, pollId };
+});
+
+/**
  * Manage roster operations (CRUD)
  * Replaces google.script.run.saveRoster, bulkAddStudentsToRoster,
  * renameClass, deleteClassRecord

@@ -553,11 +553,9 @@
      MOBILE TOUCH TARGET OPTIMIZATION
      ======================================== */
   /* Ensure minimum 44x44px touch targets for accessibility */
-  button,
+  button:not(.ql-toolbar button),
   .btn,
   .icon-btn,
-  input[type="checkbox"],
-  input[type="radio"],
   a.clickable,
   [role="button"] {
     min-width: 44px;

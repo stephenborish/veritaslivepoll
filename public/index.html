@@ -552,6 +552,17 @@
       flex-direction: column;
       gap: 1rem;
     }
+
+    /* FIX HUGE PICKER ITEMS (Color, Align) */
+    .ql-picker-label svg,
+    .ql-picker-item svg {
+      width: 18px !important;
+      height: 18px !important;
+    }
+
+    .ql-picker-label {
+      padding: 0 !important;
+    }
   </style>
   <style type="text/tailwindcss">
     @layer utilities {
@@ -22358,7 +22369,7 @@
             // Timer
             bodyHtml += '<div class="flex items-center gap-1.5">' +
               '<span class="text-xs text-slate-400">Timer:</span>' +
-              '<input type="number" class="wizard-timer w-14 rounded border border-brand-light-gray/70 px-1.5 py-0.5 text-xs text-center" placeholder="sec" min="5" max="600" data-q-index="' + qIndex + '" value="' + (q.timerSeconds || '') + '">' +
+              '' +
               '</div></div>'; // end timer row
 
             questionDiv.innerHTML = headerHtml + bodyHtml;
@@ -22384,40 +22395,48 @@
             }
 
             // Timer
-            var timerInput = questionDiv.querySelector('.wizard-timer');
-            if (timerInput) {
-              timerInput.addEventListener('input', function () {
-                var val = parseInt(this.value);
-                wizardState.questions[qIndex].timerSeconds = isNaN(val) ? null : val;
-              });
-            }
+
           });
 
-          // INITIALIZE QUILL - Dynamic
+          // INITIALIZE QUILL - Dynamic with Safety Delay
           setTimeout(function () {
+            console.log('Initializing Quill Editors...');
             wizardState.questions.forEach(function (q, qIndex) {
               // Stem
-              var stemId = 'q-stem-' + qIndex;
-              var stemQuill = richTextManager.initialize(stemId, 'stem', 'Enter question text...');
-              if (stemQuill) {
-                richTextManager.setContent(stemId, q.questionText || '');
-                stemQuill.on('text-change', function () {
-                  q.questionText = richTextManager.getContent(stemId);
-                });
+              try {
+                var stemId = 'q-stem-' + qIndex;
+                var stemQuill = richTextManager.initialize(stemId, 'stem', 'Enter question text...');
+                if (stemQuill) {
+                  richTextManager.setContent(stemId, q.questionText || '');
+                  stemQuill.on('text-change', function () {
+                    q.questionText = richTextManager.getContent(stemId);
+                  });
+                } else {
+                  console.error('Failed to init stem:', stemId);
+                }
+              } catch (e) {
+                console.error('Error init stem:', e);
               }
+
               // Options
               q.options.forEach(function (opt, optIndex) {
-                var optId = 'q-opt-' + qIndex + '-' + optIndex;
-                var optQuill = richTextManager.initialize(optId, 'option', 'Option ' + (optIndex + 1));
-                if (optQuill) {
-                  richTextManager.setContent(optId, opt.text || '');
-                  optQuill.on('text-change', function () {
-                    opt.text = richTextManager.getContent(optId);
-                  });
+                try {
+                  var optId = 'q-opt-' + qIndex + '-' + optIndex;
+                  var optQuill = richTextManager.initialize(optId, 'option', 'Option ' + (optIndex + 1));
+                  if (optQuill) {
+                    richTextManager.setContent(optId, opt.text || '');
+                    optQuill.on('text-change', function () {
+                      opt.text = richTextManager.getContent(optId);
+                    });
+                  } else {
+                    console.error('Failed to init option:', optId);
+                  }
+                } catch (e) {
+                  console.error('Error init option:', optId, e);
                 }
               });
             });
-          }, 50);
+          }, 300);
         }
 
 

@@ -94,45 +94,19 @@ export class RichTextManager {
     }
 
     getToolbarConfig(type) {
-        if (type === 'stem') {
-            return [
-                ['bold', 'italic', 'underline', 'strike'],
-                ['blockquote', 'code-block'],
-                ['formula'], // Matches our custom handler name
-
-                [{ 'header': 1 }, { 'header': 2 }],
-                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                [{ 'script': 'sub' }, { 'script': 'super' }],
-                [{ 'indent': '-1' }, { 'indent': '+1' }],
-                [{ 'direction': 'rtl' }],
-
-                [{ 'size': ['small', false, 'large', 'huge'] }],
-                [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-
-                [{ 'color': [] }, { 'background': [] }],
-                [{ 'font': [] }],
-                [{ 'align': [] }],
-
-                ['clean'],
-                ['link', 'image', 'video']
-            ];
-        } else if (type === 'option') {
-            return [
-                ['bold', 'italic', 'underline', 'strike'],
-                [{ 'script': 'sub' }, { 'script': 'super' }],
-                ['formula'],
-
-                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                [{ 'indent': '-1' }, { 'indent': '+1' }],
-
-                [{ 'color': [] }, { 'background': [] }],
-                [{ 'align': [] }],
-
-                ['link', 'image'],
-                ['clean']
-            ];
-        }
-        return [['bold', 'italic'], ['clean']];
+        // Simplified Toolbar - Single Line for both stems and options
+        // Removed: header, blockquote, code-block, indent, direction, video, background
+        // Retained: Bold, Italic, Underline, Strike, Formula, Sub/Super, List, Color, Align, Clean, Link, Image
+        return [
+            ['bold', 'italic', 'underline', 'strike'],
+            ['formula'],
+            [{ 'script': 'sub' }, { 'script': 'super' }],
+            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+            [{ 'color': [] }],
+            [{ 'align': [] }],
+            ['link', 'image'],
+            ['clean']
+        ];
     }
 
     getContent(elementId) {

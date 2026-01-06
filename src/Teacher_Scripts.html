@@ -13851,6 +13851,11 @@
         }
       }
 
+      // Sync Quill content before leaving step 3 to ensure state is preserved
+      if (wizardState.currentStep === 3 && stepNumber !== 3) {
+        syncWizardQuillContent();
+      }
+
       // Render questions when navigating to step 3
       if (stepNumber === 3) {
         renderWizardQuestions();
@@ -14015,6 +14020,71 @@
     // STEP 3: QUESTIONS - Full Editor
     // ===========================
 
+    /**
+     * Syncs all Quill editor content back to wizardState BEFORE re-rendering.
+     * This prevents data loss when renderWizardQuestions() is called.
+     */
+    function syncWizardQuillContent() {
+      var optionLetters = { a: 0, b: 1, c: 2, d: 3, e: 4, f: 5 };
+
+      // Iterate through all active Quill instances
+      Object.keys(QuillManager.instances).forEach(function(id) {
+        var quill = QuillManager.instances[id];
+        if (!quill) return;
+
+        var container = document.getElementById(id);
+        if (!container) return;
+
+        // Get current content from Quill
+        var editor = container.querySelector('.ql-editor');
+        var html = editor ? editor.innerHTML : quill.root.innerHTML;
+        var text = quill.getText();
+        var delta = quill.getContents();
+
+        // Match question stem editors: question-input-{N}
+        var questionMatch = id.match(/^question-input-(\d+)$/);
+        if (questionMatch) {
+          var qIndex = parseInt(questionMatch[1], 10) - 1;
+          if (wizardState.questions[qIndex]) {
+            wizardState.questions[qIndex].html = html;
+            wizardState.questions[qIndex].delta = delta;
+            wizardState.questions[qIndex].questionText = text;
+          }
+          return;
+        }
+
+        // Match answer editors: answer-input-{N}-{letter}
+        var answerMatch = id.match(/^answer-input-(\d+)-([a-f])$/i);
+        if (answerMatch) {
+          var qIndex = parseInt(answerMatch[1], 10) - 1;
+          var letter = answerMatch[2].toLowerCase();
+          var optIndex = optionLetters[letter];
+
+          if (wizardState.questions[qIndex] && wizardState.questions[qIndex].options[optIndex]) {
+            wizardState.questions[qIndex].options[optIndex].html = html;
+            wizardState.questions[qIndex].options[optIndex].delta = delta;
+            wizardState.questions[qIndex].options[optIndex].text = text;
+          }
+          return;
+        }
+
+        // Match metacognition prompt editors: q-meta-{N}
+        var metaMatch = id.match(/^q-meta-(\d+)$/);
+        if (metaMatch) {
+          var qIndex = parseInt(metaMatch[1], 10);
+          if (wizardState.questions[qIndex]) {
+            wizardState.questions[qIndex].metaPromptHtml = html;
+            wizardState.questions[qIndex].metaPromptDelta = delta;
+            wizardState.questions[qIndex].metaPromptText = text;
+          }
+          return;
+        }
+      });
+    }
+
+    // Expose syncWizardQuillContent globally
+    window.syncWizardQuillContent = syncWizardQuillContent;
+
     function addWizardQuestion() {
       var container = document.getElementById('wizard-questions-list');
       if (!container) return;
@@ -14035,6 +14105,7 @@
         timerSeconds: null
       });
 
+      syncWizardQuillContent();
       renderWizardQuestions();
 
       // Scroll to the new question
@@ -14052,6 +14123,7 @@
         return;
       }
       if (confirm('Are you sure you want to remove this question?')) {
+        syncWizardQuillContent();
         wizardState.questions.splice(index, 1);
         renderWizardQuestions();
       }
@@ -14063,6 +14135,7 @@
         alert('Maximum 6 answer choices allowed.');
         return;
       }
+      syncWizardQuillContent();
       q.options.push({ text: '', html: '', delta: null, imageURL: '', id: generateUUID() });
       renderWizardQuestions();
     }
@@ -14073,6 +14146,7 @@
         alert('Minimum 2 answer choices required.');
         return;
       }
+      syncWizardQuillContent();
       q.options.splice(optIndex, 1);
       // Adjust correct answer index if needed
       if (q.correctAnswerIndex >= q.options.length) {
@@ -14082,6 +14156,7 @@
     }
 
     function setCorrectAnswer(qIndex, optIndex) {
+      syncWizardQuillContent();
       wizardState.questions[qIndex].correctAnswerIndex = optIndex;
       renderWizardQuestions();
     }
@@ -14242,6 +14317,7 @@
         var qImgRemoveBtn = questionDiv.querySelector('.wizard-remove-q-img');
         if (qImgRemoveBtn) {
           qImgRemoveBtn.addEventListener('click', function () {
+            syncWizardQuillContent();
             wizardState.questions[qIndex].questionImageURL = null;
             wizardState.questions[qIndex].questionImageFileId = null;
             renderWizardQuestions();
@@ -14261,6 +14337,7 @@
         // Option image remove buttons
         questionDiv.querySelectorAll('.wizard-remove-opt-img').forEach(function (btn) {
           btn.addEventListener('click', function () {
+            syncWizardQuillContent();
             var qi = parseInt(this.getAttribute('data-q-index'));
             var oi = parseInt(this.getAttribute('data-opt-index'));
             wizardState.questions[qi].options[oi].imageURL = null;
@@ -14336,6 +14413,9 @@
           var dropIndex = parseInt(this.dataset.qIndex);
 
           if (wizardDraggedIndex !== null && wizardDraggedIndex !== dropIndex) {
+            // Sync content before reordering to prevent data loss
+            syncWizardQuillContent();
+
             // Reorder questions in the array
             var draggedQuestion = wizardState.questions[wizardDraggedIndex];
             wizardState.questions.splice(wizardDraggedIndex, 1);
@@ -14350,7 +14430,114 @@
       });
 
       initializeQuillEditors();
+      updateWizardTimeline();
     }
+
+    /**
+     * Updates the timeline navigation sidebar with current question numbers.
+     * Allows jumping to any question by clicking its number.
+     */
+    function updateWizardTimeline() {
+      var timelineContainer = document.getElementById('wizard-timeline-items');
+      if (!timelineContainer) return;
+
+      timelineContainer.innerHTML = '';
+
+      wizardState.questions.forEach(function(q, qIndex) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'wizard-timeline-btn w-full h-8 rounded-lg bg-slate-50 hover:bg-primary/10 border border-brand-light-gray/50 hover:border-primary flex items-center justify-center font-bold text-sm text-brand-dark-gray hover:text-primary transition-all';
+        btn.dataset.qIndex = qIndex;
+        btn.title = 'Jump to Question ' + (qIndex + 1);
+        btn.textContent = qIndex + 1;
+
+        btn.addEventListener('click', function() {
+          jumpToWizardQuestion(qIndex);
+        });
+
+        timelineContainer.appendChild(btn);
+      });
+
+      // Set up scroll observer to highlight current question in timeline
+      setupTimelineScrollObserver();
+    }
+
+    /**
+     * Scrolls to a specific question in the wizard
+     */
+    function jumpToWizardQuestion(qIndex) {
+      var container = document.getElementById('wizard-questions-list');
+      if (!container) return;
+
+      var questionCards = container.querySelectorAll('.question-card');
+      if (questionCards[qIndex]) {
+        questionCards[qIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Briefly highlight the question card
+        questionCards[qIndex].classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+        setTimeout(function() {
+          questionCards[qIndex].classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
+        }, 1500);
+      }
+    }
+
+    /**
+     * Sets up an Intersection Observer to highlight the current question in the timeline
+     */
+    var wizardTimelineObserver = null;
+    function setupTimelineScrollObserver() {
+      // Clean up previous observer
+      if (wizardTimelineObserver) {
+        wizardTimelineObserver.disconnect();
+      }
+
+      var container = document.getElementById('wizard-questions-list');
+      var timelineContainer = document.getElementById('wizard-timeline-items');
+      if (!container || !timelineContainer) return;
+
+      var questionCards = container.querySelectorAll('.question-card');
+      if (questionCards.length === 0) return;
+
+      wizardTimelineObserver = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting) {
+            var qIndex = parseInt(entry.target.dataset.qIndex);
+            highlightTimelineItem(qIndex);
+          }
+        });
+      }, {
+        root: null,
+        rootMargin: '-20% 0px -60% 0px',
+        threshold: 0
+      });
+
+      questionCards.forEach(function(card) {
+        wizardTimelineObserver.observe(card);
+      });
+    }
+
+    /**
+     * Highlights the specified timeline item
+     */
+    function highlightTimelineItem(qIndex) {
+      var timelineContainer = document.getElementById('wizard-timeline-items');
+      if (!timelineContainer) return;
+
+      var buttons = timelineContainer.querySelectorAll('.wizard-timeline-btn');
+      buttons.forEach(function(btn, i) {
+        if (i === qIndex) {
+          btn.classList.remove('bg-slate-50', 'text-brand-dark-gray', 'border-brand-light-gray/50');
+          btn.classList.add('bg-primary', 'text-white', 'border-primary', 'shadow-md');
+        } else {
+          btn.classList.remove('bg-primary', 'text-white', 'border-primary', 'shadow-md');
+          btn.classList.add('bg-slate-50', 'text-brand-dark-gray', 'border-brand-light-gray/50');
+        }
+      });
+    }
+
+    // Expose timeline functions globally
+    window.updateWizardTimeline = updateWizardTimeline;
+    window.jumpToWizardQuestion = jumpToWizardQuestion;
 
     function ensureQuillHost(element) {
       if (!element) return null;
@@ -14487,6 +14674,9 @@
         return;
       }
 
+      // Sync content before setting uploading state
+      syncWizardQuillContent();
+
       // Set uploading state
       if (optIndex === null) {
         wizardState.questions[qIndex].questionImageURL = 'UPLOADING';
@@ -14497,6 +14687,8 @@
 
       // Upload to Firebase Storage
       uploadImage(file).then(function (downloadURL) {
+        // Sync again before render after async upload completes
+        syncWizardQuillContent();
         if (optIndex === null) {
           wizardState.questions[qIndex].questionImageURL = downloadURL;
         } else {
@@ -14505,7 +14697,8 @@
         renderWizardQuestions();
       }).catch(function (error) {
         alert('Image upload failed. Please try again.');
-        // Reset uploading state
+        // Sync and reset uploading state
+        syncWizardQuillContent();
         if (optIndex === null) {
           wizardState.questions[qIndex].questionImageURL = null;
         } else {

@@ -3501,6 +3501,9 @@
   .live-view-grid>div:first-child {
     /* Left column should not use flex-1 growth on the answer section */
     /* This ensures question card always appears at consistent distance from header */
+    flex: 0 0 auto;
+    width: 100%;
+    /* Fallback/Base width if needed, or let content dictate */
   }
 
   .live-student-panel {

@@ -116,9 +116,9 @@
         if (this.instances[containerId]) {
           // If the element in DOM is different from the one Quill attached to, we must re-init
           if (this.instances[containerId].container !== container) {
-             delete this.instances[containerId];
+            delete this.instances[containerId];
           } else {
-             return this.instances[containerId];
+            return this.instances[containerId];
           }
         }
 
@@ -2133,21 +2133,21 @@
     bindClick('generate-ai-btn', generateAISuggestions);
 
     // NEW FEATURE: Stimulus/Passage
-    bindClick('add-stimulus-btn', function() {
-        openStimulusModal();
-        // Initialize Quill for Stimulus content when modal opens
-        // We use a small timeout to ensure the modal is visible (Quill needs dimensions)
-        setTimeout(function() {
-            var existingContent = document.getElementById('stimulus-content-editor').innerHTML;
-            // If empty or just placeholder, maybe init with default?
-            // Actually QuillManager handles idempotency.
-            // Check if we have stored stimulus data in wizardState or similar?
-            // For now, this is a "Create New" flow, so it starts empty.
-            QuillManager.init('stimulus-content-editor', '', 'Enter passage content...', function(content) {
-                // Store temporarily? Or just read on save.
-                // We'll read from QuillManager.get('stimulus-content-editor') on create.
-            });
-        }, 100);
+    bindClick('add-stimulus-btn', function () {
+      openStimulusModal();
+      // Initialize Quill for Stimulus content when modal opens
+      // We use a small timeout to ensure the modal is visible (Quill needs dimensions)
+      setTimeout(function () {
+        var existingContent = document.getElementById('stimulus-content-editor').innerHTML;
+        // If empty or just placeholder, maybe init with default?
+        // Actually QuillManager handles idempotency.
+        // Check if we have stored stimulus data in wizardState or similar?
+        // For now, this is a "Create New" flow, so it starts empty.
+        QuillManager.init('stimulus-content-editor', '', 'Enter passage content...', function (content) {
+          // Store temporarily? Or just read on save.
+          // We'll read from QuillManager.get('stimulus-content-editor') on create.
+        });
+      }, 100);
     });
     bindClick('close-stimulus-modal-btn', closeStimulusModal);
     bindClick('cancel-stimulus-btn', closeStimulusModal);
@@ -3343,9 +3343,10 @@
       }
     }
 
-    function startEditPoll(pollId, triggerButton) {
+    function startEditPoll(pollId, secondArg) {
       if (!pollId) return;
-      var button = triggerButton || null;
+      var button = (secondArg && secondArg.tagName) ? secondArg : null;
+      var startQuestionIndex = (typeof secondArg === 'number') ? secondArg : null;
       var originalLabel = button ? button.innerHTML : '';
       if (button) {
         button.disabled = true;
@@ -3360,7 +3361,7 @@
         }
         if (previewPoll) {
           // Use unified wizard for editing
-          openPollWizard(deepClone(previewPoll));
+          openPollWizard(deepClone(previewPoll), startQuestionIndex);
         } else {
           veritasAlert('Unable to locate this poll in preview mode.', { title: 'Edit poll' });
         }
@@ -3385,7 +3386,7 @@
             // Since we write the 'clean' structure in createNewPoll, we can use it directly.
             // Ensure pollId is present
             poll.pollId = pollId;
-            openPollWizard(poll);
+            openPollWizard(poll, startQuestionIndex);
           } else {
             veritasAlert('Failed to load poll data (Not found).', { title: 'Error' });
           }
@@ -3487,8 +3488,7 @@
 
           // Actions
           htmlParts.push('<div class="flex gap-2 mt-auto">');
-          htmlParts.push('<button type="button" class="flex-1 poll-card-btn primary poll-preview-btn" data-poll-id="' + (poll && poll.pollId ? poll.pollId : '') + '" aria-label="Preview ' + safeName + '"><span class="material-symbols-outlined text-base">visibility</span>Preview</button>');
-          htmlParts.push('<button type="button" class="poll-card-btn secondary poll-edit-btn" data-poll-id="' + (poll && poll.pollId ? poll.pollId : '') + '" aria-label="Edit ' + safeName + '"><span class="material-symbols-outlined text-base">edit</span></button>');
+          htmlParts.push('<button type="button" class="flex-1 poll-card-btn primary poll-preview-btn" data-poll-id="' + (poll && poll.pollId ? poll.pollId : '') + '" aria-label="Preview & Edit ' + safeName + '"><span class="material-symbols-outlined text-base">visibility</span>Preview & Edit</button>');
           htmlParts.push('<button type="button" class="poll-card-btn info poll-copy-btn" data-poll-id="' + (poll && poll.pollId ? poll.pollId : '') + '" aria-label="Duplicate ' + safeName + '"><span class="material-symbols-outlined text-base">content_copy</span></button>');
           htmlParts.push('<button type="button" class="poll-card-btn danger poll-delete-btn" data-poll-id="' + (poll && poll.pollId ? poll.pollId : '') + '" aria-label="Delete ' + safeName + '"><span class="material-symbols-outlined text-base">delete</span></button>');
           htmlParts.push('</div>');
@@ -9129,13 +9129,13 @@
         html += '<span class="text-sm text-brand-dark-gray/50 dark:text-brand-white/50">• Timer: ' + q.timerSeconds + 's</span>';
       }
       html += '</div>';
-      html += '<h3 class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">' + escapeHtml(q.questionText || 'No question text') + '</h3>';
+      html += '<h3 class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">' + (q.questionText || 'No question text') + '</h3>';
       html += '</div>';
 
       // Question image
       if (q.questionImageURL) {
         html += '<div class="mb-6">';
-        html += '<img src="' + escapeHtml(q.questionImageURL) + '" alt="Question image" class="max-w-full max-h-96 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40" referrerpolicy="no-referrer" onerror="this.style.display=\'none\';">';
+        html += '<img src="' + (q.questionImageURL) + '" alt="Question image" class="max-w-full max-h-96 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40" referrerpolicy="no-referrer" onerror="this.style.display=\'none\';">';
         html += '</div>';
       }
 
@@ -9155,7 +9155,7 @@
             html += '<p class="text-brand-dark-gray dark:text-brand-white">' + escapeHtml(opt.text) + '</p>';
           }
           if (opt.imageURL) {
-            html += '<img src="' + escapeHtml(opt.imageURL) + '" alt="Option image" class="mt-2 max-w-[200px] max-h-[150px] rounded border border-brand-light-gray dark:border-brand-dark-gray/40" referrerpolicy="no-referrer" onerror="this.style.display=\'none\';">';
+            html += '<img src="' + (opt.imageURL) + '" alt="Option image" class="mt-2 max-w-[200px] max-h-[150px] rounded border border-brand-light-gray dark:border-brand-dark-gray/40" referrerpolicy="no-referrer" onerror="this.style.display=\'none\';">';
           }
           html += '</div>';
           if (isCorrect) {
@@ -9205,7 +9205,7 @@
     function previewEditQuestion() {
       if (!currentPreviewPoll) return;
       closePollPreview();
-      startEditPoll(currentPreviewPoll.pollId);
+      startEditPoll(currentPreviewPoll.pollId, currentPreviewQuestionIndex);
     }
 
     async function previewDeleteQuestion() {
@@ -10412,8 +10412,8 @@
 
       // Fallback for non-Quill mode if needed (though we enforced Quill)
       if (!html) {
-         var input = document.getElementById('stimulus-content-input');
-         if (input) html = input.value;
+        var input = document.getElementById('stimulus-content-input');
+        if (input) html = input.value;
       }
 
       var questionCount = parseInt(document.getElementById('stimulus-question-count').value, 10) || 2;
@@ -13514,7 +13514,7 @@
     // WIZARD LIFECYCLE
     // ===========================
 
-    function openPollWizard(pollData) {
+    function openPollWizard(pollData, startQuestionIndex) {
       initWizardState(); // Reset state
       var isEdit = !!pollData;
 
@@ -13652,7 +13652,13 @@
 
       // In edit mode, skip step 1 (mode selection) and go directly to step 2
       if (isEdit) {
-        goToWizardStep(2);
+        if (typeof startQuestionIndex === 'number' && startQuestionIndex >= 0) {
+          goToWizardStep(3);
+          selectedQuestionIndex = startQuestionIndex;
+          setTimeout(function () { renderQuestionWorkspace(); }, 0);
+        } else {
+          goToWizardStep(2);
+        }
 
         // CRITICAL: Reveal secure config section if editing a secure assessment
         // Step 1 validation normally handles this toggle, but we skip step 1 in edit mode
@@ -14028,7 +14034,7 @@
       var optionLetters = { a: 0, b: 1, c: 2, d: 3, e: 4, f: 5 };
 
       // Iterate through all active Quill instances
-      Object.keys(QuillManager.instances).forEach(function(id) {
+      Object.keys(QuillManager.instances).forEach(function (id) {
         var quill = QuillManager.instances[id];
         if (!quill) return;
 
@@ -14298,11 +14304,11 @@
 
         // 2. Metacognition Prompt
         if (q.metacognitionEnabled) {
-           QuillManager.init('q-meta-' + qIndex, q.metaPromptDelta || q.metaPromptHtml || 'How confident are you in your answer?', 'Enter prompt...', function(content) {
-             wizardState.questions[qIndex].metaPromptHtml = content.html;
-             wizardState.questions[qIndex].metaPromptDelta = content.delta;
-             wizardState.questions[qIndex].metaPromptText = content.text;
-           });
+          QuillManager.init('q-meta-' + qIndex, q.metaPromptDelta || q.metaPromptHtml || 'How confident are you in your answer?', 'Enter prompt...', function (content) {
+            wizardState.questions[qIndex].metaPromptHtml = content.html;
+            wizardState.questions[qIndex].metaPromptDelta = content.delta;
+            wizardState.questions[qIndex].metaPromptText = content.text;
+          });
         }
 
         // Question image file input
@@ -14443,7 +14449,7 @@
 
       timelineContainer.innerHTML = '';
 
-      wizardState.questions.forEach(function(q, qIndex) {
+      wizardState.questions.forEach(function (q, qIndex) {
         var btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'wizard-timeline-btn w-full h-8 rounded-lg bg-slate-50 hover:bg-primary/10 border border-brand-light-gray/50 hover:border-primary flex items-center justify-center font-bold text-sm text-brand-dark-gray hover:text-primary transition-all';
@@ -14451,7 +14457,7 @@
         btn.title = 'Jump to Question ' + (qIndex + 1);
         btn.textContent = qIndex + 1;
 
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function () {
           jumpToWizardQuestion(qIndex);
         });
 
@@ -14475,7 +14481,7 @@
 
         // Briefly highlight the question card
         questionCards[qIndex].classList.add('ring-2', 'ring-primary', 'ring-offset-2');
-        setTimeout(function() {
+        setTimeout(function () {
           questionCards[qIndex].classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
         }, 1500);
       }
@@ -14498,8 +14504,8 @@
       var questionCards = container.querySelectorAll('.question-card');
       if (questionCards.length === 0) return;
 
-      wizardTimelineObserver = new IntersectionObserver(function(entries) {
-        entries.forEach(function(entry) {
+      wizardTimelineObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
           if (entry.isIntersecting) {
             var qIndex = parseInt(entry.target.dataset.qIndex);
             highlightTimelineItem(qIndex);
@@ -14511,7 +14517,7 @@
         threshold: 0
       });
 
-      questionCards.forEach(function(card) {
+      questionCards.forEach(function (card) {
         wizardTimelineObserver.observe(card);
       });
     }
@@ -14524,7 +14530,7 @@
       if (!timelineContainer) return;
 
       var buttons = timelineContainer.querySelectorAll('.wizard-timeline-btn');
-      buttons.forEach(function(btn, i) {
+      buttons.forEach(function (btn, i) {
         if (i === qIndex) {
           btn.classList.remove('bg-slate-50', 'text-brand-dark-gray', 'border-brand-light-gray/50');
           btn.classList.add('bg-primary', 'text-white', 'border-primary', 'shadow-md');

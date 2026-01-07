@@ -1,8 +1,26 @@
 # Veritas Live Poll - Project Roadmap & TODO
 
-**Last Updated**: 2025-12-25
+**Last Updated**: 2025-01-07
 **Status**: ✅ Production-Ready
-**Current Version**: v2.1 (Documentation & Architecture Audit Complete)
+**Current Version**: v2.0 (Firebase Architecture)
+
+---
+
+## ⚠️ IMPORTANT: Architecture Migration Notice
+
+**VERITAS Live Poll has migrated from Google Apps Script to Firebase.**
+
+- **CURRENT (v2.0)**: Firebase Cloud Functions + Firestore + Realtime Database
+- **LEGACY (v1.x)**: Google Apps Script + Sheets + RTDB (**DEPRECATED - DO NOT USE**)
+
+**The `src/` directory contains deprecated Google Apps Script code and is no longer in use.**
+
+All development should use:
+- ✅ `functions/` (Cloud Functions backend)
+- ✅ `public/` (Firebase Hosting frontend)
+- ✅ Firestore + Realtime Database (not Google Sheets)
+
+See [README.md](README.md) and [DOCS/ARCHITECTURE.md](DOCS/ARCHITECTURE.md) for current architecture documentation.
 
 ---
 

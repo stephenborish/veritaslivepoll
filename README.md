@@ -1,25 +1,26 @@
-# Veritas Live Poll
+# VERITAS Live Poll
 
-**A Hybrid Real-Time Assessment Platform for Classroom Education**
+**A Modern Real-Time Assessment Platform for Classroom Education**
 
-[![Google Apps Script](https://img.shields.io/badge/Built%20with-Google%20Apps%20Script-4285F4?logo=google&logoColor=white)](https://developers.google.com/apps-script)
-[![Firebase](https://img.shields.io/badge/Real--time-Firebase%20RTDB-FFCA28?logo=firebase&logoColor=black)](https://firebase.google.com/)
+[![Firebase](https://img.shields.io/badge/Backend-Firebase-FFCA28?logo=firebase&logoColor=black)](https://firebase.google.com/)
+[![Cloud Functions](https://img.shields.io/badge/Functions-Node.js%2020-339933?logo=node.js&logoColor=white)](https://firebase.google.com/docs/functions)
+[![Firestore](https://img.shields.io/badge/Database-Firestore-4285F4?logo=google-cloud&logoColor=white)](https://firebase.google.com/docs/firestore)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](#license)
 
 ---
 
 ## Overview
 
-**Veritas Live Poll** is a production-ready, serverless classroom assessment platform combining **Google Apps Script** (backend), **Google Sheets** (persistence), and **Firebase Realtime Database** (real-time signaling) to deliver low-latency interactive polling and secure proctored exams.
+**VERITAS Live Poll** is a production-ready, serverless classroom assessment platform built on **Firebase** that delivers low-latency interactive polling, secure proctored exams, and comprehensive analytics for educators.
 
 ### What Makes It Special
 
-- **🎯 Hybrid Architecture**: Firebase for fast real-time updates + Sheets for durable persistence
-- **🔐 No Student Logins**: Token-based authentication with 30-day validity
-- **👁️ Advanced Proctoring**: Fullscreen enforcement, tab-switch detection, lock versioning
+- **⚡ Real-Time Architecture**: Firestore + Realtime Database for instant synchronization
+- **🔐 Secure Authentication**: Firebase Auth with Google Sign-In for teachers, anonymous auth for students
+- **👁️ Advanced Proctoring**: Fullscreen enforcement, violation detection, teacher approval workflows
 - **📊 Dual Mode**: Live synchronized polling + Individual timed exams
-- **⚡ Write-Behind Pattern**: Optimistic client updates with background persistence
-- **💪 Production Resilience**: Exponential backoff, state versioning, connection health monitoring
+- **🎯 Analytics Engine**: Psychometric analysis with point-biserial correlation and item difficulty
+- **💪 Production Ready**: Cloud Functions backend with automatic scaling and 99.9% uptime
 
 ---
 
@@ -27,87 +28,249 @@
 
 | Layer | Technology | Purpose |
 |-------|------------|---------|
-| **Backend** | Google Apps Script (V8) | Serverless compute, RPC layer |
-| **Database** | Google Sheets | Source of truth for polls, responses, rosters |
-| **Real-Time** | Firebase Realtime Database | Lock status, heartbeats, presence |
-| **Storage** | Google Drive | Image hosting with proxy endpoint |
-| **Frontend** | HTML5 + JavaScript | Vanilla JS with Tailwind CSS |
-| **Charts** | Google Charts API | Live response visualization |
-| **Deployment** | Clasp CLI | Version control and deployment |
+| **Backend** | Firebase Cloud Functions (Node.js 20) | Serverless compute, 29+ callable functions |
+| **Database** | Firestore | Primary data store (polls, classes, exams, sessions) |
+| **Real-Time** | Firebase Realtime Database | Live session state, student presence, answer submissions |
+| **Storage** | Firebase Storage | Question images, poll assets (10MB max per file) |
+| **Frontend** | Firebase Hosting | Static HTML/JS with Tailwind CSS |
+| **Authentication** | Firebase Auth | Google Sign-In (teachers), Anonymous (students) |
+| **Analytics** | Custom Analytics Engine | Item analysis, point-biserial correlation |
+| **Deployment** | GitHub Actions + Firebase CLI | Automated CI/CD pipeline |
+
+**Project ID**: `classroomproctor`
 
 ---
 
 ## Architecture Overview
 
-### The "Write-Behind" Pattern
+### Modern Firebase Architecture
 
-Veritas uses a **hybrid persistence model** to optimize for both speed and durability:
+VERITAS uses a **hybrid persistence model** optimizing for both real-time updates and durable storage:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                      CLIENT (Browser)                           │
 │  ┌──────────────────────────────────────────────────────────┐  │
-│  │  Student/Teacher UI                                      │  │
-│  │  • Optimistic updates                                    │  │
-│  │  • Polls Firebase every 2.5s for state changes           │  │
+│  │  Teacher Dashboard (public/index.html)                   │  │
+│  │  Student Interface (public/student.html)                 │  │
+│  │  Exam Manager (public/exam_manager.html)                 │  │
+│  │  • Firebase SDK v9+ (modular)                            │  │
+│  │  • Real-time Firestore listeners                         │  │
+│  │  • RTDB listeners for live sessions                      │  │
 │  └──────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
            │                                    │
-           │ Fast Path (Real-time)              │ Slow Path (Durable)
+           │ Firestore (durable)                │ RTDB (ephemeral)
            ▼                                    ▼
 ┌────────────────────────┐        ┌───────────────────────────────┐
-│  Firebase RTDB         │        │  Google Apps Script Backend   │
-│  • Lock status         │        │  ┌─────────────────────────┐  │
-│  • Student heartbeats  │        │  │ Main_Routing.gs         │  │
-│  • Exam proctoring     │        │  │ (doGet, authentication) │  │
-│  • Presence detection  │        │  └──────────┬──────────────┘  │
-│                        │        │             │                 │
-│  TTL: 5-10 minutes     │        │  ┌──────────▼──────────────┐  │
-│  (ephemeral state)     │        │  │ Teacher/Student APIs    │  │
-│                        │        │  │ (security + validation) │  │
-└────────────────────────┘        │  └──────────┬──────────────┘  │
-                                  │             │                 │
-                                  │  ┌──────────▼──────────────┐  │
-                                  │  │ Models Layer            │  │
-                                  │  │ (business logic)        │  │
-                                  │  └──────────┬──────────────┘  │
-                                  │             │                 │
-                                  │  ┌──────────▼──────────────┐  │
-                                  │  │ Data_Access.gs          │  │
-                                  │  │ (Sheet operations)      │  │
-                                  │  └──────────┬──────────────┘  │
-                                  └─────────────┼─────────────────┘
-                                                ▼
-                              ┌─────────────────────────────────┐
-                              │  Google Sheets Database         │
-                              │  • Polls (poll definitions)     │
-                              │  • Responses (student answers)  │
-                              │  • Rosters (class enrollment)   │
-                              │  • Exams (exam configurations)  │
-                              │  • LiveStatus (session state)   │
-                              │                                 │
-                              │  Persistence: Permanent         │
-                              └─────────────────────────────────┘
+│  Firestore             │        │  Realtime Database            │
+│  • /teachers           │        │  • /sessions/{pollId}         │
+│  • /classes            │        │    - live_session (state)     │
+│  • /polls              │        │    - students (presence)      │
+│  • /exams              │        │    - answers_key (secure)     │
+│  • /sessions           │        │    - violations (logs)        │
+│  • /question_bank      │        │  • /answers/{pollId}          │
+│  • /reports            │        │    - {studentKey} (responses) │
+│                        │        │  • /tokens (auth)             │
+│  Persistence: Permanent│        │  Persistence: Session-scoped  │
+└────────────────────────┘        └───────────────────────────────┘
+           │                                    │
+           └────────────┬───────────────────────┘
+                        │
+                        ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              Firebase Cloud Functions (functions/)              │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │ Callable Functions (29 total):                           │  │
+│  │  • setLiveSessionState - Update session state            │  │
+│  │  • submitResponse - Handle student answers               │  │
+│  │  • manageProctoring - Lock/unlock students               │  │
+│  │  • getAnalytics - Psychometric analysis                  │  │
+│  │  • createPoll, updatePoll, deletePoll                    │  │
+│  │  • createClass, bulkAddStudents                          │  │
+│  │  • manageExams, createExamSession, joinSession           │  │
+│  │  • sendEmail, sendExamLink                               │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │ Triggered Functions:                                     │  │
+│  │  • onAnswerSubmitted (RTDB trigger)                      │  │
+│  │  • gradeResponse (Firestore trigger)                     │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │ Modules:                                                 │  │
+│  │  • analytics_engine.js - Item analysis algorithms        │  │
+│  │  • email_service.js - Nodemailer integration             │  │
+│  └──────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ### Why This Architecture?
 
-**Fast Path (Firebase):**
-- Proctoring violations need <1s detection → Firebase provides real-time sync
-- Lock status must propagate instantly to prevent cheating
-- Heartbeats detect disconnected students immediately
-- No Apps Script quota consumed for read-only monitoring
+**Firestore (Durable Path):**
+- Poll configurations, class rosters, exam templates stored permanently
+- Strong consistency guarantees for critical data
+- Offline support with automatic sync when reconnected
+- Complex queries with compound indexes
+- Automatic scaling to millions of documents
 
-**Slow Path (Google Sheets):**
-- Answer submissions are final → durability matters more than speed
-- Exam responses written to cache, flushed to Sheets via time-based trigger
-- Poll data/rosters rarely change → Sheets is perfect for infrequent writes
-- Free, unlimited storage (within Sheets quota)
+**Realtime Database (Fast Path):**
+- Live session state propagates to all clients in <100ms
+- Student presence/heartbeat detection for proctoring
+- Lock status updates instantly visible to teachers
+- Answer submissions buffered before Firestore write
+- Lower latency than Firestore for high-frequency updates
 
-**Tradeoff:** Students see lock status updates in ~500ms (Firebase), but answer submissions take ~2-5s to persist to Sheets. This is acceptable because:
-1. Students can't change answers after submission (UI enforced)
-2. Cache-to-Sheet flush happens every 60 seconds (background worker)
-3. On exam submit, all cached answers are immediately written (synchronous)
+**Cloud Functions (Business Logic):**
+- Server-side validation and security enforcement
+- Answer key stored securely (never exposed to students)
+- Automatic grading with point-biserial correlation
+- Email delivery via Nodemailer
+- Scalable to 10,000+ concurrent requests
+
+---
+
+## Data Models
+
+### Firestore Collections
+
+#### `/teachers/{teacherId}`
+Teacher profiles and settings.
+
+```typescript
+{
+  uid: string,              // Firebase Auth UID
+  email: string,            // Teacher's email
+  displayName: string,      // Display name
+  createdAt: Timestamp,
+  updatedAt: Timestamp
+}
+```
+
+#### `/classes/{classId}`
+Class rosters created by teachers.
+
+```typescript
+{
+  classId: string,
+  className: string,
+  teacherId: string,        // Reference to teacher UID
+  studentCount: number,
+  createdAt: Timestamp,
+  updatedAt: Timestamp
+}
+```
+
+**Sub-collection**: `/classes/{classId}/students/{studentId}`
+
+```typescript
+{
+  studentId: string,
+  name: string,
+  email: string,
+  emailHash: string,        // MD5 for secure lookups
+  createdAt: Timestamp
+}
+```
+
+#### `/polls/{pollId}`
+Poll/quiz templates.
+
+```typescript
+{
+  pollId: string,
+  pollName: string,
+  teacherId: string,
+  sessionType: 'LIVE_POLL' | 'SECURE_ASSESSMENT',
+  questions: Array<Question>,
+  settings: {
+    timeLimitMinutes: number,
+    calculatorEnabled: boolean,
+    proctorMode: 'soft' | 'hard'
+  },
+  metacognitionEnabled: boolean,
+  createdAt: Timestamp,
+  updatedAt: Timestamp
+}
+```
+
+#### `/sessions/{sessionId}`
+Live instances of polls/exams.
+
+```typescript
+{
+  sessionId: string,
+  pollId: string,
+  teacherId: string,
+  status: 'WAITING' | 'ACTIVE' | 'PAUSED' | 'CLOSED',
+  accessCode: string,       // 6-digit join code
+  currentQuestionIndex: number,
+  createdAt: Timestamp,
+  lastUpdate: Timestamp
+}
+```
+
+#### `/exams/{examId}`
+Secure exam templates.
+
+```typescript
+{
+  examId: string,
+  teacherId: string,
+  title: string,
+  questions: Array<Question>,
+  settings: {
+    timer: number,
+    shuffle: boolean,
+    proctorMode: 'fullscreen' | 'lockdown'
+  },
+  createdAt: Timestamp
+}
+```
+
+### Realtime Database Structure
+
+```
+/sessions/{pollId}/
+  ├─ live_session/
+  │   ├─ pollId: string
+  │   ├─ questionIndex: number
+  │   ├─ status: 'PRE_LIVE' | 'OPEN' | 'PAUSED' | 'ENDED'
+  │   ├─ timestamp: ServerValue.TIMESTAMP
+  │   ├─ questionText: string
+  │   ├─ options: Array<string>
+  │   └─ metadata: object
+  ├─ students/
+  │   └─ {emailHash}/
+  │       ├─ status: 'ACTIVE' | 'LOCKED' | 'FINISHED'
+  │       ├─ lastHeartbeat: timestamp
+  │       └─ lockVersion: number
+  ├─ answers_key/          # TEACHER-ONLY (secured via rules)
+  │   └─ {questionIndex}: correctAnswer
+  ├─ violations/
+  │   └─ {emailHash}/
+  │       ├─ count: number
+  │       └─ events: Array<ViolationEvent>
+  └─ activities/           # Audit logs
+
+/answers/{pollId}/
+  └─ {studentEmailKey}/
+      ├─ questionIndex: number
+      ├─ answer: mixed
+      ├─ timestamp: ServerValue.TIMESTAMP
+      └─ confidence: 'High' | 'Medium' | 'Low'  # If metacognition enabled
+
+/rosters/
+  ├─ classes: Array<ClassName>
+  └─ rosters/
+      └─ {className}/
+          └─ {emailHash}: { name, email }
+
+/tokens/                   # Authentication tokens
+  └─ {token}: { email, pollId, expiry }
+
+/history/{pollId}/         # Archived sessions
+  └─ {sessionId}: SessionSnapshot
+```
 
 ---
 
@@ -115,10 +278,10 @@ Veritas uses a **hybrid persistence model** to optimize for both speed and durab
 
 ### Requirements
 
-- **Google Workspace** (or personal Google account with Sheets/Drive access)
-- **Node.js 16+** and **npm** (for Clasp CLI deployment)
-- **Firebase Project** (free Spark plan sufficient)
-- **Teacher email** for authentication
+- **Node.js 20+** and **npm**
+- **Firebase CLI** (`npm install -g firebase-tools`)
+- **Firebase Project** (Blaze plan recommended for production)
+- **Google Account** for Firebase Console access
 
 ### Step 1: Clone Repository
 
@@ -127,267 +290,295 @@ git clone https://github.com/stephenborish/veritaslivepoll.git
 cd veritaslivepoll
 ```
 
-### Step 2: Install Clasp
+### Step 2: Install Dependencies
 
 ```bash
-npm install -g @google/clasp
-clasp login
+# Install root dependencies
+npm install
+
+# Install Cloud Functions dependencies
+cd functions
+npm install
+cd ..
 ```
 
-### Step 3: Create Google Apps Script Project
+### Step 3: Firebase Project Setup
 
-**Option A: New Project**
+**Option A: Use Existing Project (classroomproctor)**
 
-1. Create a new Google Sheet named `Veritas Live Poll Database`
-2. Open Extensions → Apps Script
-3. Note the Script ID from Project Settings
-4. Update `.clasp.json`:
+```bash
+firebase login
+firebase use classroomproctor
+```
 
+**Option B: Create New Project**
+
+```bash
+firebase login
+firebase projects:create your-project-id
+firebase use your-project-id
+```
+
+Update `.firebaserc`:
 ```json
 {
-  "scriptId": "YOUR_SCRIPT_ID_HERE",
-  "rootDir": "./src"
-}
-```
-
-5. Push code:
-
-```bash
-clasp push
-```
-
-**Option B: Clone Existing**
-
-```bash
-clasp clone YOUR_SCRIPT_ID
-```
-
-### Step 4: Configure Firebase
-
-**CRITICAL:** Do NOT hardcode Firebase credentials in source files!
-
-1. Create a Firebase project at https://console.firebase.google.com
-2. Enable Realtime Database (choose US-central or your region)
-3. Set database rules to authenticated access:
-
-```json
-{
-  "rules": {
-    ".read": "auth != null",
-    ".write": "auth != null"
+  "projects": {
+    "default": "your-project-id"
   }
 }
 ```
 
-4. Copy Firebase config from Project Settings → Web App
-5. Store in Script Properties (recommended):
+### Step 4: Enable Firebase Services
 
-**Method 1: Via Apps Script Editor**
+In [Firebase Console](https://console.firebase.google.com):
 
-```
-Project Settings → Script Properties → Add Property
-Key: FIREBASE_CONFIG
-Value: {"apiKey":"...","authDomain":"...","databaseURL":"...","projectId":"...","storageBucket":"...","messagingSenderId":"...","appId":"..."}
-```
+1. **Authentication**
+   - Enable Google Sign-In provider
+   - Enable Anonymous authentication
 
-**Method 2: Via DevTools (after first deployment)**
+2. **Firestore Database**
+   - Create database in production mode
+   - Choose region (us-central1 recommended)
 
-```javascript
-// In Apps Script editor, run this function:
-function setupFirebaseConfig() {
-  DevTools.setFirebaseConfig({
-    apiKey: "YOUR_API_KEY",
-    authDomain: "yourproject.firebaseapp.com",
-    databaseURL: "https://yourproject.firebaseio.com",
-    projectId: "yourproject",
-    storageBucket: "yourproject.appspot.com",
-    messagingSenderId: "123456789",
-    appId: "1:123456789:web:abcdef"
-  });
-}
-```
+3. **Realtime Database**
+   - Create database
+   - Set region to match Firestore
 
-### Step 5: Configure Teacher Email
+4. **Storage**
+   - Enable Firebase Storage
+   - Same region as above
 
-Edit `src/Core_Config.gs`:
+5. **Upgrade to Blaze Plan** (for Cloud Functions)
+   - Required for external API calls (email, etc.)
 
-```javascript
-Veritas.Config.TEACHER_EMAIL = "your-email@school.edu";
-```
+### Step 5: Configure Firebase
 
-### Step 6: Initialize Database
-
-1. In Apps Script editor, select `setupSheet` from function dropdown
-2. Click **Run** (authorize permissions when prompted)
-3. Verify 5 sheets created in your spreadsheet:
-   - `Classes`
-   - `Rosters`
-   - `Polls`
-   - `LiveStatus`
-   - `Responses`
-
-### Step 7: Deploy Web App
+**Deploy Security Rules:**
 
 ```bash
-clasp deploy --description "Production v1.0"
+# Deploy Firestore rules
+firebase deploy --only firestore:rules
+
+# Deploy Realtime Database rules
+firebase deploy --only database
+
+# Deploy Storage rules
+firebase deploy --only storage
 ```
 
-Or via Apps Script Editor:
-- Deploy → New deployment
-- Type: **Web app**
-- Execute as: **Me (your-email@school.edu)**
-- Who has access: **Anyone**
-- Deploy
+### Step 6: Deploy Cloud Functions
 
-**Copy the Web App URL** - this is your production endpoint.
+```bash
+cd functions
+
+# Set environment variables (if using email)
+firebase functions:config:set email.service="gmail" \
+  email.user="your-email@gmail.com" \
+  email.password="your-app-password"
+
+# Deploy functions
+npm run deploy
+
+# OR deploy everything at once from root
+cd ..
+firebase deploy
+```
+
+### Step 7: Deploy Frontend
+
+```bash
+firebase deploy --only hosting
+```
+
+Your app will be live at: `https://your-project-id.web.app`
 
 ### Step 8: Test Deployment
 
-1. Open the Web App URL
-2. You should see the Teacher Dashboard (if logged in with teacher email)
-3. Create a test class and add a student roster
-4. Create a test poll
-5. Generate student links and verify email delivery
+1. Navigate to `https://your-project-id.web.app`
+2. Sign in with Google (teacher account)
+3. Create a test class
+4. Add students to roster
+5. Create a test poll
+6. Start a live session
+7. Open student view in incognito: `https://your-project-id.web.app/student.html`
 
 ---
 
 ## Project Structure
 
-### Backend Architecture (`src/*.gs` - 25 files)
-
 ```
-Foundation Layer (Core infrastructure)
-├── Main.gs                      # Entry point, namespace initialization
-├── Core_Base.gs                 # Base configuration and version
-├── Core_Config.gs               # Configuration constants (🔑 TEACHER_EMAIL here)
-├── Core_Logging.gs              # Logging utilities
-├── Core_Security.gs             # Authentication and authorization
-└── Core_Utils.gs                # Utility functions (caching, rate limiting)
-
-Data Layer (Persistence)
-└── Data_Access.gs               # Abstraction for Sheets/Drive/Properties
-
-Models Layer (Business Logic)
-├── Model_Poll.gs                # Poll CRUD, roster management, image handling
-├── Model_Session.gs             # Live poll sessions, timing, proctoring
-├── Model_Analytics.gs           # Psychometric analysis, insights
-└── Model_StudentActivity.gs     # Student activity tracking
-
-API Layer (Exposed to Frontend)
-├── Teacher_API.gs               # Teacher-facing RPC methods
-├── Student_API.gs               # Student-facing RPC methods
-├── API_Exposed.gs               # Main RPC registry (67 functions)
-└── API_Exposed_Exams.gs         # Exam-specific RPC methods
-
-Routing Layer
-└── Main_Routing.gs              # doGet(), authentication, template serving, image proxy
-
-Exam System (Separate subsystem)
-├── Veritas_Exams.gs             # Exam CRUD operations
-├── Veritas_QuestionBank.gs      # Question bank management
-├── Veritas_Exam_Proctoring.gs   # Exam proctoring logic
-├── Veritas_Exam_Responses.gs    # Write-behind response handling
-└── Veritas_Exam_Analytics.gs    # Exam analytics and scoring
-
-Development & Testing
-├── Shared_Logic.gs              # Shared helper functions
-├── DevTools.gs                  # Development utilities (setupFirebaseConfig, etc.)
-├── Test_System.gs               # Testing framework
-└── Verification_SmokeTest.gs    # Smoke tests for CI/CD
-```
-
-### Frontend Architecture (`src/*.html` - 18 files)
-
-```
-Main Application Views
-├── Teacher_View.html            # Teacher dashboard (Live Polls mode)
-│   └── Includes: Common_Head, Common_TailwindConfig, Proctoring_Shared,
-│       Common_Styles, Teacher_Styles, Teacher_Body, Common_Scripts, Teacher_Scripts
+veritaslivepoll/
+├── public/                      # Firebase Hosting (frontend)
+│   ├── index.html              # Teacher dashboard (960KB, feature-rich SPA)
+│   ├── student.html            # Student polling interface
+│   ├── exam_manager.html       # Exam creation UI
+│   ├── exam_teacher.html       # Exam monitoring dashboard
+│   ├── exam_student.html       # Proctored exam interface
+│   └── RichTextManager.js      # Quill.js integration for rich text
 │
-└── Student_View.html            # Student polling interface
-    └── Includes: Common_Head, Common_TailwindConfig, Proctoring_Shared,
-        Common_Styles, Student_Styles, Student_Body, Common_Scripts, Student_Scripts
-
-Exam System Views
-├── ExamManagerView.html         # Exam CRUD interface (teacher)
-├── ExamTeacherView.html         # Live exam monitoring dashboard
-├── ExamStudentView.html         # Student exam interface (proctored)
-├── ExamClaimView.html           # Manual seat claiming (if tokens disabled)
-└── QuestionBankView.html        # Question bank editor
-
-Shared Components (Included via <?!= include('...') ?>)
-├── Common_Head.html             # Meta tags, Google Fonts, Material Symbols
-├── Common_Styles.html           # Global CSS variables, utility classes
-├── Common_Scripts.html          # Shared JavaScript utilities
-├── Common_TailwindConfig.html   # Tailwind CSS CDN configuration
-├── Proctoring_Shared.html       # Proctoring JavaScript library
-├── Teacher_Body.html            # Teacher dashboard HTML structure
-├── Teacher_Styles.html          # Teacher-specific CSS
-├── Teacher_Scripts.html         # Teacher polling logic, chart rendering
-├── Student_Body.html            # Student interface HTML structure
-├── Student_Styles.html          # Student-specific CSS
-└── Student_Scripts.html         # Student polling logic, proctoring handlers
+├── functions/                   # Cloud Functions (Node.js 20)
+│   ├── index.js                # Main functions file (1900+ lines, 29 exports)
+│   ├── analytics_engine.js     # Psychometric analysis algorithms
+│   ├── email_service.js        # Nodemailer email delivery
+│   ├── types.ts                # TypeScript type definitions
+│   └── package.json            # Dependencies (firebase-admin, nodemailer)
+│
+├── src/                         # LEGACY Google Apps Script (archived, not used)
+│   └── [Legacy .gs files - DO NOT USE]
+│
+├── firestore.rules             # Firestore security rules
+├── database.rules.json         # Realtime Database security rules
+├── storage.rules               # Firebase Storage security rules
+├── firebase.json               # Firebase configuration
+├── .firebaserc                 # Project aliases
+│
+├── DOCS/
+│   ├── Firestore_Data_Model.md # Database schema documentation
+│   └── ARCHITECTURE.md          # System design documentation
+│
+├── .github/
+│   └── workflows/
+│       ├── firebase-deploy.yml # Auto-deploy on push to main
+│       └── DEPLOYMENT_SETUP.md # CI/CD setup guide
+│
+└── README.md                    # This file
 ```
 
-### Google Sheets Database Schema
+---
 
-#### **Classes Sheet**
-```
-┌─────────────┬─────────────────────────┐
-│ ClassName   │ Description             │
-├─────────────┼─────────────────────────┤
-│ AP Biology  │ Advanced Placement Bio  │
-│ Physics 101 │ Introductory Physics    │
-└─────────────┴─────────────────────────┘
-```
+## Cloud Functions Reference
 
-#### **Rosters Sheet**
-```
-┌─────────────┬───────────────┬────────────────────────┐
-│ ClassName   │ StudentName   │ StudentEmail           │
-├─────────────┼───────────────┼────────────────────────┤
-│ AP Biology  │ John Smith    │ jsmith@example.com     │
-│ AP Biology  │ Jane Doe      │ jdoe@example.com       │
-└─────────────┴───────────────┴────────────────────────┘
-```
+### Session Management
 
-#### **Polls Sheet**
-```
-┌──────────┬───────────┬─────────────┬──────────────┬──────────────────┐
-│ PollID   │ PollName  │ ClassName   │ QuestionIdx  │ QuestionDataJSON │
-├──────────┼───────────┼─────────────┼──────────────┼──────────────────┤
-│ uuid-123 │ Mitosis   │ AP Biology  │ 0            │ {...json...}     │
-│ uuid-123 │ Mitosis   │ AP Biology  │ 1            │ {...json...}     │
-└──────────┴───────────┴─────────────┴──────────────┴──────────────────┘
+#### `setLiveSessionState`
+Updates live session state (question index, status).
+
+```javascript
+const result = await setLiveSessionState({
+  pollId: 'poll123',
+  status: 'OPEN',
+  questionIndex: 1,
+  questionText: 'What is the capital of France?',
+  options: ['London', 'Paris', 'Berlin', 'Madrid'],
+  correctAnswer: 1,  // Stored securely, not exposed to students
+  metadata: { timer: 90 }
+});
 ```
 
-#### **LiveStatus Sheet** (Single Row - Current Session State)
-```
-┌──────────────┬──────────────────────┬────────────┬─────────────┬───────────┐
-│ ActivePollID │ ActiveQuestionIndex  │ PollStatus │ StateVersion│ Timestamp │
-├──────────────┼──────────────────────┼────────────┼─────────────┼───────────┤
-│ uuid-123     │ 2                    │ OPEN       │ 15          │ 2025...   │
-└──────────────┴──────────────────────┴────────────┴─────────────┴───────────┘
+#### `submitResponse`
+Handles student answer submission.
+
+```javascript
+await submitResponse({
+  pollId: 'poll123',
+  studentId: 'student456',
+  questionIndex: 1,
+  answer: 'B',
+  confidence: 'High',
+  timestamp: Date.now()
+});
 ```
 
-**PollStatus Values:**
-- `OPEN` - Poll running, students can submit
-- `PAUSED` - Poll paused, no submissions
-- `ENDED` - Poll completed
+### Proctoring
 
-#### **Responses Sheet**
-```
-┌────────────┬──────────────┬──────────┬──────┬──────────────────┬────────┬───────────┬──────────────┐
-│ ResponseID │ Timestamp    │ PollID   │ QIdx │ StudentEmail     │ Answer │ IsCorrect │ Confidence   │
-├────────────┼──────────────┼──────────┼──────┼──────────────────┼────────┼───────────┼──────────────┤
-│ uuid-456   │ 2025-01-15...│ uuid-123 │ 0    │ jsmith@ex.com    │ B      │ true      │ High         │
-│ uuid-457   │ 2025-01-15...│ uuid-123 │ 0    │ jdoe@ex.com      │ A      │ false     │ Medium       │
-└────────────┴──────────────┴──────────┴──────┴──────────────────┴────────┴───────────┴──────────────┘
+#### `manageProctoring`
+Lock/unlock students, handle violations.
+
+```javascript
+await manageProctoring({
+  action: 'LOCK' | 'UNLOCK' | 'GET_STATUS',
+  pollId: 'poll123',
+  studentEmail: 'student@example.com',
+  reason: 'Fullscreen violation'
+});
 ```
 
-**Special Response Markers:**
-- `VIOLATION_LOCKED` in Answer column → Student locked due to proctoring violation
-- `VIOLATION_TEACHER_BLOCK` → Teacher manually blocked student
+#### `reportStudentViolation`
+Student-side violation reporting.
+
+```javascript
+await reportStudentViolation({
+  pollId: 'poll123',
+  studentEmail: 'student@example.com',
+  violationType: 'FULLSCREEN_EXIT' | 'TAB_SWITCH' | 'WINDOW_BLUR',
+  timestamp: Date.now()
+});
+```
+
+### Analytics
+
+#### `getAnalytics`
+Comprehensive psychometric analysis.
+
+```javascript
+const analytics = await getAnalytics({
+  pollId: 'poll123'
+});
+
+// Returns:
+// {
+//   itemAnalysis: {
+//     questions: [{
+//       difficulty: 0.75,        // % correct
+//       discrimination: 0.42,    // Point-biserial correlation
+//       distractorAnalysis: {...}
+//     }]
+//   },
+//   studentPerformance: {...},
+//   classInsights: {...}
+// }
+```
+
+### Class Management
+
+#### `createClass`
+Create a new class roster.
+
+```javascript
+await createClass({
+  className: 'AP Biology - Period 1'
+});
+```
+
+#### `bulkAddStudents`
+Add multiple students to a class (batch write).
+
+```javascript
+await bulkAddStudents({
+  classId: 'class123',
+  students: [
+    { name: 'John Smith', email: 'jsmith@school.edu' },
+    { name: 'Jane Doe', email: 'jdoe@school.edu' }
+  ]
+});
+```
+
+### Poll Management
+
+#### `savePoll`
+Create or update a poll.
+
+```javascript
+await savePoll({
+  pollId: 'poll123',  // Omit for new poll
+  pollName: 'Unit 1 Quiz',
+  className: 'AP Biology - Period 1',
+  questions: [{
+    stemHtml: '<p>What is photosynthesis?</p>',
+    options: [
+      { text: 'A chemical reaction', imageUrl: null },
+      { text: 'A physical process', imageUrl: null }
+    ],
+    correctAnswer: 0,
+    points: 1
+  }],
+  settings: {
+    timeLimitMinutes: 30,
+    calculatorEnabled: false,
+    proctorMode: 'soft'
+  }
+});
+```
 
 ---
 
@@ -395,216 +586,107 @@ Shared Components (Included via <?!= include('...') ?>)
 
 ### For Teachers
 
-#### 1. Create a Class Roster
+#### 1. First-Time Setup
 
-1. Navigate to **Classes** tab in dashboard
-2. Click **Create New Class**
-3. Enter class name (e.g., "AP Biology - Period 3")
-4. Add students:
-   - **Manual**: Click "Add Student", enter name + email
-   - **CSV Import**: Upload CSV with columns `Name,Email`
+1. Navigate to `https://classroomproctor.web.app`
+2. Click **Sign in with Google**
+3. Authorize the app
+4. You'll see the Teacher Dashboard
 
-#### 2. Create a Poll
+#### 2. Create a Class Roster
 
-1. Click **Create New Poll**
-2. Enter poll name and select target class
-3. Add questions:
-   - Question text (supports HTML formatting)
-   - Question image (optional, uploads to Drive)
+1. Click **"Create New Class"** in Classes section
+2. Enter class name (e.g., "AP Biology - Period 1")
+3. Click **"Add Students"**
+4. Paste CSV data:
+   ```
+   John Smith, jsmith@school.edu
+   Jane Doe, jdoe@school.edu
+   ```
+5. Click **"Import"**
+6. Students appear in roster immediately (real-time Firestore)
+
+#### 3. Create a Poll
+
+1. Navigate to **Poll Manager** tab
+2. Click **"Create New Poll"**
+3. Enter poll name
+4. For each question:
+   - Write question text (supports rich text via Quill editor)
+   - Upload optional image (stored in Firebase Storage)
    - Add 2-6 answer choices
-   - Mark correct answer (for auto-grading)
-   - Add images to answer choices (optional)
-4. Click **Save Poll**
+   - Mark correct answer
+   - Set point value
+5. Click **"Save Poll"**
 
-#### 3. Send Student Links
-
-1. Select poll from dropdown
-2. Click **Send Student Links**
-3. System generates unique tokens for each student (format: `https://script.google.com/macros/s/.../exec?token=abc123...`)
-4. Emails sent automatically via `MailApp.sendEmail()`
-5. Tokens valid for 30 days (configurable in `Core_Config.gs`)
-
-#### 4. Start Live Poll Session
+#### 4. Start a Live Session
 
 1. Select poll from dropdown
-2. (Optional) Adjust timer (default: 90 seconds)
-3. Click **Start Poll**
-4. LiveStatus sheet updates to `OPEN`
-5. Students receive state update within 2.5 seconds
+2. Click **"Start Live Session"**
+3. System generates 6-digit access code (e.g., `ABC123`)
+4. Share code with students
+5. Students join via student interface
+6. Monitor submissions in real-time:
+   - **Green tiles**: Answer submitted
+   - **Red tiles**: Locked due to violation
+   - **Blue tiles**: Unlocked, awaiting fullscreen
+   - **Gray tiles**: Waiting
 
-#### 5. Monitor Responses
+#### 5. Control Poll Flow
 
-**Live Bar Chart:**
-- Updates every 2.5 seconds via `google.script.run.getLivePollData()`
-- Shows answer distribution (A, B, C, D...)
-- Bars color-coded: green = correct, gray = incorrect
+- **Next Question**: Advances to next question, saves responses
+- **Pause**: Freezes timer, prevents submissions
+- **Resume**: Restarts from current state
+- **End Session**: Finalizes session, triggers analytics
 
-**Student Status Grid:**
-- Individual tiles for each student
-- Color-coded states:
-  - 🟢 **Green (SUBMITTED)**: Answer received
-  - 🔴 **Red (LOCKED)**: Proctoring violation detected
-  - 🔵 **Blue (AWAITING_FULLSCREEN)**: Teacher approved unlock, student must re-enter fullscreen
-  - ⚪ **Gray (WAITING)**: Not submitted yet
-- Click tile to see student's answer
-- Click **Approve** to unlock locked student
+#### 6. Handle Proctoring Violations
 
-#### 6. Control Poll Flow
+**Scenario**: Student exits fullscreen
 
-- **Pause**: Freezes timer, prevents new submissions
-- **Resume**: Restarts timer and submissions
-- **Next Question**: Advances to next question, saves current responses
-- **Reset Question**:
-  - Option 1: Clear responses (delete from Responses sheet)
-  - Option 2: Keep responses (reset UI only)
-- **End Poll**: Closes poll, students see "Session Complete"
-
-#### 7. Handle Proctoring Violations
-
-**Scenario:** Student exits fullscreen or switches tabs
-
-1. Student's browser detects violation via `fullscreenchange`/`visibilitychange` listeners
-2. `reportStudentViolation()` called → writes `VIOLATION_LOCKED` to Responses sheet
-3. Firebase RTDB updated: `/sessions/{pollId}/students/{emailHash} = "LOCKED"`
-4. Teacher dashboard shows red tile with lock icon and version (v1, v2, v3...)
-5. Teacher clicks **Approve** → `teacherApproveUnlock()` increments unlock version
-6. Student sees unlock message, clicks "Resume Fullscreen"
-7. Student re-enters fullscreen → `studentConfirmFullscreen()` validates version match
-8. If versions match, lock cleared; if student violated again (version mismatch), approval rejected
-
-**Lock Versioning** prevents race conditions:
-- Student violates → v1
-- Teacher approves → expects v1
-- Student violates again → v2
-- Teacher's v1 approval rejected (stale)
-- Teacher must approve v2 explicitly
+1. Student tile turns **red** with lock icon
+2. Click student tile to view violation details
+3. Click **"Approve Unlock"**
+4. Student sees unlock message
+5. Student clicks **"Resume Fullscreen"**
+6. Lock clears if student re-enters fullscreen
+7. If student violates again, lock version increments (prevents stale approvals)
 
 ### For Students
 
-#### 1. Receive Access Link
+#### 1. Join a Poll
 
-- Email subject: **"Your Veritas Live Poll Access Link"**
-- Contains personalized URL with token
-- Example: `https://script.google.com/macros/s/ABC.../exec?token=def456`
-- Valid for 30 days (no re-authentication needed)
+1. Navigate to `https://classroomproctor.web.app/student.html`
+2. Enter 6-digit access code from teacher
+3. Click **"Join Session"**
+4. Enter your name and email
+5. Click **"Begin Session"**
+6. Browser requests fullscreen → Click **"Allow"**
 
-#### 2. Join Poll
+#### 2. Answer Questions
 
-1. Click link → opens `Student_View.html`
-2. See entry screen with security warning
-3. Click **"Begin Session"**
-4. Browser requests fullscreen permission → click **Allow**
-5. Screen enters fullscreen, proctoring starts
+1. Read question and view image (if present)
+2. Click answer choice (highlights in blue)
+3. If metacognition enabled, select confidence level
+4. Click **"Submit Answer"**
+5. Confirmation appears: "Answer submitted"
+6. Wait for teacher to advance to next question
 
-#### 3. Answer Questions
+#### 3. Proctoring Requirements
 
-1. View question text and optional image
-2. Click desired answer choice
-3. Answer highlights with blue border
-4. Click **Submit Answer**
-5. Confirmation message: "Your answer has been submitted. Please wait..."
-6. Cannot change answer after submission (enforced via `hasSubmitted` flag)
+**You must maintain fullscreen mode**
 
-#### 4. Wait for Next Question
+If you accidentally exit:
+- Lock screen appears immediately
+- Cannot proceed until teacher approves
+- Teacher clicks "Approve" in their dashboard
+- You click "Resume Fullscreen"
+- Poll continues
 
-- Teacher advances question → students see new question within 2.5 seconds
-- Previous answers saved to Responses sheet
-- Chart on teacher side resets for new question
-
-#### 5. Proctoring Scenarios
-
-**If you accidentally exit fullscreen:**
-
-1. Lock screen appears immediately: "🔒 Your session has been locked"
-2. Cannot proceed without teacher approval
-3. Teacher sees red tile, clicks **Approve**
-4. You see: "🔵 Your teacher has unlocked your session. Resume fullscreen to continue."
-5. Click **Resume Poll** → re-enter fullscreen
-6. Poll resumes
-
-**Connection health monitoring:**
-- Green indicator: Connected (polling every 2.5s)
-- Yellow indicator: Struggling (3+ failed requests, backoff to 5s)
-- Red indicator: Offline (switched to 10s polling with exponential backoff)
-- Auto-recovery when connection restores
-
----
-
-## Configuration
-
-### Script Properties (Dynamic Config)
-
-Set via **Apps Script Editor → Project Settings → Script Properties**:
-
-| Key | Value | Purpose |
-|-----|-------|---------|
-| `FIREBASE_CONFIG` | `{"apiKey":"...","databaseURL":"..."}` | Firebase credentials (🔑 REQUIRED) |
-| `TEACHER_EMAILS` | `teacher2@school.edu,teacher3@school.edu` | Additional authorized teachers (comma-separated) |
-
-### Core_Config.gs (Static Config)
-
-```javascript
-// Teacher Authentication
-Veritas.Config.TEACHER_EMAIL = "primary-teacher@school.edu";
-
-// Token Expiry
-Veritas.Config.TOKEN_EXPIRY_DAYS = 30; // Student tokens valid for 30 days
-
-// Proctoring
-Veritas.Config.DEBUG_FIREBASE = false; // Set true to show Firebase debug HUD
-Veritas.Config.ALLOW_MANUAL_EXAM_CLAIM = false; // Allow students to claim exams without tokens
-```
-
-### Frontend Config (Teacher_Scripts.html / Student_Scripts.html)
-
-```javascript
-// Polling Intervals
-const POLL_INTERVAL = 2500; // Poll server every 2.5 seconds
-const CONNECTION_HEALTH_THRESHOLD = 3; // Mark unhealthy after 3 failures
-
-// Adaptive Backoff
-const ADAPTIVE_BACKOFF_MAX = 15000; // Max 15s between polls when struggling
-```
-
----
-
-## Deployment
-
-### Via Clasp (Recommended)
-
-```bash
-# Push code changes
-clasp push
-
-# Deploy new version
-clasp deploy --description "v2.1.0 - Added exam analytics"
-
-# List deployments
-clasp deployments
-
-# Promote deployment to production
-clasp deploy --deploymentId ABC123
-```
-
-### Via Apps Script Editor
-
-1. **Deploy → Manage deployments**
-2. **Create new version** with description
-3. Copy **Web App URL**
-4. Test deployment before sharing with students
-
-### Post-Deployment Checklist
-
-- [ ] Run `setupSheet()` once (initializes database)
-- [ ] Verify all 5 sheets exist (Classes, Rosters, Polls, LiveStatus, Responses)
-- [ ] Configure `FIREBASE_CONFIG` in Script Properties
-- [ ] Add teacher email to `Core_Config.gs`
-- [ ] Create test class and roster
-- [ ] Create test poll
-- [ ] Generate student token and verify email delivery
-- [ ] Test fullscreen proctoring flow
-- [ ] Verify Firebase connection (check browser console for "Firebase initialized")
-- [ ] Check Apps Script Execution logs for errors
+**Violations detected**:
+- Exiting fullscreen (F11 or Esc key)
+- Switching tabs (Cmd+Tab / Alt+Tab)
+- Clicking browser address bar
+- Opening developer tools
 
 ---
 
@@ -612,134 +694,275 @@ clasp deploy --deploymentId ABC123
 
 ### Authentication
 
-**Teacher:**
-- Google OAuth 2.0 via `Session.getActiveUser().getEmail()`
-- Validated against `Veritas.Config.TEACHER_EMAIL` and `TEACHER_EMAILS` Script Property
-- Multi-account support via comma-separated list
+**Teachers**:
+- Firebase Auth with Google Sign-In
+- Email verified by Google
+- UID stored in Firestore `/teachers/{uid}`
 
-**Student:**
-- Token-based (no Google account required)
-- Format: `base64(email:pollId:timestamp:hmac)`
-- HMAC signature using `Utilities.computeHmacSha256Signature()`
-- 30-day expiry enforced in `TokenManager.validateToken()`
-- Tokens self-contain identity (no database lookup needed)
+**Students**:
+- Anonymous authentication (no login required)
+- 6-digit access codes for session entry
+- Email collected for roster matching only
 
-### Proctoring Security
+### Firestore Security Rules
 
-**Violation Detection:**
 ```javascript
-// Student_Scripts.html
-document.addEventListener('fullscreenchange', detectViolation);
-document.addEventListener('visibilitychange', detectViolation);
-window.addEventListener('blur', detectViolation);
-```
+// Teachers can only access their own data
+match /classes/{classId} {
+  allow read, write: if request.auth.uid == resource.data.teacherId;
+}
 
-**Lock Versioning:**
-- Each violation increments `lockVersion` (v1 → v2 → v3...)
-- Teacher approval includes `expectedLockVersion` parameter
-- If student violates again after teacher approval, version mismatch detected
-- Prevents stale approvals from unlocking students who violated multiple times
+// Students can only write their own responses
+match /sessions/{sessionId}/responses/{responseId} {
+  allow create: if request.auth.uid == request.resource.data.studentId;
+  allow update: if false;  // Immutable
+}
 
-**Lock Persistence:**
-- Lock state written to Responses sheet as `VIOLATION_LOCKED` marker
-- Survives page reloads, browser restarts
-- Only clearable via `teacherApproveUnlock()` or `teacherForceUnlock()`
-
-### Data Security
-
-**Sensitive Data:**
-- Student emails hashed for Firebase keys: `SHA-256(email).substring(0, 32)`
-- Tokens HMAC-signed, tamper-proof
-- Images stored in private Drive folder, proxied via `serveImage()` with folder validation
-
-**Rate Limiting:**
-```javascript
-// Core_Utils.gs
-- 100 requests per user per minute (tracked via UserLock)
-- 5-minute ban on threshold breach
-- Prevents DoS and abuse
-```
-
-**Input Sanitization:**
-- All HTML escaped via `Veritas.Routing.escapeHtml()`
-- JSON parsing with try-catch wrappers
-- File upload size limits (5MB per image)
-
----
-
-## Troubleshooting
-
-### Common Issues
-
-#### **Issue:** "Access Denied" for Teacher
-
-**Cause:** Teacher email not configured
-
-**Solution:**
-1. Verify `Veritas.Config.TEACHER_EMAIL` in `Core_Config.gs` matches your Google account
-2. Check Apps Script Execution log for actual email attempting access
-3. Add to `TEACHER_EMAILS` Script Property if multiple teachers
-
-#### **Issue:** Student Token Invalid
-
-**Cause:** Token expired (>30 days) or corrupted
-
-**Solution:**
-1. Teacher regenerates links via "Send Student Links"
-2. Verify URL not broken across multiple lines in email
-3. Increase `TOKEN_EXPIRY_DAYS` if needed
-
-#### **Issue:** Firebase Not Connecting
-
-**Cause:** Missing or invalid `FIREBASE_CONFIG`
-
-**Solution:**
-1. Verify `FIREBASE_CONFIG` exists in Script Properties
-2. Check JSON is valid (no trailing commas)
-3. Verify Firebase RTDB is enabled in Firebase Console
-4. Check browser console for errors: `Firebase initialized successfully`
-
-#### **Issue:** Chart Not Updating
-
-**Cause:** JavaScript error in `Teacher_Scripts.html`
-
-**Solution:**
-1. Open browser console (F12)
-2. Look for errors in `getLivePollData()` or `renderChart()`
-3. Verify Google Charts library loaded: `google.visualization` should exist
-4. Hard refresh: Ctrl+Shift+R
-
-#### **Issue:** Images Not Loading
-
-**Cause:** Drive permissions or deleted file
-
-**Solution:**
-1. Verify image exists in Drive folder (check `ALLOWED_FOLDER_ID` in `Core_Config.gs`)
-2. Re-upload image via poll editor
-3. Test Drive URL directly: `https://drive.google.com/thumbnail?id=FILE_ID&sz=w800`
-
-### Debug Tools
-
-**Check Session State:**
-```javascript
-// Run in Apps Script editor
-function debugSessionState() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var liveStatus = ss.getSheetByName('LiveStatus');
-  var values = liveStatus.getRange(2, 1, 1, liveStatus.getLastColumn()).getValues()[0];
-  Logger.log('Active Poll:', values[0]);
-  Logger.log('Question Index:', values[1]);
-  Logger.log('Poll Status:', values[2]);
+// Reports are read-only for all, write-only for Cloud Functions
+match /reports/{reportId} {
+  allow read: if request.auth != null;
+  allow write: if false;
 }
 ```
 
-**Validate Token:**
+### Realtime Database Security
+
 ```javascript
-// Run in Apps Script editor
-function debugToken() {
-  var token = 'PASTE_TOKEN_HERE';
-  var decoded = TokenManager.validateToken(token);
-  Logger.log(decoded);
+// Answer keys are TEACHER-ONLY
+"answers_key": {
+  ".read": "auth.token.firebase.sign_in_provider != 'anonymous'",
+  ".write": "auth.token.firebase.sign_in_provider != 'anonymous'"
+}
+
+// Students can submit answers
+"answers": {
+  "$pollId": {
+    "$studentKey": {
+      ".write": "auth != null"
+    }
+  }
+}
+```
+
+### Storage Security
+
+```javascript
+// Teachers can upload images to their own folder
+match /poll-images/{teacherId}/{imageFile} {
+  allow create: if request.auth.uid == teacherId &&
+                   request.resource.size < 10 * 1024 * 1024 &&
+                   request.resource.contentType.matches('image/.*');
+}
+```
+
+### Data Protection
+
+- **Answer keys** stored in secure RTDB path, never exposed to client
+- **Student emails** hashed (MD5) for RTDB keys
+- **Access codes** are 6-digit random strings, expire after session
+- **Violation logs** append-only (students can't delete)
+- **HTTPS enforced** on all Firebase Hosting routes
+
+---
+
+## Deployment
+
+### Local Development
+
+```bash
+# Start Firebase emulators (Firestore, RTDB, Functions, Hosting)
+firebase emulators:start
+
+# Access local UI
+open http://localhost:5000           # Teacher dashboard
+open http://localhost:5000/student.html  # Student interface
+
+# View emulator UI
+open http://localhost:4000           # Firebase Emulator Suite
+```
+
+### Production Deployment
+
+**Option 1: Manual Deploy**
+
+```bash
+# Deploy everything
+firebase deploy
+
+# Deploy specific targets
+firebase deploy --only hosting
+firebase deploy --only functions
+firebase deploy --only firestore:rules
+```
+
+**Option 2: GitHub Actions (Automated)**
+
+Configured in `.github/workflows/firebase-deploy.yml`
+
+**Triggers**:
+- Push to `main` branch → Full deploy
+- Pull request → Preview deployment with unique URL
+
+**Setup**:
+1. Add `FIREBASE_SERVICE_ACCOUNT` to GitHub Secrets
+2. Service account JSON from Firebase Console → Project Settings → Service Accounts
+3. Push to `main` triggers deployment automatically
+
+See `.github/DEPLOYMENT_SETUP.md` for details.
+
+### Post-Deployment Checklist
+
+- [ ] Navigate to `https://your-project-id.web.app`
+- [ ] Sign in with Google (teacher)
+- [ ] Create test class
+- [ ] Add test students
+- [ ] Create test poll
+- [ ] Start live session
+- [ ] Join as student (incognito window)
+- [ ] Submit test answer
+- [ ] Verify real-time updates
+- [ ] Check Firestore console for data
+- [ ] Review Cloud Functions logs
+
+---
+
+## Monitoring & Debugging
+
+### Firebase Console
+
+**Firestore Database**:
+- View `/classes`, `/polls`, `/sessions` collections
+- Monitor real-time document changes
+- Check indexes (automatically created)
+
+**Realtime Database**:
+- View `/sessions/{pollId}/live_session` for current state
+- Monitor `/answers/{pollId}` for submissions
+- Check `/violations` for proctoring logs
+
+**Cloud Functions**:
+- Functions → Logs → Filter by function name
+- Monitor invocation count, execution time, errors
+- Check for cold starts (first invocation after deploy)
+
+**Authentication**:
+- View user list (teachers + anonymous students)
+- Check sign-in methods enabled
+- Review authentication logs
+
+### Common Issues
+
+#### Issue: "Permission Denied" in Firestore
+
+**Cause**: Security rules blocking access
+
+**Solution**:
+```bash
+# Check current rules
+firebase firestore:rules
+
+# Deploy updated rules
+firebase deploy --only firestore:rules
+```
+
+Verify teacher is authenticated with correct UID.
+
+#### Issue: Cloud Function Timeout
+
+**Cause**: Function exceeds 60s timeout (default)
+
+**Solution**:
+```javascript
+// In functions/index.js
+exports.slowFunction = functions
+  .runWith({ timeoutSeconds: 300 })  // 5 minutes
+  .https.onCall(async (data, context) => { ... });
+```
+
+#### Issue: Student Can't Join Session
+
+**Causes**:
+1. Access code expired
+2. Session status not `ACTIVE`
+3. RTDB rules blocking anonymous auth
+
+**Debug**:
+```bash
+# Check session in RTDB
+firebase database:get /sessions/{pollId}/live_session
+
+# Verify anonymous auth enabled
+firebase auth:export users.json
+```
+
+#### Issue: Images Not Loading
+
+**Cause**: Storage rules or incorrect path
+
+**Debug**:
+1. Check Firebase Storage console
+2. Verify file exists in `/poll-images/{teacherId}/`
+3. Check Storage rules allow read for authenticated users
+4. Test direct URL: `https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{path}?alt=media`
+
+---
+
+## Performance Optimization
+
+### Firestore Indexes
+
+Composite indexes are auto-created on first query. Monitor in Firestore console.
+
+**Example**: Query classes by teacher, sorted by creation date
+```javascript
+db.collection('classes')
+  .where('teacherId', '==', uid)
+  .orderBy('createdAt', 'desc')
+```
+
+Creates index:
+```
+Collection: classes
+Fields: teacherId (Ascending), createdAt (Descending)
+```
+
+### Cloud Functions
+
+**Cold Starts**: First invocation after deploy takes 1-3s
+
+**Mitigation**:
+- Use minimum instances (Blaze plan only):
+  ```javascript
+  exports.hotFunction = functions
+    .runWith({ minInstances: 1 })
+    .https.onCall(...)
+  ```
+
+**Reduce Bundle Size**:
+- Avoid large dependencies in `functions/package.json`
+- Use tree-shaking (ES6 imports)
+- Split into multiple codebase deployments
+
+### Realtime Database
+
+**Optimize Reads**:
+```javascript
+// ❌ BAD: Downloads entire session
+db.ref(`sessions/${pollId}`).once('value')
+
+// ✅ GOOD: Downloads only live_session
+db.ref(`sessions/${pollId}/live_session`).once('value')
+```
+
+**Use Indexes**:
+```json
+// In database.rules.json
+"sessions": {
+  "$pollId": {
+    "students": {
+      ".indexOn": ["lastHeartbeat"]
+    }
+  }
 }
 ```
 
@@ -749,52 +972,45 @@ function debugToken() {
 
 ### Development Workflow
 
-1. **Clone repo**:
+1. **Fork repository**
+2. **Create feature branch**:
    ```bash
-   git clone https://github.com/stephenborish/veritaslivepoll.git
-   cd veritaslivepoll
+   git checkout -b feature/add-timer-presets
    ```
-
-2. **Install Clasp**:
+3. **Make changes locally**
+4. **Test with emulators**:
    ```bash
-   npm install -g @google/clasp
-   clasp login
+   firebase emulators:start
    ```
-
-3. **Link to Apps Script project**:
+5. **Commit changes**:
    ```bash
-   clasp clone YOUR_SCRIPT_ID
+   git add .
+   git commit -m "feat: Add timer presets to poll settings"
    ```
-
-4. **Make changes locally**, then push:
+6. **Push to fork**:
    ```bash
-   clasp push
+   git push origin feature/add-timer-presets
    ```
-
-5. **Test in Apps Script editor** (Run → Execute)
-
-6. **Deploy**:
-   ```bash
-   clasp deploy --description "Feature: Add timer presets"
-   ```
+7. **Open Pull Request** on GitHub
 
 ### Code Style
 
-- **JavaScript**: ES6+ syntax (V8 runtime)
+- **JavaScript**: ES6+ syntax, async/await preferred
 - **Indentation**: 2 spaces
 - **Naming**:
   - Functions: `camelCase`
   - Constants: `UPPER_SNAKE_CASE`
-  - Namespaces: `PascalCase` (e.g., `Veritas.Config`)
-- **Comments**: JSDoc format for public functions
+  - Files: `lowercase_with_underscores.js`
+- **Comments**: JSDoc for public functions
 
-### Testing Guidelines
+### Testing Checklist
 
-1. **Unit Tests**: Run `Test_System.gs` functions
-2. **Smoke Tests**: Execute `Verification_SmokeTest.gs`
-3. **Proctoring Tests**: Manually test fullscreen violations, lock versioning, unlock flow
-4. **Browser Tests**: Chrome, Firefox, Safari (macOS)
-5. **Load Tests**: Test with 30+ concurrent students
+- [ ] Test in Chrome, Firefox, Safari
+- [ ] Test teacher dashboard with 30+ students
+- [ ] Test proctoring violations (fullscreen exit, tab switch)
+- [ ] Test offline/online transitions
+- [ ] Check Cloud Functions logs for errors
+- [ ] Verify security rules (unauthorized access blocked)
 
 ---
 
@@ -826,11 +1042,11 @@ SOFTWARE.
 
 ## Acknowledgments
 
-- **Google Apps Script** - Serverless backend platform
-- **Firebase Realtime Database** - Real-time signaling
-- **Tailwind CSS** - Modern UI framework (CDN)
-- **Google Charts** - Live response visualization
-- **Material Symbols** - Icon library
+- **Firebase** - Serverless backend platform
+- **Google Cloud** - Infrastructure and hosting
+- **Tailwind CSS** - Modern UI framework
+- **Quill.js** - Rich text editor
+- **Nodemailer** - Email delivery
 
 ---
 
@@ -838,27 +1054,18 @@ SOFTWARE.
 
 ### Documentation
 
-**Technical References:**
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Deep-dive into hybrid architecture (Firebase + Sheets)
-- **[docs/AGENTS.md](docs/AGENTS.md)** - System components and dependencies
-- **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Detailed deployment guide with troubleshooting
-- **[docs/SECURE_EXAMS.md](docs/SECURE_EXAMS.md)** - Exam module technical reference
-
-**Operational Guides:**
-- **[docs/TRIGGER_SETUP_GUIDE.md](docs/TRIGGER_SETUP_GUIDE.md)** - **CRITICAL:** Write-behind flush trigger setup
-- **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Common issues and debug tools
-
-**Planning:**
-- **[TODO.md](TODO.md)** - Project roadmap and future enhancements
-
-**Debugging:**
-- **Apps Script Execution Logs** - Debug failed RPC calls (Extensions → Apps Script → Executions)
+- **[DOCS/Firestore_Data_Model.md](DOCS/Firestore_Data_Model.md)** - Complete database schema
+- **[DOCS/ARCHITECTURE.md](DOCS/ARCHITECTURE.md)** - System design deep-dive
+- **[.github/DEPLOYMENT_SETUP.md](.github/DEPLOYMENT_SETUP.md)** - CI/CD setup guide
 
 ### Contact
 
 - **GitHub Issues**: [Report bugs or request features](https://github.com/stephenborish/veritaslivepoll/issues)
 - **Email**: sborish@malvernprep.org
+- **Firebase Documentation**: [firebase.google.com/docs](https://firebase.google.com/docs)
 
 ---
 
-**Built with ❤️ for educators | Powered by Google Apps Script + Firebase**
+**Built with ❤️ for educators | Powered by Firebase**
+
+**Production URL**: https://classroomproctor.web.app

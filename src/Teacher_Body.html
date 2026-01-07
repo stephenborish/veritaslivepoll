@@ -1561,33 +1561,53 @@
 
       <!-- STEP 3: QUESTIONS - Full Editor -->
       <div id="wizard-step-3" class="wizard-step hidden">
-        <div class="max-w-5xl mx-auto">
-          <div class="flex items-center justify-between mb-6">
-            <div>
-              <h3 class="text-2xl font-bold text-brand-dark-gray dark:text-white">Build Your Questions</h3>
-              <p class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm mt-1">Add questions with multiple
-                choice answers</p>
+        <div class="max-w-6xl mx-auto flex gap-6">
+          <!-- Timeline Navigation Sidebar -->
+          <div id="wizard-timeline-sidebar" class="hidden lg:block shrink-0 w-16">
+            <div class="sticky top-4">
+              <div class="bg-white border border-brand-light-gray rounded-xl shadow-sm p-2 space-y-1">
+                <p class="text-[10px] font-bold text-slate-400 uppercase text-center mb-2 tracking-wider">Jump to</p>
+                <div id="wizard-timeline-items" class="space-y-1">
+                  <!-- Timeline items populated by JS -->
+                </div>
+                <button type="button"
+                  class="w-full h-8 rounded-lg border-2 border-dashed border-brand-light-gray/70 flex items-center justify-center text-slate-400 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
+                  onclick="addWizardQuestion()" title="Add Question">
+                  <span class="material-symbols-outlined text-sm">add</span>
+                </button>
+              </div>
             </div>
-            <span
-              class="px-3 py-1.5 bg-green-50 text-green-700 text-xs font-bold rounded-full uppercase border border-green-200">
-              Full Editor
-            </span>
           </div>
 
-          <!-- Questions Container - Populated by JS -->
-          <div id="wizard-questions-list" class="questions-list space-y-6"></div>
-
-          <button type="button"
-            class="btn-add-question w-full mt-6 py-5 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-brand-light-gray rounded-xl hover:border-primary hover:bg-primary/5 transition-all group bg-white"
-            onclick="addWizardQuestion()">
-            <div
-              class="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 group-hover:bg-primary/20 transition-all">
-              <span class="material-symbols-outlined text-2xl">add</span>
+          <!-- Main Content -->
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between mb-6">
+              <div>
+                <h3 class="text-2xl font-bold text-brand-dark-gray dark:text-white">Build Your Questions</h3>
+                <p class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm mt-1">Add questions with multiple
+                  choice answers</p>
+              </div>
+              <span
+                class="px-3 py-1.5 bg-green-50 text-green-700 text-xs font-bold rounded-full uppercase border border-green-200">
+                Full Editor
+              </span>
             </div>
-            <span class="font-bold text-brand-dark-gray group-hover:text-primary transition-colors">Add New
-              Question</span>
-            <span class="text-xs text-brand-dark-gray/50">Click to add a multiple choice question</span>
-          </button>
+
+            <!-- Questions Container - Populated by JS -->
+            <div id="wizard-questions-list" class="questions-list space-y-6"></div>
+
+            <button type="button"
+              class="btn-add-question w-full mt-6 py-5 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-brand-light-gray rounded-xl hover:border-primary hover:bg-primary/5 transition-all group bg-white"
+              onclick="addWizardQuestion()">
+              <div
+                class="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 group-hover:bg-primary/20 transition-all">
+                <span class="material-symbols-outlined text-2xl">add</span>
+              </div>
+              <span class="font-bold text-brand-dark-gray group-hover:text-primary transition-colors">Add New
+                Question</span>
+              <span class="text-xs text-brand-dark-gray/50">Click to add a multiple choice question</span>
+            </button>
+          </div>
         </div>
       </div>
 

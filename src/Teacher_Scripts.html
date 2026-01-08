@@ -126,12 +126,17 @@
           theme: 'snow',
           placeholder: placeholder || 'Enter text...',
           modules: {
+            imageResize: {
+              displaySize: true
+            },
             toolbar: [
               ['bold', 'italic', 'underline', 'strike'],
               ['blockquote', 'code-block'],
               [{ 'list': 'ordered' }, { 'list': 'bullet' }],
               [{ 'script': 'sub' }, { 'script': 'super' }],
               [{ 'color': [] }, { 'background': [] }],
+              ['link', 'image'],
+              [{ 'align': [] }],
               ['clean']
             ]
           }
@@ -2690,6 +2695,20 @@
 
       function updateUI() {
         currentMainSection = section;
+
+        var dashboardRoot = document.getElementById('dashboard-root');
+
+        // Handle Top-Level Views (dashboard-root vs create-poll-view)
+        if (section === 'create-poll') {
+          if (dashboardRoot) dashboardRoot.style.display = 'none';
+          var createPollView = document.getElementById('create-poll-view');
+          if (createPollView) createPollView.style.display = 'flex';
+        } else {
+          if (dashboardRoot) dashboardRoot.style.display = 'flex';
+          var createPollView = document.getElementById('create-poll-view');
+          if (createPollView) createPollView.style.display = 'none';
+        }
+
         dashboard.style.display = section === 'dashboard' ? 'block' : 'none';
         liveView.style.display = section === 'live' ? 'grid' : 'none';
         rosterManager.style.display = section === 'roster' ? 'grid' : 'none';
@@ -2698,10 +2717,6 @@
         var individualTimedView = document.getElementById('individual-timed-view');
         if (individualTimedView) {
           individualTimedView.style.display = section === 'individual-timed' ? 'block' : 'none';
-        }
-        var createPollView = document.getElementById('create-poll-view');
-        if (createPollView) {
-          createPollView.style.display = section === 'create-poll' ? 'flex' : 'none';
         }
 
         var navButtons = document.querySelectorAll('.sidebar-nav-btn[data-section-target]');
@@ -14210,35 +14225,11 @@
 
         // Compact Question Body
         var bodyHtml = metaPromptHtml + '<div class="question-card-body p-4 space-y-3">' +
-          // Question Row: Rich Text + Image Upload
-          '<div class="flex gap-3">' +
+          // Question Stem - Rich Text only
           '<div class="flex-1 flex flex-col">' +
           '<label class="text-xs font-semibold text-slate-500 mb-1">Question Stem</label>' +
-          '<div id="' + questionInputId + '" class="bg-white" style="height: 120px;"></div>' +
-          '</div>' +
-          '<div class="shrink-0 flex flex-col items-center gap-1 pt-6">';
-
-        // Question Image Upload/Preview
-        var qImagePreview = getImagePreviewUrl(q.questionImageURL, q.questionImageFileId);
-        var qIsUploading = q.questionImageURL === 'UPLOADING';
-
-        if (qIsUploading) {
-          bodyHtml += '<div class="h-16 w-20 rounded-lg bg-primary/10 flex items-center justify-center">' +
-            '<div class="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div></div>';
-        } else if (qImagePreview) {
-          bodyHtml += '<div class="relative">' +
-            '<img src="' + qImagePreview + '" class="h-16 w-20 object-cover rounded-lg border border-brand-light-gray" referrerpolicy="no-referrer">' +
-            '<button type="button" class="wizard-remove-q-img absolute -top-1.5 -right-1.5 h-5 w-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs" data-q-index="' + qIndex + '" title="Remove">&times;</button>' +
-            '</div>';
-        } else {
-          bodyHtml += '<label class="h-16 w-20 rounded-lg border-2 border-dashed border-brand-light-gray flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all">' +
-            '<span class="material-symbols-outlined text-brand-dark-gray/40 text-lg">image</span>' +
-            '<span class="text-[10px] text-brand-dark-gray/40">Upload</span>' +
-            '<input type="file" class="wizard-q-img-input hidden" accept="image/*" data-q-index="' + qIndex + '">' +
-            '</label>';
-        }
-
-        bodyHtml += '</div></div>';
+          '<div id="' + questionInputId + '" class="bg-white" style="min-height: 120px; height: auto;"></div>' +
+          '</div></div>';
 
         // Answer Choices - Compact
         bodyHtml += '<div class="space-y-3">';
@@ -14257,28 +14248,12 @@
             '</label>' +
             // Option text (Quill)
             '<div class="flex-1">' +
-            '<div id="answer-input-' + questionNumber + '-' + optionLabels[optIndex].toLowerCase() + '" class="bg-white" style="height: 80px;"></div>' +
+            '<div id="answer-input-' + questionNumber + '-' + optionLabels[optIndex].toLowerCase() + '" class="bg-white" style="min-height: 80px; height: auto;"></div>' +
             '</div>';
 
-          // Option image upload/preview
-          bodyHtml += '<div class="flex flex-col gap-1 mt-1">';
-          if (optIsUploading) {
-            bodyHtml += '<div class="h-8 w-10 rounded bg-primary/10 flex items-center justify-center shrink-0">' +
-              '<div class="h-3 w-3 animate-spin rounded-full border border-primary border-t-transparent"></div></div>';
-          } else if (optImagePreview) {
-            bodyHtml += '<div class="relative shrink-0">' +
-              '<img src="' + optImagePreview + '" class="h-8 w-10 object-cover rounded border" referrerpolicy="no-referrer">' +
-              '<button type="button" class="wizard-remove-opt-img absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px]" data-q-index="' + qIndex + '" data-opt-index="' + optIndex + '">&times;</button>' +
-              '</div>';
-          } else {
-            bodyHtml += '<label class="h-8 w-10 rounded border border-dashed border-brand-light-gray/70 flex items-center justify-center cursor-pointer hover:border-primary shrink-0">' +
-              '<span class="material-symbols-outlined text-sm text-slate-400">add_photo_alternate</span>' +
-              '<input type="file" class="wizard-opt-img-input hidden" accept="image/*" data-q-index="' + qIndex + '" data-opt-index="' + optIndex + '">' +
-              '</label>';
-          }
-
-          // Remove option
-          bodyHtml += '<button type="button" class="p-1 rounded text-slate-300 hover:text-red-500 transition-colors" onclick="removeWizardOption(' + qIndex + ',' + optIndex + ')">' +
+          // Remove option button only (no image upload)
+          bodyHtml += '<div class="flex flex-col gap-1 mt-1">' +
+            '<button type="button" class="p-1 rounded text-slate-300 hover:text-red-500 transition-colors" onclick="removeWizardOption(' + qIndex + ',' + optIndex + ')">' +
             '<span class="material-symbols-outlined text-base">close</span></button>' +
             '</div></div>'; // Close flex col + answer option
         });

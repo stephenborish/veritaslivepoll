@@ -636,8 +636,17 @@
   }
 
   /* Quill Toolbar Normalization */
+  /* Quill Toolbar Normalization */
+  .ql-toolbar.ql-snow {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 8px !important;
+  }
+
   .ql-toolbar.ql-snow .ql-formats {
-    margin-right: 10px !important;
+    margin-right: 0 !important;
     display: flex !important;
     align-items: center !important;
   }
@@ -14166,14 +14175,16 @@
         }
 
         // FIREBASE MIGRATION: Start Secure Assessment via Cloud Function
-        firebase.functions().httpsCallable('setLiveSessionState')({
-          pollId: pollId,
-          status: 'OPEN',
-          questionIndex: 0,
-          metadata: {
-            sessionPhase: 'ASSESSMENT_START',
-            resultsVisibility: 'HIDDEN'
-          }
+        ensureFunctionsCallable('setLiveSessionState').then(function (ctx) {
+          return ctx.callable({
+            pollId: pollId,
+            status: 'OPEN',
+            questionIndex: 0,
+            metadata: {
+              sessionPhase: 'ASSESSMENT_START',
+              resultsVisibility: 'HIDDEN'
+            }
+          });
         }).then(function (result) {
           var data = result.data;
           setButtonLoading(startPollBtn, false);
@@ -14207,14 +14218,16 @@
       }
 
       // FIREBASE MIGRATION: Start Live Poll via Cloud Function
-      firebase.functions().httpsCallable('setLiveSessionState')({
-        pollId: pollId,
-        status: 'OPEN',
-        questionIndex: 0,
-        metadata: {
-          sessionPhase: 'LIVE',
-          resultsVisibility: 'HIDDEN'
-        }
+      ensureFunctionsCallable('setLiveSessionState').then(function (ctx) {
+        return ctx.callable({
+          pollId: pollId,
+          status: 'OPEN',
+          questionIndex: 0,
+          metadata: {
+            sessionPhase: 'LIVE',
+            resultsVisibility: 'HIDDEN'
+          }
+        });
       }).then(function (result) {
         setButtonLoading(startPollBtn, false);
         var res = result.data;

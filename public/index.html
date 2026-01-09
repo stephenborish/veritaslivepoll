@@ -8159,14 +8159,21 @@
 
   <script>
   (function () {
-    // --- Main App State ---
-    var mainLoader = document.getElementById('loader');
+    // Top-Level Error Handler
+    try {
+      console.log('[Info] Teacher Scripts Initializing...');
 
-    // FIX: Initialize poll containers early to prevent race condition with loadInitialData
-    var pollsCardView = document.getElementById('polls-card-view');
-    var pollsTableView = document.getElementById('polls-table-view');
-    var pollsTableBody = document.getElementById('polls-table-body');
-    var pollsEmptyState = document.getElementById('polls-empty-state');
+      // --- Main App State ---
+      // Wrap DOM query in safe block
+      var mainLoader = document.getElementById('loader');
+      var pollsCardView = document.getElementById('polls-card-view');
+      var pollsTableView = document.getElementById('polls-table-view');
+      var pollsTableBody = document.getElementById('polls-table-body');
+      var pollsEmptyState = document.getElementById('polls-empty-state');
+    } catch (e) {
+      console.error('[Critical] DOM Init Failed:', e);
+    }
+
     var ALL_POLLS = [];
     var ALL_CLASSES = [];
     var CURRENT_POLL_DATA = {};
@@ -8174,12 +8181,26 @@
     var studentSearchQuery = '';
     var studentTableSort = { column: 'lastName', direction: 'asc' };
     var pollInterval = null;
-    var missionControlHeartbeat = window.SecureAssessmentShared.createHeartbeat({
-      intervalMs: 2500,
-      onBeat: function () {
-        pollIndividualSessionState();
+
+    // Pulse Heartbeat - Safe Init
+    var missionControlHeartbeat = null;
+    try {
+      if (window.SecureAssessmentShared && window.SecureAssessmentShared.createHeartbeat) {
+        missionControlHeartbeat = window.SecureAssessmentShared.createHeartbeat({
+          intervalMs: 2500,
+          onBeat: function () {
+            if (typeof pollIndividualSessionState === 'function') {
+              pollIndividualSessionState();
+            }
+          }
+        });
+      } else {
+        console.warn('[Warn] SecureAssessmentShared not found, heartbeat disabled');
       }
-    });
+    } catch (e) {
+      console.error('[Error] Heartbeat init failed:', e);
+    }
+
     var missionControlPollFailures = 0;
     var missionControlBackoffMs = 0;
     var currentSecureSessionId = null;
@@ -8215,10 +8236,6 @@
     var lastQuestionIndex = -1;
     var currentMainSection = 'dashboard';
     var activeMobilePanel = 'question';
-
-
-
-
 
     // OPTIMIZATION: Adaptive polling with backoff (like student view)
     var pollFailureCount = 0;
@@ -9455,7 +9472,17 @@
       });
     }
 
-    document.addEventListener('DOMContentLoaded', initTeacherAuth);
+    // ROBUST INIT: Ensure auth flows run even if DOMContentLoaded missed or delayed
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function () {
+        // Redundant safety delay
+        setTimeout(initTeacherAuth, 50);
+      });
+    } else {
+      // Document already ready, fire immediately
+      console.log('[Info] Document already ready, firing initTeacherAuth immediately');
+      setTimeout(initTeacherAuth, 50);
+    }
 
 
 

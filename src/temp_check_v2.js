@@ -1,4 +1,4 @@
-<script>
+
   (function () {
     // Top-Level Error Handler
     try {
@@ -15166,4 +15166,3 @@
 
   })();
 
-</script>

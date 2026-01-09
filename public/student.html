@@ -29,6 +29,13 @@
 <!-- Image Resize Module -->
 <script src="https://cdn.jsdelivr.net/npm/quill-image-resize-module@3.0.0/image-resize.min.js"></script>
 
+<!-- KaTeX (Formula Rendering) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+<!-- MathLive (Visual Formula Editor) -->
+<script src="https://unpkg.com/mathlive"></script>
+
 <!-- DOMPurify (Security) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.5/purify.min.js"></script>
 
@@ -2918,7 +2925,8 @@
         width: 100%;
         max-width: 440px;
         text-align: center;
-        animation: loginFadeInUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        text-align: center;
+        /* animation: loginFadeInUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards; */
         position: relative;
         overflow: hidden;
     }
@@ -3113,8 +3121,17 @@
         window.LoginManager = {
             show: function () {
                 var el = document.getElementById('login-overlay');
+
                 if (el) {
-                    el.style.display = 'flex';
+                    // NUCLEAR OPTION: Strip classes and force inline styles
+                    el.className = '';
+                    el.style.cssText = 'position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; background-color: rgba(15, 23, 42, 1) !important; z-index: 2147483647 !important; display: flex !important; align-items: center !important; justify-content: center !important; visibility: visible !important; opacity: 1 !important; transform: none !important; pointer-events: auto !important;';
+
+                    var card = el.querySelector('.login-card');
+                    if (card) {
+                        card.style.cssText = 'display: block !important; background-color: white !important; padding: 40px !important; border-radius: 12px !important; opacity: 1 !important; visibility: visible !important; width: 100% !important; max-width: 440px !important; position: relative !important; z-index: 2147483647 !important; transform: none !important; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;';
+                    }
+
                     // Reset errors when showing
                     var errEl = document.getElementById('login-error');
                     if (errEl) errEl.style.display = 'none';
@@ -3271,7 +3288,6 @@
         };
     })();
 </script>
-
   <script>
 (function(global) {
   'use strict';

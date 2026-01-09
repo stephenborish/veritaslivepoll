@@ -98,6 +98,44 @@
     animation: motion-slide-in-right var(--transition-smooth) forwards;
   }
 
+  /* Quill Toolbar Normalization */
+  .ql-toolbar.ql-snow .ql-formats {
+    margin-right: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+
+  .ql-toolbar.ql-snow button {
+    height: 28px !important;
+    width: 28px !important;
+    padding: 3px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .ql-toolbar.ql-snow .ql-picker-label {
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+
+  /* Specific fix for alignment options to prevent layout shifts */
+  .ql-snow .ql-picker.ql-align {
+    width: 32px !important;
+  }
+
+  /* Ensure icons are centered and sized consistently */
+  .ql-snow .ql-stroke {
+    stroke-width: 1.5 !important;
+  }
+
+  /* Modal Z-Index fix to ensure it sits above everything */
+  #formula-modal {
+    z-index: 9999 !important;
+  }
+
   .motion-fade-in {
     animation: motion-fade-in var(--transition-fast) forwards;
   }

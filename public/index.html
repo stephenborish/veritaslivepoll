@@ -29,6 +29,13 @@
 <!-- Image Resize Module -->
 <script src="https://cdn.jsdelivr.net/npm/quill-image-resize-module@3.0.0/image-resize.min.js"></script>
 
+<!-- KaTeX (Formula Rendering) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+<!-- MathLive (Visual Formula Editor) -->
+<script src="https://unpkg.com/mathlive"></script>
+
 <!-- DOMPurify (Security) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.5/purify.min.js"></script>
 
@@ -591,6 +598,44 @@
 
   .motion-slide-in-right {
     animation: motion-slide-in-right var(--transition-smooth) forwards;
+  }
+
+  /* Quill Toolbar Normalization */
+  .ql-toolbar.ql-snow .ql-formats {
+    margin-right: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+
+  .ql-toolbar.ql-snow button {
+    height: 28px !important;
+    width: 28px !important;
+    padding: 3px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .ql-toolbar.ql-snow .ql-picker-label {
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+
+  /* Specific fix for alignment options to prevent layout shifts */
+  .ql-snow .ql-picker.ql-align {
+    width: 32px !important;
+  }
+
+  /* Ensure icons are centered and sized consistently */
+  .ql-snow .ql-stroke {
+    stroke-width: 1.5 !important;
+  }
+
+  /* Modal Z-Index fix to ensure it sits above everything */
+  #formula-modal {
+    z-index: 9999 !important;
   }
 
   .motion-fade-in {
@@ -6528,6 +6573,7 @@
   </div>
 
   <!-- Poll Creation Wizard View - Compact Design -->
+  </main>
 </div> <!-- End dashboard-root -->
 
 <!-- Poll Creation Wizard View - Compact Design -->
@@ -6797,11 +6843,6 @@
       </button>
     </div>
   </div>
-</div>
-</div>
-</main>
-
-</div>
 </div>
 
 <!-- Student Manager Modal -->
@@ -7574,6 +7615,34 @@
   </div>
 
   <!-- Poll Creation Wizard View -->
+
+  <!-- Global Math Formula Modal -->
+  <div id="formula-modal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="w-full max-w-2xl transform rounded-xl bg-white p-6 shadow-2xl transition-all dark:bg-brand-dark-gray">
+      <div class="mb-4 flex items-center justify-between">
+        <h3 class="text-xl font-bold text-brand-dark-gray dark:text-white">Insert Math Formula</h3>
+        <button id="close-formula-modal" class="text-slate-400 hover:text-slate-600">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <!-- The MathLive Visual Editor -->
+      <div
+        class="mb-6 rounded-lg border border-brand-light-gray bg-slate-50 p-4 dark:border-slate-600 dark:bg-slate-800">
+        <math-field id="math-editor-field" class="w-full bg-transparent text-2xl" style="outline: none; border: none;">
+          f(x) = \sqrt{x^2 + 1}
+        </math-field>
+      </div>
+
+      <div class="flex justify-end gap-3">
+        <button id="cancel-formula-btn"
+          class="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100">Cancel</button>
+        <button id="insert-formula-btn"
+          class="rounded-lg bg-primary px-6 py-2 text-sm font-bold text-white hover:bg-primary/90">Insert
+          Formula</button>
+      </div>
+    </div>
+  </div>
   <style>
     /* Login Screen Styles - Premium Glassmorphism */
     #login-overlay {
@@ -7605,7 +7674,8 @@
         width: 100%;
         max-width: 440px;
         text-align: center;
-        animation: loginFadeInUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        text-align: center;
+        /* animation: loginFadeInUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards; */
         position: relative;
         overflow: hidden;
     }
@@ -7800,8 +7870,17 @@
         window.LoginManager = {
             show: function () {
                 var el = document.getElementById('login-overlay');
+
                 if (el) {
-                    el.style.display = 'flex';
+                    // NUCLEAR OPTION: Strip classes and force inline styles
+                    el.className = '';
+                    el.style.cssText = 'position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; background-color: rgba(15, 23, 42, 1) !important; z-index: 2147483647 !important; display: flex !important; align-items: center !important; justify-content: center !important; visibility: visible !important; opacity: 1 !important; transform: none !important; pointer-events: auto !important;';
+
+                    var card = el.querySelector('.login-card');
+                    if (card) {
+                        card.style.cssText = 'display: block !important; background-color: white !important; padding: 40px !important; border-radius: 12px !important; opacity: 1 !important; visibility: visible !important; width: 100% !important; max-width: 440px !important; position: relative !important; z-index: 2147483647 !important; transform: none !important; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;';
+                    }
+
                     // Reset errors when showing
                     var errEl = document.getElementById('login-error');
                     if (errEl) errEl.style.display = 'none';
@@ -7958,7 +8037,6 @@
         };
     })();
 </script>
-
   <script>
 (function(global) {
   'use strict';
@@ -8210,16 +8288,34 @@
             imageResize: {
               displaySize: true
             },
-            toolbar: [
-              ['bold', 'italic', 'underline', 'strike'],
-              ['blockquote', 'code-block'],
-              [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-              [{ 'script': 'sub' }, { 'script': 'super' }],
-              [{ 'color': [] }, { 'background': [] }],
-              ['link', 'image'],
-              [{ 'align': [] }],
-              ['clean']
-            ]
+            toolbar: {
+              container: [
+                ['bold', 'italic', 'underline', 'strike'],
+                ['blockquote', 'code-block'],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                [{ 'script': 'sub' }, { 'script': 'super' }],
+                [{ 'color': [] }, { 'background': [] }],
+                ['link', 'image', 'formula'], // Add 'formula'
+                [{ 'align': [] }],
+                ['clean']
+              ],
+              handlers: {
+                formula: function () {
+                  console.log('Formula button clicked');
+                  var range = this.quill.getSelection();
+                  if (typeof window.openFormulaModal === 'function') {
+                    window.openFormulaModal(this.quill, range);
+                  } else {
+                    console.error('window.openFormulaModal is not defined. Checking global scope...');
+                    if (window.openFormulaModal) {
+                      window.openFormulaModal(this.quill, range);
+                    } else {
+                      alert('Error: Formula editor could not be loaded. Please refresh.');
+                    }
+                  }
+                }
+              }
+            }
           }
         });
 
@@ -8235,13 +8331,32 @@
         // Bind change event
         quill.on('text-change', function (delta, oldDelta, source) {
           if (onChange) {
-            // We use innerHTML of the editor (children of ql-editor)
-            // Quill puts content in .ql-editor
             var editor = container.querySelector('.ql-editor');
             var html = editor ? editor.innerHTML : quill.root.innerHTML;
             var text = quill.getText();
             var content = quill.getContents();
             onChange({ html: html, text: text, delta: content });
+          }
+        });
+
+        // Add double-click handler for editing formulas
+        // Note: Quill renders formula as a specialized embed. We can detect clicks on it.
+        // However, standard Quill doesn't easily expose click on embed. 
+        // We will try detecting selection change to a formula blot.
+        quill.on('selection-change', function (range, oldRange, source) {
+          if (range && range.length === 0) { // Cursor selection
+            var [leaf, offset] = quill.getLeaf(range.index);
+            if (leaf.statics.blotName === 'formula') {
+              // It's a formula! Open editor logic could go here if we want auto-open on click
+              // Or we can rely on a specific interaction. 
+              // For now, let's just allow the toolbar button to insert.
+              // To Edit: We actually need to know the 'value' of the blot.
+              // A common pattern is to select the formula and hit the toolbar button again?
+              // Or custom UI overlay. Let's keep it simple for MVP: Toolbar button inserts new.
+              // But user asked for "Edit".
+              // Let's enable Clicking the formula to edit.
+              openFormulaModal(quill, range, leaf);
+            }
           }
         });
 
@@ -9270,13 +9385,18 @@
 
       // Initialize Legacy Listeners (Zoom, etc)
       initializeLegacyListeners();
+
+      // Initialize Main Dashboard Bindings (The new gated init)
+      initializeDashboardBindings();
     }
 
     function initTeacherAuth() {
+      // alert('[DEBUG] initTeacherAuth running');
+      console.log('initTeacherAuth firing'); // Console log as well
       if (!sessionStorage.getItem('veritas_session_token')) {
         console.log('[Auth] No teacher session found. Initiating Login Flow.');
         // Hide main content
-        var dashboard = document.getElementById('main-dashboard-container');
+        var dashboard = document.getElementById('dashboard-root');
         if (dashboard) dashboard.style.display = 'none';
 
         if (window.LoginManager) {
@@ -9291,6 +9411,9 @@
         }
       } else {
         console.log('[Auth] Teacher Authenticated');
+        // Unhide dashboard for optimistic load
+        var dashboard = document.getElementById('dashboard-root');
+        if (dashboard) dashboard.style.display = 'flex';
         startTeacherApp();
       }
     }
@@ -9333,6 +9456,8 @@
     }
 
     document.addEventListener('DOMContentLoaded', initTeacherAuth);
+
+
 
 
     // Image zoom functionality
@@ -9483,6 +9608,7 @@
       try {
         firebase.auth().onAuthStateChanged(function (user) {
           if (user) {
+            // alert('[DEBUG] Auth Change: User logged in');
             var startTime = Date.now();
             console.log('[Auth] User authenticated:', user.email, '| UID:', user.uid);
 
@@ -9498,7 +9624,10 @@
             // Show Dashboard
             var dashboardRoot = document.getElementById('dashboard-root');
             if (dashboardRoot) dashboardRoot.style.display = 'flex';
+            if (dashboardRoot) dashboardRoot.style.display = 'flex';
             if (mainLoader) mainLoader.style.display = 'none';
+
+            // alert('[DEBUG] Dashboard Unhidden from initializeBackend');
 
             renderLogoutButton(user);
 
@@ -10175,590 +10304,396 @@
       }, 8000);
     }
 
-    bindClick('nav-create-poll', function () {
-      console.log('Create New Poll button clicked - opening wizard via Wizard.init()');
-      setDashboardSidebarVisibility(false);
-      Wizard.init();
-    });
-    bindClick('nav-polls-list', function () {
-      showDashboard();
-      setDashboardSidebarVisibility(true);
-    });
-    bindClick('nav-rosters', function () {
-      showRosterManager();
-      setDashboardSidebarVisibility(false);
-    });
-    bindClick('nav-archived', function () {
-      showArchivedView();
-      setDashboardSidebarVisibility(false);
-    });
-    bindClick('nav-analytics', function () {
-      showAnalyticsView();
-      setDashboardSidebarVisibility(false);
-    });
-    bindClick('close-modal-btn', closePollCreator);
-    bindClick('close-links-modal-btn', closeLinksModal);
-    bindClick('close-preview-modal-btn', closePollPreview);
-    bindClick('preview-prev-question-btn', previewPrevQuestion);
-    bindClick('preview-next-question-btn', previewNextQuestion);
-    bindClick('preview-open-links-btn', previewOpenLinks);
-    bindClick('preview-edit-question-btn', previewEditQuestion);
-    bindClick('preview-delete-question-btn', previewDeleteQuestion);
-    bindClick('preview-reorder-btn', togglePreviewReorder);
-    bindClick('add-question-btn', addQuestion);
-    bindClick('save-poll-btn', savePoll);
+    function initializeDashboardBindings() {
+      console.log('[App] Initializing dashboard bindings...');
+      bindClick('nav-create-poll', function () {
+        console.log('Create New Poll button clicked - opening wizard via Wizard.init()');
+        setDashboardSidebarVisibility(false);
+        Wizard.init();
+      });
+      bindClick('nav-polls-list', function () {
+        showDashboard();
+        setDashboardSidebarVisibility(true);
+      });
+      bindClick('nav-rosters', function () {
+        showRosterManager();
+        setDashboardSidebarVisibility(false);
+      });
+      bindClick('nav-archived', function () {
+        showArchivedView();
+        setDashboardSidebarVisibility(false);
+      });
+      bindClick('nav-analytics', function () {
+        showAnalyticsView();
+        setDashboardSidebarVisibility(false);
+      });
+      bindClick('close-modal-btn', closePollCreator);
+      bindClick('close-links-modal-btn', closeLinksModal);
+      bindClick('close-preview-modal-btn', closePollPreview);
+      bindClick('preview-prev-question-btn', previewPrevQuestion);
+      bindClick('preview-next-question-btn', previewNextQuestion);
+      bindClick('preview-open-links-btn', previewOpenLinks);
+      bindClick('preview-edit-question-btn', previewEditQuestion);
+      bindClick('preview-delete-question-btn', previewDeleteQuestion);
+      bindClick('preview-reorder-btn', togglePreviewReorder);
+      bindClick('add-question-btn', addQuestion);
+      bindClick('save-poll-btn', savePoll);
 
-    // NEW FEATURE: Question Bank Import
-    bindClick('import-from-bank-btn', openQuestionBank);
-    bindClick('close-question-bank-btn', closeQuestionBank);
-    bindClick('import-selected-btn', importSelectedQuestions);
+      // NEW FEATURE: Question Bank Import
+      bindClick('import-from-bank-btn', openQuestionBank);
+      bindClick('close-question-bank-btn', closeQuestionBank);
+      bindClick('import-selected-btn', importSelectedQuestions);
 
-    // NEW FEATURE: AI Suggestions
-    bindClick('ai-suggest-btn', openAISuggestions);
-    bindClick('close-ai-modal-btn', closeAISuggestions);
-    bindClick('generate-ai-btn', generateAISuggestions);
+      // NEW FEATURE: AI Suggestions
+      bindClick('ai-suggest-btn', openAISuggestions);
+      bindClick('close-ai-modal-btn', closeAISuggestions);
+      bindClick('generate-ai-btn', generateAISuggestions);
 
-    // NEW FEATURE: Stimulus/Passage
-    bindClick('add-stimulus-btn', function () {
-      openStimulusModal();
-      // Initialize Quill for Stimulus content when modal opens
-      // We use a small timeout to ensure the modal is visible (Quill needs dimensions)
-      setTimeout(function () {
-        var existingContent = document.getElementById('stimulus-content-editor').innerHTML;
-        // If empty or just placeholder, maybe init with default?
-        // Actually QuillManager handles idempotency.
-        // Check if we have stored stimulus data in wizardState or similar?
-        // For now, this is a "Create New" flow, so it starts empty.
-        QuillManager.init('stimulus-content-editor', '', 'Enter passage content...', function (content) {
-          // Store temporarily? Or just read on save.
-          // We'll read from QuillManager.get('stimulus-content-editor') on create.
+      // NEW FEATURE: Stimulus/Passage
+      bindClick('add-stimulus-btn', function () {
+        openStimulusModal();
+        // Initialize Quill for Stimulus content when modal opens
+        setTimeout(function () {
+          QuillManager.init('stimulus-content-editor', '', 'Enter passage content...', function (content) {
+          });
+        }, 100);
+      });
+      bindClick('close-stimulus-modal-btn', closeStimulusModal);
+      bindClick('cancel-stimulus-btn', closeStimulusModal);
+      bindClick('create-stimulus-btn', createStimulusWithQuestions);
+
+      bindInput('new-poll-name', 'input', markPollDirty);
+      bindChange(classSelect, markPollDirty, 'class-select');
+
+      if (sessionToggleButtons && sessionToggleButtons.length) {
+        sessionToggleButtons.forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var targetType = this.dataset.sessionType;
+            setPollSessionType(targetType);
+          });
         });
-      }, 100);
-    });
-    bindClick('close-stimulus-modal-btn', closeStimulusModal);
-    bindClick('cancel-stimulus-btn', closeStimulusModal);
-    bindClick('create-stimulus-btn', createStimulusWithQuestions);
-
-    bindInput('new-poll-name', 'input', markPollDirty);
-    bindChange(classSelect, markPollDirty, 'class-select');
-
-    if (sessionToggleButtons && sessionToggleButtons.length) {
-      sessionToggleButtons.forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          var targetType = this.dataset.sessionType;
-          setPollSessionType(targetType);
-        });
-      });
-    }
-
-    if (secureTimeLimitInput) {
-      secureTimeLimitInput.addEventListener('input', function () {
-        readSecureSettingsFromInputs();
-        markPollDirty();
-      });
-    }
-
-    if (secureAccessCodeInput) {
-      secureAccessCodeInput.addEventListener('input', function () {
-        this.value = (this.value || '').toUpperCase();
-        readSecureSettingsFromInputs();
-        markPollDirty();
-      });
-    }
-
-    if (secureAvailableInput) {
-      secureAvailableInput.addEventListener('change', function () {
-        readSecureSettingsFromInputs();
-        markPollDirty();
-      });
-    }
-
-    if (secureDueInput) {
-      secureDueInput.addEventListener('change', function () {
-        readSecureSettingsFromInputs();
-        markPollDirty();
-      });
-    }
-
-    syncSessionTypeToggleUI();
-    updateSecureSettingsVisibility();
-    populateSecureSettingsInputs();
-
-    if (pollSearchInput) {
-      pollSearchInput.addEventListener('input', function () {
-        pollSearchQuery = (this.value || '').trim();
-        refreshPollViews();
-        updatePollSearchClear();
-      });
-    }
-
-    if (pollSearchClearBtn) {
-      pollSearchClearBtn.addEventListener('click', function () {
-        pollSearchQuery = '';
-        if (pollSearchInput) {
-          pollSearchInput.value = '';
-          pollSearchInput.focus();
-        }
-        refreshPollViews();
-        updatePollSearchClear();
-      });
-    }
-
-    updatePollSearchClear();
-    setQuestionReorderHelp();
-
-    if (questionSortResetBtn) {
-      questionSortResetBtn.addEventListener('click', function () {
-        resetQuestionOrderToInitial();
-      });
-    }
-
-    if (questionNavigatorContainer) {
-      questionNavigatorContainer.addEventListener('dragover', handleNavigatorDragOver);
-      questionNavigatorContainer.addEventListener('drop', handleNavigatorDrop);
-    }
-
-    if (startPollBtn) {
-      startPollBtn.addEventListener('click', onStartPoll);
-    } else {
-      console.warn('Missing click target: start-poll-btn');
-    }
-
-    // --- Emulator Controls ---
-    function initEmulatorControls() {
-      console.log('[Emulator] Initializing controls...', {
-        emulatorControlsExists: !!emulatorControls,
-        emulatorEnabledExists: !!emulatorEnabled
-      });
-
-      if (!emulatorControls || !emulatorEnabled) {
-        console.warn('[Emulator] DOM elements not found - emulator controls will not be available');
-        return;
       }
 
-      // FIREBASE MIGRATION: Emulator Availability
-      // Instead of GAS, check if we are in a local environment or if a specific flag is set
-      emulatorAvailable = !!(typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.projectId && FIREBASE_CONFIG.projectId.includes('emulator'));
-
-      // Fallback: Enable if specifically requested via URL param or similar
-      if (window.location.search.includes('emulator=true')) emulatorAvailable = true;
-
-      if (emulatorAvailable) {
-        emulatorControls.classList.remove('hidden');
-        console.log('[Emulator] ✓ Available and controls shown');
-      } else {
-        console.log('[Emulator] ✗ Not available (Live environment)');
+      if (secureTimeLimitInput) {
+        secureTimeLimitInput.addEventListener('input', function () {
+          readSecureSettingsFromInputs();
+          markPollDirty();
+        });
       }
 
-      // Toggle options visibility when checkbox changes
-      emulatorEnabled.addEventListener('change', function () {
-        if (emulatorOptions) {
-          if (this.checked) {
-            emulatorOptions.classList.remove('hidden');
-          } else {
-            emulatorOptions.classList.add('hidden');
+      if (secureAccessCodeInput) {
+        secureAccessCodeInput.addEventListener('input', function () {
+          this.value = (this.value || '').toUpperCase();
+          readSecureSettingsFromInputs();
+          markPollDirty();
+        });
+      }
+
+      if (secureAvailableInput) {
+        secureAvailableInput.addEventListener('change', function () {
+          readSecureSettingsFromInputs();
+          markPollDirty();
+        });
+      }
+
+      if (secureDueInput) {
+        secureDueInput.addEventListener('change', function () {
+          readSecureSettingsFromInputs();
+          markPollDirty();
+        });
+      }
+
+      syncSessionTypeToggleUI();
+      updateSecureSettingsVisibility();
+      populateSecureSettingsInputs();
+
+      if (pollSearchInput) {
+        pollSearchInput.addEventListener('input', function () {
+          pollSearchQuery = (this.value || '').trim();
+          refreshPollViews();
+          updatePollSearchClear();
+        });
+      }
+
+      if (pollSearchClearBtn) {
+        pollSearchClearBtn.addEventListener('click', function () {
+          pollSearchQuery = '';
+          if (pollSearchInput) {
+            pollSearchInput.value = '';
+            pollSearchInput.focus();
           }
-        }
-      });
-    }
-
-    // Initialize emulator controls after a short delay to ensure DOM is ready
-    setTimeout(initEmulatorControls, 500);
-
-    /**
-     * Trigger student emulation for a live poll
-     * @param {string} pollId - Poll ID to emulate
-     */
-    function triggerLivePollEmulation(pollId) {
-      if (!emulatorAvailable) return;
-      var studentCount = emulatorStudentCount ? parseInt(emulatorStudentCount.value, 10) || 5 : 5;
-      var concurrent = emulatorConcurrent ? emulatorConcurrent.checked : false;
-
-      console.log('[Emulator] Triggering live poll emulation', { pollId: pollId, studentCount: studentCount, concurrent: concurrent });
-      showToast('info', 'Emulator', 'Starting emulation with ' + studentCount + ' students...');
-
-      // FIREBASE MIGRATION: Call Cloud Function for emulation
-      firebase.functions().httpsCallable('manageProctoring')({
-        action: 'EMULATE_LIVE',
-        pollId: pollId,
-        studentCount: studentCount,
-        concurrent: concurrent
-      }).then(function (result) {
-        var res = result.data;
-        if (res && res.success) {
-          showToast('success', 'Emulator', 'Emulation complete: ' + res.successfulSubmissions + '/' + res.totalSubmissions);
-        } else {
-          throw new Error((res && res.error) || 'Emulation failed');
-        }
-      }).catch(function (error) {
-        showToast('error', 'Emulator', 'Emulation error: ' + error.message);
-      });
-    }
-
-    /**
-     * Trigger student emulation for a secure assessment
-     * @param {string} pollId - Poll ID to emulate
-     * @param {string} sessionId - Session ID
-     */
-    function triggerSecureAssessmentEmulation(pollId, sessionId) {
-      if (!emulatorAvailable) return;
-      var studentCount = emulatorStudentCount ? parseInt(emulatorStudentCount.value, 10) || 5 : 5;
-
-      console.log('[Emulator] Triggering secure assessment emulation', { pollId: pollId, sessionId: sessionId, studentCount: studentCount });
-      showToast('info', 'Emulator', 'Starting secure assessment emulation...');
-
-      firebase.functions().httpsCallable('manageProctoring')({
-        action: 'EMULATE_SECURE',
-        pollId: pollId,
-        studentCount: studentCount
-      }).then(function (result) {
-        var res = result.data;
-        if (res && res.success) {
-          showToast('success', 'Emulator', 'Emulation complete');
-        } else {
-          throw new Error((res && res.error) || 'Emulation failed');
-        }
-      }).catch(function (error) {
-        showToast('error', 'Emulator', 'Emulation error: ' + error.message);
-      });
-    }
-
-    // --- Calculator Toggles ---
-    // (Live Calculator is already bound via bindClick below)
-
-    var wizardCalcToggle = document.getElementById('wizard-calculator-toggle');
-    if (wizardCalcToggle) {
-      wizardCalcToggle.addEventListener('change', function () {
-        if (typeof wizardState !== 'undefined') {
-          wizardState.calculatorEnabled = this.checked;
-        }
-      });
-    }
-    bindClick('header-start-btn', onResumePoll);
-    bindClick('header-end-show-btn', onEndQuestionAndShowAnswer);
-    bindClick('header-stop-btn', onEndPoll);
-
-    // FIX TASK D: Wire calculator button to proper handler (onToggleLiveCalculator)
-    // Remove duplicate handler and use the comprehensive one defined below
-    var calcToggleBtn = document.getElementById('header-calc-toggle');
-    if (calcToggleBtn) {
-      calcToggleBtn.addEventListener('click', onToggleLiveCalculator);
-    }
-
-    // Live View More Actions Menu
-    bindClick('live-more-actions-btn', function (e) {
-      e.stopPropagation();
-      var menu = document.getElementById('live-more-menu');
-      if (menu) {
-        menu.classList.toggle('hidden');
+          refreshPollViews();
+          updatePollSearchClear();
+        });
       }
-    });
 
-    bindClick('header-edit-poll-btn', function () {
-      if (CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId) {
-        startEditPoll(CURRENT_POLL_DATA.pollId);
+      updatePollSearchClear();
+      setQuestionReorderHelp();
+
+      if (questionSortResetBtn) {
+        questionSortResetBtn.addEventListener('click', function () {
+          resetQuestionOrderToInitial();
+        });
       }
-    });
 
-    // Close live menu on outside click
-    document.addEventListener('click', function (e) {
-      var menu = document.getElementById('live-more-menu');
-      var btn = document.getElementById('live-more-actions-btn');
-      if (menu && !menu.classList.contains('hidden') && !menu.contains(e.target) && (!btn || !btn.contains(e.target))) {
-        menu.classList.add('hidden');
+      if (questionNavigatorContainer) {
+        questionNavigatorContainer.addEventListener('dragover', handleNavigatorDragOver);
+        questionNavigatorContainer.addEventListener('drop', handleNavigatorDrop);
       }
-    });
 
-    bindClick('header-back-btn', onPreviousQuestion);
-    bindClick('header-next-btn', onNextQuestion);
-    bindClick('header-reset-question-btn', onResetQuestion);
-    bindClick('hide-results-btn', onHideResults);
-    bindClick('strip-next-btn', onNextQuestion);
-    registerDashboardSidebarToggle('dashboard-sidebar-toggle');
-    registerDashboardSidebarToggle('dashboard-sidebar-toggle-live');
-    updateDashboardSidebarToggleState();
-
-    var mobileTabs = document.querySelectorAll('.live-mobile-tab');
-    mobileTabs.forEach(function (tab) {
-      tab.addEventListener('click', function () {
-        var panel = tab.getAttribute('data-panel');
-        setActiveMobilePanelForViewport(panel);
-      });
-    });
-    updateMobileLayoutVisibility();
-
-    function focusLockoutsSection() {
-      var panel = document.getElementById('exited-students-panel');
-      if (panel) {
-        panel.classList.remove('hidden');
-        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (startPollBtn) {
+        startPollBtn.addEventListener('click', onStartPoll);
+      } else {
+        console.warn('Missing click target: start-poll-btn');
       }
-    }
-    bindClick('focus-lockouts-btn', focusLockoutsSection);
-    // Initialize Locked Students Popover toggle
-    var hudFocusBtn = document.getElementById('hud-focus-lockouts-btn');
-    if (hudFocusBtn) {
-      hudFocusBtn.onclick = function (e) {
+
+      var wizardCalcToggle = document.getElementById('wizard-calculator-toggle');
+      if (wizardCalcToggle) {
+        wizardCalcToggle.addEventListener('change', function () {
+          if (typeof wizardState !== 'undefined') {
+            wizardState.calculatorEnabled = this.checked;
+          }
+        });
+      }
+      bindClick('header-start-btn', onResumePoll);
+      bindClick('header-end-show-btn', onEndQuestionAndShowAnswer);
+      bindClick('header-stop-btn', onEndPoll);
+
+      var calcToggleBtn = document.getElementById('header-calc-toggle');
+      if (calcToggleBtn) {
+        calcToggleBtn.addEventListener('click', onToggleLiveCalculator);
+      }
+
+      bindClick('live-more-actions-btn', function (e) {
         e.stopPropagation();
-        var popover = document.getElementById('locked-students-popover');
-        if (popover) {
-          popover.classList.toggle('hidden');
-        }
-      };
-    }
-    // Close popover on click outside
-    document.addEventListener('click', function (e) {
-      var popover = document.getElementById('locked-students-popover');
-      if (popover && !popover.classList.contains('hidden') && !popover.contains(e.target) && e.target !== hudFocusBtn) {
-        popover.classList.add('hidden');
-      }
-    });
-
-    // --- Tab Navigation System ---
-    // New timer button event listeners
-    bindClick('start-btn', startTimer);
-    bindClick('pause-btn', pauseTimer);
-    bindClick('reset-btn', resetTimer);
-    bindClick('add-10s-btn', function () {
-      parseInputToTotalSeconds();
-      editTime(10);
-    });
-    bindClick('subtract-10s-btn', function () {
-      parseInputToTotalSeconds();
-      editTime(-10);
-    });
-    bindClick('mobile-start-btn', startTimer);
-    bindClick('mobile-pause-btn', pauseTimer);
-    bindClick('mobile-reset-btn', onResetQuestion);
-    bindClick('mobile-next-btn', onNextQuestion);
-    bindClick('mobile-reveal-btn', onEndQuestionAndShowAnswer);
-    bindClick('mobile-resume-btn', onResumePoll);
-    bindClick('mobile-stop-btn', onEndPoll);
-    bindClick('add-10s-btn-mobile', function () {
-      parseInputToTotalSeconds();
-      editTime(10);
-    });
-    bindClick('subtract-10s-btn-mobile', function () {
-      parseInputToTotalSeconds();
-      editTime(-10);
-    });
-    bindClick('mobile-locks-btn', function () {
-      var focusBtn = document.getElementById('hud-focus-lockouts-btn');
-      if (focusBtn && !focusBtn.disabled) {
-        focusBtn.click();
-      }
-    });
-
-    // Timer display input event listener
-    var timerDisplayInput = document.getElementById('timer-display');
-    if (timerDisplayInput) {
-      timerDisplayInput.addEventListener('blur', function () {
-        parseInputToTotalSeconds();
-        updateDisplay();
-      });
-
-      // Handle Enter key to blur and apply changes
-      timerDisplayInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') {
-          timerDisplayInput.blur();
+        var menu = document.getElementById('live-more-menu');
+        if (menu) {
+          menu.classList.toggle('hidden');
         }
       });
-    }
 
-    // Keyboard shortcuts for timer (when timer is visible)
-    document.addEventListener('keydown', function (e) {
-      var timerDisplay = document.getElementById('timer-display');
-      if (!timerDisplay || !timerDisplay.offsetParent) return; // Timer not visible
-
-      // Prevent shortcuts when typing in the timer input field or other inputs
-      if (e.target === timerDisplay || e.target.tagName === 'TEXTAREA') return;
-
-      if (e.key === ' ') {
-        e.preventDefault();
-        if (isRunning) {
-          pauseTimer();
-        } else {
-          startTimer();
+      bindClick('header-edit-poll-btn', function () {
+        if (CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId) {
+          startEditPoll(CURRENT_POLL_DATA.pollId);
         }
-      } else if (e.key === 'r' || e.key === 'R') {
-        e.preventDefault();
-        resetTimer();
-      } else if (!isRunning && (e.key === 'ArrowLeft' || e.key === 'ArrowDown')) {
-        e.preventDefault();
-        parseInputToTotalSeconds();
-        editTime(-10);
-      } else if (!isRunning && (e.key === 'ArrowRight' || e.key === 'ArrowUp')) {
-        e.preventDefault();
+      });
+
+      bindClick('header-back-btn', onPreviousQuestion);
+      bindClick('header-next-btn', onNextQuestion);
+      bindClick('header-reset-question-btn', onResetQuestion);
+      bindClick('hide-results-btn', onHideResults);
+      bindClick('strip-next-btn', onNextQuestion);
+      registerDashboardSidebarToggle('dashboard-sidebar-toggle');
+      registerDashboardSidebarToggle('dashboard-sidebar-toggle-live');
+      updateDashboardSidebarToggleState();
+
+      var mobileTabs = document.querySelectorAll('.live-mobile-tab');
+      mobileTabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          var panel = tab.getAttribute('data-panel');
+          setActiveMobilePanelForViewport(panel);
+        });
+      });
+      updateMobileLayoutVisibility();
+
+      bindClick('focus-lockouts-btn', focusLockoutsSection);
+      var hudFocusBtn = document.getElementById('hud-focus-lockouts-btn');
+      if (hudFocusBtn) {
+        hudFocusBtn.onclick = function (e) {
+          e.stopPropagation();
+          var popover = document.getElementById('locked-students-popover');
+          if (popover) {
+            popover.classList.toggle('hidden');
+          }
+        };
+      }
+
+      bindClick('start-btn', startTimer);
+      bindClick('pause-btn', pauseTimer);
+      bindClick('reset-btn', resetTimer);
+      bindClick('add-10s-btn', function () {
         parseInputToTotalSeconds();
         editTime(10);
-      }
-    });
-
-    // Initialize timer display
-    updateDisplay();
-    updateTimerStatus('Timer idle.', 'info');
-    bindClick('send-link-btn', onSendLink);
-    bindClick('view-links-btn', onViewLinks);
-    bindClick('header-send-link-btn', onSendLink);
-    bindClick('header-view-links-btn', onViewLinks);
-
-    // Student status search
-    var studentSearchInput = document.getElementById('student-search-input');
-    if (studentSearchInput) {
-      studentSearchInput.addEventListener('input', function () {
-        studentSearchQuery = this.value;
-        renderStudentStatus();
       });
-    }
-
-    function syncStatusFilterButtons() {
-      var lockedBtn = document.getElementById('filter-locked-only-btn');
-      var allBtn = document.getElementById('filter-all-btn');
-      if (lockedBtn) {
-        if (studentStatusFilter === 'locked') {
-          lockedBtn.classList.add('bg-red-500/30');
-          lockedBtn.classList.remove('bg-red-500/10');
-        } else {
-          lockedBtn.classList.remove('bg-red-500/30');
-          lockedBtn.classList.add('bg-red-500/10');
+      bindClick('subtract-10s-btn', function () {
+        parseInputToTotalSeconds();
+        editTime(-10);
+      });
+      bindClick('mobile-start-btn', startTimer);
+      bindClick('mobile-pause-btn', pauseTimer);
+      bindClick('mobile-reset-btn', onResetQuestion);
+      bindClick('mobile-next-btn', onNextQuestion);
+      bindClick('mobile-reveal-btn', onEndQuestionAndShowAnswer);
+      bindClick('mobile-resume-btn', onResumePoll);
+      bindClick('mobile-stop-btn', onEndPoll);
+      bindClick('add-10s-btn-mobile', function () {
+        parseInputToTotalSeconds();
+        editTime(10);
+      });
+      bindClick('subtract-10s-btn-mobile', function () {
+        parseInputToTotalSeconds();
+        editTime(-10);
+      });
+      bindClick('mobile-locks-btn', function () {
+        var focusBtn = document.getElementById('hud-focus-lockouts-btn');
+        if (focusBtn && !focusBtn.disabled) {
+          focusBtn.click();
         }
-      }
-      if (allBtn) {
-        if (studentStatusFilter === 'all') {
-          allBtn.classList.add('bg-primary/30');
-          allBtn.classList.remove('bg-primary/10');
-        } else {
-          allBtn.classList.remove('bg-primary/30');
-          allBtn.classList.add('bg-primary/10');
-        }
-      }
-    }
-
-    var statusFilterSelect = document.getElementById('student-status-filter-select');
-    if (statusFilterSelect) {
-      statusFilterSelect.addEventListener('change', function () {
-        studentStatusFilter = this.value;
-        syncStatusFilterButtons();
-        renderStudentStatus();
       });
-    }
 
-    var correctnessFilterSelect = document.getElementById('student-correctness-filter-select');
-    if (correctnessFilterSelect) {
-      correctnessFilterSelect.addEventListener('change', function () {
-        studentCorrectnessFilter = this.value;
-        renderStudentStatus();
-      });
-    }
+      var timerDisplayInput = document.getElementById('timer-display');
+      if (timerDisplayInput) {
+        timerDisplayInput.addEventListener('blur', function () {
+          parseInputToTotalSeconds();
+          updateDisplay();
+        });
 
-    var studentSortSelectEl = document.getElementById('student-sort-select');
-    if (studentSortSelectEl) {
-      studentSortSelectEl.addEventListener('change', function () {
-        studentTableSort.column = this.value;
-        if (this.value === 'recent' && studentTableSort.direction === 'asc') {
-          studentTableSort.direction = 'desc';
-          var dirIcon = document.querySelector('#student-sort-direction-btn span');
-          if (dirIcon) {
-            dirIcon.textContent = 'north';
+        timerDisplayInput.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') {
+            timerDisplayInput.blur();
           }
-        } else {
-          var icon = document.querySelector('#student-sort-direction-btn span');
+        });
+      }
+
+      updateDisplay();
+      updateTimerStatus('Timer idle.', 'info');
+      bindClick('send-link-btn', onSendLink);
+      bindClick('view-links-btn', onViewLinks);
+      bindClick('header-send-link-btn', onSendLink);
+      bindClick('header-view-links-btn', onViewLinks);
+
+      var studentSearchInput = document.getElementById('student-search-input');
+      if (studentSearchInput) {
+        studentSearchInput.addEventListener('input', function () {
+          studentSearchQuery = this.value;
+          renderStudentStatus();
+        });
+      }
+
+      var statusFilterSelect = document.getElementById('student-status-filter-select');
+      if (statusFilterSelect) {
+        statusFilterSelect.addEventListener('change', function () {
+          studentStatusFilter = this.value;
+          syncStatusFilterButtons();
+          renderStudentStatus();
+        });
+      }
+
+      var correctnessFilterSelect = document.getElementById('student-correctness-filter-select');
+      if (correctnessFilterSelect) {
+        correctnessFilterSelect.addEventListener('change', function () {
+          studentCorrectnessFilter = this.value;
+          renderStudentStatus();
+        });
+      }
+
+      var studentSortSelectEl = document.getElementById('student-sort-select');
+      if (studentSortSelectEl) {
+        studentSortSelectEl.addEventListener('change', function () {
+          studentTableSort.column = this.value;
+          if (this.value === 'recent' && studentTableSort.direction === 'asc') {
+            studentTableSort.direction = 'desc';
+            var dirIcon = document.querySelector('#student-sort-direction-btn span');
+            if (dirIcon) {
+              dirIcon.textContent = 'north';
+            }
+          } else {
+            var icon = document.querySelector('#student-sort-direction-btn span');
+            if (icon) {
+              icon.textContent = studentTableSort.direction === 'asc' ? 'south' : 'north';
+            }
+          }
+          renderStudentStatus();
+        });
+      }
+
+      var sortDirectionBtn = document.getElementById('student-sort-direction-btn');
+      if (sortDirectionBtn) {
+        sortDirectionBtn.addEventListener('click', function () {
+          studentTableSort.direction = studentTableSort.direction === 'asc' ? 'desc' : 'asc';
+          var icon = this.querySelector('span');
           if (icon) {
             icon.textContent = studentTableSort.direction === 'asc' ? 'south' : 'north';
           }
-        }
-        renderStudentStatus();
-      });
-    }
-
-    var sortDirectionBtn = document.getElementById('student-sort-direction-btn');
-    if (sortDirectionBtn) {
-      sortDirectionBtn.addEventListener('click', function () {
-        studentTableSort.direction = studentTableSort.direction === 'asc' ? 'desc' : 'asc';
-        var icon = this.querySelector('span');
-        if (icon) {
-          icon.textContent = studentTableSort.direction === 'asc' ? 'south' : 'north';
-        }
-        renderStudentStatus();
-      });
-    }
-
-    // Student status table sorting
-    document.querySelectorAll('th[data-sort]').forEach(function (th) {
-      th.addEventListener('click', function () {
-        var column = this.dataset.sort;
-        if (studentTableSort.column === column) {
-          studentTableSort.direction = studentTableSort.direction === 'asc' ? 'desc' : 'asc';
-        } else {
-          studentTableSort.column = column;
-          studentTableSort.direction = 'asc';
-        }
-
-        // Update sort icons
-        document.querySelectorAll('th[data-sort] .sort-icon').forEach(function (icon) {
-          icon.textContent = 'unfold_more';
+          renderStudentStatus();
         });
-        var icon = this.querySelector('.sort-icon');
-        if (icon) {
-          icon.textContent = studentTableSort.direction === 'asc' ? 'arrow_upward' : 'arrow_downward';
-        }
+      }
 
-        renderStudentStatus();
+      document.querySelectorAll('th[data-sort]').forEach(function (th) {
+        th.addEventListener('click', function () {
+          var column = this.dataset.sort;
+          if (studentTableSort.column === column) {
+            studentTableSort.direction = studentTableSort.direction === 'asc' ? 'desc' : 'asc';
+          } else {
+            studentTableSort.column = column;
+            studentTableSort.direction = 'asc';
+          }
+
+          document.querySelectorAll('th[data-sort] .sort-icon').forEach(function (icon) {
+            icon.textContent = 'unfold_more';
+          });
+          var icon = this.querySelector('.sort-icon');
+          if (icon) {
+            icon.textContent = studentTableSort.direction === 'asc' ? 'arrow_upward' : 'arrow_downward';
+          }
+
+          renderStudentStatus();
+        });
       });
-    });
 
-    if (pollSelect) {
-      pollSelect.addEventListener('change', onPollSelectChange);
-    } else {
-      console.warn('Missing change target: poll-select');
-    }
-    if (pollSortSelect) {
-      pollSortSelect.addEventListener('change', function () { pollSortMode = this.value; refreshPollViews(); });
-    } else {
-      console.warn('Missing change target: poll-sort-select');
-    }
-    if (pollFilterSelect) {
-      pollFilterSelect.addEventListener('change', function () { pollClassFilter = this.value; refreshPollViews(); });
-    } else {
-      console.warn('Missing change target: poll-filter-select');
-    }
-    if (archivedClassFilterSelect) {
-      archivedClassFilterSelect.addEventListener('change', function () { archivedClassFilter = this.value; renderArchivedList(); });
-    } else {
-      console.warn('Missing change target: archived-class-filter');
-    }
-    if (addClassBtn) {
-      addClassBtn.addEventListener('click', onAddClass);
-    } else {
-      console.warn('Missing click target: add-class-btn');
-    }
-    if (addStudentRowBtn) {
-      addStudentRowBtn.addEventListener('click', addRosterRow);
-    } else {
-      console.warn('Missing click target: add-student-row-btn');
-    }
-    bindClick('bulk-add-students-btn', openBulkAddStudentsModal);
-    bindClick('cancel-bulk-add-btn', closeBulkAddStudentsModal);
-    bindClick('confirm-bulk-add-btn', confirmBulkAddStudents);
-    if (saveRosterBtn) {
-      saveRosterBtn.addEventListener('click', saveRoster);
-    } else {
-      console.warn('Missing click target: save-roster-btn');
-    }
-    if (renameClassBtn) {
-      renameClassBtn.addEventListener('click', onRenameClass);
-    } else {
-      console.warn('Missing click target: rename-class-btn');
-    }
-    if (deleteClassBtn) {
-      deleteClassBtn.addEventListener('click', onDeleteClass);
-    } else {
-      console.warn('Missing click target: delete-class-btn');
-    }
-    if (refreshArchivedBtn) {
-      refreshArchivedBtn.addEventListener('click', function () { loadArchivedPolls(true); });
-    } else {
-      console.warn('Missing click target: refresh-archived-btn');
+      if (pollSelect) {
+        pollSelect.addEventListener('change', onPollSelectChange);
+      } else {
+        console.warn('Missing change target: poll-select');
+      }
+      if (pollSortSelect) {
+        pollSortSelect.addEventListener('change', function () { pollSortMode = this.value; refreshPollViews(); });
+      } else {
+        console.warn('Missing change target: poll-sort-select');
+      }
+      if (pollFilterSelect) {
+        pollFilterSelect.addEventListener('change', function () { pollClassFilter = this.value; refreshPollViews(); });
+      } else {
+        console.warn('Missing change target: poll-filter-select');
+      }
+      if (archivedClassFilterSelect) {
+        archivedClassFilterSelect.addEventListener('change', function () { archivedClassFilter = this.value; renderArchivedList(); });
+      } else {
+        console.warn('Missing change target: archived-class-filter');
+      }
+      if (addClassBtn) {
+        addClassBtn.addEventListener('click', onAddClass);
+      } else {
+        console.warn('Missing click target: add-class-btn');
+      }
+      if (addStudentRowBtn) {
+        addStudentRowBtn.addEventListener('click', addRosterRow);
+      } else {
+        console.warn('Missing click target: add-student-row-btn');
+      }
+      bindClick('bulk-add-students-btn', openBulkAddStudentsModal);
+      bindClick('cancel-bulk-add-btn', closeBulkAddStudentsModal);
+      bindClick('confirm-bulk-add-btn', confirmBulkAddStudents);
+      if (saveRosterBtn) {
+        saveRosterBtn.addEventListener('click', saveRoster);
+      } else {
+        console.warn('Missing click target: save-roster-btn');
+      }
+      if (renameClassBtn) {
+        renameClassBtn.addEventListener('click', onRenameClass);
+      } else {
+        console.warn('Missing click target: rename-class-btn');
+      }
+      if (deleteClassBtn) {
+        deleteClassBtn.addEventListener('click', onDeleteClass);
+      } else {
+        console.warn('Missing click target: delete-class-btn');
+      }
+      if (refreshArchivedBtn) {
+        refreshArchivedBtn.addEventListener('click', function () { loadArchivedPolls(true); });
+      } else {
+        console.warn('Missing click target: refresh-archived-btn');
+      }
     }
 
     function setMainSection(section) {
@@ -23286,7 +23221,83 @@
     }
 
 
+
+    // ------------------------------------------------------------------
+    // MATH FORMULA UTILITIES (Global)
+    // ------------------------------------------------------------------
+    var _qFormulaInstance = null;
+    var _qFormulaRange = null;
+    var _qFormulaBlot = null;
+
+    window.openFormulaModal = function (quill, range, existingBlot) {
+      _qFormulaInstance = quill;
+      _qFormulaRange = range;
+      _qFormulaBlot = existingBlot || null;
+
+      var modal = document.getElementById('formula-modal');
+      var mathField = document.getElementById('math-editor-field');
+
+      if (modal && mathField) {
+        if (existingBlot) {
+          // Existing formula value
+          var val = existingBlot.value();
+          mathField.value = (typeof val === 'string' ? val : '');
+        } else {
+          mathField.value = '';
+        }
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        // Focus the math field
+        setTimeout(function () { mathField.focus(); }, 50);
+      }
+    };
+
+    window.closeFormulaModal = function () {
+      var modal = document.getElementById('formula-modal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        _qFormulaInstance = null;
+        _qFormulaRange = null;
+        _qFormulaBlot = null;
+      }
+    };
+
+    window.insertFormula = function () {
+      var mathField = document.getElementById('math-editor-field');
+      if (_qFormulaInstance && mathField) {
+        var latex = mathField.value;
+
+        if (_qFormulaBlot) {
+          // Replace existing formula
+          var index = _qFormulaInstance.getIndex(_qFormulaBlot);
+          _qFormulaInstance.deleteText(index, 1);
+          _qFormulaInstance.insertEmbed(index, 'formula', latex);
+        } else {
+          // Insert new formula
+          var index = _qFormulaRange ? _qFormulaRange.index : _qFormulaInstance.getLength();
+          _qFormulaInstance.insertEmbed(index, 'formula', latex);
+        }
+
+        closeFormulaModal();
+      }
+    };
+
+    // Bind Global Events for Formula Modal
+    // (We use a self-executing check to ensure listeners aren't duplicated if this script re-runs)
+    (function initFormulaEvents() {
+      var closeBtn = document.getElementById('close-formula-modal');
+      var cancelBtn = document.getElementById('cancel-formula-btn');
+      var insertBtn = document.getElementById('insert-formula-btn');
+
+      if (closeBtn) closeBtn.onclick = window.closeFormulaModal;
+      if (cancelBtn) cancelBtn.onclick = window.closeFormulaModal;
+      if (insertBtn) insertBtn.onclick = window.insertFormula;
+    })();
+
   })();
+
 </script>
   <script>
     /**

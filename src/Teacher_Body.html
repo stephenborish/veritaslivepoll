@@ -1366,6 +1366,7 @@
   </div>
 
   <!-- Poll Creation Wizard View - Compact Design -->
+  </main>
 </div> <!-- End dashboard-root -->
 
 <!-- Poll Creation Wizard View - Compact Design -->
@@ -1635,11 +1636,6 @@
       </button>
     </div>
   </div>
-</div>
-</div>
-</main>
-
-</div>
 </div>
 
 <!-- Student Manager Modal -->
@@ -2412,3 +2408,31 @@
   </div>
 
   <!-- Poll Creation Wizard View -->
+
+  <!-- Global Math Formula Modal -->
+  <div id="formula-modal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="w-full max-w-2xl transform rounded-xl bg-white p-6 shadow-2xl transition-all dark:bg-brand-dark-gray">
+      <div class="mb-4 flex items-center justify-between">
+        <h3 class="text-xl font-bold text-brand-dark-gray dark:text-white">Insert Math Formula</h3>
+        <button id="close-formula-modal" class="text-slate-400 hover:text-slate-600">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <!-- The MathLive Visual Editor -->
+      <div
+        class="mb-6 rounded-lg border border-brand-light-gray bg-slate-50 p-4 dark:border-slate-600 dark:bg-slate-800">
+        <math-field id="math-editor-field" class="w-full bg-transparent text-2xl" style="outline: none; border: none;">
+          f(x) = \sqrt{x^2 + 1}
+        </math-field>
+      </div>
+
+      <div class="flex justify-end gap-3">
+        <button id="cancel-formula-btn"
+          class="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100">Cancel</button>
+        <button id="insert-formula-btn"
+          class="rounded-lg bg-primary px-6 py-2 text-sm font-bold text-white hover:bg-primary/90">Insert
+          Formula</button>
+      </div>
+    </div>
+  </div>

@@ -149,20 +149,29 @@
     align-items: center !important;
   }
 
-  .ql-toolbar.ql-snow button {
+  /* Unified height and alignment for all toolbar items */
+  .ql-toolbar.ql-snow button,
+  .ql-toolbar.ql-snow .ql-picker {
     height: 28px !important;
+    vertical-align: middle !important;
+    display: inline-flex !important;
+    align-items: center !important;
+  }
+
+  /* Button specific centering */
+  .ql-toolbar.ql-snow button {
     width: 28px !important;
     padding: 3px !important;
-    display: flex !important;
-    align-items: center !important;
     justify-content: center !important;
   }
 
+  /* Picker specific */
   .ql-toolbar.ql-snow .ql-picker-label {
     padding-left: 4px !important;
     padding-right: 4px !important;
     display: flex !important;
     align-items: center !important;
+    height: 100% !important;
   }
 
   /* Specific fix for alignment options to prevent layout shifts */

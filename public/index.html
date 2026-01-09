@@ -651,20 +651,29 @@
     align-items: center !important;
   }
 
-  .ql-toolbar.ql-snow button {
+  /* Unified height and alignment for all toolbar items */
+  .ql-toolbar.ql-snow button,
+  .ql-toolbar.ql-snow .ql-picker {
     height: 28px !important;
+    vertical-align: middle !important;
+    display: inline-flex !important;
+    align-items: center !important;
+  }
+
+  /* Button specific centering */
+  .ql-toolbar.ql-snow button {
     width: 28px !important;
     padding: 3px !important;
-    display: flex !important;
-    align-items: center !important;
     justify-content: center !important;
   }
 
+  /* Picker specific */
   .ql-toolbar.ql-snow .ql-picker-label {
     padding-left: 4px !important;
     padding-right: 4px !important;
     display: flex !important;
     align-items: center !important;
+    height: 100% !important;
   }
 
   /* Specific fix for alignment options to prevent layout shifts */
@@ -23549,129 +23558,129 @@
 
   })();
 
-</script>
-// ==========================================
-// STUDENT INSPECTOR & ANALYTICS (PHASE 4)
-// ==========================================
 
-async function openStudentInspector(email) {
-var modal = document.getElementById('student-inspector-modal');
-if (!modal) return;
+  // ==========================================
+  // STUDENT INSPECTOR & ANALYTICS (PHASE 4)
+  // ==========================================
 
-// 1. Reset & Show Loading State
-document.getElementById('inspector-history-body').innerHTML = '<tr>
-  <td colspan="5" class="p-8 text-center text-slate-400">Loading history...</td>
-</tr>';
-document.getElementById('inspector-empty-state').classList.add('hidden');
+  async function openStudentInspector(email) {
+    var modal = document.getElementById('student-inspector-modal');
+    if (!modal) return;
 
-// 2. Populate Header
-var student = (STUDENTS || []).find(function (s) { return s.email === email; });
-var name = student ? (student.name || student.email) : email;
-var initials = name.split(' ').map(function (n) { return n[0]; }).join('').substring(0, 2).toUpperCase();
+    // 1. Reset & Show Loading State
+    document.getElementById('inspector-history-body').innerHTML = `<tr>
+      <td colspan="5" class="p-8 text-center text-slate-400">Loading history...</td>
+    </tr>`;
+    document.getElementById('inspector-empty-state').classList.add('hidden');
 
-document.getElementById('inspector-name').textContent = name;
-document.getElementById('inspector-email').textContent = email;
-document.getElementById('inspector-initials').textContent = initials;
+    // 2. Populate Header
+    var student = (STUDENTS || []).find(function (s) { return s.email === email; });
+    var name = student ? (student.name || student.email) : email;
+    var initials = name.split(' ').map(function (n) { return n[0]; }).join('').substring(0, 2).toUpperCase();
 
-// Status Badge
-var statusBadge = document.getElementById('inspector-status-badge');
-var isOnline = student && student.isOnline; // Assuming we track this
-statusBadge.textContent = isOnline ? 'Online' : 'Offline';
-statusBadge.className = isOnline
-? 'px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wide'
-: 'px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-wide';
+    document.getElementById('inspector-name').textContent = name;
+    document.getElementById('inspector-email').textContent = email;
+    document.getElementById('inspector-initials').textContent = initials;
 
-modal.classList.remove('hidden');
+    // Status Badge
+    var statusBadge = document.getElementById('inspector-status-badge');
+    var isOnline = student && student.isOnline; // Assuming we track this
+    statusBadge.textContent = isOnline ? 'Online' : 'Offline';
+    statusBadge.className = isOnline
+      ? 'px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wide'
+      : 'px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-wide';
 
-// 3. Fetch & Process History
-try {
-var history = await fetchStudentHistory(CURRENT_POLL_DATA.pollId, email);
-renderStudentInspector(history);
-} catch (error) {
-console.error('Failed to fetch student history:', error);
-document.getElementById('inspector-history-body').innerHTML = '<tr>
-  <td colspan="5" class="p-8 text-center text-red-500">Failed to load data.</td>
-</tr>';
-}
-}
+    modal.classList.remove('hidden');
 
-async function fetchStudentHistory(pollId, email) {
-if (!pollId || !email) return [];
+    // 3. Fetch & Process History
+    try {
+      var history = await fetchStudentHistory(CURRENT_POLL_DATA.pollId, email);
+      renderStudentInspector(history);
+    } catch (error) {
+      console.error('Failed to fetch student history:', error);
+      document.getElementById('inspector-history-body').innerHTML = `<tr>
+        <td colspan="5" class="p-8 text-center text-red-500">Failed to load data.</td>
+      </tr>`;
+    }
+  }
 
-// Fetch specific student history from answers/{pollId}
-// This might be inefficient if we fetch ALL answers. Optimally we query by orderByChild('email').equalTo(email)
-// For now, assuming answers/{pollId} is an object with keys as questionIndices? Or keys as answerIds?
-// Let's assume structure: answers/{pollId}/{questionIndex}/{emailSanitized} = { ... }
-// OR answers/{pollId}/{answerId} = { email: ..., ... }
+  async function fetchStudentHistory(pollId, email) {
+    if (!pollId || !email) return [];
 
-// We'll fetch all answers for the poll and filter client-side for now, as strict schema isn't guaranteed.
-var snapshot = await firebase.database().ref('answers/' + pollId).once('value');
-var val = snapshot.val();
-if (!val) return [];
+    // Fetch specific student history from answers/{pollId}
+    // This might be inefficient if we fetch ALL answers. Optimally we query by orderByChild('email').equalTo(email)
+    // For now, assuming answers/{pollId} is an object with keys as questionIndices? Or keys as answerIds?
+    // Let's assume structure: answers/{pollId}/{questionIndex}/{emailSanitized} = { ... }
+    // OR answers/{pollId}/{answerId} = { email: ..., ... }
 
-var history = [];
+    // We'll fetch all answers for the poll and filter client-side for now, as strict schema isn't guaranteed.
+    var snapshot = await firebase.database().ref('answers/' + pollId).once('value');
+    var val = snapshot.val();
+    if (!val) return [];
 
-// Iterate differently based on structure
-// Case A: Flat list
-if (typeof val === 'object') {
-Object.keys(val).forEach(function (key) {
-// Logic to traverse nested structure if needed
-// If organized by questionIndex: val[qIdx][email]
-// If flat: val[key].email === email
+    var history = [];
 
-var item = val[key];
-// Check if this item relates to the student
-if (item.email === email || (item.user && item.user.email === email)) {
-history.push(item);
-} else if (typeof item === 'object') {
-// Nested check (e.g. by question index)
-Object.values(item).forEach(function (subItem) {
-if (subItem && (subItem.email === email || (subItem.user && subItem.user.email === email))) {
-history.push(subItem);
-}
-});
-}
-});
-}
+    // Iterate differently based on structure
+    // Case A: Flat list
+    if (typeof val === 'object') {
+      Object.keys(val).forEach(function (key) {
+        // Logic to traverse nested structure if needed
+        // If organized by questionIndex: val[qIdx][email]
+        // If flat: val[key].email === email
 
-return history;
-}
+        var item = val[key];
+        // Check if this item relates to the student
+        if (item.email === email || (item.user && item.user.email === email)) {
+          history.push(item);
+        } else if (typeof item === 'object') {
+          // Nested check (e.g. by question index)
+          Object.values(item).forEach(function (subItem) {
+            if (subItem && (subItem.email === email || (subItem.user && subItem.user.email === email))) {
+              history.push(subItem);
+            }
+          });
+        }
+      });
+    }
 
-function renderStudentInspector(history) {
-var tbody = document.getElementById('inspector-history-body');
-var emptyState = document.getElementById('inspector-empty-state');
+    return history;
+  }
 
-if (!history || history.length === 0) {
-tbody.innerHTML = '';
-emptyState.classList.remove('hidden');
-updateInspectorMetrics([], 0);
-return;
-}
+  function renderStudentInspector(history) {
+    var tbody = document.getElementById('inspector-history-body');
+    var emptyState = document.getElementById('inspector-empty-state');
 
-emptyState.classList.add('hidden');
+    if (!history || history.length === 0) {
+      tbody.innerHTML = '';
+      emptyState.classList.remove('hidden');
+      updateInspectorMetrics([], 0);
+      return;
+    }
 
-// Sort history by time or question index
-history.sort(function (a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+    emptyState.classList.add('hidden');
 
-var totalCorrect = 0;
-var totalViolations = 0;
-var totalTime = 0;
+    // Sort history by time or question index
+    history.sort(function (a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
 
-var html = history.map(function (item, index) {
-var isCorrect = item.correct === true; // or check against key
-if (isCorrect) totalCorrect++;
+    var totalCorrect = 0;
+    var totalViolations = 0;
+    var totalTime = 0;
 
-// Calculate time taken (mock or real)
-var timeTaken = Math.round(Math.random() * 30 + 10); // Mock for now if not in data
-totalTime += timeTaken;
+    var html = history.map(function (item, index) {
+      var isCorrect = item.correct === true; // or check against key
+      if (isCorrect) totalCorrect++;
 
-return `
+      // Calculate time taken (mock or real)
+      var timeTaken = Math.round(Math.random() * 30 + 10); // Mock for now if not in data
+      totalTime += timeTaken;
+
+      return `
 <tr class="hover:bg-slate-50 dark:hover:bg-brand-dark-gray/20 transition-colors">
   <td class="py-3 font-medium text-slate-700 dark:text-slate-300">Q${item.questionIndex + 1}</td>
   <td class="py-3 text-slate-600 dark:text-slate-400 max-w-xs truncate">${escapeHtml(item.questionText || 'Question ' +
-    (item.questionIndex + 1))}</td>
+        (item.questionIndex + 1))}</td>
   <td class="py-3 font-mono text-xs text-slate-600 dark:text-slate-400">${escapeHtml(item.answer || item.answerText ||
-    '--')}</td>
+          '--')}</td>
   <td class="py-3 text-center">
     <span
       class="inline-flex items-center justify-center h-6 w-6 rounded-full ${isCorrect ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}">
@@ -23681,33 +23690,33 @@ return `
   <td class="py-3 text-right font-mono text-xs text-slate-500">${timeTaken}s</td>
 </tr>
 `;
-}).join('');
+    }).join('');
 
-tbody.innerHTML = html;
+    tbody.innerHTML = html;
 
-updateInspectorMetrics(history, totalCorrect);
-}
+    updateInspectorMetrics(history, totalCorrect);
+  }
 
-function updateInspectorMetrics(history, correctCount) {
-var total = history.length;
-var accuracy = total > 0 ? Math.round((correctCount / total) * 100) : 0;
+  function updateInspectorMetrics(history, correctCount) {
+    var total = history.length;
+    var accuracy = total > 0 ? Math.round((correctCount / total) * 100) : 0;
 
-document.getElementById('inspector-accuracy').textContent = accuracy + '%';
-document.getElementById('inspector-correct-count').textContent = correctCount + '/' + total + ' correct';
+    document.getElementById('inspector-accuracy').textContent = accuracy + '%';
+    document.getElementById('inspector-correct-count').textContent = correctCount + '/' + total + ' correct';
 
-document.getElementById('inspector-violations').textContent = '0'; // Mock for now
+    document.getElementById('inspector-violations').textContent = '0'; // Mock for now
 
-var avgSpeed = total > 0 ? Math.round(34) : 0; // Mock average
-document.getElementById('inspector-speed').textContent = avgSpeed + 's';
-}
+    var avgSpeed = total > 0 ? Math.round(34) : 0; // Mock average
+    document.getElementById('inspector-speed').textContent = avgSpeed + 's';
+  }
 
-// Close Handlers
-document.querySelectorAll('[data-close-inspector="true"]').forEach(function (el) {
-el.addEventListener('click', function () {
-var modal = document.getElementById('student-inspector-modal');
-if (modal) modal.classList.add('hidden');
-});
-});
+  // Close Handlers
+  document.querySelectorAll('[data-close-inspector="true"]').forEach(function (el) {
+    el.addEventListener('click', function () {
+      var modal = document.getElementById('student-inspector-modal');
+      if (modal) modal.classList.add('hidden');
+    });
+  });</script>
   <script>
     /**
      * Veritas Theme Manager

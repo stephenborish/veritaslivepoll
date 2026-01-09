@@ -504,299 +504,223 @@
         </div>
       </div>
 
-      <!-- Live Poll View (REDESIGNED FOR OPTIMAL TEACHER WORKFLOW) -->
-      <div id="live-view" class="flex flex-col h-full min-h-0 overflow-hidden p-0" style="display: none;">
+      <!-- Live Poll View (REDESIGNED FOR MISSION CONTROL) -->
+      <div id="live-view" class="flex flex-col h-full min-h-0 overflow-hidden bg-gray-50 dark:bg-gray-900"
+        style="display: none;">
 
-        <!-- 🚨 Proctoring notifications now use lightweight toasts. Legacy banners removed for a calmer experience. -->
+        <!-- 1. Top Control Bar (Professional & Dense) -->
+        <div id="live-control-bar"
+          class="shrink-0 h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center px-6 shadow-sm z-20 justify-between">
 
-        <!-- New Status Bar (Replaces Session HUD) -->
-        <div id="live-status-bar"
-          class="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex items-center gap-4 sm:gap-6 overflow-x-auto text-sm shadow-sm z-10 h-12">
-          <!-- Responses Metric -->
-          <div class="flex items-center gap-2 whitespace-nowrap">
-            <span class="material-symbols-outlined text-veritas-navy dark:text-gray-400 text-lg">group</span>
-            <span class="font-bold text-gray-900 dark:text-white text-base" id="hud-response-count">0 / 0</span>
-            <span class="text-gray-500 text-xs uppercase tracking-wide font-semibold">Responded</span>
-          </div>
-
-          <div class="w-px h-4 bg-gray-300 dark:bg-gray-700"></div>
-
-          <!-- Accuracy Metric -->
-          <div class="flex items-center gap-2 whitespace-nowrap">
-            <span class="material-symbols-outlined text-emerald-600 text-lg">check_circle</span>
-            <span class="font-bold text-gray-900 dark:text-white text-base" id="hud-accuracy-value">--%</span>
-            <span class="text-gray-500 text-xs uppercase tracking-wide font-semibold">Accuracy</span>
-          </div>
-
-          <div class="w-px h-4 bg-gray-300 dark:bg-gray-700"></div>
-
-          <!-- Locked Metric -->
-          <div class="flex items-center gap-2 whitespace-nowrap">
-            <span class="material-symbols-outlined text-amber-500 text-lg">lock_person</span>
-            <span class="font-bold text-gray-900 dark:text-white text-base" id="hud-lockouts-value">0</span>
-            <span class="text-gray-500 text-xs uppercase tracking-wide font-semibold">Locked</span>
-            <button id="hud-focus-lockouts-btn"
-              class="flex items-center gap-1 px-2 py-1 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold transition-colors ml-1"
-              disabled>
-              <span class="material-symbols-outlined text-sm">open_in_new</span>
-              <span>VIEW</span>
-            </button>
-            <!-- Locked Students Popover -->
-            <div id="locked-students-popover"
-              class="hidden absolute top-14 left-1/2 -translate-x-1/2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl z-50 p-4">
-              <div class="flex items-center justify-between mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">
-                <span class="font-bold text-gray-900 dark:text-white text-sm">Locked Students</span>
-                <button onclick="document.getElementById('locked-students-popover').classList.add('hidden')"
-                  class="text-gray-400 hover:text-gray-600"><span
-                    class="material-symbols-outlined text-sm">close</span></button>
-              </div>
-              <div id="locked-popover-list" class="flex flex-col gap-2 max-h-60 overflow-y-auto">
-                <!-- Populated via JS -->
+          <!-- Context Group -->
+          <div class="flex items-center gap-4">
+            <div class="flex flex-col">
+              <h1 id="header-poll-name"
+                class="text-gray-900 dark:text-white font-bold text-lg leading-tight truncate max-w-xs">Poll Name</h1>
+              <div class="flex items-center gap-2 text-xs text-gray-500 font-medium">
+                <span id="live-question-info"
+                  class="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-gray-700 dark:text-gray-300">Q1 /
+                  10</span>
+                <span class="w-1 h-1 rounded-full bg-gray-300"></span>
+                <span id="timer-status-message">Ready</span>
               </div>
             </div>
           </div>
 
-          <!-- Spacer -->
-          <div class="flex-1"></div>
+          <!-- Central Hub: Timer & Main Actions -->
+          <div class="flex items-center gap-4 absolute left-1/2 transform -translate-x-1/2">
+            <!-- Time Controls -->
+            <div id="timer-main-container"
+              class="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 gap-1 shadow-inner">
+              <button id="subtract-10s-btn"
+                class="w-8 h-8 flex items-center justify-center rounded hover:bg-white dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors"
+                title="-10s">
+                <span class="material-symbols-outlined text-lg">remove</span>
+              </button>
+              <input type="text" id="timer-display"
+                class="w-16 bg-transparent text-center font-mono text-xl font-bold text-gray-800 dark:text-white border-none focus:ring-0 p-0"
+                value="00:00" readonly>
+              <button id="add-10s-btn"
+                class="w-8 h-8 flex items-center justify-center rounded hover:bg-white dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors"
+                title="+10s">
+                <span class="material-symbols-outlined text-lg">add</span>
+              </button>
+            </div>
 
-          <!-- Status Message / Timer Pace (Simplified) -->
-          <div class="flex items-center gap-2 text-xs text-gray-500 whitespace-nowrap hidden sm:flex">
-            <span id="timer-status-message" class="italic hidden">Ready</span>
-            <span id="hud-pace-value"
-              class="font-mono font-semibold bg-gray-100 dark:bg-gray-800 px-1.5 rounded hidden">--:--</span>
-          </div>
-
-          <!-- Hidden placeholders for legacy JS compatibility -->
-          <div id="hud-response-ring" class="hidden"></div>
-          <div id="hud-response-percent" class="hidden"></div>
-          <div id="hud-response-caption" class="hidden"></div>
-          <div id="hud-accuracy-ring" class="hidden"></div>
-          <div id="hud-accuracy-percent" class="hidden"></div>
-          <div id="hud-accuracy-caption" class="hidden"></div>
-          <div id="hud-lockouts-caption" class="hidden"></div>
-          <div id="hud-pace-caption" class="hidden"></div>
-          <div id="hud-pace-chip" class="hidden"></div>
-        </div>
-
-        <!-- Mobile Nav Controls (phone/tablet) -->
-        <div id="live-mobile-nav" class="live-mobile-nav" style="display: none;" role="tablist"
-          aria-label="Live dashboard sections">
-          <button class="live-mobile-tab is-active" data-panel="question" role="tab" aria-selected="true">
-            <span class="material-symbols-outlined text-base">quiz</span>
-            <span>Question</span>
-            <span id="mobile-response-chip" class="live-mobile-tab-chip">0 / 0</span>
-          </button>
-          <button class="live-mobile-tab" data-panel="students" role="tab" aria-selected="false">
-            <span class="material-symbols-outlined text-base">group</span>
-            <span>Students</span>
-            <span id="mobile-lock-chip" class="live-mobile-tab-chip">0</span>
-          </button>
-        </div>
-
-        <!-- Main Content Wrapper (Scrollable) -->
-        <div class="flex-1 min-h-0 overflow-y-auto bg-gray-50 dark:bg-gray-800 px-4 pb-32 lg:pb-10 live-view-shell">
-
-          <div class="flex flex-col lg:flex-row gap-4 h-full min-h-0 live-view-grid">
-            <!-- LEFT COLUMN: Question + Answer Choices (Adaptive Width) -->
-            <section id="live-question-panel" class="live-mobile-panel flex-1 min-w-0 flex flex-col gap-4"
-              data-mobile-panel="question">
-
-              <!-- Question Display Area -->
-              <div
-                class="bg-white dark:bg-brand-dark-gray/30 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm shrink-0 live-question-card">
-                <!-- Hidden elements for JS compatibility -->
-                <!-- P0-5 FIX: Apply whitespace-pre-wrap to compact version too -->
-                <h2 id="live-question-text-compact" class="hidden whitespace-pre-wrap"></h2>
-                <span id="live-question-info" class="hidden">Q1 / 10</span>
-                <span id="response-count-header" class="hidden">0 / 0 answered</span>
-
-                <!-- Student-view-style layout: text on left, image on right -->
-                <div id="question-layout-container" class="question-layout-grid">
-                  <div class="question-text-area">
-                    <h2 id="live-question-text" class="question-stem-text whitespace-pre-wrap">Question text will appear
-                      here...</h2>
-                  </div>
-                  <div id="question-image-container" class="question-image-area" style="display: none;">
-                    <div class="question-image-frame">
-                      <img id="live-question-image" alt="Question" src="" class="question-image-clickable">
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Answer Choices (Student View Style) -->
-              <!-- P0-6 FIX: Remove flex-1 from answer section to prevent variable gap under question card -->
-              <!-- flex-1 causes the section to grow/shrink, creating dynamic spacing above it -->
-              <div class="flex flex-col min-h-0 flex-shrink">
-                <div class="overflow-y-auto">
-                  <div id="results-bars" class="flex flex-col gap-2" aria-live="polite">
-                    <!-- Answer choices will be populated dynamically in student-view style -->
-                  </div>
-
-                  <!-- Results Reveal Strip -->
-                  <div id="results-reveal-strip" class="mt-4 hidden">
-                    <div
-                      class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-green-600/20 bg-green-600/5 px-4 py-2.5">
-                      <div class="min-w-[200px]">
-                        <p class="text-sm font-semibold text-green-700 dark:text-green-400">Answer revealed to students
-                        </p>
-                        <p id="results-strip-status" class="text-xs text-green-700/70">Students can now see the correct
-                          answer.</p>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <button id="hide-results-btn"
-                          class="flex items-center gap-2 rounded-lg bg-gray-200 text-gray-700 px-3 py-1.5 text-sm font-semibold hover:bg-gray-300 transition-colors"
-                          type="button">
-                          <span class="material-symbols-outlined text-base">visibility_off</span>
-                          <span>Hide</span>
-                        </button>
-                        <button id="strip-next-btn"
-                          class="flex items-center gap-2 rounded-lg bg-veritas-navy text-white px-3 py-1.5 text-sm font-semibold hover:bg-veritas-navy/90 transition-colors"
-                          type="button">
-                          <span>Next</span>
-                          <span class="material-symbols-outlined text-base">arrow_forward</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <!-- RIGHT COLUMN: STUDENTS + CONFIDENCE PULSE (Fixed Width) -->
-            <section id="live-students-panel"
-              class="live-mobile-panel w-full lg:w-96 flex-none flex flex-col gap-4 h-full overflow-hidden min-h-0 transition-all duration-300 ease-in-out"
-              data-mobile-panel="students">
-
-              <!-- STUDENTS PANEL -->
-              <div id="live-sidebar"
-                class="flex-1 flex flex-col bg-white dark:bg-brand-dark-gray/30 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden min-h-0 live-student-panel">
-
-                <!-- Student Header with Status Summary -->
-                <div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 px-4 py-2.5">
-                  <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-brand-dark-gray dark:text-brand-white text-base font-bold">Students</h3>
-                    <div class="flex items-center gap-1.5">
-                      <button id="filter-locked-only-btn"
-                        class="h-6 w-6 flex items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200 transition-colors"
-                        title="Show locked only">
-                        <span class="material-symbols-outlined text-sm">lock</span>
-                      </button>
-                      <button id="filter-all-btn"
-                        class="h-6 w-6 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-400 hover:bg-gray-200 transition-colors"
-                        title="Show all">
-                        <span class="material-symbols-outlined text-sm">group</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Status Pills (Always Visible) -->
-                  <div class="flex flex-wrap gap-1">
-                    <div
-                      class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-xs font-semibold text-green-700 dark:text-green-400">
-                      <span>✓ <span id="correct-count">0</span></span>
-                    </div>
-                    <div
-                      class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-xs font-semibold text-red-700 dark:text-red-400">
-                      <span>🔒 <span id="locked-count">0</span></span>
-                    </div>
-                    <div
-                      class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-xs font-semibold text-amber-700 dark:text-amber-400">
-                      <span>⚠ <span id="blocked-count">0</span></span>
-                    </div>
-                    <div
-                      class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-900/30 text-xs font-semibold text-gray-700 dark:text-gray-400">
-                      <span>⏳ <span id="waiting-count">0</span></span>
-                    </div>
-                  </div>
-
-                  <!-- Hidden elements for compatibility -->
-                  <div class="hidden">
-                    <div id="student-search-container">
-                      <input type="text" id="student-search-input" />
-                    </div>
-                    <select id="student-sort-select">
-                      <option value="name">Name</option>
-                      <option value="status">Status</option>
-                      <option value="answer">Answer</option>
-                    </select>
-                    <button id="student-sort-direction-btn"></button>
-                  </div>
-                </div>
-
-
-                <!-- Student Grid (Scrollable, Compact Tiles) -->
-                <div id="student-status-grid" class="flex-1 overflow-y-auto px-3 py-2" aria-live="polite">
-                  <!-- Students will be populated with full names, inline status, hover actions -->
-                </div>
-
-              </div>
-
-              <!-- CONFIDENCE PULSE PANEL -->
-              <div id="confidence-pulse-container" class="shrink-0">
-                <!-- Confidence pulse will be rendered here dynamically -->
-              </div>
-            </section>
-            <!-- END STUDENTS PANEL -->
-
-          </div>
-          <!-- END RIGHT COLUMN -->
-
-        </div> <!-- Closes the new .flex.gap-6 -->
-      </div> <!-- Closes the new .flex-1.overflow-y-auto -->
-
-      <!-- Sticky Mobile Action Bar -->
-      <div id="live-mobile-actions" class="live-mobile-actions" style="display: none;" aria-live="polite">
-        <div class="live-mobile-actions__row">
-          <div class="live-mobile-timer" id="timer-compact-container">
-            <button id="mobile-start-btn" type="button" class="live-mobile-pill live-mobile-pill-primary">
-              <span class="material-symbols-outlined text-base">play_arrow</span>
-              <span id="mobile-timer-label">Start</span>
-            </button>
-            <button id="mobile-pause-btn" type="button" class="live-mobile-pill live-mobile-pill-muted hidden">
-              <span class="material-symbols-outlined text-base">pause</span>
-              <span>Pause</span>
-            </button>
-            <div class="live-mobile-timebox">
-              <button id="subtract-10s-btn-mobile" type="button" aria-label="Subtract 10 seconds">-10s</button>
-              <input id="timer-display-compact" type="text" aria-label="Timer" readonly />
-              <button id="add-10s-btn-mobile" type="button" aria-label="Add 10 seconds">+10s</button>
+            <!-- Playback Controls -->
+            <div class="flex items-center gap-2">
+              <button id="start-btn"
+                class="w-10 h-10 flex items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-600 active:scale-95 transition-all">
+                <span class="material-symbols-outlined filled text-2xl">play_arrow</span>
+              </button>
+              <button id="pause-btn"
+                class="hidden w-10 h-10 flex items-center justify-center rounded-full bg-amber-500 text-white shadow-lg shadow-amber-500/30 hover:bg-amber-600 active:scale-95 transition-all">
+                <span class="material-symbols-outlined filled text-2xl">pause</span>
+              </button>
+              <button id="reset-btn"
+                class="w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 active:scale-95 transition-all"
+                title="Reset Question">
+                <span class="material-symbols-outlined text-xl">restart_alt</span>
+              </button>
             </div>
           </div>
-          <div class="live-mobile-metrics">
-            <div class="live-mobile-metric">
-              <span class="live-mobile-metric-label">Accuracy</span>
-              <span id="mobile-accuracy-chip" class="live-mobile-metric-value">--%</span>
+
+          <!-- Right Actions: Navigation, Reveal, Tools -->
+          <div class="flex items-center gap-3">
+            <!-- Tool Toggles -->
+            <div class="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
+              <button id="header-calc-toggle"
+                class="w-9 h-9 flex items-center justify-center rounded hover:bg-white dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors"
+                title="Toggle TI-84 Calculator">
+                <span class="material-symbols-outlined text-xl">calculate</span>
+              </button>
+              <button id="header-whiteboard-toggle"
+                class="w-9 h-9 flex items-center justify-center rounded hover:bg-white dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors"
+                title="Toggle Whiteboard (Coming Soon)">
+                <span class="material-symbols-outlined text-xl">draw</span>
+              </button>
             </div>
-            <button id="mobile-locks-btn" type="button" class="live-mobile-pill live-mobile-pill-warning" disabled>
-              <span class="material-symbols-outlined text-base">lock_person</span>
-              <span id="mobile-locks-label">Locked</span>
+
+            <div class="h-8 w-px bg-gray-300 dark:bg-gray-700"></div>
+
+            <button id="header-end-show-btn"
+              class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow-md shadow-indigo-500/20 transition-all">
+              <span class="material-symbols-outlined text-lg">visibility</span>
+              <span>Reveal</span>
+            </button>
+
+            <button id="header-next-btn"
+              class="flex items-center gap-2 px-4 py-2 bg-gray-800 dark:bg-gray-700 hover:bg-gray-900 dark:hover:bg-gray-600 text-white rounded-lg font-semibold shadow-md transition-all">
+              <span>Next</span>
+              <span class="material-symbols-outlined text-lg">arrow_forward</span>
             </button>
           </div>
         </div>
-        <div class="live-mobile-actions__buttons">
-          <button id="mobile-resume-btn" type="button" class="live-mobile-action live-mobile-action-ghost hidden">
-            <span class="material-symbols-outlined text-base">play_circle</span>
-            <span>Resume</span>
-          </button>
-          <button id="mobile-reveal-btn" type="button" class="live-mobile-action live-mobile-action-primary">
-            <span class="material-symbols-outlined text-base">visibility</span>
-            <span>Reveal</span>
-          </button>
-          <button id="mobile-next-btn" type="button" class="live-mobile-action live-mobile-action-info">
-            <span class="material-symbols-outlined text-base">arrow_forward</span>
-            <span>Next</span>
-          </button>
-          <button id="mobile-reset-btn" type="button" class="live-mobile-action live-mobile-action-ghost">
-            <span class="material-symbols-outlined text-base">replay</span>
-            <span>Reset</span>
-          </button>
-          <button id="mobile-stop-btn" type="button" class="live-mobile-action live-mobile-action-danger">
-            <span class="material-symbols-outlined text-base">stop_circle</span>
-            <span>End</span>
-          </button>
+
+        <!-- 2. Main High-Density Grid -->
+        <main class="flex-1 flex overflow-hidden">
+
+          <!-- LEFT PANEL: Question & Content (45%) -->
+          <div id="live-question-panel"
+            class="w-[45%] flex flex-col border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10">
+            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+              <!-- Question Card -->
+              <div class="space-y-4">
+                <span class="text-xs font-bold tracking-widest text-indigo-500 uppercase">Current Question</span>
+                <h2 id="live-question-text"
+                  class="text-2xl font-serif font-medium text-gray-900 dark:text-white leading-relaxed">
+                  Loading question...
+                </h2>
+              </div>
+
+              <!-- Dynamic Media Container -->
+              <div id="question-image-container"
+                class="relative group rounded-xl overflow-hidden border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 hidden">
+                <img id="live-question-image" src=""
+                  class="w-full h-auto max-h-[400px] object-contain transition-transform group-hover:scale-[1.02]"
+                  alt="Question Media">
+                <button
+                  class="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-lg backdrop-blur-sm transition-opacity opacity-0 group-hover:opacity-100"
+                  title="Expand Image">
+                  <span class="material-symbols-outlined">zoom_in</span>
+                </button>
+              </div>
+
+              <!-- Answer Choices (Interactive Stats) -->
+              <div class="space-y-3 pt-4">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold tracking-widest text-gray-400 uppercase">Responses</span>
+                  <span id="response-count-header" class="text-xs font-medium text-gray-500">0 answered</span>
+                </div>
+                <div id="results-bars" class="space-y-3">
+                  <!-- Populated dynamically: Bars with percentages -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT PANEL: Proctoring Mission Control (55%) -->
+          <div id="live-student-panel" class="w-[55%] flex flex-col bg-gray-50/50 dark:bg-gray-900/50">
+
+            <!-- Metrics Heads-Up Display -->
+            <div
+              class="h-16 px-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-white/50 dark:bg-gray-800/50 backdrop-blur-md">
+              <div class="flex gap-6">
+                <!-- Metric: Response Rate -->
+                <div class="flex items-baseline gap-2">
+                  <span class="text-2xl font-bold text-gray-900 dark:text-white" id="hud-response-count">0/0</span>
+                  <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Responses</span>
+                </div>
+                <!-- Metric: Accuracy -->
+                <div class="flex items-baseline gap-2 pl-6 border-l border-gray-200 dark:border-gray-700">
+                  <span class="text-2xl font-bold text-emerald-600" id="hud-accuracy-value">--%</span>
+                  <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Accuracy</span>
+                </div>
+                <!-- Metric: Metacognition Index (New) -->
+                <div class="flex items-baseline gap-2 pl-6 border-l border-gray-200 dark:border-gray-700"
+                  title="Class Confidence Index">
+                  <div class="flex items-center gap-1 text-indigo-600">
+                    <span class="material-symbols-outlined text-lg">psychology</span>
+                    <span class="text-xl font-bold" id="hud-metacognition-value">--</span>
+                  </div>
+                  <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Confidence</span>
+                </div>
+              </div>
+
+              <!-- Filter Controls -->
+              <div class="flex items-center gap-2 bg-gray-200 dark:bg-gray-700 p-1 rounded-lg">
+                <button id="filter-all-btn"
+                  class="px-3 py-1 text-xs font-bold rounded-md bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm transition-all">ALL</button>
+                <button id="filter-locked-only-btn"
+                  class="px-3 py-1 text-xs font-bold rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600 transition-all flex items-center gap-1">
+                  <span>LOCKED</span>
+                  <span id="locked-count" class="bg-red-500 text-white text-[10px] px-1.5 rounded-full hidden">0</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Student Grid (Scrollable) -->
+            <div id="student-status-grid"
+              class="flex-1 overflow-y-auto custom-scrollbar p-6 grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start">
+              <!-- Cards injected here -->
+              <!-- Example Card Structure for reference (created by JS):
+                    <div class="student-card p-3 rounded-xl bg-white border border-gray-200 shadow-sm relative group hover:shadow-md transition-all">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="font-bold text-sm text-gray-800 truncate">Student Name</span>
+                            <span class="status-indicator w-2 h-2 rounded-full bg-gray-300"></span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-mono text-gray-500">Thinking...</span>
+                            <span class="metacognition-dot w-3 h-3 rounded-full bg-indigo-100"></span>
+                        </div>
+                    </div>
+                    -->
+            </div>
+          </div>
+        </main>
+
+        <!-- TI-84 Iframe Container (Draggable) -->
+        <!-- Hidden by default, toggled via #header-calc-toggle -->
+        <div id="calculator-draggable"
+          class="hidden absolute top-20 right-20 w-[300px] h-[580px] bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden flex flex-col shadow-indigo-500/20">
+          <!-- Drag Handle -->
+          <div id="calculator-drag-handle"
+            class="h-8 bg-gray-100 dark:bg-gray-700 cursor-move flex items-center justify-between px-3 border-b border-gray-200 dark:border-gray-600">
+            <div class="flex items-center gap-1">
+              <span class="w-2 h-2 rounded-full bg-red-400"></span>
+              <span class="w-2 h-2 rounded-full bg-yellow-400"></span>
+              <span class="w-2 h-2 rounded-full bg-green-400"></span>
+            </div>
+            <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">TI-84 Plus</span>
+            <span class="material-symbols-outlined text-sm text-gray-400">drag_indicator</span>
+          </div>
+          <!-- Iframe -->
+          <iframe src="https://mpcalc-aaa91.web.app/" class="w-full h-full border-0 bg-gray-100"
+            title="TI-84 Calculator"></iframe>
         </div>
+
       </div>
+
 
       <!-- Hidden elements for compatibility -->
       <div class="hidden">
@@ -974,6 +898,116 @@
     </div>
   </div>
 
+  <!-- Student Detail Inspector Modal (New for Phase 4) -->
+  <div id="student-inspector-modal" class="fixed inset-0 z-[60] hidden">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-close-inspector="true"></div>
+    <div
+      class="relative w-full max-w-4xl mx-auto my-12 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh]">
+
+      <!-- 1. Header -->
+      <div
+        class="flex items-start justify-between p-6 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
+        <div class="flex items-center gap-4">
+          <div
+            class="h-16 w-16 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+            <span id="inspector-initials">--</span>
+          </div>
+          <div>
+            <h2 id="inspector-name" class="text-2xl font-bold text-gray-900 dark:text-white leading-tight">Student Name
+            </h2>
+            <div class="flex items-center gap-3 mt-1 text-sm">
+              <span id="inspector-email" class="text-gray-500 font-medium">student@example.com</span>
+              <span id="inspector-status-badge"
+                class="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-wide">Offline</span>
+            </div>
+          </div>
+        </div>
+        <button
+          class="h-10 w-10 flex items-center justify-center rounded-full bg-white dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shadow-sm border border-gray-200 dark:border-gray-700"
+          data-close-inspector="true">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <!-- 2. Integrated Analytics Grid -->
+      <div class="grid grid-cols-3 gap-6 p-6 pb-2">
+        <!-- Accuracy Card -->
+        <div
+          class="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800 relative overflow-hidden group">
+          <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <span class="material-symbols-outlined text-6xl text-indigo-600">check_circle</span>
+          </div>
+          <p class="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-1">Accuracy</p>
+          <div class="flex items-baseline gap-2">
+            <span id="inspector-accuracy" class="text-3xl font-black text-indigo-800 dark:text-indigo-300">--%</span>
+            <span id="inspector-correct-count" class="text-sm font-semibold text-indigo-600/70">0/0 correct</span>
+          </div>
+        </div>
+
+        <!-- Violations Card -->
+        <div
+          class="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800 relative overflow-hidden group">
+          <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <span class="material-symbols-outlined text-6xl text-amber-600">warning</span>
+          </div>
+          <p class="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-1">Violations</p>
+          <div class="flex items-baseline gap-2">
+            <span id="inspector-violations" class="text-3xl font-black text-amber-800 dark:text-amber-300">0</span>
+            <span class="text-sm font-semibold text-amber-600/70">tab switches</span>
+          </div>
+        </div>
+
+        <!-- Speed Card -->
+        <div
+          class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800 relative overflow-hidden group">
+          <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <span class="material-symbols-outlined text-6xl text-emerald-600">timer</span>
+          </div>
+          <p class="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-1">Avg. Speed
+          </p>
+          <div class="flex items-baseline gap-2">
+            <span id="inspector-speed" class="text-3xl font-black text-emerald-800 dark:text-emerald-300">--s</span>
+            <span class="text-sm font-semibold text-emerald-600/70">per question</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Session History Label -->
+      <div class="px-6 py-2">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-gray-500">Session History</h3>
+      </div>
+
+      <!-- 4. Scrollable History Table -->
+      <div class="flex-1 overflow-y-auto custom-scrollbar px-6 pb-6">
+        <table class="w-full text-left text-sm">
+          <thead class="sticky top-0 bg-white dark:bg-gray-900 z-10 box-decoration-clone">
+            <tr class="text-xs text-gray-400 uppercase tracking-wide border-b border-gray-100 dark:border-gray-800">
+              <th class="py-3 font-semibold">Q#</th>
+              <th class="py-3 font-semibold">Question</th>
+              <th class="py-3 font-semibold">Response</th>
+              <th class="py-3 font-semibold text-center">Result</th>
+              <th class="py-3 font-semibold text-right">Time</th>
+            </tr>
+          </thead>
+          <tbody id="inspector-history-body" class="divide-y divide-gray-50 dark:divide-gray-800">
+            <!-- Populated by JS -->
+          </tbody>
+        </table>
+
+        <!-- Empty State -->
+        <div id="inspector-empty-state" class="hidden py-12 text-center text-gray-400">
+          <p>No activity recorded yet.</p>
+        </div>
+      </div>
+
+      <!-- 5. Footer Actions -->
+      <div
+        class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-3">
+        <button class="px-4 py-2 rounded-lg font-bold text-gray-600 hover:bg-gray-200 transition-colors text-sm"
+          data-close-inspector="true">Close</button>
+      </div>
+    </div>
+  </div>
   <!-- Archived Polls View -->
   <div id="archived-view"
     class="p-6 grid grid-cols-1 lg:grid-cols-4 gap-6 bg-gray-50 dark:bg-brand-dark-gray/10 min-h-full"
@@ -1640,83 +1674,201 @@
 
 <!-- Student Manager Modal -->
 <div id="student-manager-modal" class="fixed inset-0 z-50 hidden">
-  <div class="absolute inset-0 bg-slate-900/60" data-student-manager-close="true"></div>
+  <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-close-manager="true"></div>
   <div
-    class="relative w-full max-w-2xl mx-auto my-12 bg-white dark:bg-brand-dark-gray rounded-2xl shadow-2xl border border-brand-light-gray dark:border-brand-dark-gray/40">
-    <div class="flex items-start justify-between gap-4 p-6 border-b border-slate-100 dark:border-brand-dark-gray/60">
-      <div>
-        <p class="text-xs font-semibold tracking-[0.2em] uppercase text-slate-500">Student Manager</p>
-        <h3 id="student-manager-name" class="text-2xl font-bold text-brand-dark-gray dark:text-white">Student Name</h3>
-        <p id="student-manager-status" class="text-sm font-semibold text-slate-500">Status</p>
-      </div>
-      <button id="student-manager-close"
-        class="h-10 w-10 inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-brand-dark-gray/70 text-slate-600 dark:text-white hover:bg-slate-200">
-        <span class="material-symbols-outlined">close</span>
-      </button>
-    </div>
-    <div class="p-6 space-y-6">
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="p-3 rounded-xl bg-slate-50 dark:bg-brand-dark-gray/40">
-          <p class="text-xs font-semibold uppercase text-slate-500">Question</p>
-          <p id="student-manager-progress" class="text-xl font-bold text-brand-dark-gray dark:text-white">--</p>
+    class="relative w-full max-w-md mx-auto my-12 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh]">
+    <!-- Header -->
+    <div
+      class="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
+      <div class="flex items-center gap-4">
+        <div
+          class="h-12 w-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-xl font-bold text-indigo-600 dark:text-indigo-400">
+          <span id="student-manager-initials">--</span>
         </div>
-        <div class="p-3 rounded-xl bg-slate-50 dark:bg-brand-dark-gray/40">
-          <p class="text-xs font-semibold uppercase text-slate-500">Time Remaining</p>
-          <p id="student-manager-time" class="text-xl font-bold text-brand-dark-gray dark:text-white">--:--</p>
-        </div>
-        <div class="p-3 rounded-xl bg-slate-50 dark:bg-brand-dark-gray/40">
-          <p class="text-xs font-semibold uppercase text-slate-500">Extra Time</p>
-          <p id="student-manager-extra" class="text-xl font-bold text-brand-dark-gray dark:text-white">+0m</p>
-        </div>
-        <div class="p-3 rounded-xl bg-slate-50 dark:bg-brand-dark-gray/40">
-          <p class="text-xs font-semibold uppercase text-slate-500">Connection</p>
-          <div class="flex items-center gap-2">
-            <span id="student-manager-connection-dot" class="h-3 w-3 rounded-full bg-slate-300"></span>
-            <p id="student-manager-connection" class="text-sm font-semibold text-brand-dark-gray dark:text-white">
-              Unknown</p>
+        <div>
+          <h2 id="student-manager-name" class="text-xl font-bold text-gray-900 dark:text-white leading-tight">Student
+            Name</h2>
+          <div class="flex items-center gap-2 mt-1 text-sm">
+            <span id="student-manager-email" class="text-gray-500 font-medium">student@example.com</span>
+            <span id="student-manager-status-badge"
+              class="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-wide">Offline</span>
           </div>
         </div>
       </div>
+      <button
+        class="h-10 w-10 flex items-center justify-center rounded-full bg-white dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shadow-sm border border-gray-200 dark:border-gray-700"
+        data-close-manager="true">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div class="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
+      <!-- Current Status -->
+      <div class="rounded-2xl border border-slate-200 dark:border-brand-dark-gray/60 p-4">
+        <p class="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-3">Current Status</p>
+        <div class="flex items-center gap-3">
+          <span id="student-manager-current-status"
+            class="px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-sm font-bold uppercase tracking-wide">Thinking...</span>
+          <span id="student-manager-current-time" class="text-sm text-slate-500">0:00</span>
+        </div>
+      </div>
+
+      <!-- Time Controls (Restored) -->
       <div class="rounded-2xl border border-slate-200 dark:border-brand-dark-gray/60 p-4">
         <p class="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-3">Time Controls</p>
         <div class="flex flex-wrap items-center gap-2">
           <button id="student-manager-add-5"
-            class="inline-flex items-center gap-2 rounded-full bg-emerald-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-emerald-700">
+            class="inline-flex items-center gap-2 rounded-full bg-emerald-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-emerald-700 transition-colors">
             <span class="material-symbols-outlined text-base">add</span>
             +5 min
           </button>
           <button id="student-manager-add-10"
-            class="inline-flex items-center gap-2 rounded-full bg-emerald-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-emerald-700">
+            class="inline-flex items-center gap-2 rounded-full bg-emerald-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-emerald-700 transition-colors">
             <span class="material-symbols-outlined text-base">add</span>
             +10 min
           </button>
           <button id="student-manager-pause"
-            class="inline-flex items-center gap-2 rounded-full bg-amber-500 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-amber-600">
+            class="inline-flex items-center gap-2 rounded-full bg-amber-500 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-amber-600 transition-colors">
             <span class="material-symbols-outlined text-base">pause_circle</span>
             Pause Timer
           </button>
         </div>
       </div>
-      <div class="flex flex-wrap items-center gap-3">
-        <button id="student-manager-unlock"
-          class="inline-flex items-center gap-2 rounded-full bg-blue-600 text-white px-5 py-2 text-sm font-semibold shadow hover:bg-blue-700">
-          <span class="material-symbols-outlined text-base">lock_open</span>
-          Approve Unlock
-        </button>
-        <button id="student-manager-force-submit"
-          class="inline-flex items-center gap-2 rounded-full bg-red-600 text-white px-5 py-2 text-sm font-semibold shadow hover:bg-red-700">
-          <span class="material-symbols-outlined text-base">task</span>
-          Force Submit
-        </button>
-        <p id="student-manager-message" class="text-sm text-slate-500"></p>
+
+      <div>
+        <p class="text-xs font-semibold uppercase text-slate-500 mb-2">Actions</p>
+        <div class="flex flex-wrap items-center gap-3">
+          <button id="student-manager-unlock"
+            class="inline-flex items-center gap-2 rounded-full bg-blue-600 text-white px-5 py-2 text-sm font-semibold shadow hover:bg-blue-700 transition-colors">
+            <span class="material-symbols-outlined text-base">lock_open</span>
+            Approve Unlock
+          </button>
+          <button id="student-manager-force-submit"
+            class="inline-flex items-center gap-2 rounded-full bg-red-600 text-white px-5 py-2 text-sm font-semibold shadow hover:bg-red-700 transition-colors">
+            <span class="material-symbols-outlined text-base">task</span>
+            Force Submit
+          </button>
+          <p id="student-manager-message" class="text-sm text-slate-500"></p>
+        </div>
       </div>
       <div id="student-manager-loading" class="hidden text-sm text-slate-500">Working...</div>
     </div>
   </div>
 </div>
 
+<!-- Student Detail Inspector Modal (New for Phase 4) -->
+<div id="student-inspector-modal" class="fixed inset-0 z-[60] hidden">
+  <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-close-inspector="true"></div>
+  <div
+    class="relative w-full max-w-4xl mx-auto my-12 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh]">
+
+    <!-- 1. Header -->
+    <div
+      class="flex items-start justify-between p-6 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
+      <div class="flex items-center gap-4">
+        <div
+          class="h-16 w-16 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+          <span id="inspector-initials">--</span>
+        </div>
+        <div>
+          <h2 id="inspector-name" class="text-2xl font-bold text-gray-900 dark:text-white leading-tight">Student Name
+          </h2>
+          <div class="flex items-center gap-3 mt-1 text-sm">
+            <span id="inspector-email" class="text-gray-500 font-medium">student@example.com</span>
+            <span id="inspector-status-badge"
+              class="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-wide">Offline</span>
+          </div>
+        </div>
+      </div>
+      <button
+        class="h-10 w-10 flex items-center justify-center rounded-full bg-white dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shadow-sm border border-gray-200 dark:border-gray-700"
+        data-close-inspector="true">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <!-- 2. Integrated Analytics Grid -->
+    <div class="grid grid-cols-3 gap-6 p-6 pb-2">
+      <!-- Accuracy Card -->
+      <div
+        class="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800 relative overflow-hidden group">
+        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+          <span class="material-symbols-outlined text-6xl text-indigo-600">check_circle</span>
+        </div>
+        <p class="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-1">Accuracy</p>
+        <div class="flex items-baseline gap-2">
+          <span id="inspector-accuracy" class="text-3xl font-black text-indigo-800 dark:text-indigo-300">--%</span>
+          <span id="inspector-correct-count" class="text-sm font-semibold text-indigo-600/70">0/0 correct</span>
+        </div>
+      </div>
+
+      <!-- Violations Card -->
+      <div
+        class="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800 relative overflow-hidden group">
+        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+          <span class="material-symbols-outlined text-6xl text-amber-600">warning</span>
+        </div>
+        <p class="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-1">Violations</p>
+        <div class="flex items-baseline gap-2">
+          <span id="inspector-violations" class="text-3xl font-black text-amber-800 dark:text-amber-300">0</span>
+          <span class="text-sm font-semibold text-amber-600/70">tab switches</span>
+        </div>
+      </div>
+
+      <!-- Speed Card -->
+      <div
+        class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800 relative overflow-hidden group">
+        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+          <span class="material-symbols-outlined text-6xl text-emerald-600">timer</span>
+        </div>
+        <p class="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-1">Avg. Speed</p>
+        <div class="flex items-baseline gap-2">
+          <span id="inspector-speed" class="text-3xl font-black text-emerald-800 dark:text-emerald-300">--s</span>
+          <span class="text-sm font-semibold text-emerald-600/70">per question</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Session History Label -->
+    <div class="px-6 py-2">
+      <h3 class="text-sm font-bold uppercase tracking-wider text-gray-500">Session History</h3>
+    </div>
+
+    <!-- 4. Scrollable History Table -->
+    <div class="flex-1 overflow-y-auto px-6 pb-6">
+      <table class="w-full text-left text-sm">
+        <thead class="sticky top-0 bg-white dark:bg-gray-900 z-10 box-decoration-clone">
+          <tr class="text-xs text-gray-400 uppercase tracking-wide border-b border-gray-100 dark:border-gray-800">
+            <th class="py-3 font-semibold">Q#</th>
+            <th class="py-3 font-semibold">Question</th>
+            <th class="py-3 font-semibold">Response</th>
+            <th class="py-3 font-semibold text-center">Result</th>
+            <th class="py-3 font-semibold text-right">Time</th>
+          </tr>
+        </thead>
+        <tbody id="inspector-history-body" class="divide-y divide-gray-50 dark:divide-gray-800">
+          <!-- Populated by JS -->
+        </tbody>
+      </table>
+
+      <!-- Empty State -->
+      <div id="inspector-empty-state" class="hidden py-12 text-center text-gray-400">
+        <p>No activity recorded yet.</p>
+      </div>
+    </div>
+
+    <!-- 5. Footer Actions -->
+    <div
+      class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-3">
+      <button class="px-4 py-2 rounded-lg font-bold text-gray-600 hover:bg-gray-200 transition-colors text-sm"
+        data-close-inspector="true">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- Book View Modal -->
-<div id="book-view-modal" class="fixed inset-0 z-50 hidden overflow-y-auto">
+<div id="book-view-modal" class="fixed inset-0 z-50 hidden overflow-y-auto custom-scrollbar">
   <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onclick="closeBookView()"></div>
   <div
     class="relative w-full max-w-[95vw] mx-auto my-8 bg-white dark:bg-brand-dark-gray rounded-2xl shadow-2xl border border-brand-light-gray dark:border-brand-dark-gray/40">

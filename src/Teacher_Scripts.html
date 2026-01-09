@@ -1913,7 +1913,7 @@
     function bindClick(id, handler) {
       var el = document.getElementById(id);
       if (!el) {
-        console.warn('Missing click target:', id);
+        // Reduced noise for conditional elements
         return null;
       }
       el.addEventListener('click', handler);
@@ -1923,7 +1923,6 @@
     function bindInput(id, eventName, handler) {
       var el = document.getElementById(id);
       if (!el) {
-        console.warn('Missing input target:', id);
         return null;
       }
       el.addEventListener(eventName, handler);
@@ -1932,10 +1931,41 @@
 
     function bindChange(element, handler, debugId) {
       if (!element) {
-        console.warn('Missing change target:', debugId);
         return;
       }
       element.addEventListener('change', handler);
+    }
+
+    // --- Missing UI Synchronization Functions ---
+    function syncStatusFilterButtons() {
+      var lockedBtn = document.getElementById('filter-locked-only-btn');
+      var allBtn = document.getElementById('filter-all-btn');
+      if (lockedBtn) {
+        if (typeof studentStatusFilter !== 'undefined' && studentStatusFilter === 'locked') {
+          lockedBtn.classList.add('bg-red-500/30');
+          lockedBtn.classList.remove('bg-red-500/10');
+        } else {
+          lockedBtn.classList.remove('bg-red-500/30');
+          lockedBtn.classList.add('bg-red-500/10');
+        }
+      }
+      if (allBtn) {
+        if (typeof studentStatusFilter !== 'undefined' && studentStatusFilter === 'all') {
+          allBtn.classList.add('bg-primary/30');
+          allBtn.classList.remove('bg-primary/10');
+        } else {
+          allBtn.classList.remove('bg-primary/30');
+          allBtn.classList.add('bg-primary/10');
+        }
+      }
+    }
+
+    function focusLockoutsSection() {
+      var panel = document.getElementById('exited-students-panel');
+      if (panel) {
+        panel.classList.remove('hidden');
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     }
 
     function updateDashboardSidebarToggleState() {
@@ -2173,394 +2203,406 @@
     }
 
     function initializeDashboardBindings() {
-      console.log('[App] Initializing dashboard bindings...');
-      bindClick('nav-create-poll', function () {
-        console.log('Create New Poll button clicked - opening wizard via Wizard.init()');
-        setDashboardSidebarVisibility(false);
-        Wizard.init();
-      });
-      bindClick('nav-polls-list', function () {
-        showDashboard();
-        setDashboardSidebarVisibility(true);
-      });
-      bindClick('nav-rosters', function () {
-        showRosterManager();
-        setDashboardSidebarVisibility(false);
-      });
-      bindClick('nav-archived', function () {
-        showArchivedView();
-        setDashboardSidebarVisibility(false);
-      });
-      bindClick('nav-analytics', function () {
-        showAnalyticsView();
-        setDashboardSidebarVisibility(false);
-      });
-      bindClick('close-modal-btn', closePollCreator);
-      bindClick('close-links-modal-btn', closeLinksModal);
-      bindClick('close-preview-modal-btn', closePollPreview);
-      bindClick('preview-prev-question-btn', previewPrevQuestion);
-      bindClick('preview-next-question-btn', previewNextQuestion);
-      bindClick('preview-open-links-btn', previewOpenLinks);
-      bindClick('preview-edit-question-btn', previewEditQuestion);
-      bindClick('preview-delete-question-btn', previewDeleteQuestion);
-      bindClick('preview-reorder-btn', togglePreviewReorder);
-      bindClick('add-question-btn', addQuestion);
-      bindClick('save-poll-btn', savePoll);
-
-      // NEW FEATURE: Question Bank Import
-      bindClick('import-from-bank-btn', openQuestionBank);
-      bindClick('close-question-bank-btn', closeQuestionBank);
-      bindClick('import-selected-btn', importSelectedQuestions);
-
-      // NEW FEATURE: AI Suggestions
-      bindClick('ai-suggest-btn', openAISuggestions);
-      bindClick('close-ai-modal-btn', closeAISuggestions);
-      bindClick('generate-ai-btn', generateAISuggestions);
-
-      // NEW FEATURE: Stimulus/Passage
-      bindClick('add-stimulus-btn', function () {
-        openStimulusModal();
-        // Initialize Quill for Stimulus content when modal opens
-        setTimeout(function () {
-          QuillManager.init('stimulus-content-editor', '', 'Enter passage content...', function (content) {
-          });
-        }, 100);
-      });
-      bindClick('close-stimulus-modal-btn', closeStimulusModal);
-      bindClick('cancel-stimulus-btn', closeStimulusModal);
-      bindClick('create-stimulus-btn', createStimulusWithQuestions);
-
-      bindInput('new-poll-name', 'input', markPollDirty);
-      bindChange(classSelect, markPollDirty, 'class-select');
-
-      if (sessionToggleButtons && sessionToggleButtons.length) {
-        sessionToggleButtons.forEach(function (btn) {
-          btn.addEventListener('click', function () {
-            var targetType = this.dataset.sessionType;
-            setPollSessionType(targetType);
-          });
-        });
-      }
-
-      if (secureTimeLimitInput) {
-        secureTimeLimitInput.addEventListener('input', function () {
-          readSecureSettingsFromInputs();
-          markPollDirty();
-        });
-      }
-
-      if (secureAccessCodeInput) {
-        secureAccessCodeInput.addEventListener('input', function () {
-          this.value = (this.value || '').toUpperCase();
-          readSecureSettingsFromInputs();
-          markPollDirty();
-        });
-      }
-
-      if (secureAvailableInput) {
-        secureAvailableInput.addEventListener('change', function () {
-          readSecureSettingsFromInputs();
-          markPollDirty();
-        });
-      }
-
-      if (secureDueInput) {
-        secureDueInput.addEventListener('change', function () {
-          readSecureSettingsFromInputs();
-          markPollDirty();
-        });
-      }
-
-      syncSessionTypeToggleUI();
-      updateSecureSettingsVisibility();
-      populateSecureSettingsInputs();
-
-      if (pollSearchInput) {
-        pollSearchInput.addEventListener('input', function () {
-          pollSearchQuery = (this.value || '').trim();
-          refreshPollViews();
-          updatePollSearchClear();
-        });
-      }
-
-      if (pollSearchClearBtn) {
-        pollSearchClearBtn.addEventListener('click', function () {
-          pollSearchQuery = '';
-          if (pollSearchInput) {
-            pollSearchInput.value = '';
-            pollSearchInput.focus();
-          }
-          refreshPollViews();
-          updatePollSearchClear();
-        });
-      }
-
-      updatePollSearchClear();
-      setQuestionReorderHelp();
-
-      if (questionSortResetBtn) {
-        questionSortResetBtn.addEventListener('click', function () {
-          resetQuestionOrderToInitial();
-        });
-      }
-
-      if (questionNavigatorContainer) {
-        questionNavigatorContainer.addEventListener('dragover', handleNavigatorDragOver);
-        questionNavigatorContainer.addEventListener('drop', handleNavigatorDrop);
-      }
-
-      if (startPollBtn) {
-        startPollBtn.addEventListener('click', onStartPoll);
-      } else {
-        console.warn('Missing click target: start-poll-btn');
-      }
-
-      var wizardCalcToggle = document.getElementById('wizard-calculator-toggle');
-      if (wizardCalcToggle) {
-        wizardCalcToggle.addEventListener('change', function () {
-          if (typeof wizardState !== 'undefined') {
-            wizardState.calculatorEnabled = this.checked;
-          }
-        });
-      }
-      bindClick('header-start-btn', onResumePoll);
-      bindClick('header-end-show-btn', onEndQuestionAndShowAnswer);
-      bindClick('header-stop-btn', onEndPoll);
-
-      var calcToggleBtn = document.getElementById('header-calc-toggle');
-      if (calcToggleBtn) {
-        calcToggleBtn.addEventListener('click', onToggleLiveCalculator);
-      }
-
-      bindClick('live-more-actions-btn', function (e) {
-        e.stopPropagation();
-        var menu = document.getElementById('live-more-menu');
-        if (menu) {
-          menu.classList.toggle('hidden');
-        }
-      });
-
-      bindClick('header-edit-poll-btn', function () {
-        if (CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId) {
-          startEditPoll(CURRENT_POLL_DATA.pollId);
-        }
-      });
-
-      bindClick('header-back-btn', onPreviousQuestion);
-      bindClick('header-next-btn', onNextQuestion);
-      bindClick('header-reset-question-btn', onResetQuestion);
-      bindClick('hide-results-btn', onHideResults);
-      bindClick('strip-next-btn', onNextQuestion);
-      registerDashboardSidebarToggle('dashboard-sidebar-toggle');
-      registerDashboardSidebarToggle('dashboard-sidebar-toggle-live');
-      updateDashboardSidebarToggleState();
-
-      var mobileTabs = document.querySelectorAll('.live-mobile-tab');
-      mobileTabs.forEach(function (tab) {
-        tab.addEventListener('click', function () {
-          var panel = tab.getAttribute('data-panel');
-          setActiveMobilePanelForViewport(panel);
-        });
-      });
-      updateMobileLayoutVisibility();
-
-      bindClick('focus-lockouts-btn', focusLockoutsSection);
-      var hudFocusBtn = document.getElementById('hud-focus-lockouts-btn');
-      if (hudFocusBtn) {
-        hudFocusBtn.onclick = function (e) {
-          e.stopPropagation();
-          var popover = document.getElementById('locked-students-popover');
-          if (popover) {
-            popover.classList.toggle('hidden');
-          }
-        };
-      }
-
-      bindClick('start-btn', startTimer);
-      bindClick('pause-btn', pauseTimer);
-      bindClick('reset-btn', resetTimer);
-      bindClick('add-10s-btn', function () {
-        parseInputToTotalSeconds();
-        editTime(10);
-      });
-      bindClick('subtract-10s-btn', function () {
-        parseInputToTotalSeconds();
-        editTime(-10);
-      });
-      bindClick('mobile-start-btn', startTimer);
-      bindClick('mobile-pause-btn', pauseTimer);
-      bindClick('mobile-reset-btn', onResetQuestion);
-      bindClick('mobile-next-btn', onNextQuestion);
-      bindClick('mobile-reveal-btn', onEndQuestionAndShowAnswer);
-      bindClick('mobile-resume-btn', onResumePoll);
-      bindClick('mobile-stop-btn', onEndPoll);
-      bindClick('add-10s-btn-mobile', function () {
-        parseInputToTotalSeconds();
-        editTime(10);
-      });
-      bindClick('subtract-10s-btn-mobile', function () {
-        parseInputToTotalSeconds();
-        editTime(-10);
-      });
-      bindClick('mobile-locks-btn', function () {
-        var focusBtn = document.getElementById('hud-focus-lockouts-btn');
-        if (focusBtn && !focusBtn.disabled) {
-          focusBtn.click();
-        }
-      });
-
-      var timerDisplayInput = document.getElementById('timer-display');
-      if (timerDisplayInput) {
-        timerDisplayInput.addEventListener('blur', function () {
-          parseInputToTotalSeconds();
-          updateDisplay();
-        });
-
-        timerDisplayInput.addEventListener('keydown', function (e) {
-          if (e.key === 'Enter') {
-            timerDisplayInput.blur();
-          }
-        });
-      }
-
-      updateDisplay();
-      updateTimerStatus('Timer idle.', 'info');
-      bindClick('send-link-btn', onSendLink);
-      bindClick('view-links-btn', onViewLinks);
-      bindClick('header-send-link-btn', onSendLink);
-      bindClick('header-view-links-btn', onViewLinks);
-
-      var studentSearchInput = document.getElementById('student-search-input');
-      if (studentSearchInput) {
-        studentSearchInput.addEventListener('input', function () {
-          studentSearchQuery = this.value;
-          renderStudentStatus();
-        });
-      }
-
-      var statusFilterSelect = document.getElementById('student-status-filter-select');
-      if (statusFilterSelect) {
-        statusFilterSelect.addEventListener('change', function () {
-          studentStatusFilter = this.value;
-          syncStatusFilterButtons();
-          renderStudentStatus();
-        });
-      }
-
-      var correctnessFilterSelect = document.getElementById('student-correctness-filter-select');
-      if (correctnessFilterSelect) {
-        correctnessFilterSelect.addEventListener('change', function () {
-          studentCorrectnessFilter = this.value;
-          renderStudentStatus();
-        });
-      }
-
-      var studentSortSelectEl = document.getElementById('student-sort-select');
-      if (studentSortSelectEl) {
-        studentSortSelectEl.addEventListener('change', function () {
-          studentTableSort.column = this.value;
-          if (this.value === 'recent' && studentTableSort.direction === 'asc') {
-            studentTableSort.direction = 'desc';
-            var dirIcon = document.querySelector('#student-sort-direction-btn span');
-            if (dirIcon) {
-              dirIcon.textContent = 'north';
-            }
+      try {
+        console.log('[App] Initializing dashboard bindings...');
+        bindClick('nav-create-poll', function () {
+          console.log('Create New Poll button clicked - opening wizard via Wizard.init()');
+          setDashboardSidebarVisibility(false);
+          if (window.Wizard && window.Wizard.init) {
+            Wizard.init();
           } else {
-            var icon = document.querySelector('#student-sort-direction-btn span');
+            console.error('Wizard system not loaded');
+          }
+        });
+        bindClick('nav-polls-list', function () {
+          showDashboard();
+          setDashboardSidebarVisibility(true);
+        });
+        bindClick('nav-rosters', function () {
+          showRosterManager();
+          setDashboardSidebarVisibility(false);
+        });
+        bindClick('nav-archived', function () {
+          showArchivedView();
+          setDashboardSidebarVisibility(false);
+        });
+        bindClick('nav-analytics', function () {
+          showAnalyticsView();
+          setDashboardSidebarVisibility(false);
+        });
+        bindClick('close-modal-btn', closePollCreator);
+        bindClick('close-links-modal-btn', closeLinksModal);
+        bindClick('close-preview-modal-btn', closePollPreview);
+        bindClick('preview-prev-question-btn', previewPrevQuestion);
+        bindClick('preview-next-question-btn', previewNextQuestion);
+        bindClick('preview-open-links-btn', previewOpenLinks);
+        bindClick('preview-edit-question-btn', previewEditQuestion);
+        bindClick('preview-delete-question-btn', previewDeleteQuestion);
+        bindClick('preview-reorder-btn', togglePreviewReorder);
+        bindClick('add-question-btn', addQuestion);
+        bindClick('save-poll-btn', savePoll);
+
+        // NEW FEATURE: Question Bank Import
+        bindClick('import-from-bank-btn', openQuestionBank);
+        bindClick('close-question-bank-btn', closeQuestionBank);
+        bindClick('import-selected-btn', importSelectedQuestions);
+
+        // NEW FEATURE: AI Suggestions
+        bindClick('ai-suggest-btn', openAISuggestions);
+        bindClick('close-ai-modal-btn', closeAISuggestions);
+        bindClick('generate-ai-btn', generateAISuggestions);
+
+        // NEW FEATURE: Stimulus/Passage
+        bindClick('add-stimulus-btn', function () {
+          if (typeof openStimulusModal === 'function') {
+            openStimulusModal();
+            // Initialize Quill for Stimulus content when modal opens
+            setTimeout(function () {
+              if (window.QuillManager && QuillManager.init) {
+                QuillManager.init('stimulus-content-editor', '', 'Enter passage content...', function (content) {
+                });
+              }
+            }, 100);
+          }
+        });
+        bindClick('close-stimulus-modal-btn', closeStimulusModal);
+        bindClick('cancel-stimulus-btn', closeStimulusModal);
+        bindClick('create-stimulus-btn', createStimulusWithQuestions);
+
+        bindInput('new-poll-name', 'input', markPollDirty);
+        bindChange(classSelect, markPollDirty, 'class-select');
+
+        if (sessionToggleButtons && sessionToggleButtons.length) {
+          sessionToggleButtons.forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              var targetType = this.dataset.sessionType;
+              if (typeof setPollSessionType === 'function') {
+                setPollSessionType(targetType);
+              }
+            });
+          });
+        }
+
+        if (secureTimeLimitInput) {
+          secureTimeLimitInput.addEventListener('input', function () {
+            readSecureSettingsFromInputs();
+            markPollDirty();
+          });
+        }
+
+        if (secureAccessCodeInput) {
+          secureAccessCodeInput.addEventListener('input', function () {
+            this.value = (this.value || '').toUpperCase();
+            readSecureSettingsFromInputs();
+            markPollDirty();
+          });
+        }
+
+        if (secureAvailableInput) {
+          secureAvailableInput.addEventListener('change', function () {
+            readSecureSettingsFromInputs();
+            markPollDirty();
+          });
+        }
+
+        if (secureDueInput) {
+          secureDueInput.addEventListener('change', function () {
+            readSecureSettingsFromInputs();
+            markPollDirty();
+          });
+        }
+
+        if (typeof syncSessionTypeToggleUI === 'function') syncSessionTypeToggleUI();
+        if (typeof updateSecureSettingsVisibility === 'function') updateSecureSettingsVisibility();
+        if (typeof populateSecureSettingsInputs === 'function') populateSecureSettingsInputs();
+
+        if (pollSearchInput) {
+          pollSearchInput.addEventListener('input', function () {
+            pollSearchQuery = (this.value || '').trim();
+            refreshPollViews();
+            updatePollSearchClear();
+          });
+        }
+
+        if (pollSearchClearBtn) {
+          pollSearchClearBtn.addEventListener('click', function () {
+            pollSearchQuery = '';
+            if (pollSearchInput) {
+              pollSearchInput.value = '';
+              pollSearchInput.focus();
+            }
+            refreshPollViews();
+            updatePollSearchClear();
+          });
+        }
+
+        updatePollSearchClear();
+        setQuestionReorderHelp();
+
+        if (questionSortResetBtn) {
+          questionSortResetBtn.addEventListener('click', function () {
+            resetQuestionOrderToInitial();
+          });
+        }
+
+        if (questionNavigatorContainer) {
+          questionNavigatorContainer.addEventListener('dragover', handleNavigatorDragOver);
+          questionNavigatorContainer.addEventListener('drop', handleNavigatorDrop);
+        }
+
+        if (startPollBtn) {
+          startPollBtn.addEventListener('click', onStartPoll);
+        }
+
+        var wizardCalcToggle = document.getElementById('wizard-calculator-toggle');
+        if (wizardCalcToggle) {
+          wizardCalcToggle.addEventListener('change', function () {
+            if (typeof wizardState !== 'undefined') {
+              wizardState.calculatorEnabled = this.checked;
+            }
+          });
+        }
+        bindClick('header-start-btn', onResumePoll);
+        bindClick('header-end-show-btn', onEndQuestionAndShowAnswer);
+        bindClick('header-stop-btn', onEndPoll);
+
+        var calcToggleBtn = document.getElementById('header-calc-toggle');
+        if (calcToggleBtn) {
+          calcToggleBtn.addEventListener('click', onToggleLiveCalculator);
+        }
+
+        bindClick('live-more-actions-btn', function (e) {
+          e.stopPropagation();
+          var menu = document.getElementById('live-more-menu');
+          if (menu) {
+            menu.classList.toggle('hidden');
+          }
+        });
+
+        bindClick('header-edit-poll-btn', function () {
+          if (CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId) {
+            startEditPoll(CURRENT_POLL_DATA.pollId);
+          }
+        });
+
+        bindClick('header-back-btn', onPreviousQuestion);
+        bindClick('header-next-btn', onNextQuestion);
+        bindClick('header-reset-question-btn', onResetQuestion);
+        bindClick('hide-results-btn', onHideResults);
+        bindClick('strip-next-btn', onNextQuestion);
+        registerDashboardSidebarToggle('dashboard-sidebar-toggle');
+        registerDashboardSidebarToggle('dashboard-sidebar-toggle-live');
+        updateDashboardSidebarToggleState();
+
+        var mobileTabs = document.querySelectorAll('.live-mobile-tab');
+        mobileTabs.forEach(function (tab) {
+          tab.addEventListener('click', function () {
+            var panel = tab.getAttribute('data-panel');
+            setActiveMobilePanelForViewport(panel);
+          });
+        });
+        updateMobileLayoutVisibility();
+
+        bindClick('focus-lockouts-btn', focusLockoutsSection);
+        var hudFocusBtn = document.getElementById('hud-focus-lockouts-btn');
+        if (hudFocusBtn) {
+          hudFocusBtn.onclick = function (e) {
+            e.stopPropagation();
+            var popover = document.getElementById('locked-students-popover');
+            if (popover) {
+              popover.classList.toggle('hidden');
+            }
+          };
+        }
+
+        bindClick('start-btn', startTimer);
+        bindClick('pause-btn', pauseTimer);
+        bindClick('reset-btn', resetTimer);
+        bindClick('add-10s-btn', function () {
+          parseInputToTotalSeconds();
+          editTime(10);
+        });
+        bindClick('subtract-10s-btn', function () {
+          parseInputToTotalSeconds();
+          editTime(-10);
+        });
+        bindClick('mobile-start-btn', startTimer);
+        bindClick('mobile-pause-btn', pauseTimer);
+        bindClick('mobile-reset-btn', onResetQuestion);
+        bindClick('mobile-next-btn', onNextQuestion);
+        bindClick('mobile-reveal-btn', onEndQuestionAndShowAnswer);
+        bindClick('mobile-resume-btn', onResumePoll);
+        bindClick('mobile-stop-btn', onEndPoll);
+        bindClick('add-10s-btn-mobile', function () {
+          parseInputToTotalSeconds();
+          editTime(10);
+        });
+        bindClick('subtract-10s-btn-mobile', function () {
+          parseInputToTotalSeconds();
+          editTime(-10);
+        });
+        bindClick('mobile-locks-btn', function () {
+          var focusBtn = document.getElementById('hud-focus-lockouts-btn');
+          if (focusBtn && !focusBtn.disabled) {
+            focusBtn.click();
+          }
+        });
+
+        var timerDisplayInput = document.getElementById('timer-display');
+        if (timerDisplayInput) {
+          timerDisplayInput.addEventListener('blur', function () {
+            parseInputToTotalSeconds();
+            updateDisplay();
+          });
+
+          timerDisplayInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+              timerDisplayInput.blur();
+            }
+          });
+        }
+
+        updateDisplay();
+        updateTimerStatus('Timer idle.', 'info');
+        bindClick('send-link-btn', onSendLink);
+        bindClick('view-links-btn', onViewLinks);
+        bindClick('header-send-link-btn', onSendLink);
+        bindClick('header-view-links-btn', onViewLinks);
+
+        var studentSearchInput = document.getElementById('student-search-input');
+        if (studentSearchInput) {
+          studentSearchInput.addEventListener('input', function () {
+            studentSearchQuery = this.value;
+            renderStudentStatus();
+          });
+        }
+
+        var statusFilterSelect = document.getElementById('student-status-filter-select');
+        if (statusFilterSelect) {
+          statusFilterSelect.addEventListener('change', function () {
+            studentStatusFilter = this.value;
+            syncStatusFilterButtons();
+            renderStudentStatus();
+          });
+        }
+
+        var correctnessFilterSelect = document.getElementById('student-correctness-filter-select');
+        if (correctnessFilterSelect) {
+          correctnessFilterSelect.addEventListener('change', function () {
+            studentCorrectnessFilter = this.value;
+            renderStudentStatus();
+          });
+        }
+
+        var studentSortSelectEl = document.getElementById('student-sort-select');
+        if (studentSortSelectEl) {
+          studentSortSelectEl.addEventListener('change', function () {
+            studentTableSort.column = this.value;
+            if (this.value === 'recent' && studentTableSort.direction === 'asc') {
+              studentTableSort.direction = 'desc';
+              var dirIcon = document.querySelector('#student-sort-direction-btn span');
+              if (dirIcon) {
+                dirIcon.textContent = 'north';
+              }
+            } else {
+              var icon = document.querySelector('#student-sort-direction-btn span');
+              if (icon) {
+                icon.textContent = studentTableSort.direction === 'asc' ? 'south' : 'north';
+              }
+            }
+            renderStudentStatus();
+          });
+        }
+
+        var sortDirectionBtn = document.getElementById('student-sort-direction-btn');
+        if (sortDirectionBtn) {
+          sortDirectionBtn.addEventListener('click', function () {
+            studentTableSort.direction = studentTableSort.direction === 'asc' ? 'desc' : 'asc';
+            var icon = this.querySelector('span');
             if (icon) {
               icon.textContent = studentTableSort.direction === 'asc' ? 'south' : 'north';
             }
-          }
-          renderStudentStatus();
-        });
-      }
-
-      var sortDirectionBtn = document.getElementById('student-sort-direction-btn');
-      if (sortDirectionBtn) {
-        sortDirectionBtn.addEventListener('click', function () {
-          studentTableSort.direction = studentTableSort.direction === 'asc' ? 'desc' : 'asc';
-          var icon = this.querySelector('span');
-          if (icon) {
-            icon.textContent = studentTableSort.direction === 'asc' ? 'south' : 'north';
-          }
-          renderStudentStatus();
-        });
-      }
-
-      document.querySelectorAll('th[data-sort]').forEach(function (th) {
-        th.addEventListener('click', function () {
-          var column = this.dataset.sort;
-          if (studentTableSort.column === column) {
-            studentTableSort.direction = studentTableSort.direction === 'asc' ? 'desc' : 'asc';
-          } else {
-            studentTableSort.column = column;
-            studentTableSort.direction = 'asc';
-          }
-
-          document.querySelectorAll('th[data-sort] .sort-icon').forEach(function (icon) {
-            icon.textContent = 'unfold_more';
+            renderStudentStatus();
           });
-          var icon = this.querySelector('.sort-icon');
-          if (icon) {
-            icon.textContent = studentTableSort.direction === 'asc' ? 'arrow_upward' : 'arrow_downward';
-          }
+        }
 
-          renderStudentStatus();
+        document.querySelectorAll('th[data-sort]').forEach(function (th) {
+          th.addEventListener('click', function () {
+            var column = this.dataset.sort;
+            if (studentTableSort.column === column) {
+              studentTableSort.direction = studentTableSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+              studentTableSort.column = column;
+              studentTableSort.direction = 'asc';
+            }
+
+            document.querySelectorAll('th[data-sort] .sort-icon').forEach(function (icon) {
+              icon.textContent = 'unfold_more';
+            });
+            var icon = this.querySelector('.sort-icon');
+            if (icon) {
+              icon.textContent = studentTableSort.direction === 'asc' ? 'arrow_upward' : 'arrow_downward';
+            }
+
+            renderStudentStatus();
+          });
         });
-      });
 
-      if (pollSelect) {
-        pollSelect.addEventListener('change', onPollSelectChange);
-      } else {
-        console.warn('Missing change target: poll-select');
-      }
-      if (pollSortSelect) {
-        pollSortSelect.addEventListener('change', function () { pollSortMode = this.value; refreshPollViews(); });
-      } else {
-        console.warn('Missing change target: poll-sort-select');
-      }
-      if (pollFilterSelect) {
-        pollFilterSelect.addEventListener('change', function () { pollClassFilter = this.value; refreshPollViews(); });
-      } else {
-        console.warn('Missing change target: poll-filter-select');
-      }
-      if (archivedClassFilterSelect) {
-        archivedClassFilterSelect.addEventListener('change', function () { archivedClassFilter = this.value; renderArchivedList(); });
-      } else {
-        console.warn('Missing change target: archived-class-filter');
-      }
-      if (addClassBtn) {
-        addClassBtn.addEventListener('click', onAddClass);
-      } else {
-        console.warn('Missing click target: add-class-btn');
-      }
-      if (addStudentRowBtn) {
-        addStudentRowBtn.addEventListener('click', addRosterRow);
-      } else {
-        console.warn('Missing click target: add-student-row-btn');
-      }
-      bindClick('bulk-add-students-btn', openBulkAddStudentsModal);
-      bindClick('cancel-bulk-add-btn', closeBulkAddStudentsModal);
-      bindClick('confirm-bulk-add-btn', confirmBulkAddStudents);
-      if (saveRosterBtn) {
-        saveRosterBtn.addEventListener('click', saveRoster);
-      } else {
-        console.warn('Missing click target: save-roster-btn');
-      }
-      if (renameClassBtn) {
-        renameClassBtn.addEventListener('click', onRenameClass);
-      } else {
-        console.warn('Missing click target: rename-class-btn');
-      }
-      if (deleteClassBtn) {
-        deleteClassBtn.addEventListener('click', onDeleteClass);
-      } else {
-        console.warn('Missing click target: delete-class-btn');
-      }
-      if (refreshArchivedBtn) {
-        refreshArchivedBtn.addEventListener('click', function () { loadArchivedPolls(true); });
-      } else {
-        console.warn('Missing click target: refresh-archived-btn');
+        if (pollSelect) {
+          pollSelect.addEventListener('change', onPollSelectChange);
+        } else {
+          console.warn('Missing change target: poll-select');
+        }
+        if (pollSortSelect) {
+          pollSortSelect.addEventListener('change', function () { pollSortMode = this.value; refreshPollViews(); });
+        } else {
+          console.warn('Missing change target: poll-sort-select');
+        }
+        if (pollFilterSelect) {
+          pollFilterSelect.addEventListener('change', function () { pollClassFilter = this.value; refreshPollViews(); });
+        } else {
+          console.warn('Missing change target: poll-filter-select');
+        }
+        if (archivedClassFilterSelect) {
+          archivedClassFilterSelect.addEventListener('change', function () { archivedClassFilter = this.value; renderArchivedList(); });
+        } else {
+          console.warn('Missing change target: archived-class-filter');
+        }
+        if (addClassBtn) {
+          addClassBtn.addEventListener('click', onAddClass);
+        } else {
+          console.warn('Missing click target: add-class-btn');
+        }
+        if (addStudentRowBtn) {
+          addStudentRowBtn.addEventListener('click', addRosterRow);
+        } else {
+          console.warn('Missing click target: add-student-row-btn');
+        }
+        bindClick('bulk-add-students-btn', openBulkAddStudentsModal);
+        bindClick('cancel-bulk-add-btn', closeBulkAddStudentsModal);
+        bindClick('confirm-bulk-add-btn', confirmBulkAddStudents);
+        if (saveRosterBtn) {
+          saveRosterBtn.addEventListener('click', saveRoster);
+        } else {
+          console.warn('Missing click target: save-roster-btn');
+        }
+        if (renameClassBtn) {
+          renameClassBtn.addEventListener('click', onRenameClass);
+        } else {
+          console.warn('Missing click target: rename-class-btn');
+        }
+        if (deleteClassBtn) {
+          deleteClassBtn.addEventListener('click', onDeleteClass);
+        } else {
+          console.warn('Missing click target: delete-class-btn');
+        }
+        if (refreshArchivedBtn) {
+          refreshArchivedBtn.addEventListener('click', function () { loadArchivedPolls(true); });
+        } else {
+          console.warn('Missing click target: refresh-archived-btn');
+        }
+      } catch (e) {
+        console.error('[App] Binding Error:', e);
       }
     }
 

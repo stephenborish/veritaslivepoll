@@ -2351,6 +2351,15 @@
         }
 
 
+
+        // DEBUG: Capture ALL clicks to find rogue listeners
+        document.addEventListener('click', function (e) {
+          console.log('[DEBUG_CLICK] Element:', e.target);
+          console.log('[DEBUG_CLICK] ID:', e.target.id);
+          console.log('[DEBUG_CLICK] Classes:', e.target.className);
+          console.log('[DEBUG_CLICK] Path:', e.composedPath());
+        }, true);
+
         if (startPollBtn) {
           console.log('[DashboardBindings] Found startPollBtn (ID: start-session-main-btn). Binding click event...');
           // Remove any existing listeners if possible (though this is fresh init)
@@ -3292,6 +3301,8 @@
     }
 
     function startEditPoll(pollId, secondArg) {
+      console.log('[startEditPoll] CALLED with pollId:', pollId);
+      console.trace('[startEditPoll] Stack Trace:');
       if (!pollId) return;
       var button = (secondArg && secondArg.tagName) ? secondArg : null;
       var startQuestionIndex = (typeof secondArg === 'number') ? secondArg : null;
@@ -5757,8 +5768,10 @@
     });
 
     // --- Poll Lifecycle Controls ---
-    async function onStartPoll() {
-      console.log('[onStartPoll] Clicked. Poll select value:', pollSelect ? pollSelect.value : 'N/A');
+    async function onStartPoll(e) {
+      console.log('[onStartPoll] Clicked. Event:', e);
+      console.trace('[onStartPoll] Stack Trace:');
+      console.log('[onStartPoll] Poll select value:', pollSelect ? pollSelect.value : 'N/A');
       try {
         var pollId = pollSelect.value;
         if (!pollId) {

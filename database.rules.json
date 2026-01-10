@@ -32,6 +32,7 @@
     },
     "sessions": {
       "$pollId": {
+        ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
         "live_session": {
           // Students need to read the live session state (current question, status)
           // Only Teachers update the session state
@@ -69,6 +70,7 @@
     },
     "answers": {
       "$pollId": {
+        ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
         // Teachers read aggregated answers
         ".read": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
         // Students submit answers

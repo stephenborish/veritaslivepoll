@@ -2079,7 +2079,7 @@
 
     // --- Element Cache ---
     var pollSelect = document.getElementById('poll-select');
-    var startPollBtn = document.getElementById('start-poll-btn');
+    var startPollBtn = document.getElementById('start-session-main-btn');
     var sendLinkBtn = document.getElementById('send-link-btn');
     var viewLinksBtn = document.getElementById('view-links-btn');
     var headerSessionControls = document.getElementById('header-session-controls');
@@ -2350,8 +2350,15 @@
           questionNavigatorContainer.addEventListener('drop', handleNavigatorDrop);
         }
 
+
         if (startPollBtn) {
+          console.log('[DashboardBindings] Found startPollBtn (ID: start-session-main-btn). Binding click event...');
+          // Remove any existing listeners if possible (though this is fresh init)
+          startPollBtn.removeEventListener('click', onStartPoll);
           startPollBtn.addEventListener('click', onStartPoll);
+          console.log('[DashboardBindings] Click listener bound to startPollBtn.');
+        } else {
+          console.error('[DashboardBindings] CRITICAL: startPollBtn (ID: start-session-main-btn) NOT FOUND in DOM.');
         }
 
         var wizardCalcToggle = document.getElementById('wizard-calculator-toggle');
@@ -5751,98 +5758,122 @@
 
     // --- Poll Lifecycle Controls ---
     async function onStartPoll() {
-      var pollId = pollSelect.value;
-      if (!pollId) {
-        await veritasAlert('Please select a poll first.', { title: 'Live poll' });
-        return;
-      }
+      console.log('[onStartPoll] Clicked. Poll select value:', pollSelect ? pollSelect.value : 'N/A');
+      try {
+        var pollId = pollSelect.value;
+        if (!pollId) {
+          console.warn('[onStartPoll] No poll selected.');
+          await veritasAlert('Please select a poll first.', { title: 'Live poll' });
+          return;
+        }
 
-      var selectedPoll = ALL_POLLS.find(function (p) { return p.pollId === pollId; });
-      if (!selectedPoll) {
-        await veritasAlert('Could not find the selected poll data.', { title: 'Error' });
-        setButtonLoading(startPollBtn, false);
-        return;
-      }
+        var selectedPoll = ALL_POLLS.find(function (p) { return p.pollId === pollId; });
+        console.log('[onStartPoll] Selected Poll found:', !!selectedPoll, selectedPoll);
 
-      // Check session type and call appropriate function
-      if (isSecureSessionTypeClient(selectedPoll.sessionType)) {
-        setButtonLoading(startPollBtn, true, 'Launching...');
+        if (!selectedPoll) {
+          console.error('[onStartPoll] Could not find poll data for ID:', pollId);
+          await veritasAlert('Could not find the selected poll data.', { title: 'Error' });
+          setButtonLoading(startPollBtn, false);
+          return;
+        }
+
+        // Check session type and call appropriate function
+        if (isSecureSessionTypeClient(selectedPoll.sessionType)) {
+          console.log('[onStartPoll] Starting Secure Session...');
+          setButtonLoading(startPollBtn, true, 'Launching...');
+
+          if (PREVIEW_MODE) {
+            console.log('[onStartPoll] Preview mode active.');
+            setButtonLoading(startPollBtn, false);
+            await previewOnlyNotice('start a session');
+            return;
+          }
+
+          // FIREBASE MIGRATION: Start Secure Assessment via Cloud Function
+          ensureFunctionsCallable('setLiveSessionState').then(function (ctx) {
+            console.log('[onStartPoll] secure: obtained callable context');
+            return ctx.callable({
+              pollId: pollId,
+              status: 'OPEN',
+              questionIndex: 0,
+              metadata: {
+                sessionPhase: 'ASSESSMENT_START',
+                resultsVisibility: 'HIDDEN'
+              }
+            });
+          }).then(function (result) {
+            console.log('[onStartPoll] secure: callable result:', result);
+            var data = result.data;
+            setButtonLoading(startPollBtn, false);
+            if (data && data.success) {
+              // result here should contain the new sessionId
+              showIndividualTimedDashboard(data);
+
+              // Trigger emulation if enabled
+              if (emulatorAvailable && emulatorEnabled && emulatorEnabled.checked) {
+                triggerSecureAssessmentEmulation(pollId, data.sessionId);
+              }
+            } else {
+              throw new Error((data && data.error) || 'Failed to start secure session');
+            }
+          }).catch(function (error) {
+            console.error('[onStartPoll] secure: error:', error);
+            setButtonLoading(startPollBtn, false);
+            handleError(error);
+          });
+          return;
+        }
+
+        console.log('[onStartPoll] Starting Live Session...');
+        setButtonLoading(startPollBtn, true, 'Starting...');
+        clearLiveIntervals();
+        isPaused = false;
+        isLiveSession = true;
 
         if (PREVIEW_MODE) {
+          console.log('[onStartPoll] Preview mode active.');
           setButtonLoading(startPollBtn, false);
           await previewOnlyNotice('start a session');
           return;
         }
 
-        // FIREBASE MIGRATION: Start Secure Assessment via Cloud Function
+        // FIREBASE MIGRATION: Start Live Poll via Cloud Function
         ensureFunctionsCallable('setLiveSessionState').then(function (ctx) {
+          console.log('[onStartPoll] live: obtained callable context');
           return ctx.callable({
             pollId: pollId,
             status: 'OPEN',
             questionIndex: 0,
             metadata: {
-              sessionPhase: 'ASSESSMENT_START',
+              sessionPhase: 'LIVE',
               resultsVisibility: 'HIDDEN'
             }
           });
         }).then(function (result) {
-          var data = result.data;
+          console.log('[onStartPoll] live: callable result:', result);
           setButtonLoading(startPollBtn, false);
-          if (data && data.success) {
-            // result here should contain the new sessionId
-            showIndividualTimedDashboard(data);
-
-            // Trigger emulation if enabled
+          var res = result.data;
+          if (res && res.success) {
+            // RTDB listener will handle the UI update via onQuestionStateChange
             if (emulatorAvailable && emulatorEnabled && emulatorEnabled.checked) {
-              triggerSecureAssessmentEmulation(pollId, data.sessionId);
+              triggerLivePollEmulation(pollId);
             }
           } else {
-            throw new Error((data && data.error) || 'Failed to start secure session');
+            throw new Error(res.error || 'Failed to start poll');
           }
         }).catch(function (error) {
+          console.error('[onStartPoll] live: error:', error);
           setButtonLoading(startPollBtn, false);
           handleError(error);
         });
-        return;
-      }
 
-      setButtonLoading(startPollBtn, true, 'Starting...');
-      clearLiveIntervals();
-      isPaused = false;
-      isLiveSession = true;
-
-      if (PREVIEW_MODE) {
-        setButtonLoading(startPollBtn, false);
-        await previewOnlyNotice('start a session');
-        return;
-      }
-
-      // FIREBASE MIGRATION: Start Live Poll via Cloud Function
-      ensureFunctionsCallable('setLiveSessionState').then(function (ctx) {
-        return ctx.callable({
-          pollId: pollId,
-          status: 'OPEN',
-          questionIndex: 0,
-          metadata: {
-            sessionPhase: 'LIVE',
-            resultsVisibility: 'HIDDEN'
-          }
-        });
-      }).then(function (result) {
-        setButtonLoading(startPollBtn, false);
-        var res = result.data;
-        if (res && res.success) {
-          // RTDB listener will handle the UI update via onQuestionStateChange
-          if (emulatorAvailable && emulatorEnabled && emulatorEnabled.checked) {
-            triggerLivePollEmulation(pollId);
-          }
-        } else {
-          throw new Error(res.error || 'Failed to start poll');
+      } catch (e) {
+        console.error('[onStartPoll] Synchronous error:', e);
+        if (typeof setButtonLoading === 'function' && startPollBtn) {
+          setButtonLoading(startPollBtn, false);
         }
-      }).catch(function (error) {
-        setButtonLoading(startPollBtn, false);
-        handleError(error);
-      });
+        handleError(e);
+      }
     }
 
     function onResumePoll() {

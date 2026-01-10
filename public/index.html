@@ -15250,6 +15250,30 @@
         .catch(handleError);
     }
 
+    function safeSetText(id, text) {
+      var elements = document.querySelectorAll('[id="' + id + '"]');
+      elements.forEach(function (el) { el.textContent = text; });
+    }
+
+    function safeSetDisplay(id, display) {
+      var elements = document.querySelectorAll('[id="' + id + '"]');
+      elements.forEach(function (el) { el.style.display = display; });
+    }
+
+    function safeSetDisabled(id, disabled) {
+      var elements = document.querySelectorAll('[id="' + id + '"]');
+      elements.forEach(function (el) {
+        if ('disabled' in el) el.disabled = disabled;
+        if (disabled) {
+          el.style.opacity = '0.5';
+          el.style.cursor = 'not-allowed';
+        } else {
+          el.style.opacity = '1';
+          el.style.cursor = 'pointer';
+        }
+      });
+    }
+
     function updateLiveView(data) {
       mainLoader.style.display = 'none';
       setButtonLoading(startPollBtn, false);
@@ -15330,45 +15354,18 @@
       var questionChanged = previousQuestionIndex === null || data.questionIndex !== previousQuestionIndex;
 
       // Show live view and hide sidebar
-      setMainSection('live');
-      headerDefault.style.display = 'none';
-      headerLive.style.display = 'flex';
-      setDashboardSidebarVisibility(false);
-
       // Update header
-      document.getElementById('header-poll-name').textContent = data.pollName;
+      safeSetText('header-poll-name', data.pollName);
 
       // Update question dots
       updateQuestionDots(data.questionIndex, data.totalQuestions);
 
       // Enable/disable navigation buttons
-      var backBtn = document.getElementById('header-back-btn');
-      var nextBtn = document.getElementById('header-next-btn');
-      var mobileNextBtn = document.getElementById('mobile-next-btn');
-      if (backBtn) {
-        backBtn.disabled = data.questionIndex <= 0;
-        if (data.questionIndex <= 0) {
-          backBtn.style.opacity = '0.5';
-          backBtn.style.cursor = 'not-allowed';
-        } else {
-          backBtn.style.opacity = '1';
-          backBtn.style.cursor = 'pointer';
-        }
-      }
-      if (nextBtn) {
-        var isLastQuestion = data.questionIndex >= data.totalQuestions - 1;
-        nextBtn.disabled = isLastQuestion;
-        if (isLastQuestion) {
-          nextBtn.style.opacity = '0.5';
-          nextBtn.style.cursor = 'not-allowed';
-        } else {
-          nextBtn.style.opacity = '1';
-          nextBtn.style.cursor = 'pointer';
-        }
-      }
-      if (mobileNextBtn) {
-        mobileNextBtn.disabled = data.questionIndex >= data.totalQuestions - 1;
-      }
+      safeSetDisabled('header-back-btn', data.questionIndex <= 0);
+
+      var isLastQuestion = data.questionIndex >= data.totalQuestions - 1;
+      safeSetDisabled('header-next-btn', isLastQuestion);
+      safeSetDisabled('mobile-next-btn', isLastQuestion);
 
       // Show/hide end-show/start buttons based on state
       var isResultsRevealed = resultsVisibility === 'REVEALED';
@@ -15378,20 +15375,20 @@
 
       if (isResultsRevealed) {
         // Results already revealed - hide both action buttons
-        document.getElementById('header-start-btn').style.display = 'none';
-        document.getElementById('header-end-show-btn').style.display = 'none';
+        safeSetDisplay('header-start-btn', 'none');
+        safeSetDisplay('header-end-show-btn', 'none');
         if (mobileResumeBtn) mobileResumeBtn.classList.add('hidden');
         if (mobileRevealBtn) mobileRevealBtn.classList.add('hidden');
       } else if (isPaused) {
         // Paused (responses closed) but not revealed - show resume and reveal buttons
-        document.getElementById('header-start-btn').style.display = 'flex';
-        document.getElementById('header-end-show-btn').style.display = 'flex';
+        safeSetDisplay('header-start-btn', 'flex');
+        safeSetDisplay('header-end-show-btn', 'flex');
         if (mobileResumeBtn) mobileResumeBtn.classList.remove('hidden');
         if (mobileRevealBtn) mobileRevealBtn.classList.remove('hidden');
       } else {
         // Active (collecting responses) - show only reveal button (teacher can end early)
-        document.getElementById('header-start-btn').style.display = 'none';
-        document.getElementById('header-end-show-btn').style.display = 'flex';
+        safeSetDisplay('header-start-btn', 'none');
+        safeSetDisplay('header-end-show-btn', 'flex');
         if (mobileResumeBtn) mobileResumeBtn.classList.add('hidden');
         if (mobileRevealBtn) mobileRevealBtn.classList.remove('hidden');
       }
@@ -15462,16 +15459,16 @@
         }
       }
 
-      document.getElementById('live-question-info').textContent = 'Q' + (data.questionIndex + 1) + '/' + data.totalQuestions;
-      document.getElementById('live-question-text').textContent = data.questionText;
-      document.getElementById('live-question-text-compact').textContent = data.questionText;
+      safeSetText('live-question-info', 'Q' + (data.questionIndex + 1) + '/' + data.totalQuestions);
+      safeSetText('live-question-text', data.questionText);
+      safeSetText('live-question-text-compact', data.questionText);
 
       // Handle question image with cache-busting
       var questionImageContainer = document.getElementById('question-image-container');
-      var questionImageEl = document.getElementById('live-question-image');
+      var questionImageEls = document.querySelectorAll('[id="live-question-image"]');
       var questionLayoutContainer = document.getElementById('question-layout-container');
       if (data.questionImageURL) {
-        questionImageContainer.style.display = 'flex';
+        if (questionImageContainer) questionImageContainer.style.display = 'flex';
 
         // Remove no-image class from grid
         if (questionLayoutContainer) {
@@ -15479,18 +15476,18 @@
         }
 
         // Add cache-busting query parameter based on question index
-        // This ensures the browser re-fetches when switching questions
         var imageUrl = data.questionImageURL;
         var cacheBuster = 'q=' + data.questionIndex;
         var separator = imageUrl.includes('?') ? '&' : '?';
-        questionImageEl.src = imageUrl + separator + cacheBuster;
-        questionImageEl.style.display = 'block';
 
-        // Also set referrerpolicy for cross-origin images
-        questionImageEl.setAttribute('referrerpolicy', 'no-referrer');
+        questionImageEls.forEach(function (el) {
+          el.src = imageUrl + separator + cacheBuster;
+          el.style.display = 'block';
+          el.setAttribute('referrerpolicy', 'no-referrer');
+        });
       } else {
-        questionImageContainer.style.display = 'none';
-        questionImageEl.src = '';
+        if (questionImageContainer) questionImageContainer.style.display = 'none';
+        questionImageEls.forEach(function (el) { el.src = ''; });
 
         // Add no-image class to grid when no image present
         if (questionLayoutContainer) {
@@ -15499,11 +15496,8 @@
       }
 
       // Update response count
-      document.getElementById('response-count').textContent = data.totalResponses + ' / ' + data.totalStudents + ' answered';
-      var responseCountHeader = document.getElementById('response-count-header');
-      if (responseCountHeader) {
-        responseCountHeader.textContent = data.totalResponses + ' / ' + data.totalStudents + ' answered';
-      }
+      safeSetText('response-count', data.totalResponses + ' / ' + data.totalStudents + ' answered');
+      safeSetText('response-count-header', data.totalResponses + ' / ' + data.totalStudents + ' answered');
 
       updateLiveOverviewFromData(data);
 

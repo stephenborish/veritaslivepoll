@@ -1,5 +1,15 @@
 <style>
-    /* Login Screen Styles - Premium Glassmorphism */
+    /* Login Screen Styles - Premium Light Mode & Glassmorphism */
+    :root {
+        --v-navy: #12385d;
+        --v-gold: #c5a05a;
+        --v-slate-50: #f8fafc;
+        --v-slate-100: #f1f5f9;
+        --v-slate-400: #94a3b8;
+        --v-slate-600: #475569;
+        --v-slate-900: #0f172a;
+    }
+
     #login-overlay {
         position: fixed !important;
         top: 0 !important;
@@ -9,138 +19,276 @@
         margin: 0 !important;
         padding: 0 !important;
         z-index: 2147483647 !important;
-        background: radial-gradient(circle at top right, #1e293b, #0f172a);
+        /* Dynamic Light Background */
+        background: radial-gradient(circle at 0% 0%, #ffffff 0%, #f1f5f9 100%);
         display: flex;
         align-items: center;
         justify-content: center;
         font-family: 'Inter', system-ui, -apple-system, sans-serif;
         box-sizing: border-box !important;
-        backdrop-filter: blur(8px);
-    }
-
-    .login-card {
-        background: rgba(30, 41, 59, 0.7);
-        backdrop-filter: blur(24px) saturate(180%);
-        -webkit-backdrop-filter: blur(24px) saturate(180%);
-        border: 1px solid rgba(255, 255, 255, 0.125);
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
-        border-radius: 28px;
-        padding: 56px;
-        width: 100%;
-        max-width: 440px;
-        text-align: center;
-        text-align: center;
-        /* animation: loginFadeInUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards; */
-        position: relative;
         overflow: hidden;
     }
 
-    .login-card::before {
-        content: '';
+    /* Animated background elements */
+    .bg-shape {
         position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: radial-gradient(circle, rgba(251, 191, 36, 0.05) 0%, transparent 70%);
-        pointer-events: none;
+        filter: blur(80px);
+        opacity: 0.6;
+        z-index: -1;
+        animation: floatShape 20s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    @keyframes loginFadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px) scale(0.98);
+    .bg-shape-1 {
+        top: -10%;
+        left: -10%;
+        width: 600px;
+        height: 600px;
+        background: radial-gradient(#e0e7ff, transparent 70%);
+        animation-delay: 0s;
+    }
+
+    .bg-shape-2 {
+        bottom: -10%;
+        right: -10%;
+        width: 500px;
+        height: 500px;
+        background: radial-gradient(#fef3c7, transparent 70%);
+        animation-delay: -5s;
+    }
+
+    @keyframes floatShape {
+        0% {
+            transform: translate(0, 0) rotate(0deg);
         }
 
+        100% {
+            transform: translate(50px, 50px) rotate(10deg);
+        }
+    }
+
+    .login-card {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+        border: 1px solid rgba(255, 255, 255, 1);
+        box-shadow:
+            0 20px 25px -5px rgba(0, 0, 0, 0.05),
+            0 8px 10px -6px rgba(0, 0, 0, 0.01),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+        border-radius: 32px;
+        padding: 64px 56px;
+        width: 100%;
+        max-width: 480px;
+        text-align: center;
+        position: relative;
+        transform: translateY(20px);
+        opacity: 0;
+        animation: cardEntry 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes cardEntry {
         to {
             opacity: 1;
-            transform: translateY(0) scale(1);
+            transform: translateY(0);
         }
     }
 
+    /* Logo Container */
     .login-logo {
-        width: 72px;
-        height: 72px;
+        width: 80px;
+        height: 80px;
         margin: 0 auto 32px;
-        background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
-        border-radius: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 12px 24px -6px rgba(217, 119, 6, 0.4);
-        transform: rotate(-3deg);
-        transition: transform 0.3s ease;
+        /* Subtle float animation */
+        animation: logoFloat 6s ease-in-out infinite;
     }
 
-    .login-logo:hover {
-        transform: rotate(0deg) scale(1.05);
+    @keyframes logoFloat {
+
+        0%,
+        100% {
+            transform: translateY(0);
+        }
+
+        50% {
+            transform: translateY(-6px);
+        }
     }
 
-    .login-logo span {
-        font-size: 36px;
-        color: white;
+    .logo-svg {
+        width: 100%;
+        height: 100%;
+        filter: drop-shadow(0 10px 15px rgba(18, 56, 93, 0.15));
     }
 
     .login-title {
-        color: white;
+        color: var(--v-navy);
         font-size: 32px;
         font-weight: 800;
         margin-bottom: 12px;
-        letter-spacing: -0.04em;
+        letter-spacing: -0.03em;
+        opacity: 0;
+        animation: fadeInUp 0.6s ease-out 0.2s forwards;
     }
 
     .login-subtitle {
-        color: #94a3b8;
+        color: var(--v-slate-600);
         font-size: 16px;
-        margin-bottom: 40px;
+        margin-bottom: 48px;
         line-height: 1.6;
-        font-weight: 400;
+        font-weight: 500;
+        opacity: 0;
+        animation: fadeInUp 0.6s ease-out 0.3s forwards;
     }
 
+    /* Input Group */
+    .input-group {
+        margin-bottom: 20px;
+        text-align: left;
+        opacity: 0;
+        animation: fadeInUp 0.6s ease-out 0.4s forwards;
+    }
+
+    .input-label {
+        color: var(--v-slate-600);
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        display: block;
+        transition: color 0.2s;
+    }
+
+    .input-field {
+        width: 100%;
+        padding: 16px;
+        border-radius: 12px;
+        border: 2px solid var(--v-slate-100);
+        background: white;
+        color: var(--v-navy);
+        font-size: 16px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        outline: none;
+    }
+
+    .input-field:focus {
+        border-color: var(--v-navy);
+        box-shadow: 0 0 0 4px rgba(18, 56, 93, 0.05);
+    }
+
+    .input-field:focus+.input-label,
+    .input-field:not(:placeholder-shown)+.input-label {
+        color: var(--v-navy);
+    }
+
+    .input-field::placeholder {
+        color: var(--v-slate-400);
+    }
+
+    /* Buttons */
     .login-btn {
         width: 100%;
-        background: white;
-        color: #0f172a;
-        border: none;
         padding: 16px;
         border-radius: 14px;
         font-size: 16px;
-        font-weight: 600;
+        font-weight: 700;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 14px;
+        gap: 12px;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+        border: none;
+        position: relative;
+        overflow: hidden;
     }
 
-    .login-btn:hover {
+    .btn-primary {
+        background: var(--v-navy);
+        color: white;
+        box-shadow: 0 10px 20px -5px rgba(18, 56, 93, 0.3);
+        margin-top: 12px;
+    }
+
+    .btn-primary:hover {
         transform: translateY(-2px);
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
-        background: #fdfdfd;
+        box-shadow: 0 15px 25px -5px rgba(18, 56, 93, 0.4);
+        background: #1e4570;
+        /* slightly lighter navy */
     }
 
-    .login-btn:active {
-        transform: translateY(0);
+    .btn-google {
+        background: white;
+        color: var(--v-slate-900);
+        border: 2px solid var(--v-slate-100);
+        margin-top: 16px;
     }
 
-    .login-btn-icon {
-        width: 24px;
-        height: 24px;
+    .btn-google:hover {
+        border-color: #cbd5e1;
+        background: #f8fafc;
+        transform: translateY(-1px);
+    }
+
+    /* Divider */
+    .divider {
+        display: flex;
+        align-items: center;
+        margin: 28px 0;
+        color: var(--v-slate-400);
+        font-size: 13px;
+        font-weight: 600;
+        opacity: 0;
+        animation: fadeInUp 0.6s ease-out 0.5s forwards;
+    }
+
+    .divider::before,
+    .divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--v-slate-100);
+    }
+
+    .divider span {
+        padding: 0 16px;
+    }
+
+    /* Footer */
+    .login-footer {
+        margin-top: 48px;
+        color: var(--v-slate-400);
+        font-size: 13px;
+        font-weight: 500;
+        opacity: 0;
+        animation: fadeInUp 0.6s ease-out 0.7s forwards;
     }
 
     .login-error {
         margin-top: 24px;
-        padding: 14px;
-        background: rgba(239, 68, 68, 0.15);
-        border: 1px solid rgba(239, 68, 68, 0.25);
+        padding: 16px;
+        background: #fef2f2;
+        border: 1px solid #fee2e2;
         border-radius: 12px;
-        color: #fca5a5;
+        color: #ef4444;
         font-size: 14px;
-        font-weight: 500;
+        font-weight: 600;
         display: none;
         animation: loginShake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     @keyframes loginShake {
@@ -166,47 +314,64 @@
             transform: translate3d(4px, 0, 0);
         }
     }
-
-    .login-footer {
-        margin-top: 48px;
-        color: #64748b;
-        font-size: 13px;
-        font-weight: 500;
-        letter-spacing: 0.02em;
-    }
 </style>
 
-<div id="login-overlay" style="display: flex;">
+<div id="login-overlay">
+    <!-- Background Shapes -->
+    <div class="bg-shape bg-shape-1"></div>
+    <div class="bg-shape bg-shape-2"></div>
+
     <div class="login-card">
         <div class="login-logo">
-            <span class="material-symbols-outlined">school</span>
+            <!-- Custom SVG Logo: Learning, Growth, & Exams -->
+            <svg class="logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Open Book Base (Learning) -->
+                <path d="M15 75C15 75 35 68 50 75C65 68 85 75 85 75V35C85 35 65 28 50 35C35 28 15 35 15 35V75Z"
+                    fill="#12385D" />
+
+                <!-- Inner Pages (Knowledge) -->
+                <path d="M15 38C32 30 48 36 50 36V72C48 72 32 66 15 72V38Z" fill="rgba(255,255,255,0.1)" />
+                <path d="M85 38C68 30 52 36 50 36V72C52 72 68 66 85 72V38Z" fill="rgba(255,255,255,0.15)" />
+
+                <!-- Rising Growth/Torch Element (Growth & Searching) -->
+                <path d="M50 55V25" stroke="#C5A05A" stroke-width="6" stroke-linecap="round" />
+
+                <!-- Leaves / Torch Flame (Growth) -->
+                <path d="M50 25C50 25 35 15 35 30" stroke="#C5A05A" stroke-width="6" stroke-linecap="round" />
+                <path d="M50 25C50 25 65 15 65 30" stroke="#C5A05A" stroke-width="6" stroke-linecap="round" />
+
+                <!-- Exam Checkmark Badge (Exams) -->
+                <circle cx="78" cy="22" r="10" fill="#12385D" stroke="#ffffff" stroke-width="2" />
+                <path d="M73 22L76 25L83 18" stroke="#C5A05A" stroke-width="3" stroke-linecap="round"
+                    stroke-linejoin="round" />
+            </svg>
         </div>
+
         <h1 class="login-title">Veritas Live</h1>
         <p class="login-subtitle">Secure Teacher Dashboard Access</p>
 
-        <div style="margin-bottom: 24px; text-align: left;">
-            <label style="color: #94a3b8; font-size: 14px; margin-bottom: 8px; display: block;">Username or
-                Email</label>
-            <input type="text" id="login-username" placeholder="Enter username or email"
-                style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: white; margin-bottom: 16px; font-size: 16px;">
+        <div class="login-form-container">
+            <div class="input-group">
+                <label class="input-label">Username or Email</label>
+                <input type="text" id="login-username" class="input-field" placeholder="Enter your credentials">
+            </div>
 
-            <label style="color: #94a3b8; font-size: 14px; margin-bottom: 8px; display: block;">Password</label>
-            <input type="password" id="login-password" placeholder="Enter password"
-                style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: white; margin-bottom: 16px; font-size: 16px;">
+            <div class="input-group">
+                <label class="input-label">Password</label>
+                <input type="password" id="login-password" class="input-field" placeholder="Enter your password">
+            </div>
 
-            <button id="simple-login-btn" class="login-btn" style="background: #3b82f6; color: white;">
+            <button id="simple-login-btn" class="login-btn btn-primary"
+                style="opacity: 0; animation: fadeInUp 0.6s ease-out 0.5s forwards;">
                 Sign In
             </button>
         </div>
 
-        <div style="display: flex; align-items: center; margin: 24px 0; color: #64748b;">
-            <hr style="flex: 1; border-color: rgba(255,255,255,0.1);">
-            <span style="padding: 0 12px; font-size: 14px;">OR</span>
-            <hr style="flex: 1; border-color: rgba(255,255,255,0.1);">
-        </div>
+        <div class="divider"><span>OR</span></div>
 
-        <button id="google-login-btn" class="login-btn">
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="login-btn-icon"
+        <button id="google-login-btn" class="login-btn btn-google"
+            style="opacity: 0; animation: fadeInUp 0.6s ease-out 0.6s forwards;">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20"
                 alt="Google">
             Sign in with Google
         </button>
@@ -214,7 +379,7 @@
         <div id="login-error" class="login-error"></div>
 
         <div class="login-footer">
-            &copy; 2024 Veritas Education. Professional Grade.
+            &copy; 2026 Veritas Education. Professional Grade.
         </div>
     </div>
 </div>
@@ -227,18 +392,11 @@
                 var el = document.getElementById('login-overlay');
 
                 if (el) {
-                    // NUCLEAR OPTION: Strip classes and force inline styles
-                    el.className = '';
-                    el.style.cssText = 'position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; background-color: rgba(15, 23, 42, 1) !important; z-index: 2147483647 !important; display: flex !important; align-items: center !important; justify-content: center !important; visibility: visible !important; opacity: 1 !important; transform: none !important; pointer-events: auto !important;';
-
-                    var card = el.querySelector('.login-card');
-                    if (card) {
-                        card.style.cssText = 'display: block !important; background-color: white !important; padding: 40px !important; border-radius: 12px !important; opacity: 1 !important; visibility: visible !important; width: 100% !important; max-width: 440px !important; position: relative !important; z-index: 2147483647 !important; transform: none !important; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;';
-                    }
-
-                    // Reset errors when showing
-                    var errEl = document.getElementById('login-error');
-                    if (errEl) errEl.style.display = 'none';
+                    // Force Layout Reset for visibility
+                    el.style.display = 'flex';
+                    // Trigger animations by reflowing?
+                    // Actually the CSS animations run on mount, but if it was hidden with display:none, they might re-run or be stalled.
+                    // This manager seems to toggle visibility.
                 }
             },
             hide: function () {
@@ -322,19 +480,16 @@
                         // Magic Credential Mapping
                         var targetEmail = '';
                         var targetPwd = '';
-                        var weakPasswordShim = false;
 
                         if (username.toLowerCase() === 'teacher' && password === '1234') {
                             targetEmail = 'teacher@veritas.app'; // Internal System Account
                             targetPwd = 'password1234';          // Meets min 6 char requirement
-                            weakPasswordShim = true;
                         } else if (username.includes('@')) {
                             // Allow direct email access (e.g. sborish@malvernprep.org)
                             targetEmail = username;
                             if (password.length < 6) {
-                                // Firebase enforces 6+ char passwords; transparently pad to honor 1234-style demos
+                                // Firebase enforces 6+ char passwords; transparently pad
                                 targetPwd = 'password' + password;
-                                weakPasswordShim = true;
                             } else {
                                 targetPwd = password;
                             }
@@ -358,12 +513,11 @@
                                     error.code === 'auth/user-not-found' ||
                                     error.code === 'auth/invalid-login-credentials' ||
                                     error.code === 'auth/wrong-password' ||
-                                    error.code === 'auth/invalid-credential' // New Firebase error
+                                    error.code === 'auth/invalid-credential'
                                 );
 
                                 if (isAuthError) {
                                     console.log('[Auth] User or Credential issue, attempting auto-create/recovery for demo...');
-                                    // Try creating if not found
                                     return firebase.auth().createUserWithEmailAndPassword(targetEmail, targetPwd)
                                         .then(function (result) {
                                             console.log('[Auth] Demo account created:', result.user.email);
@@ -375,10 +529,7 @@
                             })
                             .catch(function (finalError) {
                                 console.error('[Auth] Login failed:', finalError);
-                                // Nicer error for wrong password on existing account
                                 if (finalError.code === 'auth/email-already-in-use') {
-                                    // This shouldn't happen in the catch chain unless create failed, but just in case
-                                    // Try signing in again? No, we likely have wrong password for existing user
                                     LoginManager.setError('Incorrect password for existing demo account.');
                                 } else {
                                     LoginManager.setError(finalError.message);

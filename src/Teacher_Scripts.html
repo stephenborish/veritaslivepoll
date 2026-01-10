@@ -8873,6 +8873,8 @@
     var originalQuestionOrder = null;
 
     function openPollPreview(pollId) {
+      console.log('[openPollPreview] CALLED with pollId:', pollId);
+      console.trace('[openPollPreview] Stack Trace:');
       var poll = ALL_POLLS.find(function (p) { return p.pollId === pollId; });
       if (!poll || !poll.questions || poll.questions.length === 0) {
         veritasAlert('This poll has no questions.', { title: 'Cannot preview', destructive: true });

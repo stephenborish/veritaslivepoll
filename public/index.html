@@ -619,6 +619,12 @@
     --transition-bounce: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
+  body {
+    /* MathLive Keyboard Z-Index Fix */
+    --keyboard-zindex: 20000 !important;
+    --ml-keyboard-zindex: 20000 !important;
+  }
+
   .motion-safe-transition {
     transition: all var(--transition-smooth);
   }
@@ -10765,6 +10771,10 @@
     function initializeDashboardBindings() {
       try {
         console.log('[App] Initializing dashboard bindings...');
+        // Refresh critical element references
+        startPollBtn = document.getElementById('start-session-main-btn');
+        pollSelect = document.getElementById('poll-select');
+
         bindClick('nav-create-poll', function () {
           console.log('Create New Poll button clicked - opening wizard via Wizard.init()');
           setDashboardSidebarVisibility(false);
@@ -11177,10 +11187,23 @@
     }
 
     function setMainSection(section) {
+      console.log('[UI] setMainSection called via:', section);
+
       var mainContainer = document.querySelector('main');
       if (mainContainer) {
         mainContainer.scrollTop = 0;
       }
+
+      // Explicitly fetch all view containers to ensure we aren't using stale globals
+      var dashboardView = document.getElementById('dashboard');
+      var liveView = document.getElementById('live-view');
+      var rosterManager = document.getElementById('roster-manager');
+      var archivedView = document.getElementById('archived-view');
+      var analyticsView = document.getElementById('analytics-view');
+      var individualTimedView = document.getElementById('individual-timed-view');
+      var createPollView = document.getElementById('create-poll-view');
+      var dashboardRoot = document.getElementById('dashboard-root');
+      var headerSessionControls = document.getElementById('header-session-controls');
 
       // Focus mode: collapse sidebar for task views, keep it open for the dashboard
       if (section === 'dashboard') {
@@ -11190,31 +11213,24 @@
       }
 
       function updateUI() {
-        currentMainSection = section;
-
-        var dashboardRoot = document.getElementById('dashboard-root');
-
         // Handle Top-Level Views (dashboard-root vs create-poll-view)
         if (section === 'create-poll') {
           if (dashboardRoot) dashboardRoot.style.display = 'none';
-          var createPollView = document.getElementById('create-poll-view');
           if (createPollView) createPollView.style.display = 'flex';
         } else {
           if (dashboardRoot) dashboardRoot.style.display = 'flex';
-          var createPollView = document.getElementById('create-poll-view');
           if (createPollView) createPollView.style.display = 'none';
         }
 
-        dashboard.style.display = section === 'dashboard' ? 'block' : 'none';
-        liveView.style.display = section === 'live' ? 'grid' : 'none';
-        rosterManager.style.display = section === 'roster' ? 'grid' : 'none';
-        archivedView.style.display = section === 'archived' ? 'grid' : 'none';
-        analyticsView.style.display = section === 'analytics' ? 'flex' : 'none';
-        var individualTimedView = document.getElementById('individual-timed-view');
-        if (individualTimedView) {
-          individualTimedView.style.display = section === 'individual-timed' ? 'block' : 'none';
-        }
+        // Toggle visibility for each main section
+        if (dashboardView) dashboardView.style.display = section === 'dashboard' ? 'block' : 'none';
+        if (liveView) liveView.style.display = section === 'live' ? 'grid' : 'none'; // Ensure grid for live view
+        if (rosterManager) rosterManager.style.display = section === 'roster' ? 'grid' : 'none';
+        if (archivedView) archivedView.style.display = section === 'archived' ? 'grid' : 'none';
+        if (analyticsView) analyticsView.style.display = section === 'analytics' ? 'flex' : 'none';
+        if (individualTimedView) individualTimedView.style.display = section === 'individual-timed' ? 'block' : 'none';
 
+        // Update Navigation Buttons State
         var navButtons = document.querySelectorAll('.sidebar-nav-btn[data-section-target]');
         navButtons.forEach(function (btn) {
           var target = btn.getAttribute('data-section-target');
@@ -11228,6 +11244,7 @@
           }
         });
 
+        // Handle Header Controls Visibility
         if (headerSessionControls) {
           if (section === 'dashboard') {
             headerSessionControls.classList.remove('hidden');
@@ -12497,11 +12514,18 @@
     }
 
     function onPollSelectChange() {
+      // Re-fetch button to ensure reference is valid
+      startPollBtn = document.getElementById('start-session-main-btn');
+      console.log('[onPollSelectChange] Triggered. Value:', pollSelect.value);
+
       var pollId = pollSelect.value;
       var selectedPoll = pollId ? ALL_POLLS.find(function (p) { return p.pollId === pollId; }) : null;
       var className = selectedPoll && selectedPoll.className ? selectedPoll.className : '';
       var hasSelection = !!selectedPoll;
 
+      console.log('[onPollSelectChange] Poll:', pollId, 'Found:', hasSelection, 'Class:', className);
+
+      renderStudentStatus();
       updateSessionLaunchControls(selectedPoll);
       updateSecureSessionMeta(selectedPoll);
 
@@ -14340,6 +14364,10 @@
           return;
         }
 
+        // FIX: Ensure global current poll data is set before starting session
+        // This prevents the UI from falling back to full refresh or failing
+        CURRENT_POLL_DATA = selectedPoll;
+
         // Check session type and call appropriate function
         if (isSecureSessionTypeClient(selectedPoll.sessionType)) {
           console.log('[onStartPoll] Starting Secure Session...');
@@ -15298,13 +15326,17 @@
 
       if (!isLiveSession && !isPreLive) {
         if (status === 'LIVE' || status === 'OPEN') {
+          console.log('[updateLiveView] Transitioning to LIVE session state');
           isLiveSession = true;
+          // Robustly switch view using new refactored function
+          setMainSection('live');
         } else {
           return;
         }
       }
 
       if (isPreLive || isEnded) {
+        console.log('[updateLiveView] Session is PRE_LIVE or ENDED, showing dashboard');
         showDashboard();
         return;
       }

@@ -52,7 +52,7 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/firebase-service-account.json
         run: |
           echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > firebase-service-account.json
-          firebase deploy --only hosting,functions,firestore,storage --project classroomproctor
+          firebase deploy --only hosting,functions,firestore,storage,database --project classroomproctor
 
       - name: Cleanup
         if: always()

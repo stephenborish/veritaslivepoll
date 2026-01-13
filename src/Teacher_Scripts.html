@@ -121,6 +121,7 @@
     // === Quill Rich Text Manager ===
     var QuillManager = {
       instances: {}, // map id -> quill instance
+      lastFocusedQuillId: null,
 
       // Initialize a new editor
       init: function (containerId, initialContent, placeholder, onChange) {
@@ -197,22 +198,14 @@
           }
         });
 
-        // Add double-click handler for editing formulas
-        // Note: Quill renders formula as a specialized embed. We can detect clicks on it.
-        // However, standard Quill doesn't easily expose click on embed. 
-        // We will try detecting selection change to a formula blot.
+        // Add focus listener to track active editor for Math Symbols
         quill.on('selection-change', function (range, oldRange, source) {
+          if (range) {
+            QuillManager.lastFocusedQuillId = containerId;
+          }
           if (range && range.length === 0) { // Cursor selection
             var [leaf, offset] = quill.getLeaf(range.index);
-            if (leaf.statics.blotName === 'formula') {
-              // It's a formula! Open editor logic could go here if we want auto-open on click
-              // Or we can rely on a specific interaction. 
-              // For now, let's just allow the toolbar button to insert.
-              // To Edit: We actually need to know the 'value' of the blot.
-              // A common pattern is to select the formula and hit the toolbar button again?
-              // Or custom UI overlay. Let's keep it simple for MVP: Toolbar button inserts new.
-              // But user asked for "Edit".
-              // Let's enable Clicking the formula to edit.
+            if (leaf && leaf.statics.blotName === 'formula') {
               openFormulaModal(quill, range, leaf);
             }
           }
@@ -228,6 +221,27 @@
 
       clearAll: function () {
         this.instances = {};
+        this.lastFocusedQuillId = null;
+      },
+
+      insertMathSymbol: function (symbol) {
+        if (!this.lastFocusedQuillId) {
+          // If no focus tracked, try to find the first visible quill editor
+          var keys = Object.keys(this.instances);
+          if (keys.length > 0) this.lastFocusedQuillId = keys[0];
+          else return;
+        }
+
+        var quill = this.instances[this.lastFocusedQuillId];
+        if (!quill) return;
+
+        var range = quill.getSelection(true);
+        if (range) {
+          quill.insertText(range.index, symbol);
+          quill.setSelection(range.index + symbol.length);
+        } else {
+          quill.insertText(quill.getLength() - 1, symbol);
+        }
       }
     };
 
@@ -14856,6 +14870,86 @@
       renderWizardQuestions();
     }
 
+    /**
+     * Parsing logic for Smart Paste: splits text into question stem and answer options.
+     */
+    function handleSmartPaste(qIndex, text) {
+      if (!text || !text.trim()) return;
+
+      var lines = text.split('\n').map(l => l.trim()).filter(l => l);
+      if (lines.length < 2) return;
+
+      var stem = "";
+      var options = [];
+      // Regex for option patterns: A), A., 1), 1., etc.
+      var optionRegex = /^([a-f]|[1-6])[\.\)]\s*(.*)/i;
+
+      var firstOptionFound = false;
+      lines.forEach(line => {
+        var match = line.match(optionRegex);
+        if (match) {
+          firstOptionFound = true;
+          options.push(match[2]);
+        } else {
+          if (!firstOptionFound) {
+            stem += (stem ? "\n" : "") + line;
+          } else {
+            // Continuation of previous option?
+            if (options.length > 0) {
+              options[options.length - 1] += " " + line;
+            }
+          }
+        }
+      });
+
+      if (options.length === 0) {
+        // Fallback: Use first line as stem, others as options if no labels found
+        stem = lines[0];
+        options = lines.slice(1);
+      }
+
+      syncWizardQuillContent();
+      var q = wizardState.questions[qIndex];
+      q.questionText = stem;
+      q.html = "<p>" + stem + "</p>";
+      q.delta = null;
+
+      // Map options
+      q.options = options.slice(0, 6).map(optText => ({
+        text: optText,
+        html: "<p>" + optText + "</p>",
+        delta: null,
+        imageURL: '',
+        id: generateUUID()
+      }));
+
+      // Ensure at least 2 options
+      while (q.options.length < 2) {
+        q.options.push({ text: '', html: '', delta: null, imageURL: '', id: generateUUID() });
+      }
+
+      renderWizardQuestions();
+    }
+
+    /**
+     * Generates HTML for the Math Input Panel
+     */
+    function getMathPanelHtml() {
+      var symbols = [
+        { label: 'α', value: 'α' }, { label: 'β', value: 'β' }, { label: 'γ', value: 'γ' }, { label: 'π', value: 'π' },
+        { label: 'θ', value: 'θ' }, { label: 'Σ', value: 'Σ' }, { label: '∞', value: '∞' }, { label: '√', value: '√' },
+        { label: '²', value: '²' }, { label: '³', value: '³' }, { label: '±', value: '±' }, { label: '≠', value: '≠' },
+        { label: '≈', value: '≈' }, { label: '≤', value: '≤' }, { label: '≥', value: '≥' }, { label: 'Δ', value: 'Δ' }
+      ];
+
+      var html = '<div class="math-input-panel flex flex-wrap gap-1.5 p-2 bg-slate-50 border-b border-brand-light-gray">';
+      symbols.forEach(function (s) {
+        html += '<button type="button" class="math-symbol-btn" onclick="QuillManager.insertMathSymbol(\'' + s.value + '\')">' + s.label + '</button>';
+      });
+      html += '</div>';
+      return html;
+    }
+
     function renderWizardQuestions() {
       var container = document.getElementById('wizard-questions-list');
       if (!container) return;
@@ -14869,90 +14963,117 @@
         var questionInputId = 'question-input-' + questionNumber;
 
         var questionDiv = document.createElement('div');
-        questionDiv.className = 'question-card bg-white border border-brand-light-gray rounded-xl overflow-hidden shadow-sm transition-all duration-200';
-        questionDiv.draggable = true;
+        questionDiv.className = 'question-card bg-white border border-brand-light-gray rounded-xl overflow-hidden shadow-sm transition-all duration-200 ring-offset-2';
+        // Remove draggable="true" from main div to allow text selection
+        // questionDiv.draggable = true; 
         questionDiv.dataset.qIndex = qIndex;
 
-        // Compact Question Header with drag handle
-        var headerHtml = '<div class="question-card-header flex justify-between items-center px-4 py-2.5 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-brand-light-gray cursor-move" data-drag-handle>' +
-          '<div class="flex items-center gap-2">' +
-          '<span class="material-symbols-outlined text-slate-400 text-lg" title="Drag to reorder">drag_indicator</span>' +
-          '<div class="h-7 w-7 rounded-lg bg-primary text-white flex items-center justify-center font-bold text-xs">' + (qIndex + 1) + '</div>' +
-          '<span class="font-bold text-brand-dark-gray">Q' + (qIndex + 1) + '</span>' +
+        // 1. Compact Header with Restricted Drag Handle
+        var headerHtml = '<div class="question-card-header flex justify-between items-center px-4 py-2 bg-slate-50 border-b border-brand-light-gray">' +
+          '<div class="flex items-center gap-3">' +
+          '<div class="drag-handle cursor-grab active:cursor-grabbing p-1 -ml-1 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded transition-colors" draggable="true" title="Drag to reorder">' +
+          '<span class="material-symbols-outlined text-lg">drag_indicator</span>' +
           '</div>' +
-          '<div class="flex items-center gap-1">' +
-          '<label class="flex items-center gap-1 px-2 py-1 rounded hover:bg-slate-200 cursor-pointer text-xs text-slate-500" title="Enable confidence tracking">' +
-          '<input type="checkbox" class="wizard-meta-cb h-3.5 w-3.5 rounded" data-q-index="' + qIndex + '" ' + (q.metacognitionEnabled ? 'checked' : '') + '>' +
+          '<div class="flex items-center gap-2">' +
+          '<div class="h-6 w-6 rounded bg-veritas-navy text-white flex items-center justify-center font-bold text-[10px]">' + questionNumber + '</div>' +
+          '<span class="font-bold text-xs text-brand-dark-gray tracking-tight">QUESTION ' + questionNumber + '</span>' +
+          '</div>' +
+          '</div>' +
+          '<div class="flex items-center gap-2">' +
+          '<label class="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-slate-200 cursor-pointer text-[11px] font-semibold text-slate-500 transition-colors" title="Enable confidence tracking">' +
+          '<input type="checkbox" class="wizard-meta-cb h-3.5 w-3.5 rounded border-slate-300 text-veritas-navy focus:ring-veritas-navy" data-q-index="' + qIndex + '" ' + (q.metacognitionEnabled ? 'checked' : '') + '>' +
           '<span>Confidence</span></label>' +
-          '<button type="button" class="p-1.5 rounded text-red-500 hover:bg-red-50 transition-colors" onclick="removeWizardQuestion(' + qIndex + ')" title="Remove">' +
+          '<div class="w-px h-4 bg-slate-200 mx-1"></div>' +
+          '<button type="button" class="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-all" onclick="removeWizardQuestion(' + qIndex + ')" title="Remove Question">' +
           '<span class="material-symbols-outlined text-lg">delete</span></button>' +
           '</div></div>';
 
-        // METADATA: Custom Metacognition Prompt (Conditional)
-        var metaPromptHtml = '';
-        if (q.metacognitionEnabled) {
-          metaPromptHtml = '<div class="px-4 pt-3 pb-0">' +
-            '<p class="text-xs font-semibold text-slate-500 mb-1">Metacognition Prompt (Optional)</p>' +
-            '<div id="q-meta-' + qIndex + '" class="bg-white" style="height: 80px;"></div>' +
-            '</div>';
-        }
+        // 2. Math Input Panel (Static for Stem)
+        var mathPanelHtml = getMathPanelHtml();
 
-        // Compact Question Body
-        var bodyHtml = metaPromptHtml + '<div class="question-card-body p-4 space-y-3">' +
-          // Question Stem - Rich Text only
-          '<div class="flex-1 flex flex-col">' +
-          '<label class="text-xs font-semibold text-slate-500 mb-1">Question Stem</label>' +
-          '<div id="' + questionInputId + '" class="bg-white" style="min-height: 120px; height: auto;"></div>' +
-          '</div></div>';
+        // 3. Smart Paste Zone
+        var smartPasteHtml = '<div class="px-4 py-3 bg-slate-50/50 border-b border-brand-light-gray">' +
+          '<div class="flex items-center gap-2 mb-2">' +
+          '<span class="material-symbols-outlined text-sm text-veritas-gold">tips_and_updates</span>' +
+          '<span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Smart Paste</span>' +
+          '</div>' +
+          '<textarea class="smart-paste-area focus:ring-1 focus:ring-veritas-gold" placeholder="Paste full question with options here (e.g. \"What is 2+2? A) 3 B) 4\") to auto-populate..." data-q-index="' + qIndex + '"></textarea>' +
+          '</div>';
 
-        // Answer Choices - Compact
-        bodyHtml += '<div class="space-y-3">';
+        // 4. Question Stem Section
+        var stemHtml = '<div class="p-4 space-y-2">' +
+          '<div class="flex items-center justify-between">' +
+          '<label class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Question Stem</label>' +
+          '</div>' +
+          '<div class="border border-brand-light-gray rounded-lg overflow-hidden focus-within:border-veritas-navy transition-colors">' +
+          '<div id="' + questionInputId + '" class="bg-white" style="min-height: 100px; height: auto;"></div>' +
+          '</div>' +
+          '</div>';
+
+        // 5. Answer Choices
+        var optionsHtml = '<div class="px-4 pb-4 space-y-3">' +
+          '<label class="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Answer Choices</label>';
+
         q.options.forEach(function (opt, optIndex) {
           var isCorrect = q.correctAnswerIndex === optIndex;
-          var correctBorder = isCorrect ? 'border-green-400 bg-green-50/10' : 'border-brand-light-gray/80';
-          var optImagePreview = getImagePreviewUrl(opt.imageURL, opt.imageFileId);
-          var optIsUploading = opt.imageURL === 'UPLOADING';
+          var optionId = 'answer-input-' + questionNumber + '-' + optionLabels[optIndex].toLowerCase();
+          var correctClass = isCorrect ? 'ring-2 ring-green-500 bg-green-50/30' : 'border-slate-200';
 
-          bodyHtml += '<div class="answer-option flex items-start gap-2 p-2 rounded-lg border ' + correctBorder + ' transition-all">' +
-            // Correct answer radio
-            '<label class="cursor-pointer mt-2">' +
-            '<input type="radio" name="correct-' + qIndex + '" class="hidden wizard-correct-radio" data-q-index="' + qIndex + '" data-opt-index="' + optIndex + '" ' + (isCorrect ? 'checked' : '') + '>' +
-            '<div class="h-7 w-7 rounded flex items-center justify-center font-bold text-xs transition-all ' +
-            (isCorrect ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-primary/10') + '">' + optionLabels[optIndex] + '</div>' +
-            '</label>' +
-            // Option text (Quill)
+          optionsHtml += '<div class="flex items-start gap-3 p-3 rounded-xl border ' + correctClass + ' transition-all group">' +
+            '<div class="flex flex-col items-center gap-2 mt-1">' +
+            '<button type="button" class="wizard-correct-toggle w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm transition-all ' +
+            (isCorrect ? 'bg-green-500 text-white shadow-lg shadow-green-200' : 'bg-slate-100 text-slate-400 hover:bg-green-100 hover:text-green-600') + '" ' +
+            'onclick="setCorrectAnswer(' + qIndex + ', ' + optIndex + ')" title="Mark as Correct Answer">' +
+            optionLabels[optIndex] + '</button>' +
+            '</div>' +
             '<div class="flex-1">' +
-            '<div id="answer-input-' + questionNumber + '-' + optionLabels[optIndex].toLowerCase() + '" class="bg-white" style="min-height: 80px; height: auto;"></div>' +
+            '<div class="border border-brand-light-gray rounded-lg overflow-hidden bg-white focus-within:border-veritas-navy transition-colors">' +
+            '<div id="' + optionId + '" style="min-height: 60px; height: auto;"></div>' +
+            '</div>' +
+            '</div>' +
+            '<button type="button" class="mt-2 p-1.5 rounded text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100" ' +
+            'onclick="removeWizardOption(' + qIndex + ', ' + optIndex + ')" title="Remove Choice">' +
+            '<span class="material-symbols-outlined text-lg">close</span></button>' +
             '</div>';
-
-          // Remove option button only (no image upload)
-          bodyHtml += '<div class="flex flex-col gap-1 mt-1">' +
-            '<button type="button" class="p-1 rounded text-slate-300 hover:text-red-500 transition-colors" onclick="removeWizardOption(' + qIndex + ',' + optIndex + ')">' +
-            '<span class="material-symbols-outlined text-base">close</span></button>' +
-            '</div></div>'; // Close flex col + answer option
         });
-        bodyHtml += '</div>';
 
-        // Add option + timer row
-        bodyHtml += '<div class="flex items-center justify-between pt-1">';
+        // Add Choice Button
         if (q.options.length < 6) {
-          bodyHtml += '<button type="button" class="flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80" onclick="addWizardOption(' + qIndex + ')">' +
-            '<span class="material-symbols-outlined text-sm">add</span>Add choice</button>';
-        } else {
-          bodyHtml += '<span></span>';
+          optionsHtml += '<div class="flex justify-center pt-1">' +
+            '<button type="button" class="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 hover:bg-primary/10 text-slate-600 hover:text-primary transition-all text-[11px] font-bold" ' +
+            'onclick="addWizardOption(' + qIndex + ')">' +
+            '<span class="material-symbols-outlined text-sm">add_circle</span>Add Choice</button>' +
+            '</div>';
         }
-        bodyHtml += '<div class="flex items-center gap-1.5">' +
-          '<span class="text-xs text-slate-400">Timer:</span>' +
-          '<input type="number" class="wizard-timer w-14 rounded border border-brand-light-gray/70 px-1.5 py-0.5 text-xs text-center" placeholder="sec" min="5" max="600" data-q-index="' + qIndex + '" value="' + (q.timerSeconds || '') + '">' +
-          '</div></div>';
 
-        bodyHtml += '</div>'; // Close question-card-body
+        optionsHtml += '</div>';
 
-        questionDiv.innerHTML = headerHtml + bodyHtml;
+        // 6. Assemble Card
+        questionDiv.innerHTML = headerHtml + mathPanelHtml + smartPasteHtml + stemHtml + optionsHtml;
         container.appendChild(questionDiv);
 
-        // 2. Metacognition Prompt
+        // --- Event Listeners and Initialization ---
+
+        // A. Smart Paste Event
+        var pasteArea = questionDiv.querySelector('.smart-paste-area');
+        if (pasteArea) {
+          pasteArea.addEventListener('paste', function (e) {
+            e.preventDefault();
+            var text = (e.clipboardData || window.clipboardData).getData('text');
+            handleSmartPaste(qIndex, text);
+          });
+        }
+
+        // B. Metacognition Prompt Initialization
         if (q.metacognitionEnabled) {
+          var metaPromptContainer = document.createElement('div');
+          metaPromptContainer.className = 'px-4 pb-4';
+          metaPromptContainer.innerHTML = '<label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Confidence Prompt</label>' +
+            '<div id="q-meta-' + qIndex + '" class="border border-brand-light-gray rounded-lg overflow-hidden" style="height: 80px;"></div>';
+
+          // Insert before stem
+          questionDiv.insertBefore(metaPromptContainer, questionDiv.querySelector('.p-4'));
+
           QuillManager.init('q-meta-' + qIndex, q.metaPromptDelta || q.metaPromptHtml || 'How confident are you in your answer?', 'Enter prompt...', function (content) {
             wizardState.questions[qIndex].metaPromptHtml = content.html;
             wizardState.questions[qIndex].metaPromptDelta = content.delta;
@@ -14960,126 +15081,53 @@
           });
         }
 
-        // Question image file input
-        var qImgInput = questionDiv.querySelector('.wizard-q-img-input');
-        if (qImgInput) {
-          qImgInput.addEventListener('change', function (e) {
-            handleWizardImageUpload(e.target.files[0], qIndex, null);
-          });
-        }
-
-        // Question image remove button
-        var qImgRemoveBtn = questionDiv.querySelector('.wizard-remove-q-img');
-        if (qImgRemoveBtn) {
-          qImgRemoveBtn.addEventListener('click', function () {
-            syncWizardQuillContent();
-            wizardState.questions[qIndex].questionImageURL = null;
-            wizardState.questions[qIndex].questionImageFileId = null;
-            renderWizardQuestions();
-          });
-        }
-
-
-        // Option image file inputs
-        questionDiv.querySelectorAll('.wizard-opt-img-input').forEach(function (input) {
-          input.addEventListener('change', function (e) {
-            var qi = parseInt(this.getAttribute('data-q-index'));
-            var oi = parseInt(this.getAttribute('data-opt-index'));
-            handleWizardImageUpload(e.target.files[0], qi, oi);
-          });
-        });
-
-        // Option image remove buttons
-        questionDiv.querySelectorAll('.wizard-remove-opt-img').forEach(function (btn) {
-          btn.addEventListener('click', function () {
-            syncWizardQuillContent();
-            var qi = parseInt(this.getAttribute('data-q-index'));
-            var oi = parseInt(this.getAttribute('data-opt-index'));
-            wizardState.questions[qi].options[oi].imageURL = null;
-            wizardState.questions[qi].options[oi].imageFileId = null;
-            renderWizardQuestions();
-          });
-        });
-
-        // Correct answer radios
-        questionDiv.querySelectorAll('.wizard-correct-radio').forEach(function (radio) {
-          radio.parentElement.addEventListener('click', function (e) {
-            e.preventDefault();
-            var qi = parseInt(radio.getAttribute('data-q-index'));
-            var oi = parseInt(radio.getAttribute('data-opt-index'));
-            setCorrectAnswer(qi, oi);
-          });
-        });
-
-        // Metacognition checkbox
+        // C. Metacognition checkbox
         var metaCb = questionDiv.querySelector('.wizard-meta-cb');
         if (metaCb) {
           metaCb.addEventListener('change', function () {
             wizardState.questions[qIndex].metacognitionEnabled = this.checked;
+            renderWizardQuestions();
           });
         }
 
-        // Timer input
-        var timerInput = questionDiv.querySelector('.wizard-timer');
-        if (timerInput) {
-          timerInput.addEventListener('input', function () {
-            var val = parseInt(this.value);
-            wizardState.questions[qIndex].timerSeconds = isNaN(val) ? null : val;
-          });
-        }
-
-        // Drag and Drop Event Listeners
-        questionDiv.addEventListener('dragstart', function (e) {
+        // D. Drag and Drop restricted to handle
+        var handle = questionDiv.querySelector('.drag-handle');
+        handle.addEventListener('dragstart', function (e) {
           wizardDraggedIndex = qIndex;
-          this.classList.add('opacity-50');
+          questionDiv.classList.add('opacity-40', 'scale-[0.98]');
           e.dataTransfer.effectAllowed = 'move';
-          e.dataTransfer.setData('text/html', this.innerHTML);
+          // Use the whole card as the drag image
+          e.dataTransfer.setDragImage(questionDiv, 20, 20);
         });
 
-        questionDiv.addEventListener('dragend', function (e) {
-          this.classList.remove('opacity-50');
-          // Remove all drag-over indicators
+        handle.addEventListener('dragend', function (e) {
+          questionDiv.classList.remove('opacity-40', 'scale-[0.98]');
           container.querySelectorAll('.question-card').forEach(function (card) {
-            card.classList.remove('border-blue-500', 'border-dashed', 'border-2');
+            card.classList.remove('ring-4', 'ring-veritas-gold/20', 'border-veritas-gold');
           });
         });
 
         questionDiv.addEventListener('dragover', function (e) {
-          if (e.preventDefault) {
-            e.preventDefault();
-          }
+          if (e.preventDefault) e.preventDefault();
           e.dataTransfer.dropEffect = 'move';
-
-          // Add visual feedback
-          this.classList.add('border-blue-500', 'border-dashed', 'border-2');
-
+          this.classList.add('ring-4', 'ring-veritas-gold/20', 'border-veritas-gold');
           return false;
         });
 
         questionDiv.addEventListener('dragleave', function (e) {
-          this.classList.remove('border-blue-500', 'border-dashed', 'border-2');
+          this.classList.remove('ring-4', 'ring-veritas-gold/20', 'border-veritas-gold');
         });
 
         questionDiv.addEventListener('drop', function (e) {
-          if (e.stopPropagation) {
-            e.stopPropagation();
-          }
-
+          if (e.stopPropagation) e.stopPropagation();
           var dropIndex = parseInt(this.dataset.qIndex);
-
           if (wizardDraggedIndex !== null && wizardDraggedIndex !== dropIndex) {
-            // Sync content before reordering to prevent data loss
             syncWizardQuillContent();
-
-            // Reorder questions in the array
             var draggedQuestion = wizardState.questions[wizardDraggedIndex];
             wizardState.questions.splice(wizardDraggedIndex, 1);
             wizardState.questions.splice(dropIndex, 0, draggedQuestion);
-
-            // Re-render questions to show new order
             renderWizardQuestions();
           }
-
           return false;
         });
       });

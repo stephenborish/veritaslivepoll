@@ -8625,9 +8625,17 @@
                 });
 
         } else if (!window.STUDENT_EMAIL) {
-            // No token, no injected email -> Show Login
-            console.log('[Auth] No token or student email. Initiating Login Flow.');
-            showLoginScreen();
+            // P1: Check sessionStorage for persisted identity
+            var persistedEmail = sessionStorage.getItem('veritas_student_email');
+            if (persistedEmail) {
+                console.log('[Auth] Found persisted student email in sessionStorage:', persistedEmail);
+                window.STUDENT_EMAIL = persistedEmail;
+                startApp();
+            } else {
+                // No token, no injected email, no persistence -> Show Login
+                console.log('[Auth] No identity found. Initiating Login Flow.');
+                showLoginScreen();
+            }
         } else {
             // Already authenticated (injected)
             console.log('[Auth] Authenticated via injection:', window.STUDENT_EMAIL);
@@ -8651,8 +8659,13 @@
             if (subtitle) subtitle.textContent = 'Student Access';
 
             LoginManager.init(function (user) {
-                // On Success
-                console.log('[Auth] Login successful. Reloading to initialize session.');
+                // On Success - Persist email for reload cycle
+                console.log('[Auth] Student Login successful:', user.email);
+                try {
+                    sessionStorage.setItem('veritas_student_email', user.email);
+                } catch (e) { }
+
+                console.log('[Auth] Reloading to initialize session.');
                 setTimeout(function () { window.location.reload(); }, 500);
             });
             LoginManager.show();

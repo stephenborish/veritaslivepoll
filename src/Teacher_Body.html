@@ -157,8 +157,14 @@
         </div>
 
         <div class="hidden sm:block w-px h-6 bg-white/10 mx-1"></div>
+        <button id="header-prev-btn" type="button"
+          class="hidden md:flex items-center gap-2 h-8 sm:h-9 px-3 sm:px-4 rounded bg-white/10 text-white font-bold text-xs sm:text-sm hover:bg-white/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Previous Question (←)">
+          <span class="material-symbols-outlined text-sm sm:text-base">arrow_back</span>
+          <span>Prev</span>
+        </button>
         <button id="header-next-btn" type="button"
-          class="hidden md:flex items-center gap-2 h-8 sm:h-9 px-3 sm:px-4 rounded bg-white text-veritas-navy font-bold text-xs sm:text-sm shadow hover:bg-gray-100 transition-all"
+          class="hidden md:flex items-center gap-2 h-8 sm:h-9 px-3 sm:px-4 rounded bg-white text-veritas-navy font-bold text-xs sm:text-sm shadow hover:bg-gray-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           title="Next Question (→)">
           <span>Next</span>
           <span class="material-symbols-outlined text-sm sm:text-base">arrow_forward</span>
@@ -515,14 +521,14 @@
           <!-- Context Group -->
           <div class="flex items-center gap-4">
             <div class="flex flex-col">
-              <h1 id="header-poll-name"
+              <h1 id="lcb-poll-name"
                 class="text-gray-900 dark:text-white font-bold text-lg leading-tight truncate max-w-xs">Poll Name</h1>
               <div class="flex items-center gap-2 text-xs text-gray-500 font-medium">
-                <span id="live-question-info"
+                <span id="lcb-question-info"
                   class="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-gray-700 dark:text-gray-300">Q1 /
                   10</span>
                 <span class="w-1 h-1 rounded-full bg-gray-300"></span>
-                <span id="timer-status-message">Ready</span>
+                <span id="lcb-timer-status-message">Ready</span>
               </div>
             </div>
           </div>
@@ -530,17 +536,17 @@
           <!-- Central Hub: Timer & Main Actions -->
           <div class="flex items-center gap-4 absolute left-1/2 transform -translate-x-1/2">
             <!-- Time Controls -->
-            <div id="timer-main-container"
+            <div id="lcb-timer-main-container"
               class="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 gap-1 shadow-inner">
-              <button id="subtract-10s-btn"
+              <button id="lcb-subtract-10s-btn"
                 class="w-8 h-8 flex items-center justify-center rounded hover:bg-white dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors"
                 title="-10s">
                 <span class="material-symbols-outlined text-lg">remove</span>
               </button>
-              <input type="text" id="timer-display"
+              <input type="text" id="lcb-timer-display"
                 class="w-16 bg-transparent text-center font-mono text-xl font-bold text-gray-800 dark:text-white border-none focus:ring-0 p-0"
                 value="00:00" readonly>
-              <button id="add-10s-btn"
+              <button id="lcb-add-10s-btn"
                 class="w-8 h-8 flex items-center justify-center rounded hover:bg-white dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors"
                 title="+10s">
                 <span class="material-symbols-outlined text-lg">add</span>
@@ -549,15 +555,15 @@
 
             <!-- Playback Controls -->
             <div class="flex items-center gap-2">
-              <button id="start-btn"
+              <button id="lcb-start-btn"
                 class="w-10 h-10 flex items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-600 active:scale-95 transition-all">
                 <span class="material-symbols-outlined filled text-2xl">play_arrow</span>
               </button>
-              <button id="pause-btn"
+              <button id="lcb-pause-btn"
                 class="hidden w-10 h-10 flex items-center justify-center rounded-full bg-amber-500 text-white shadow-lg shadow-amber-500/30 hover:bg-amber-600 active:scale-95 transition-all">
                 <span class="material-symbols-outlined filled text-2xl">pause</span>
               </button>
-              <button id="reset-btn"
+              <button id="lcb-reset-btn"
                 class="w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 active:scale-95 transition-all"
                 title="Reset Question">
                 <span class="material-symbols-outlined text-xl">restart_alt</span>
@@ -569,12 +575,12 @@
           <div class="flex items-center gap-3">
             <!-- Tool Toggles -->
             <div class="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
-              <button id="header-calc-toggle"
+              <button id="lcb-calc-toggle"
                 class="w-9 h-9 flex items-center justify-center rounded hover:bg-white dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors"
                 title="Toggle TI-84 Calculator">
                 <span class="material-symbols-outlined text-xl">calculate</span>
               </button>
-              <button id="header-whiteboard-toggle"
+              <button id="lcb-whiteboard-toggle"
                 class="w-9 h-9 flex items-center justify-center rounded hover:bg-white dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors"
                 title="Toggle Whiteboard (Coming Soon)">
                 <span class="material-symbols-outlined text-xl">draw</span>
@@ -583,13 +589,13 @@
 
             <div class="h-8 w-px bg-gray-300 dark:bg-gray-700"></div>
 
-            <button id="header-end-show-btn"
+            <button id="lcb-end-show-btn"
               class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow-md shadow-indigo-500/20 transition-all">
               <span class="material-symbols-outlined text-lg">visibility</span>
               <span>Reveal</span>
             </button>
 
-            <button id="header-next-btn"
+            <button id="lcb-next-btn"
               class="flex items-center gap-2 px-4 py-2 bg-gray-800 dark:bg-gray-700 hover:bg-gray-900 dark:hover:bg-gray-600 text-white rounded-lg font-semibold shadow-md transition-all">
               <span>Next</span>
               <span class="material-symbols-outlined text-lg">arrow_forward</span>
@@ -717,6 +723,12 @@
           <!-- Iframe -->
           <iframe src="https://mpcalc-aaa91.web.app/" class="w-full h-full border-0 bg-gray-100"
             title="TI-84 Calculator"></iframe>
+        </div>
+
+        <!-- Student Inspector Panel (Slide-over) -->
+        <div id="student-inspector-panel"
+          class="hidden absolute top-0 right-0 h-full w-96 bg-white dark:bg-gray-800 shadow-2xl border-l border-gray-200 dark:border-gray-700 z-[60] transform transition-transform duration-300 flex flex-col">
+          <!-- Content injected dynamically by openStudentInspector() -->
         </div>
 
       </div>

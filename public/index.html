@@ -5468,8 +5468,14 @@
         </div>
 
         <div class="hidden sm:block w-px h-6 bg-white/10 mx-1"></div>
+        <button id="header-prev-btn" type="button"
+          class="hidden md:flex items-center gap-2 h-8 sm:h-9 px-3 sm:px-4 rounded bg-white/10 text-white font-bold text-xs sm:text-sm hover:bg-white/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Previous Question (←)">
+          <span class="material-symbols-outlined text-sm sm:text-base">arrow_back</span>
+          <span>Prev</span>
+        </button>
         <button id="header-next-btn" type="button"
-          class="hidden md:flex items-center gap-2 h-8 sm:h-9 px-3 sm:px-4 rounded bg-white text-veritas-navy font-bold text-xs sm:text-sm shadow hover:bg-gray-100 transition-all"
+          class="hidden md:flex items-center gap-2 h-8 sm:h-9 px-3 sm:px-4 rounded bg-white text-veritas-navy font-bold text-xs sm:text-sm shadow hover:bg-gray-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           title="Next Question (→)">
           <span>Next</span>
           <span class="material-symbols-outlined text-sm sm:text-base">arrow_forward</span>
@@ -5826,14 +5832,14 @@
           <!-- Context Group -->
           <div class="flex items-center gap-4">
             <div class="flex flex-col">
-              <h1 id="header-poll-name"
+              <h1 id="lcb-poll-name"
                 class="text-gray-900 dark:text-white font-bold text-lg leading-tight truncate max-w-xs">Poll Name</h1>
               <div class="flex items-center gap-2 text-xs text-gray-500 font-medium">
-                <span id="live-question-info"
+                <span id="lcb-question-info"
                   class="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-gray-700 dark:text-gray-300">Q1 /
                   10</span>
                 <span class="w-1 h-1 rounded-full bg-gray-300"></span>
-                <span id="timer-status-message">Ready</span>
+                <span id="lcb-timer-status-message">Ready</span>
               </div>
             </div>
           </div>
@@ -5841,17 +5847,17 @@
           <!-- Central Hub: Timer & Main Actions -->
           <div class="flex items-center gap-4 absolute left-1/2 transform -translate-x-1/2">
             <!-- Time Controls -->
-            <div id="timer-main-container"
+            <div id="lcb-timer-main-container"
               class="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 gap-1 shadow-inner">
-              <button id="subtract-10s-btn"
+              <button id="lcb-subtract-10s-btn"
                 class="w-8 h-8 flex items-center justify-center rounded hover:bg-white dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors"
                 title="-10s">
                 <span class="material-symbols-outlined text-lg">remove</span>
               </button>
-              <input type="text" id="timer-display"
+              <input type="text" id="lcb-timer-display"
                 class="w-16 bg-transparent text-center font-mono text-xl font-bold text-gray-800 dark:text-white border-none focus:ring-0 p-0"
                 value="00:00" readonly>
-              <button id="add-10s-btn"
+              <button id="lcb-add-10s-btn"
                 class="w-8 h-8 flex items-center justify-center rounded hover:bg-white dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors"
                 title="+10s">
                 <span class="material-symbols-outlined text-lg">add</span>
@@ -5860,15 +5866,15 @@
 
             <!-- Playback Controls -->
             <div class="flex items-center gap-2">
-              <button id="start-btn"
+              <button id="lcb-start-btn"
                 class="w-10 h-10 flex items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-600 active:scale-95 transition-all">
                 <span class="material-symbols-outlined filled text-2xl">play_arrow</span>
               </button>
-              <button id="pause-btn"
+              <button id="lcb-pause-btn"
                 class="hidden w-10 h-10 flex items-center justify-center rounded-full bg-amber-500 text-white shadow-lg shadow-amber-500/30 hover:bg-amber-600 active:scale-95 transition-all">
                 <span class="material-symbols-outlined filled text-2xl">pause</span>
               </button>
-              <button id="reset-btn"
+              <button id="lcb-reset-btn"
                 class="w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 active:scale-95 transition-all"
                 title="Reset Question">
                 <span class="material-symbols-outlined text-xl">restart_alt</span>
@@ -5880,12 +5886,12 @@
           <div class="flex items-center gap-3">
             <!-- Tool Toggles -->
             <div class="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
-              <button id="header-calc-toggle"
+              <button id="lcb-calc-toggle"
                 class="w-9 h-9 flex items-center justify-center rounded hover:bg-white dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors"
                 title="Toggle TI-84 Calculator">
                 <span class="material-symbols-outlined text-xl">calculate</span>
               </button>
-              <button id="header-whiteboard-toggle"
+              <button id="lcb-whiteboard-toggle"
                 class="w-9 h-9 flex items-center justify-center rounded hover:bg-white dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors"
                 title="Toggle Whiteboard (Coming Soon)">
                 <span class="material-symbols-outlined text-xl">draw</span>
@@ -5894,13 +5900,13 @@
 
             <div class="h-8 w-px bg-gray-300 dark:bg-gray-700"></div>
 
-            <button id="header-end-show-btn"
+            <button id="lcb-end-show-btn"
               class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow-md shadow-indigo-500/20 transition-all">
               <span class="material-symbols-outlined text-lg">visibility</span>
               <span>Reveal</span>
             </button>
 
-            <button id="header-next-btn"
+            <button id="lcb-next-btn"
               class="flex items-center gap-2 px-4 py-2 bg-gray-800 dark:bg-gray-700 hover:bg-gray-900 dark:hover:bg-gray-600 text-white rounded-lg font-semibold shadow-md transition-all">
               <span>Next</span>
               <span class="material-symbols-outlined text-lg">arrow_forward</span>
@@ -6028,6 +6034,12 @@
           <!-- Iframe -->
           <iframe src="https://mpcalc-aaa91.web.app/" class="w-full h-full border-0 bg-gray-100"
             title="TI-84 Calculator"></iframe>
+        </div>
+
+        <!-- Student Inspector Panel (Slide-over) -->
+        <div id="student-inspector-panel"
+          class="hidden absolute top-0 right-0 h-full w-96 bg-white dark:bg-gray-800 shadow-2xl border-l border-gray-200 dark:border-gray-700 z-[60] transform transition-transform duration-300 flex flex-col">
+          <!-- Content injected dynamically by openStudentInspector() -->
         </div>
 
       </div>
@@ -10953,9 +10965,22 @@
 
         bindClick('live-more-actions-btn', function (e) {
           e.stopPropagation();
+          console.log('[LiveUI] Three-dots menu clicked');
           var menu = document.getElementById('live-more-menu');
           if (menu) {
             menu.classList.toggle('hidden');
+            console.log('[LiveUI] Menu hidden:', menu.classList.contains('hidden'));
+          }
+        });
+
+        // Close more actions menu when clicking outside
+        document.addEventListener('click', function (e) {
+          var menu = document.getElementById('live-more-menu');
+          var btn = document.getElementById('live-more-actions-btn');
+          if (menu && !menu.classList.contains('hidden')) {
+            if (!menu.contains(e.target) && (!btn || !btn.contains(e.target))) {
+              menu.classList.add('hidden');
+            }
           }
         });
 
@@ -10966,6 +10991,7 @@
         });
 
         bindClick('header-back-btn', onPreviousQuestion);
+        bindClick('header-prev-btn', onPreviousQuestion); // New visible Previous button
         bindClick('header-next-btn', onNextQuestion);
         bindClick('header-reset-question-btn', onResetQuestion);
         bindClick('hide-results-btn', onHideResults);
@@ -11049,6 +11075,22 @@
         bindClick('header-send-link-btn', onSendLink);
         bindClick('header-view-links-btn', onViewLinks);
 
+        // Timer presets from dropdown menu
+        bindClick('add-30s-btn-preset', function () {
+          parseInputToTotalSeconds();
+          editTime(30);
+          // Close the menu
+          var menu = document.getElementById('live-more-menu');
+          if (menu) menu.classList.add('hidden');
+        });
+        bindClick('add-60s-btn-preset', function () {
+          parseInputToTotalSeconds();
+          editTime(60);
+          // Close the menu
+          var menu = document.getElementById('live-more-menu');
+          if (menu) menu.classList.add('hidden');
+        });
+
         var studentSearchInput = document.getElementById('student-search-input');
         if (studentSearchInput) {
           studentSearchInput.addEventListener('input', function () {
@@ -11056,6 +11098,9 @@
             renderStudentStatus();
           });
         }
+
+        bindClick('filter-all-btn', function () { setStudentFilter('ALL'); });
+        bindClick('filter-locked-only-btn', function () { setStudentFilter('LOCKED'); });
 
         var statusFilterSelect = document.getElementById('student-status-filter-select');
         if (statusFilterSelect) {
@@ -15416,6 +15461,7 @@
 
       // Enable/disable navigation buttons
       safeSetDisabled('header-back-btn', data.questionIndex <= 0);
+      safeSetDisabled('header-prev-btn', data.questionIndex <= 0); // Visible Prev button
 
       var isLastQuestion = data.questionIndex >= data.totalQuestions - 1;
       safeSetDisabled('header-next-btn', isLastQuestion);
@@ -15613,12 +15659,63 @@
       }
     }
 
+    function jumpToQuestion(index) {
+      if (isPaused || isNavigating) return;
+      if (index === CURRENT_POLL_DATA.questionIndex) return;
+
+      if (pollInterval) clearInterval(pollInterval);
+      pauseTimerCountdown();
+      stopVisualTimer();
+      timerExpiredHandled = false;
+      timerActive = false;
+      timerRemainingSeconds = timerPresetSeconds;
+      updateTimerDisplay();
+      updateTimerStatus('Navigating...', 'info');
+      isPaused = false;
+      isNavigating = true;
+
+      var setSessionFn = firebase.functions().httpsCallable('setLiveSessionState');
+      var pollId = CURRENT_POLL_DATA.pollId;
+      var qDef = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[index]) ? CURRENT_POLL_DATA.questions[index] : null;
+
+      setSessionFn({
+        pollId: pollId,
+        questionIndex: index,
+        status: 'OPEN',
+        questionText: qDef ? qDef.questionText : '',
+        options: qDef ? qDef.options : []
+      })
+        .then(function (result) {
+          setTimeout(function () {
+            isNavigating = false;
+          }, 500);
+        })
+        .catch(function (error) {
+          isNavigating = false;
+          handleError(error);
+        });
+    }
+
     function updateQuestionDots(current, total) {
       var dotsContainer = document.getElementById('question-dots');
+      if (!dotsContainer) return;
+
       dotsContainer.innerHTML = '';
       for (var i = 0; i < total; i++) {
-        var dot = document.createElement('span');
-        dot.className = 'h-2 w-2 rounded-full ' + (i === current ? 'bg-primary' : 'bg-primary/50');
+        var dot = document.createElement('button');
+        var isCurrent = (i === current);
+        dot.className = 'transition-all duration-200 outline-none ' +
+          (isCurrent
+            ? 'h-3 w-3 sm:h-3.5 sm:w-3.5 bg-white shadow-lg ring-2 ring-white/30 scale-110 cursor-default rounded-full'
+            : 'h-2 w-2 sm:h-2.5 sm:w-2.5 bg-white/40 hover:bg-white/80 hover:scale-125 cursor-pointer rounded-full');
+
+        if (!isCurrent) {
+          (function (idx) {
+            dot.onclick = function () { jumpToQuestion(idx); };
+            dot.title = "Jump to Q" + (idx + 1);
+          })(i);
+        }
+
         dotsContainer.appendChild(dot);
       }
     }
@@ -16587,17 +16684,54 @@
       return document.createElement('tr');
     }
 
+    // Global filter state
+    var activeStudentFilter = 'ALL'; // 'ALL' or 'LOCKED'
+
+    function setStudentFilter(filter) {
+      if (activeStudentFilter === filter) return;
+      activeStudentFilter = filter;
+
+      // Update UI button states immediately
+      var allBtn = document.getElementById('filter-all-btn');
+      var lockedBtn = document.getElementById('filter-locked-only-btn');
+
+      if (allBtn) {
+        if (filter === 'ALL') {
+          allBtn.className = 'px-3 py-1 text-xs font-bold rounded-md bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm transition-all';
+        } else {
+          allBtn.className = 'px-3 py-1 text-xs font-bold rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600 transition-all';
+        }
+      }
+
+      if (lockedBtn) {
+        if (filter === 'LOCKED') {
+          lockedBtn.className = 'px-3 py-1 text-xs font-bold rounded-md bg-white dark:bg-gray-600 text-red-600 dark:text-red-400 shadow-sm transition-all flex items-center gap-1';
+        } else {
+          lockedBtn.className = 'px-3 py-1 text-xs font-bold rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600 transition-all flex items-center gap-1';
+        }
+      }
+
+      renderStudentStatus();
+    }
+
     function renderStudentStatus() {
       // Find the container based on ID
       var grid = document.getElementById('student-status-grid');
       // If we are in the new view, this is the main container.
       if (!grid) return;
 
-      // Update filter UI
-      syncStatusFilterButtons();
-
       // Filter Logic (Simplified for card view)
-      var students = Array.isArray(currentStudentStatusData) ? currentStudentStatusData.slice() : [];
+      var rawStudents = Array.isArray(currentStudentStatusData) ? currentStudentStatusData : [];
+      var students = [];
+
+      if (activeStudentFilter === 'LOCKED') {
+        students = rawStudents.filter(function (s) {
+          var status = deriveProctorStatus(s);
+          return status === 'LOCKED' || status === 'BLOCKED';
+        });
+      } else {
+        students = rawStudents.slice();
+      }
 
       // Filter: Show LOCKED/BLOCKED always
       // Filter: If submitted, show submitted + locked/blocked
@@ -16630,14 +16764,9 @@
       students.forEach(function (student) {
         var card = buildStudentStatusTile(student); // Using new card function
         if (card) {
-          // Wire up Inspector
           card.style.cursor = 'pointer';
           card.onclick = function () {
-            if (typeof openStudentInspector === 'function') {
-              openStudentInspector(student.email);
-            } else {
-              console.error('openStudentInspector not defined');
-            }
+            openStudentInspector(student.email);
           };
           fragment.appendChild(card);
         }
@@ -16645,12 +16774,150 @@
 
       grid.appendChild(fragment);
 
-      // Update Counts
+      // Update Counts & Metrics
+      var submittedCount = students.filter(s => s.status === 'Submitted').length;
       var correctCount = students.filter(s => s.status === 'Submitted' && s.isCorrect === true).length;
       var lockedCount = students.filter(s => deriveProctorStatus(s) === 'LOCKED').length;
       var waitingCount = students.filter(s => s.status !== 'Submitted').length;
+      var activeCount = students.length;
+
+      // Accuracy
+      var accuracy = submittedCount > 0 ? Math.round((correctCount / submittedCount) * 100) : 0;
+      var accEl = document.getElementById('hud-accuracy-value');
+      if (accEl) accEl.textContent = submittedCount > 0 ? accuracy + '%' : '--%';
+
+      // Response Rate
+      var respEl = document.getElementById('hud-response-count');
+      if (respEl) respEl.textContent = submittedCount + '/' + activeCount;
+
+      // Confidence Index (0-100)
+      var confTotal = 0;
+      var confCount = 0;
+      students.forEach(function (s) {
+        if (s.status === 'Submitted' && s.confidence) {
+          if (s.confidence === 'guessing') confTotal += 0;
+          else if (s.confidence === 'somewhat-sure') confTotal += 50;
+          else if (s.confidence === 'very-sure') confTotal += 100;
+          confCount++;
+        }
+      });
+      var avgConf = confCount > 0 ? Math.round(confTotal / confCount) : null;
+      var metaEl = document.getElementById('hud-metacognition-value');
+      if (metaEl) {
+        if (avgConf !== null) {
+          metaEl.textContent = avgConf;
+          // Color code
+          metaEl.className = 'text-xl font-bold ' +
+            (avgConf >= 80 ? 'text-emerald-600' :
+              (avgConf >= 50 ? 'text-amber-600' : 'text-red-500'));
+        } else {
+          metaEl.textContent = '--';
+          metaEl.className = 'text-xl font-bold text-gray-400';
+        }
+      }
 
       updateLiveOverviewCounts(lockedCount, 0, waitingCount);
+    }
+
+    function openStudentInspector(email) {
+      var student = currentStudentStatusData.find(function (s) { return s.email === email; });
+      if (!student) return;
+
+      var panel = document.getElementById('student-inspector-panel');
+      if (!panel) return;
+
+      var name = formatStudentName(student);
+      var status = deriveProctorStatus(student);
+      var isLocked = status === 'LOCKED';
+      var isBlocked = status === 'BLOCKED';
+
+      var statusColor = isLocked ? 'text-red-600 bg-red-50' : (isBlocked ? 'text-gray-600 bg-gray-100' : 'text-emerald-600 bg-emerald-50');
+
+      var html = `
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900">
+          <div>
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white">${escapeHtml(name)}</h3>
+            <span class="text-xs px-2 py-0.5 rounded font-bold uppercase tracking-wide ${statusColor}">${status}</span>
+          </div>
+          <button onclick="closeStudentInspector()" class="text-gray-400 hover:text-gray-600">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-6 space-y-6">
+          <div class="space-y-4">
+            <h4 class="text-xs font-bold text-gray-500 uppercase tracking-widest">Actions</h4>
+            <div class="grid grid-cols-1 gap-3">
+              ${isLocked ? `
+              <button onclick="proctorAction('UNLOCK', '${email}')" class="flex items-center justify-center gap-2 p-3 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition-all shadow-md">
+                <span class="material-symbols-outlined">lock_open</span>
+                <span>Unlock Student</span>
+              </button>` : ''}
+              
+              <button onclick="proctorAction('RESET', '${email}')" class="flex items-center justify-center gap-2 p-3 bg-white border border-gray-300 text-gray-700 rounded-lg font-bold hover:bg-gray-50 transition-all">
+                <span class="material-symbols-outlined">restart_alt</span>
+                <span>Reset Question</span>
+              </button>
+              
+              ${!isBlocked ? `
+              <button onclick="proctorAction('BLOCK', '${email}')" class="flex items-center justify-center gap-2 p-3 bg-red-50 text-red-600 border border-red-200 rounded-lg font-bold hover:bg-red-100 transition-all">
+                <span class="material-symbols-outlined">block</span>
+                <span>Block Student</span>
+              </button>` : `
+              <button onclick="proctorAction('UNBLOCK', '${email}')" class="flex items-center justify-center gap-2 p-3 bg-gray-100 text-gray-700 border border-gray-300 rounded-lg font-bold hover:bg-gray-200 transition-all">
+                <span class="material-symbols-outlined">check_circle</span>
+                <span>Unblock Student</span>
+              </button>`}
+            </div>
+          </div>
+          
+          <div class="space-y-2">
+            <h4 class="text-xs font-bold text-gray-500 uppercase tracking-widest">Details</h4>
+            <div class="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg text-sm space-y-2 border border-gray-200 dark:border-gray-700">
+              <div class="flex justify-between">
+                <span class="text-gray-500">Email</span>
+                <span class="text-gray-900 dark:text-white font-mono">${escapeHtml(student.email)}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-500">Attempt Count</span>
+                <span class="text-gray-900 dark:text-white font-mono">${student.attemptCount || 0}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      panel.innerHTML = html;
+      panel.classList.remove('hidden');
+    }
+
+    function closeStudentInspector() {
+      var panel = document.getElementById('student-inspector-panel');
+      if (panel) panel.classList.add('hidden');
+    }
+
+    // Expose close to window for onclick
+    window.closeStudentInspector = closeStudentInspector;
+    window.proctorAction = proctorAction;
+
+    function proctorAction(action, email) {
+      if (!confirm('Are you sure you want to ' + action + ' this student?')) return;
+
+      var manageProctoringFn = firebase.functions().httpsCallable('manageProctoring');
+      manageProctoringFn({
+        action: action,
+        pollId: CURRENT_POLL_DATA.pollId,
+        email: email
+      })
+        .then(function (result) {
+          console.log('[Proctor] Action success:', result);
+          showToast('Action ' + action + ' successful', 'success');
+          closeStudentInspector();
+        })
+        .catch(function (error) {
+          console.error('[Proctor] Action failed:', error);
+          handleError(error);
+        });
     }
 
     function buildTelemetryIndicators(telemetry) {
@@ -16894,7 +17161,12 @@
       if (!timerDisplay) return;
 
       timerDisplay.value = formatTime(totalSeconds);
-      document.title = formatTime(totalSeconds) + ' - Veritas Live Poll';
+      // Only update title with timer when timer is actively running
+      if (isRunning) {
+        document.title = formatTime(totalSeconds) + ' - Veritas Live Poll';
+      } else {
+        document.title = 'Veritas Live Poll';
+      }
 
       // Update legacy variables for compatibility
       timerRemainingSeconds = totalSeconds;
@@ -16982,12 +17254,17 @@
      * Starts the countdown
      */
     function startTimer() {
-      if (isRunning || totalSeconds <= 0) return; // Do not start if already running or at 0
+      console.log('[Timer] startTimer called. isRunning:', isRunning, 'totalSeconds:', totalSeconds);
+      if (isRunning || totalSeconds <= 0) {
+        console.log('[Timer] Cannot start - already running or no time');
+        return;
+      }
 
       toggleButtons(true);
       updateTimerStatus('Timer running…', 'info');
 
       teacherCountdown.start(totalSeconds);
+      console.log('[Timer] Timer started');
     }
 
     /**

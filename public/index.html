@@ -5301,6 +5301,72 @@
       opacity: .6;
     }
   }
+
+  /* ========================================
+     POLL WIZARD EDITOR STYLES
+     ======================================== */
+  .math-symbol-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: white;
+    border: 1px solid var(--brand-light-gray);
+    color: var(--text-secondary);
+    font-family: "Times New Roman", serif;
+    /* Classic math font look */
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .math-symbol-btn:hover {
+    background: var(--bg-light);
+    border-color: var(--veritas-navy);
+    color: var(--veritas-navy);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+
+  .math-symbol-btn:active {
+    transform: translateY(0);
+  }
+
+  .cursor-grab {
+    cursor: grab;
+  }
+
+  .cursor-grabbing {
+    cursor: grabbing;
+  }
+
+  .smart-paste-area {
+    width: 100%;
+    min-height: 80px;
+    padding: 12px;
+    border: 2px dashed var(--brand-light-gray);
+    border-radius: var(--radius-md);
+    background: var(--bg-light);
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.5;
+    transition: all 0.2s;
+    resize: vertical;
+  }
+
+  .smart-paste-area:focus {
+    outline: none;
+    border-color: var(--veritas-gold);
+    background: white;
+    color: var(--text-primary);
+  }
+
+  .smart-paste-area::placeholder {
+    color: var(--text-muted);
+    font-style: italic;
+  }
 </style>
 </style>
 </head>
@@ -7683,89 +7749,280 @@
 </div>
 
 <!-- Poll Preview Modal -->
+<!-- REDESIGNED: Unified Poll Editor & Preview Modal -->
 <div id="poll-preview-modal"
-  class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-  <div
-    class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
-    <!-- Header -->
-    <div class="sticky top-0 bg-primary px-6 py-4 border-b border-primary/70">
-      <div class="flex items-center justify-between">
-        <div class="flex-1">
-          <h2 id="preview-poll-name" class="text-brand-white text-2xl font-bold">Poll Preview</h2>
-          <p id="preview-poll-meta" class="text-brand-white/80 text-sm mt-1">Class Name • 5 Questions</p>
-        </div>
-        <div class="flex items-center gap-2">
-          <button id="preview-open-links-btn"
-            class="flex items-center justify-center gap-2 h-10 px-5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors">
-            <span class="material-symbols-outlined text-lg">link</span>
-            <span>View Student Links</span>
-          </button>
-          <button id="close-preview-modal-btn"
-            class="flex items-center justify-center h-10 w-10 rounded-lg bg-brand-white/20 text-brand-white hover:bg-brand-white/30 transition-colors">
-            <span class="material-symbols-outlined">close</span>
-          </button>
-        </div>
-      </div>
-    </div>
+  class="modal fixed inset-0 z-[100] hidden bg-gray-100 dark:bg-gray-900 flex-col overflow-hidden font-sans">
 
-    <!-- Body -->
-    <div class="flex-1 overflow-hidden flex">
-      <!-- Left Sidebar - Question Navigation -->
+  <!-- 1. Header Area -->
+  <header
+    class="bg-white dark:bg-brand-dark-gray border-b border-gray-200 dark:border-gray-700 h-16 flex items-center justify-between px-6 shadow-sm z-20 flex-shrink-0">
+    <div class="flex items-center gap-4">
       <div
-        class="w-64 border-r border-brand-light-gray dark:border-brand-dark-gray/40 overflow-y-auto bg-gray-50 dark:bg-brand-dark-gray/20">
-        <div class="p-4">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Questions</h3>
-            <button id="preview-reorder-btn"
-              class="text-xs px-2 py-1 rounded bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white hover:bg-brand-dark-gray/20 dark:hover:bg-brand-white/20 transition-colors">
-              <span class="material-symbols-outlined text-sm align-middle">swap_vert</span>
-            </button>
-          </div>
-          <div id="preview-questions-nav" class="space-y-2">
-            <!-- Question navigation items will be added here -->
-          </div>
-        </div>
+        class="h-10 w-10 rounded-xl bg-veritas-navy text-white flex items-center justify-center shadow-lg shadow-veritas-navy/20">
+        <span class="material-symbols-outlined text-2xl">edit_note</span>
       </div>
-
-      <!-- Main Content - Question Display -->
-      <div class="flex-1 overflow-y-auto p-6">
-        <div id="preview-question-display">
-          <!-- Question content will be displayed here -->
+      <div>
+        <h2 id="preview-poll-name" class="text-lg font-bold text-gray-900 dark:text-white leading-tight">Poll Name</h2>
+        <div class="flex items-center gap-2 text-xs text-gray-500 font-medium">
+          <span id="preview-poll-meta">Class • 0 Questions</span>
+          <span class="mx-1">•</span>
+          <span class="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            Auto-saving
+          </span>
         </div>
       </div>
     </div>
 
-    <!-- Footer - Navigation Controls -->
-    <div
-      class="sticky bottom-0 bg-brand-white dark:bg-brand-dark-gray px-6 py-4 border-t border-brand-light-gray dark:border-brand-dark-gray/40 flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <button id="preview-edit-question-btn"
-          class="h-10 px-4 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
-          <span class="material-symbols-outlined text-sm align-middle mr-1">edit</span>
-          Edit Question
-        </button>
-        <button id="preview-delete-question-btn"
-          class="h-10 px-4 rounded-lg bg-red-600/10 text-red-600 dark:bg-red-500/20 dark:text-red-300 text-sm font-semibold hover:bg-red-600/20 dark:hover:bg-red-500/30 transition-colors">
-          <span class="material-symbols-outlined text-sm align-middle mr-1">delete</span>
-          Delete
-        </button>
-      </div>
-      <div class="flex items-center gap-2">
-        <button id="preview-prev-question-btn"
-          class="h-10 px-4 rounded-lg bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white text-sm font-semibold hover:bg-brand-dark-gray/20 dark:hover:bg-brand-white/20 transition-colors">
-          <span class="material-symbols-outlined text-sm align-middle mr-1">arrow_back</span>
-          Previous
-        </button>
-        <span id="preview-question-counter" class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60 px-2">1 /
-          5</span>
-        <button id="preview-next-question-btn"
-          class="h-10 px-4 rounded-lg bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white text-sm font-semibold hover:bg-brand-dark-gray/20 dark:hover:bg-brand-white/20 transition-colors">
-          Next
-          <span class="material-symbols-outlined text-sm align-middle ml-1">arrow_forward</span>
-        </button>
-      </div>
+    <div class="flex items-center gap-3">
+      <button id="preview-view-links-btn"
+        class="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors text-sm font-semibold">
+        <span class="material-symbols-outlined text-lg">link</span>
+        Student Links
+      </button>
+      <div class="h-8 w-px bg-gray-200 dark:bg-gray-700 mx-1"></div>
+      <button onclick="closePollPreview()"
+        class="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm font-semibold">
+        Close
+      </button>
+      <button id="preview-save-btn" onclick="saveAndClosePreview()"
+        class="flex items-center gap-2 px-6 py-2 rounded-lg bg-veritas-navy text-white hover:bg-veritas-navy/90 transition-all shadow-lg shadow-veritas-navy/20 text-sm font-bold">
+        <span class="material-symbols-outlined text-lg">save</span>
+        Save & Close
+      </button>
     </div>
+  </header>
+
+  <!-- 2. Main Workspace -->
+  <div class="flex-1 flex overflow-hidden">
+
+    <!-- A. Left Sidebar: Question Navigator -->
+    <aside
+      class="w-72 bg-white dark:bg-brand-dark-gray border-r border-gray-200 dark:border-gray-700 flex flex-col flex-shrink-0 z-10 transition-all duration-300"
+      id="editor-sidebar">
+      <div class="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/10 backdrop-blur-sm">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Questions</h3>
+          <span id="preview-question-count-badge"
+            class="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[10px] font-bold px-1.5 py-0.5 rounded">0</span>
+        </div>
+        <button id="editor-add-question-btn" onclick="addNewQuestionToPoll()"
+          class="w-full py-2.5 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-veritas-gold hover:text-veritas-gold dark:hover:border-veritas-gold dark:hover:text-veritas-gold hover:bg-veritas-gold/5 transition-all text-sm font-bold flex items-center justify-center gap-2 group">
+          <span class="material-symbols-outlined group-hover:scale-110 transition-transform">add_circle</span>
+          Add Question
+        </button>
+      </div>
+
+      <div id="preview-questions-nav" class="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-thin">
+        <!-- Questions injected here -->
+      </div>
+    </aside>
+
+    <!-- B. Middle Panel: Editor Form -->
+    <main class="flex-1 flex flex-col min-w-0 bg-gray-50 dark:bg-gray-900 relative">
+      <div class="flex-1 overflow-y-auto p-6 md:p-8 xl:p-12 scrollbar-hide">
+        <div class="max-w-3xl mx-auto space-y-8 pb-20">
+
+          <!-- Editor Header -->
+          <div class="flex items-center justify-between">
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white font-display">Edit Question <span
+                id="editor-current-num">1</span></h1>
+            <div class="flex items-center gap-2">
+              <button id="editor-delete-btn" onclick="deleteCurrentQuestion()"
+                class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                title="Delete Question">
+                <span class="material-symbols-outlined">delete</span>
+              </button>
+              <button id="editor-duplicate-btn" onclick="duplicateCurrentQuestion()"
+                class="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                title="Duplicate Question">
+                <span class="material-symbols-outlined">content_copy</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Question Input -->
+          <div
+            class="bg-white dark:bg-brand-dark-gray p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 space-y-4">
+            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Question
+              Text</label>
+            <div id="editor-question-input" class="bg-gray-50 dark:bg-gray-800 rounded-lg min-h-[100px]"></div>
+
+            <!-- Media & Timer Row -->
+            <div class="flex flex-wrap gap-4 pt-2">
+              <div class="flex-1 min-w-[200px]">
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Attached Media</label>
+                <div class="flex items-center gap-3">
+                  <button id="editor-upload-img-btn"
+                    onclick="document.getElementById('editor-hidden-file-input').click()"
+                    class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold transition-colors">
+                    <span class="material-symbols-outlined text-lg">image</span>
+                    Upload Image
+                  </button>
+                  <div id="editor-img-preview-container" class="hidden relative group h-10 w-10">
+                    <img id="editor-img-thumbnail" src=""
+                      class="h-10 w-10 object-cover rounded-lg border border-gray-300">
+                    <button id="editor-remove-img-btn" onclick="removeQuestionImage()"
+                      class="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span class="material-symbols-outlined text-[10px]">close</span>
+                    </button>
+                  </div>
+                </div>
+                <input type="file" id="editor-hidden-file-input" class="hidden" accept="image/*"
+                  onchange="handleQuestionImageUpload(this)">
+              </div>
+
+              <div class="w-32">
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Timer (sec)</label>
+                <div class="relative">
+                  <span
+                    class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-sm">timer</span>
+                  <input type="number" id="editor-timer-input" value="60" min="10" step="10"
+                    class="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-brand-dark-gray/50 focus:ring-2 focus:ring-veritas-gold focus:border-veritas-gold text-sm font-semibold">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Answers Input -->
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Answer
+                Options</label>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-500">Correct Answer</span>
+              </div>
+            </div>
+
+            <div id="editor-options-list" class="space-y-3">
+              <!-- Options injected here -->
+            </div>
+
+            <div class="flex justify-center pt-2">
+              <button id="editor-add-option-btn" onclick="addOptionToQuestion()"
+                class="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm font-bold transition-colors">
+                <span class="material-symbols-outlined text-lg">add</span>
+                Add Option
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </main>
+
+    <!-- C. Right Panel: True Preview (Hidden on small screens) -->
+    <aside
+      class="hidden xl:flex w-[500px] bg-gray-100 dark:bg-black/20 border-l border-gray-200 dark:border-gray-700 flex-col flex-shrink-0 relative">
+      <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-veritas-gold/40 to-transparent">
+      </div>
+
+      <div
+        class="p-4 flex items-center justify-between bg-white dark:bg-brand-dark-gray border-b border-gray-200 dark:border-gray-700">
+        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+          <span class="material-symbols-outlined text-sm">smartphone</span>
+          Student View (Preview)
+        </h3>
+        <span class="text-[10px] text-gray-400">Live Updates</span>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-6 flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-900">
+        <!-- Simulated Device Frame -->
+        <div
+          class="w-full max-w-[400px] h-[750px] bg-white border-8 border-gray-900 rounded-[3rem] shadow-2xl flex flex-col overflow-hidden relative">
+          <!-- Status Bar Mockup -->
+          <div class="h-6 bg-gray-900 w-full flex items-center justify-between px-6">
+            <div class="text-[10px] text-white font-medium">9:41</div>
+            <div class="flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[10px] text-white">signal_cellular_alt</span>
+              <span class="material-symbols-outlined text-[10px] text-white">wifi</span>
+              <span class="material-symbols-outlined text-[10px] text-white">battery_full</span>
+            </div>
+          </div>
+
+          <!-- Student Interface Mockup -->
+          <div class="flex-1 bg-white overflow-y-auto relative scrollbar-hide">
+
+            <!-- Header -->
+            <div
+              class="h-14 bg-veritas-navy text-white flex items-center px-4 justify-between sticky top-0 z-10 shadow-md">
+              <span class="font-bold tracking-widest text-sm">VERITAS</span>
+              <div class="flex items-center gap-2">
+                <span
+                  class="bg-black/20 rounded-full w-8 h-8 flex items-center justify-center text-xs font-mono">0:45</span>
+              </div>
+            </div>
+
+            <!-- Question Content (The True Preview) -->
+            <div class="p-5 font-sans">
+              <div id="true-preview-container">
+                <!-- Injected formatted question goes here -->
+                <div class="question-visual float-right ml-3 mb-3 max-w-[120px] hidden" id="preview-student-visual">
+                  <img src="" class="rounded-lg border border-gray-200 w-full object-contain bg-white">
+                </div>
+                <h2 class="text-[#12385d] font-serif text-lg leading-relaxed mb-4" id="preview-student-stem">Question
+                  text...</h2>
+
+                <div class="clear-both space-y-3 mt-6" id="preview-student-options">
+                  <!-- Options -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100 bg-white">
+              <div
+                class="w-full h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 font-bold text-sm">
+                Submit Answer
+              </div>
+            </div>
+          </div>
+
+          <!-- Home Indicator -->
+          <div class="absolute bottom-1 left-1/2 -translate-x-1/2 w-32 h-1 bg-white/20 rounded-full"></div>
+        </div>
+      </div>
+    </aside>
+
   </div>
+
+  <!-- Scoped Styles for True Preview (inline to ensure they are available) -->
+  <style>
+    /* Mimic Student Styles within the preview container */
+    #true-preview-container .student-option {
+      border: 1px solid #d1d5db;
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: white;
+      color: black;
+      transition: all 0.2s;
+    }
+
+    #true-preview-container .student-option.correct-preview {
+      border-color: #22c55e;
+      background-color: #f0fdf4;
+    }
+
+    #true-preview-container .student-badge {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: #12385d;
+      flex-shrink: 0;
+    }
+
+    #true-preview-container .student-option.correct-preview .student-badge {
+      background: #22c55e;
+      border-color: #22c55e;
+      color: white;
+    }
+  </style>
 </div>
 
 <!-- Post-Poll Analytics Modal -->
@@ -8735,6 +8992,7 @@
     // === Quill Rich Text Manager ===
     var QuillManager = {
       instances: {}, // map id -> quill instance
+      lastFocusedQuillId: null,
 
       // Initialize a new editor
       init: function (containerId, initialContent, placeholder, onChange) {
@@ -8811,22 +9069,14 @@
           }
         });
 
-        // Add double-click handler for editing formulas
-        // Note: Quill renders formula as a specialized embed. We can detect clicks on it.
-        // However, standard Quill doesn't easily expose click on embed. 
-        // We will try detecting selection change to a formula blot.
+        // Add focus listener to track active editor for Math Symbols
         quill.on('selection-change', function (range, oldRange, source) {
+          if (range) {
+            QuillManager.lastFocusedQuillId = containerId;
+          }
           if (range && range.length === 0) { // Cursor selection
             var [leaf, offset] = quill.getLeaf(range.index);
-            if (leaf.statics.blotName === 'formula') {
-              // It's a formula! Open editor logic could go here if we want auto-open on click
-              // Or we can rely on a specific interaction. 
-              // For now, let's just allow the toolbar button to insert.
-              // To Edit: We actually need to know the 'value' of the blot.
-              // A common pattern is to select the formula and hit the toolbar button again?
-              // Or custom UI overlay. Let's keep it simple for MVP: Toolbar button inserts new.
-              // But user asked for "Edit".
-              // Let's enable Clicking the formula to edit.
+            if (leaf && leaf.statics.blotName === 'formula') {
               openFormulaModal(quill, range, leaf);
             }
           }
@@ -8842,6 +9092,27 @@
 
       clearAll: function () {
         this.instances = {};
+        this.lastFocusedQuillId = null;
+      },
+
+      insertMathSymbol: function (symbol) {
+        if (!this.lastFocusedQuillId) {
+          // If no focus tracked, try to find the first visible quill editor
+          var keys = Object.keys(this.instances);
+          if (keys.length > 0) this.lastFocusedQuillId = keys[0];
+          else return;
+        }
+
+        var quill = this.instances[this.lastFocusedQuillId];
+        if (!quill) return;
+
+        var range = quill.getSelection(true);
+        if (range) {
+          quill.insertText(range.index, symbol);
+          quill.setSelection(range.index + symbol.length);
+        } else {
+          quill.insertText(quill.getLength() - 1, symbol);
+        }
       }
     };
 
@@ -17893,350 +18164,602 @@
       document.body.style.overflow = '';
     }
 
-    // --- Poll Preview Modal Functions ---
+    // --- REDESIGNED: Poll Editor & Preview Functions ---
     var previewModal = document.getElementById('poll-preview-modal');
+    var editorSidebar = document.getElementById('editor-sidebar');
     var previewPollName = document.getElementById('preview-poll-name');
     var previewPollMeta = document.getElementById('preview-poll-meta');
     var previewQuestionsNav = document.getElementById('preview-questions-nav');
-    var previewQuestionDisplay = document.getElementById('preview-question-display');
-    var previewQuestionCounter = document.getElementById('preview-question-counter');
+
+    // Editor Form Elements
+    var editorQuestionInputContainer = document.getElementById('editor-question-input');
+    var editorTimerInput = document.getElementById('editor-timer-input');
+    var editorImgPreviewContainer = document.getElementById('editor-img-preview-container');
+    var editorImgThumbnail = document.getElementById('editor-img-thumbnail');
+    var editorOptionsList = document.getElementById('editor-options-list');
+
+    // Preview Pane Elements
+    var truePreviewContainer = document.getElementById('true-preview-container');
+    var previewStudentStem = document.getElementById('preview-student-stem');
+    var previewStudentVisual = document.getElementById('preview-student-visual');
+    var previewStudentOptions = document.getElementById('preview-student-options');
+
     var currentPreviewPoll = null;
     var currentPreviewQuestionIndex = 0;
-    var isPreviewReorderMode = false;
-    var originalQuestionOrder = null;
+    var editorQuill = null;
+    var isPreviewDirty = false;
+    var draggedItemIndex = null;
 
     function openPollPreview(pollId) {
       var poll = ALL_POLLS.find(function (p) { return p.pollId === pollId; });
-      if (!poll || !poll.questions || poll.questions.length === 0) {
-        veritasAlert('This poll has no questions.', { title: 'Cannot preview', destructive: true });
+      if (!poll) {
+        showToast('error', 'Error', 'Poll not found.');
         return;
       }
 
-      currentPreviewPoll = poll;
+      // Deep copy to avoid mutating the global state until save
+      // JSON.parse/stringify is simple way to deep copy for this data structure
+      currentPreviewPoll = JSON.parse(JSON.stringify(poll));
+
+      if (!currentPreviewPoll.questions) currentPreviewPoll.questions = [];
+      if (currentPreviewPoll.questions.length === 0) {
+        // Auto-add first question if empty
+        currentPreviewPoll.questions.push(createNewQuestionTemplate());
+      }
+
       currentPreviewQuestionIndex = 0;
-      isPreviewReorderMode = false;
-      originalQuestionOrder = null;
+      isPreviewDirty = false;
 
+      // Update Header
       previewPollName.textContent = poll.pollName || 'Untitled Poll';
-      var questionsCount = poll.questions.length;
-      var classText = poll.className || 'No class';
-      previewPollMeta.textContent = classText + ' • ' + questionsCount + ' Question' + (questionsCount !== 1 ? 's' : '');
+      updatePreviewMeta();
 
+      // Init Editor
+      initEditorQuill();
+
+      // Render
       renderPreviewNav();
-      renderPreviewQuestion();
+      loadQuestionIntoEditor(0);
 
-      // Ensure modal is appended to document.body to escape any container clipping
+      // Show Modal
       if (previewModal.parentElement !== document.body) {
         document.body.appendChild(previewModal);
       }
-
+      previewModal.style.display = 'flex';
       previewModal.classList.remove('hidden');
-      previewModal.style.cssText = 'display: flex !important; visibility: visible !important; position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; z-index: 99999 !important; background-color: rgba(0,0,0,0.6) !important;';
-      previewModal.setAttribute('aria-hidden', 'false');
-
-      // Prevent background scrolling
       document.body.style.overflow = 'hidden';
+
+      // Setup Keyboard Shortcuts
+      document.addEventListener('keydown', handlePreviewKeydown);
     }
 
     function closePollPreview() {
-      previewModal.classList.add('hidden');
+      if (isPreviewDirty) {
+        if (!confirm('You have unsaved changes. Are you sure you want to close?')) return;
+      }
+
       previewModal.style.display = 'none';
-      previewModal.style.cssText = ''; // Reset inline styles
-      // Restore body scroll
+      previewModal.classList.add('hidden');
       document.body.style.overflow = '';
+      document.removeEventListener('keydown', handlePreviewKeydown);
       currentPreviewPoll = null;
-      currentPreviewQuestionIndex = 0;
-      isPreviewReorderMode = false;
-      originalQuestionOrder = null;
     }
 
-    function renderPreviewNav() {
-      if (!currentPreviewPoll || !currentPreviewPoll.questions) return;
+    function handlePreviewKeydown(e) {
+      if (e.key === 'Escape') closePollPreview();
+      // Add more shortcuts if needed (Ctrl+S to save?)
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        saveAndClosePreview();
+      }
+    }
 
+    function createNewQuestionTemplate() {
+      return {
+        questionText: 'New Question',
+        options: [
+          { text: 'Option A', imageURL: '' },
+          { text: 'Option B', imageURL: '' },
+          { text: 'Option C', imageURL: '' },
+          { text: 'Option D', imageURL: '' }
+        ],
+        correctAnswer: 'A',
+        timerSeconds: 60,
+        questionImageURL: ''
+      };
+    }
+
+    function updatePreviewMeta() {
+      var count = currentPreviewPoll.questions.length;
+      var classText = currentPreviewPoll.className || 'No Class';
+      previewPollMeta.textContent = classText + ' • ' + count + ' Question' + (count !== 1 ? 's' : '');
+      document.getElementById('preview-question-count-badge').textContent = count;
+    }
+
+    /* --- Navigation & Sidebar --- */
+    function renderPreviewNav() {
       previewQuestionsNav.innerHTML = '';
       currentPreviewPoll.questions.forEach(function (q, index) {
-        var div = document.createElement('div');
-        div.className = 'preview-nav-item cursor-pointer rounded-lg p-3 transition-colors ' + (index === currentPreviewQuestionIndex ? 'bg-primary/20 dark:bg-primary/30 border-l-4 border-primary' : 'bg-brand-white dark:bg-brand-dark-gray/30 hover:bg-brand-light-gray/40 dark:hover:bg-brand-dark-gray/40');
-        div.dataset.questionIndex = index;
+        var el = document.createElement('div');
+        el.className = 'group flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all border border-transparent ' +
+          (index === currentPreviewQuestionIndex ? 'bg-veritas-navy/5 border-veritas-navy/10 shadow-sm' : 'hover:bg-gray-50 dark:hover:bg-gray-800');
+        el.draggable = true;
 
-        var html = '<div class="flex items-start gap-2">';
-        if (isPreviewReorderMode) {
-          html += '<span class="material-symbols-outlined text-sm text-brand-dark-gray/40 dark:text-brand-white/40 cursor-move">drag_indicator</span>';
-        }
-        html += '<div class="flex-1 min-w-0">';
-        html += '<div class="text-xs font-semibold text-brand-dark-gray/80 dark:text-brand-white/80">Q' + (index + 1) + '</div>';
-        html += '<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 truncate mt-1">' + escapeHtml(q.questionText || 'No text') + '</div>';
-        html += '</div></div>';
+        // Drag Handle
+        var handle = document.createElement('span');
+        handle.className = 'material-symbols-outlined text-gray-400 text-lg cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity';
+        handle.textContent = 'drag_indicator';
 
-        div.innerHTML = html;
-        div.onclick = function () {
-          if (!isPreviewReorderMode) {
-            currentPreviewQuestionIndex = index;
-            renderPreviewNav();
-            renderPreviewQuestion();
-          }
+        // Index Number
+        var num = document.createElement('span');
+        num.className = 'text-xs font-bold w-5 h-5 flex items-center justify-center rounded bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 ' + (index === currentPreviewQuestionIndex ? 'bg-veritas-navy text-white dark:bg-veritas-navy dark:text-white' : '');
+        num.textContent = index + 1;
+
+        // Text Preview
+        var text = document.createElement('div');
+        text.className = 'flex-1 min-w-0';
+        // Strip HTML for sidebar preview
+        var tmp = document.createElement('div');
+        tmp.innerHTML = q.questionText || 'New Question';
+        var plainText = tmp.textContent || tmp.innerText || 'New Question';
+
+        text.innerHTML = '<p class="text-xs font-semibold text-gray-700 dark:text-gray-200 truncate">' + escapeHtml(plainText) + '</p>';
+
+        el.appendChild(handle);
+        el.appendChild(num);
+        el.appendChild(text);
+
+        // Click Handler
+        el.onclick = function () {
+          loadQuestionIntoEditor(index);
         };
 
-        if (isPreviewReorderMode) {
-          div.setAttribute('draggable', 'true');
-          setupDragHandlers(div, index);
+        // DnD Handlers
+        el.addEventListener('dragstart', function (e) {
+          draggedItemIndex = index;
+          e.dataTransfer.effectAllowed = 'move';
+          el.classList.add('opacity-50');
+        });
+        el.addEventListener('dragend', function () {
+          el.classList.remove('opacity-50');
+          draggedItemIndex = null;
+        });
+        el.addEventListener('dragover', function (e) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+        });
+        el.addEventListener('drop', function (e) {
+          e.preventDefault();
+          if (draggedItemIndex !== null && draggedItemIndex !== index) {
+            // Reorder
+            var item = currentPreviewPoll.questions.splice(draggedItemIndex, 1)[0];
+            currentPreviewPoll.questions.splice(index, 0, item);
+
+            // Update selection index
+            if (currentPreviewQuestionIndex === draggedItemIndex) {
+              currentPreviewQuestionIndex = index;
+            } else if (draggedItemIndex < currentPreviewQuestionIndex && index >= currentPreviewQuestionIndex) {
+              currentPreviewQuestionIndex--;
+            } else if (draggedItemIndex > currentPreviewQuestionIndex && index <= currentPreviewQuestionIndex) {
+              currentPreviewQuestionIndex++;
+            }
+
+            renderPreviewNav();
+            isPreviewDirty = true;
+          }
+        });
+
+        previewQuestionsNav.appendChild(el);
+      });
+
+      // Scroll to active
+      // setTimeout(() => {
+      //     var active = previewQuestionsNav.children[currentPreviewQuestionIndex];
+      //     if(active) active.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+      // }, 50);
+    }
+
+    /* --- Editor Logic --- */
+    function initEditorQuill() {
+      if (!editorQuill) {
+        editorQuill = QuillManager.init('editor-question-input', '', 'Type your question here...', function (data) {
+          if (!currentPreviewPoll) return;
+          currentPreviewPoll.questions[currentPreviewQuestionIndex].questionText = data.html;
+          updateTruePreview();
+          renderPreviewNav(); // Update sidebar text
+          isPreviewDirty = true;
+        });
+      }
+    }
+
+    function loadQuestionIntoEditor(index) {
+      currentPreviewQuestionIndex = index;
+      var q = currentPreviewPoll.questions[index];
+
+      // Update Sidebar Highlight
+      var items = previewQuestionsNav.children;
+      for (var i = 0; i < items.length; i++) {
+        if (i === index) {
+          items[i].classList.add('bg-veritas-navy/5', 'border-veritas-navy/10');
+          items[i].classList.remove('hover:bg-gray-50');
+          items[i].querySelector('span.w-5').classList.add('bg-veritas-navy', 'text-white');
+        } else {
+          items[i].classList.remove('bg-veritas-navy/5', 'border-veritas-navy/10');
+          items[i].classList.add('hover:bg-gray-50');
+          items[i].querySelector('span.w-5').classList.remove('bg-veritas-navy', 'text-white');
+        }
+      }
+
+      document.getElementById('editor-current-num').textContent = index + 1;
+
+      // Quill Content
+      if (editorQuill) {
+        var delta = editorQuill.clipboard.convert(q.questionText || '');
+        editorQuill.setContents(delta, 'silent');
+      }
+
+      // Timer
+      editorTimerInput.value = q.timerSeconds || 60;
+      editorTimerInput.onchange = function () {
+        q.timerSeconds = parseInt(this.value) || 60;
+        isPreviewDirty = true;
+      };
+
+      // Image
+      if (q.questionImageURL) {
+        editorImgThumbnail.src = q.questionImageURL;
+        editorImgPreviewContainer.classList.remove('hidden');
+      } else {
+        editorImgPreviewContainer.classList.add('hidden');
+      }
+
+      // Options
+      renderEditorOptions();
+
+      // Sync Preview
+      updateTruePreview();
+    }
+
+    function renderEditorOptions() {
+      editorOptionsList.innerHTML = '';
+      var q = currentPreviewPoll.questions[currentPreviewQuestionIndex];
+
+      q.options.forEach(function (opt, i) {
+        var letter = String.fromCharCode(65 + i);
+        var isCorrect = q.correctAnswer === letter;
+
+        var row = document.createElement('div');
+        row.className = 'flex flex-col gap-2 bg-white dark:bg-brand-dark-gray p-3 rounded-lg border ' +
+          (isCorrect ? 'border-green-500 ring-1 ring-green-500/20' : 'border-gray-200 dark:border-gray-700');
+
+        // Top Row: Radio, Text, Actions
+        var topRow = document.createElement('div');
+        topRow.className = 'flex items-center gap-3 w-full';
+
+        // Correct Answer Radio
+        var radioContainer = document.createElement('label');
+        radioContainer.className = 'flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full border cursor-pointer transition-colors ' +
+          (isCorrect ? 'bg-green-500 border-green-500 text-white' : 'bg-gray-50 border-gray-300 hover:border-gray-400 text-gray-400');
+        radioContainer.innerHTML = '<span class="text-sm font-bold">' + letter + '</span>' +
+          '<input type="radio" name="correct_answer" class="hidden" ' + (isCorrect ? 'checked' : '') + '>';
+        radioContainer.onclick = function () {
+          q.correctAnswer = letter;
+          renderEditorOptions();
+          updateTruePreview();
+          isPreviewDirty = true;
+        };
+
+        // Text Input
+        var textInput = document.createElement('input');
+        textInput.type = 'text';
+        textInput.value = opt.text || '';
+        textInput.placeholder = 'Answer option ' + letter;
+        textInput.className = 'flex-1 min-w-0 px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-veritas-navy/50 outline-none text-sm';
+        textInput.oninput = function () {
+          opt.text = this.value;
+          updateTruePreview();
+          isPreviewDirty = true;
+        };
+
+        // Actions: Image, Remove
+        var actionsDiv = document.createElement('div');
+        actionsDiv.className = 'flex items-center gap-1';
+
+        // Image Upload Btn
+        var imgBtn = document.createElement('label');
+        imgBtn.className = 'p-1.5 text-gray-400 hover:text-veritas-navy cursor-pointer transition-colors rounded hover:bg-gray-100';
+        imgBtn.title = 'Add Image';
+        imgBtn.innerHTML = '<span class="material-symbols-outlined text-lg">image</span>' +
+          '<input type="file" class="hidden" accept="image/*" onchange="handleOptionImageUpload(' + i + ', this)">';
+
+        // Remove Btn
+        var removeBtn = document.createElement('button');
+        removeBtn.className = 'p-1.5 text-gray-400 hover:text-red-500 transition-colors rounded hover:bg-gray-100';
+        removeBtn.innerHTML = '<span class="material-symbols-outlined text-lg">close</span>';
+        removeBtn.title = 'Remove Option';
+        removeBtn.onclick = function () {
+          removeOptionFromQuestion(i);
+        };
+
+        actionsDiv.appendChild(imgBtn);
+        actionsDiv.appendChild(removeBtn);
+
+        topRow.appendChild(radioContainer);
+        topRow.appendChild(textInput);
+        topRow.appendChild(actionsDiv);
+
+        row.appendChild(topRow);
+
+        // Bottom Row: Image Preview (if exists)
+        if (opt.imageURL) {
+          var imgRow = document.createElement('div');
+          imgRow.className = 'pl-11 relative group inline-block';
+
+          var img = document.createElement('img');
+          img.src = opt.imageURL;
+          img.className = 'h-20 w-auto rounded border border-gray-200 object-contain bg-gray-50';
+
+          var removeImgBtn = document.createElement('button');
+          removeImgBtn.className = 'absolute top-0 right-0 transform translate-x-1/2 -translate-y-1/2 bg-red-500 text-white rounded-full p-0.5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity';
+          removeImgBtn.innerHTML = '<span class="material-symbols-outlined text-[12px]">close</span>';
+          removeImgBtn.onclick = function () {
+            removeOptionImage(i);
+          };
+
+          imgRow.appendChild(img);
+          imgRow.appendChild(removeImgBtn);
+          row.appendChild(imgRow);
         }
 
-        previewQuestionsNav.appendChild(div);
+        editorOptionsList.appendChild(row);
       });
     }
 
-    function renderPreviewQuestion() {
-      if (!currentPreviewPoll || !currentPreviewPoll.questions || currentPreviewQuestionIndex >= currentPreviewPoll.questions.length) {
-        previewQuestionDisplay.innerHTML = '<p class="text-brand-dark-gray/60 dark:text-brand-white/60">No question selected</p>';
-        return;
+    function handleOptionImageUpload(index, input) {
+      if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function (e) {
+          var dataURL = e.target.result;
+          var q = currentPreviewPoll.questions[currentPreviewQuestionIndex];
+          if (q.options[index]) {
+            q.options[index].imageURL = dataURL;
+            renderEditorOptions();
+            updateTruePreview();
+            isPreviewDirty = true;
+          }
+        };
+        reader.readAsDataURL(input.files[0]);
       }
+    }
 
+    function removeOptionImage(index) {
       var q = currentPreviewPoll.questions[currentPreviewQuestionIndex];
-      var html = '';
-
-      // Question header
-      html += '<div class="mb-6">';
-      html += '<div class="flex items-center gap-2 mb-2">';
-      html += '<span class="text-sm font-semibold text-brand-dark-gray/60 dark:text-brand-white/60">Question ' + (currentPreviewQuestionIndex + 1) + ' of ' + currentPreviewPoll.questions.length + '</span>';
-      if (q.timerSeconds) {
-        html += '<span class="text-sm text-brand-dark-gray/50 dark:text-brand-white/50">• Timer: ' + q.timerSeconds + 's</span>';
-      }
-      html += '</div>';
-      html += '<h3 class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">' + (q.questionText || 'No question text') + '</h3>';
-      html += '</div>';
-
-      // Question image
-      if (q.questionImageURL) {
-        html += '<div class="mb-6">';
-        html += '<img src="' + (q.questionImageURL) + '" alt="Question image" class="max-w-full max-h-96 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40" referrerpolicy="no-referrer" onerror="this.style.display=\'none\';">';
-        html += '</div>';
-      }
-
-      // Answer options
-      if (q.options && q.options.length > 0) {
-        html += '<div class="space-y-3">';
-        html += '<h4 class="text-lg font-semibold text-brand-dark-gray dark:text-brand-white mb-3">Answer Options</h4>';
-        q.options.forEach(function (opt, optIndex) {
-          var letter = String.fromCharCode(65 + optIndex);
-          var isCorrect = q.correctAnswer === letter;
-          var optClass = 'flex items-start gap-3 p-4 rounded-lg border-2 transition-colors ' + (isCorrect ? 'bg-green-50 dark:bg-green-900/20 border-green-500 dark:border-green-600' : 'bg-brand-light-gray/30 dark:bg-brand-dark-gray/20 border-brand-light-gray dark:border-brand-dark-gray/40');
-
-          html += '<div class="' + optClass + '">';
-          html += '<div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold ' + (isCorrect ? 'bg-green-500 text-white' : 'bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white') + '">' + letter + '</div>';
-          html += '<div class="flex-1">';
-          if (opt.text) {
-            html += '<p class="text-brand-dark-gray dark:text-brand-white">' + escapeHtml(opt.text) + '</p>';
-          }
-          if (opt.imageURL) {
-            html += '<img src="' + (opt.imageURL) + '" alt="Option image" class="mt-2 max-w-[200px] max-h-[150px] rounded border border-brand-light-gray dark:border-brand-dark-gray/40" referrerpolicy="no-referrer" onerror="this.style.display=\'none\';">';
-          }
-          html += '</div>';
-          if (isCorrect) {
-            html += '<span class="material-symbols-outlined text-green-600 dark:text-green-400">check_circle</span>';
-          }
-          html += '</div>';
-        });
-        html += '</div>';
-      } else {
-        html += '<p class="text-brand-dark-gray/60 dark:text-brand-white/60">No answer options</p>';
-      }
-
-      previewQuestionDisplay.innerHTML = html;
-      previewQuestionCounter.textContent = (currentPreviewQuestionIndex + 1) + ' / ' + currentPreviewPoll.questions.length;
-
-      // Update navigation button states
-      document.getElementById('preview-prev-question-btn').disabled = currentPreviewQuestionIndex === 0;
-      document.getElementById('preview-next-question-btn').disabled = currentPreviewQuestionIndex === currentPreviewPoll.questions.length - 1;
-    }
-
-    function previewPrevQuestion() {
-      if (currentPreviewQuestionIndex > 0) {
-        currentPreviewQuestionIndex--;
-        renderPreviewNav();
-        renderPreviewQuestion();
+      if (q.options[index]) {
+        q.options[index].imageURL = '';
+        renderEditorOptions();
+        updateTruePreview();
+        isPreviewDirty = true;
       }
     }
 
-    function previewNextQuestion() {
-      if (currentPreviewPoll && currentPreviewQuestionIndex < currentPreviewPoll.questions.length - 1) {
-        currentPreviewQuestionIndex++;
-        renderPreviewNav();
-        renderPreviewQuestion();
-      }
-    }
-
-    function previewOpenLinks() {
-      if (!currentPreviewPoll) return;
-      var className = currentPreviewPoll.className;
-      if (!className) {
-        veritasAlert('This poll has no class assigned.', { title: 'No class', destructive: true });
+    function addOptionToQuestion() {
+      var q = currentPreviewPoll.questions[currentPreviewQuestionIndex];
+      if (q.options.length >= 8) {
+        showToast('warning', 'Limit Reached', 'Maximum 8 options allowed.');
         return;
       }
-      openLinksModal(className);
+      q.options.push({ text: '', imageURL: '' });
+      renderEditorOptions();
+      updateTruePreview();
+      isPreviewDirty = true;
     }
 
-    function previewEditQuestion() {
-      if (!currentPreviewPoll) return;
-      closePollPreview();
-      startEditPoll(currentPreviewPoll.pollId, currentPreviewQuestionIndex);
+    function removeOptionFromQuestion(index) {
+      var q = currentPreviewPoll.questions[currentPreviewQuestionIndex];
+      if (q.options.length <= 2) {
+        showToast('warning', 'Cannot Remove', 'Minimum 2 options required.');
+        return;
+      }
+      q.options.splice(index, 1);
+
+      // Reset correct answer if it was the removed one or shifted
+      // Allow dumb reset to 'A' if invalid
+      var newLetter = q.correctAnswer;
+      if (index < (q.correctAnswer.charCodeAt(0) - 65)) {
+        // If we removed an option before the correct one, the correct letter shifts down
+        newLetter = String.fromCharCode(q.correctAnswer.charCodeAt(0) - 1);
+      } else if (index === (q.correctAnswer.charCodeAt(0) - 65)) {
+        // Removed the correct answer, default to A
+        newLetter = 'A';
+      }
+      q.correctAnswer = newLetter;
+
+      renderEditorOptions();
+      updateTruePreview();
+      isPreviewDirty = true;
     }
 
-    async function previewDeleteQuestion() {
-      if (!currentPreviewPoll || !currentPreviewPoll.questions || currentPreviewPoll.questions.length === 0) return;
+    function addNewQuestionToPoll() {
+      var newQ = createNewQuestionTemplate();
+      currentPreviewPoll.questions.push(newQ);
+      updatePreviewMeta();
+      renderPreviewNav();
+      loadQuestionIntoEditor(currentPreviewPoll.questions.length - 1); // Switch to new
+      isPreviewDirty = true;
+    }
 
-      var confirmed = await veritasConfirm('Delete this question from the poll?', {
-        title: 'Delete question',
-        confirmText: 'Delete',
-        destructive: true
-      });
-      if (!confirmed) return;
+    function deleteCurrentQuestion() {
+      if (currentPreviewPoll.questions.length <= 1) {
+        showToast('warning', 'Cannot Delete', 'Poll must have at least one question.');
+        return;
+      }
+      if (!confirm('Delete this question?')) return;
 
       currentPreviewPoll.questions.splice(currentPreviewQuestionIndex, 1);
-
-      if (currentPreviewPoll.questions.length === 0) {
-        await veritasAlert('Cannot delete the last question. A poll must have at least one question.', {
-          title: 'Cannot delete',
-          destructive: true
-        });
-        currentPreviewPoll.questions.splice(currentPreviewQuestionIndex, 0, { questionText: '', options: [], correctAnswer: 'A', timerSeconds: 90 });
-        return;
-      }
 
       if (currentPreviewQuestionIndex >= currentPreviewPoll.questions.length) {
         currentPreviewQuestionIndex = currentPreviewPoll.questions.length - 1;
       }
 
-      // Save to backend
-      if (PREVIEW_MODE) {
-        renderPreviewNav();
-        renderPreviewQuestion();
-        await veritasAlert('Question deleted (preview mode).', { title: 'Question deleted' });
-        return;
-      }
-
-      var previewMetadata = {
-        sessionType: normalizeSessionTypeClient(currentPreviewPoll.sessionType),
-        timeLimitMinutes: currentPreviewPoll.timeLimitMinutes || null,
-        accessCode: currentPreviewPoll.accessCode || '',
-        availableFrom: currentPreviewPoll.availableFrom || '',
-        dueBy: currentPreviewPoll.dueBy || '',
-        secureSettings: currentPreviewPoll.secureSettings || {}
-      };
-
-      // FIREBASE MIGRATION: Update Poll via Cloud Function
-      firebase.functions().httpsCallable('updatePoll')({
-        pollId: currentPreviewPoll.pollId,
-        pollName: currentPreviewPoll.pollName,
-        className: currentPreviewPoll.className,
-        questions: currentPreviewPoll.questions,
-        metadata: previewMetadata
-      }).then(function (result) {
-        if (result.data && result.data.success) {
-          // RTDB listener will update ALL_POLLS and UI
-          renderPreviewNav();
-          renderPreviewQuestion();
-          veritasAlert('Question deleted successfully.', { title: 'Question deleted' });
-        } else {
-          throw new Error('Failed to update poll');
-        }
-      }).catch(function (error) {
-        handleError(error);
-      });
-    }
-
-    function togglePreviewReorder() {
-      isPreviewReorderMode = !isPreviewReorderMode;
-      var btn = document.getElementById('preview-reorder-btn');
-
-      if (isPreviewReorderMode) {
-        originalQuestionOrder = JSON.parse(JSON.stringify(currentPreviewPoll.questions));
-        btn.innerHTML = '<span class="material-symbols-outlined text-sm align-middle">check</span>';
-        btn.classList.add('bg-primary', 'text-white');
-        btn.classList.remove('bg-brand-dark-gray/10', 'dark:bg-brand-white/10', 'text-brand-dark-gray', 'dark:text-brand-white');
-      } else {
-        // Save the reordered questions
-        if (JSON.stringify(originalQuestionOrder) !== JSON.stringify(currentPreviewPoll.questions)) {
-          saveReorderedQuestions();
-        }
-        originalQuestionOrder = null;
-        btn.innerHTML = '<span class="material-symbols-outlined text-sm align-middle">swap_vert</span>';
-        btn.classList.remove('bg-primary', 'text-white');
-        btn.classList.add('bg-brand-dark-gray/10', 'dark:bg-brand-white/10', 'text-brand-dark-gray', 'dark:text-brand-white');
-      }
-
+      updatePreviewMeta();
       renderPreviewNav();
+      loadQuestionIntoEditor(currentPreviewQuestionIndex);
+      isPreviewDirty = true;
     }
 
-    function saveReorderedQuestions() {
-      if (!currentPreviewPoll) return;
+    function duplicateCurrentQuestion() {
+      var q = currentPreviewPoll.questions[currentPreviewQuestionIndex];
+      var copy = JSON.parse(JSON.stringify(q));
+      copy.questionText += ' (Copy)';
 
-      if (PREVIEW_MODE) {
-        veritasAlert('Question order updated (preview mode).', { title: 'Questions reordered' });
+      currentPreviewPoll.questions.splice(currentPreviewQuestionIndex + 1, 0, copy);
+      updatePreviewMeta();
+      renderPreviewNav();
+      loadQuestionIntoEditor(currentPreviewQuestionIndex + 1);
+      isPreviewDirty = true;
+    }
+
+    function handleQuestionImageUpload(input) {
+      if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function (e) {
+          var dataURL = e.target.result;
+          var q = currentPreviewPoll.questions[currentPreviewQuestionIndex];
+          q.questionImageURL = dataURL;
+
+          // Update UIs
+          editorImgThumbnail.src = dataURL;
+          editorImgPreviewContainer.classList.remove('hidden');
+          updateTruePreview();
+          isPreviewDirty = true;
+
+          // Optional: Trigger background upload to Storage here if we wanted persistent URL immediately
+          // For now, we save DataURL directly to poll object. 
+          // Note: Large images might hit Firestore limits.
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
+    }
+
+    function removeQuestionImage() {
+      var q = currentPreviewPoll.questions[currentPreviewQuestionIndex];
+      q.questionImageURL = '';
+      editorImgPreviewContainer.classList.add('hidden');
+      document.getElementById('editor-hidden-file-input').value = '';
+      updateTruePreview();
+      isPreviewDirty = true;
+    }
+
+    /* --- "True Preview" Rendering (Student View Simulation) --- */
+    function updateTruePreview() {
+      var q = currentPreviewPoll.questions[currentPreviewQuestionIndex];
+
+      // Stem
+      previewStudentStem.innerHTML = q.questionText || '<span class="text-gray-400 italic">Start typing your question...</span>';
+
+      // Image
+      if (q.questionImageURL) {
+        previewStudentVisual.querySelector('img').src = q.questionImageURL;
+        previewStudentVisual.classList.remove('hidden');
+      } else {
+        previewStudentVisual.classList.add('hidden');
+      }
+
+      // Options
+      previewStudentOptions.innerHTML = '';
+      q.options.forEach(function (opt, i) {
+        var letter = String.fromCharCode(65 + i);
+        var isCorrect = q.correctAnswer === letter;
+
+        var div = document.createElement('div');
+        div.className = 'student-option flex flex-col gap-2 ' + (isCorrect ? 'correct-preview' : '');
+
+        // Top Row
+        var topRow = document.createElement('div');
+        topRow.className = 'flex items-center gap-3 w-full';
+
+        var badge = document.createElement('div');
+        badge.className = 'student-badge';
+        badge.textContent = letter;
+
+        var text = document.createElement('div');
+        text.className = 'text-sm font-medium flex-1 break-words';
+        text.textContent = opt.text || 'Option ' + letter;
+
+        topRow.appendChild(badge);
+        topRow.appendChild(text);
+
+        if (isCorrect) {
+          var check = document.createElement('span');
+          check.className = 'material-symbols-outlined text-green-500 text-lg';
+          check.textContent = 'check_circle';
+          topRow.appendChild(check);
+        }
+
+        div.appendChild(topRow);
+
+        // Option Image
+        if (opt.imageURL) {
+          var img = document.createElement('img');
+          img.src = opt.imageURL;
+          img.className = 'w-full h-32 object-contain rounded border border-gray-100 bg-white ml-2';
+          div.appendChild(img);
+        }
+        // Wait, I appended topRow twice? No, I appended img to div. 
+        // Logic check: div.appendChild(topRow); then div.appendChild(img). Correct.
+        // Wait, in my replacement string above I put div.appendChild(topRow) BEFORE the image check, which is correct.
+
+        previewStudentOptions.appendChild(div);
+      });
+    }
+
+    /* --- Saving --- */
+    function saveAndClosePreview() {
+      if (!isPreviewDirty) {
+        closePollPreview();
         return;
       }
 
-      var reorderMetadata = {
-        sessionType: normalizeSessionTypeClient(currentPreviewPoll.sessionType),
-        timeLimitMinutes: currentPreviewPoll.timeLimitMinutes || null,
-        accessCode: currentPreviewPoll.accessCode || '',
-        availableFrom: currentPreviewPoll.availableFrom || '',
-        dueBy: currentPreviewPoll.dueBy || '',
-        secureSettings: currentPreviewPoll.secureSettings || {}
-      };
+      var saveBtn = document.getElementById('preview-save-btn');
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<div class="h-4 w-4 border-2 border-white/50 border-t-white rounded-full animate-spin"></div> Saving...';
 
+      // Call Backend
       // FIREBASE MIGRATION: Update Poll via Cloud Function
       firebase.functions().httpsCallable('updatePoll')({
         pollId: currentPreviewPoll.pollId,
         pollName: currentPreviewPoll.pollName,
         className: currentPreviewPoll.className,
         questions: currentPreviewPoll.questions,
-        metadata: reorderMetadata
+        metadata: {
+          // Preserve existing meta
+          sessionType: currentPreviewPoll.sessionType || 'live',
+          timeLimitMinutes: currentPreviewPoll.timeLimitMinutes || null,
+          accessCode: currentPreviewPoll.accessCode || '',
+          availableFrom: currentPreviewPoll.availableFrom || '',
+          dueBy: currentPreviewPoll.dueBy || '',
+          secureSettings: currentPreviewPoll.secureSettings || {}
+        }
       }).then(function (result) {
         if (result.data && result.data.success) {
-          veritasAlert('Question order updated successfully.', { title: 'Questions reordered' });
-        } else {
-          throw new Error('Failed to update poll');
-        }
-      }).catch(function (error) {
-        handleError(error);
-      });
-    }
+          showToast('success', 'Saved', 'Poll updated successfully.');
+          isPreviewDirty = false;
 
-    var draggedItemIndex = null;
-
-    function setupDragHandlers(div, index) {
-      div.addEventListener('dragstart', function (e) {
-        draggedItemIndex = index;
-        this.style.opacity = '0.4';
-        e.dataTransfer.effectAllowed = 'move';
-      });
-
-      div.addEventListener('dragend', function (e) {
-        this.style.opacity = '1';
-        draggedItemIndex = null;
-      });
-
-      div.addEventListener('dragover', function (e) {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-
-        if (draggedItemIndex !== null && draggedItemIndex !== index) {
-          var draggedQuestion = currentPreviewPoll.questions[draggedItemIndex];
-          currentPreviewPoll.questions.splice(draggedItemIndex, 1);
-          currentPreviewPoll.questions.splice(index, 0, draggedQuestion);
-
-          if (currentPreviewQuestionIndex === draggedItemIndex) {
-            currentPreviewQuestionIndex = index;
-          } else if (draggedItemIndex < currentPreviewQuestionIndex && index >= currentPreviewQuestionIndex) {
-            currentPreviewQuestionIndex--;
-          } else if (draggedItemIndex > currentPreviewQuestionIndex && index <= currentPreviewQuestionIndex) {
-            currentPreviewQuestionIndex++;
+          // Update Local Cache/State immediately for responsiveness
+          // (The RTDB listener usually does this, but good to be redundant)
+          var existingIndex = ALL_POLLS.findIndex(p => p.pollId === currentPreviewPoll.pollId);
+          if (existingIndex !== -1) {
+            ALL_POLLS[existingIndex] = currentPreviewPoll;
           }
 
-          draggedItemIndex = index;
-          renderPreviewNav();
+          closePollPreview();
+        } else {
+          throw new Error('Save failed');
         }
+      }).catch(function (error) {
+        showToast('error', 'Save Failed', error.message);
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<span class="material-symbols-outlined text-lg">save</span> Save & Close';
       });
     }
 
@@ -23218,6 +23741,86 @@
       renderWizardQuestions();
     }
 
+    /**
+     * Parsing logic for Smart Paste: splits text into question stem and answer options.
+     */
+    function handleSmartPaste(qIndex, text) {
+      if (!text || !text.trim()) return;
+
+      var lines = text.split('\n').map(l => l.trim()).filter(l => l);
+      if (lines.length < 2) return;
+
+      var stem = "";
+      var options = [];
+      // Regex for option patterns: A), A., 1), 1., etc.
+      var optionRegex = /^([a-f]|[1-6])[\.\)]\s*(.*)/i;
+
+      var firstOptionFound = false;
+      lines.forEach(line => {
+        var match = line.match(optionRegex);
+        if (match) {
+          firstOptionFound = true;
+          options.push(match[2]);
+        } else {
+          if (!firstOptionFound) {
+            stem += (stem ? "\n" : "") + line;
+          } else {
+            // Continuation of previous option?
+            if (options.length > 0) {
+              options[options.length - 1] += " " + line;
+            }
+          }
+        }
+      });
+
+      if (options.length === 0) {
+        // Fallback: Use first line as stem, others as options if no labels found
+        stem = lines[0];
+        options = lines.slice(1);
+      }
+
+      syncWizardQuillContent();
+      var q = wizardState.questions[qIndex];
+      q.questionText = stem;
+      q.html = "<p>" + stem + "</p>";
+      q.delta = null;
+
+      // Map options
+      q.options = options.slice(0, 6).map(optText => ({
+        text: optText,
+        html: "<p>" + optText + "</p>",
+        delta: null,
+        imageURL: '',
+        id: generateUUID()
+      }));
+
+      // Ensure at least 2 options
+      while (q.options.length < 2) {
+        q.options.push({ text: '', html: '', delta: null, imageURL: '', id: generateUUID() });
+      }
+
+      renderWizardQuestions();
+    }
+
+    /**
+     * Generates HTML for the Math Input Panel
+     */
+    function getMathPanelHtml() {
+      var symbols = [
+        { label: 'α', value: 'α' }, { label: 'β', value: 'β' }, { label: 'γ', value: 'γ' }, { label: 'π', value: 'π' },
+        { label: 'θ', value: 'θ' }, { label: 'Σ', value: 'Σ' }, { label: '∞', value: '∞' }, { label: '√', value: '√' },
+        { label: '²', value: '²' }, { label: '³', value: '³' }, { label: '±', value: '±' }, { label: '≠', value: '≠' },
+        { label: '≈', value: '≈' }, { label: '≤', value: '≤' }, { label: '≥', value: '≥' }, { label: 'Δ', value: 'Δ' }
+      ];
+
+      var html = '<div class="math-input-panel flex flex-wrap gap-1.5 p-2 bg-slate-50 border-b border-brand-light-gray">';
+      symbols.forEach(function (s) {
+        html += '<button type="button" class="math-symbol-btn" onclick="QuillManager.insertMathSymbol(\'' + s.value + '\')">' + s.label + '</button>';
+      });
+      html += '</div>';
+      return html;
+    }
+
     function renderWizardQuestions() {
       var container = document.getElementById('wizard-questions-list');
       if (!container) return;
@@ -23231,90 +23834,117 @@
         var questionInputId = 'question-input-' + questionNumber;
 
         var questionDiv = document.createElement('div');
-        questionDiv.className = 'question-card bg-white border border-brand-light-gray rounded-xl overflow-hidden shadow-sm transition-all duration-200';
-        questionDiv.draggable = true;
+        questionDiv.className = 'question-card bg-white border border-brand-light-gray rounded-xl overflow-hidden shadow-sm transition-all duration-200 ring-offset-2';
+        // Remove draggable="true" from main div to allow text selection
+        // questionDiv.draggable = true; 
         questionDiv.dataset.qIndex = qIndex;
 
-        // Compact Question Header with drag handle
-        var headerHtml = '<div class="question-card-header flex justify-between items-center px-4 py-2.5 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-brand-light-gray cursor-move" data-drag-handle>' +
-          '<div class="flex items-center gap-2">' +
-          '<span class="material-symbols-outlined text-slate-400 text-lg" title="Drag to reorder">drag_indicator</span>' +
-          '<div class="h-7 w-7 rounded-lg bg-primary text-white flex items-center justify-center font-bold text-xs">' + (qIndex + 1) + '</div>' +
-          '<span class="font-bold text-brand-dark-gray">Q' + (qIndex + 1) + '</span>' +
+        // 1. Compact Header with Restricted Drag Handle
+        var headerHtml = '<div class="question-card-header flex justify-between items-center px-4 py-2 bg-slate-50 border-b border-brand-light-gray">' +
+          '<div class="flex items-center gap-3">' +
+          '<div class="drag-handle cursor-grab active:cursor-grabbing p-1 -ml-1 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded transition-colors" draggable="true" title="Drag to reorder">' +
+          '<span class="material-symbols-outlined text-lg">drag_indicator</span>' +
           '</div>' +
-          '<div class="flex items-center gap-1">' +
-          '<label class="flex items-center gap-1 px-2 py-1 rounded hover:bg-slate-200 cursor-pointer text-xs text-slate-500" title="Enable confidence tracking">' +
-          '<input type="checkbox" class="wizard-meta-cb h-3.5 w-3.5 rounded" data-q-index="' + qIndex + '" ' + (q.metacognitionEnabled ? 'checked' : '') + '>' +
+          '<div class="flex items-center gap-2">' +
+          '<div class="h-6 w-6 rounded bg-veritas-navy text-white flex items-center justify-center font-bold text-[10px]">' + questionNumber + '</div>' +
+          '<span class="font-bold text-xs text-brand-dark-gray tracking-tight">QUESTION ' + questionNumber + '</span>' +
+          '</div>' +
+          '</div>' +
+          '<div class="flex items-center gap-2">' +
+          '<label class="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-slate-200 cursor-pointer text-[11px] font-semibold text-slate-500 transition-colors" title="Enable confidence tracking">' +
+          '<input type="checkbox" class="wizard-meta-cb h-3.5 w-3.5 rounded border-slate-300 text-veritas-navy focus:ring-veritas-navy" data-q-index="' + qIndex + '" ' + (q.metacognitionEnabled ? 'checked' : '') + '>' +
           '<span>Confidence</span></label>' +
-          '<button type="button" class="p-1.5 rounded text-red-500 hover:bg-red-50 transition-colors" onclick="removeWizardQuestion(' + qIndex + ')" title="Remove">' +
+          '<div class="w-px h-4 bg-slate-200 mx-1"></div>' +
+          '<button type="button" class="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-all" onclick="removeWizardQuestion(' + qIndex + ')" title="Remove Question">' +
           '<span class="material-symbols-outlined text-lg">delete</span></button>' +
           '</div></div>';
 
-        // METADATA: Custom Metacognition Prompt (Conditional)
-        var metaPromptHtml = '';
-        if (q.metacognitionEnabled) {
-          metaPromptHtml = '<div class="px-4 pt-3 pb-0">' +
-            '<p class="text-xs font-semibold text-slate-500 mb-1">Metacognition Prompt (Optional)</p>' +
-            '<div id="q-meta-' + qIndex + '" class="bg-white" style="height: 80px;"></div>' +
-            '</div>';
-        }
+        // 2. Math Input Panel (Static for Stem)
+        var mathPanelHtml = getMathPanelHtml();
 
-        // Compact Question Body
-        var bodyHtml = metaPromptHtml + '<div class="question-card-body p-4 space-y-3">' +
-          // Question Stem - Rich Text only
-          '<div class="flex-1 flex flex-col">' +
-          '<label class="text-xs font-semibold text-slate-500 mb-1">Question Stem</label>' +
-          '<div id="' + questionInputId + '" class="bg-white" style="min-height: 120px; height: auto;"></div>' +
-          '</div></div>';
+        // 3. Smart Paste Zone
+        var smartPasteHtml = '<div class="px-4 py-3 bg-slate-50/50 border-b border-brand-light-gray">' +
+          '<div class="flex items-center gap-2 mb-2">' +
+          '<span class="material-symbols-outlined text-sm text-veritas-gold">tips_and_updates</span>' +
+          '<span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Smart Paste</span>' +
+          '</div>' +
+          '<textarea class="smart-paste-area focus:ring-1 focus:ring-veritas-gold" placeholder="Paste full question with options here (e.g. \"What is 2+2? A) 3 B) 4\") to auto-populate..." data-q-index="' + qIndex + '"></textarea>' +
+          '</div>';
 
-        // Answer Choices - Compact
-        bodyHtml += '<div class="space-y-3">';
+        // 4. Question Stem Section
+        var stemHtml = '<div class="p-4 space-y-2">' +
+          '<div class="flex items-center justify-between">' +
+          '<label class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Question Stem</label>' +
+          '</div>' +
+          '<div class="border border-brand-light-gray rounded-lg overflow-hidden focus-within:border-veritas-navy transition-colors">' +
+          '<div id="' + questionInputId + '" class="bg-white" style="min-height: 100px; height: auto;"></div>' +
+          '</div>' +
+          '</div>';
+
+        // 5. Answer Choices
+        var optionsHtml = '<div class="px-4 pb-4 space-y-3">' +
+          '<label class="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Answer Choices</label>';
+
         q.options.forEach(function (opt, optIndex) {
           var isCorrect = q.correctAnswerIndex === optIndex;
-          var correctBorder = isCorrect ? 'border-green-400 bg-green-50/10' : 'border-brand-light-gray/80';
-          var optImagePreview = getImagePreviewUrl(opt.imageURL, opt.imageFileId);
-          var optIsUploading = opt.imageURL === 'UPLOADING';
+          var optionId = 'answer-input-' + questionNumber + '-' + optionLabels[optIndex].toLowerCase();
+          var correctClass = isCorrect ? 'ring-2 ring-green-500 bg-green-50/30' : 'border-slate-200';
 
-          bodyHtml += '<div class="answer-option flex items-start gap-2 p-2 rounded-lg border ' + correctBorder + ' transition-all">' +
-            // Correct answer radio
-            '<label class="cursor-pointer mt-2">' +
-            '<input type="radio" name="correct-' + qIndex + '" class="hidden wizard-correct-radio" data-q-index="' + qIndex + '" data-opt-index="' + optIndex + '" ' + (isCorrect ? 'checked' : '') + '>' +
-            '<div class="h-7 w-7 rounded flex items-center justify-center font-bold text-xs transition-all ' +
-            (isCorrect ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-primary/10') + '">' + optionLabels[optIndex] + '</div>' +
-            '</label>' +
-            // Option text (Quill)
+          optionsHtml += '<div class="flex items-start gap-3 p-3 rounded-xl border ' + correctClass + ' transition-all group">' +
+            '<div class="flex flex-col items-center gap-2 mt-1">' +
+            '<button type="button" class="wizard-correct-toggle w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm transition-all ' +
+            (isCorrect ? 'bg-green-500 text-white shadow-lg shadow-green-200' : 'bg-slate-100 text-slate-400 hover:bg-green-100 hover:text-green-600') + '" ' +
+            'onclick="setCorrectAnswer(' + qIndex + ', ' + optIndex + ')" title="Mark as Correct Answer">' +
+            optionLabels[optIndex] + '</button>' +
+            '</div>' +
             '<div class="flex-1">' +
-            '<div id="answer-input-' + questionNumber + '-' + optionLabels[optIndex].toLowerCase() + '" class="bg-white" style="min-height: 80px; height: auto;"></div>' +
+            '<div class="border border-brand-light-gray rounded-lg overflow-hidden bg-white focus-within:border-veritas-navy transition-colors">' +
+            '<div id="' + optionId + '" style="min-height: 60px; height: auto;"></div>' +
+            '</div>' +
+            '</div>' +
+            '<button type="button" class="mt-2 p-1.5 rounded text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100" ' +
+            'onclick="removeWizardOption(' + qIndex + ', ' + optIndex + ')" title="Remove Choice">' +
+            '<span class="material-symbols-outlined text-lg">close</span></button>' +
             '</div>';
-
-          // Remove option button only (no image upload)
-          bodyHtml += '<div class="flex flex-col gap-1 mt-1">' +
-            '<button type="button" class="p-1 rounded text-slate-300 hover:text-red-500 transition-colors" onclick="removeWizardOption(' + qIndex + ',' + optIndex + ')">' +
-            '<span class="material-symbols-outlined text-base">close</span></button>' +
-            '</div></div>'; // Close flex col + answer option
         });
-        bodyHtml += '</div>';
 
-        // Add option + timer row
-        bodyHtml += '<div class="flex items-center justify-between pt-1">';
+        // Add Choice Button
         if (q.options.length < 6) {
-          bodyHtml += '<button type="button" class="flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80" onclick="addWizardOption(' + qIndex + ')">' +
-            '<span class="material-symbols-outlined text-sm">add</span>Add choice</button>';
-        } else {
-          bodyHtml += '<span></span>';
+          optionsHtml += '<div class="flex justify-center pt-1">' +
+            '<button type="button" class="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 hover:bg-primary/10 text-slate-600 hover:text-primary transition-all text-[11px] font-bold" ' +
+            'onclick="addWizardOption(' + qIndex + ')">' +
+            '<span class="material-symbols-outlined text-sm">add_circle</span>Add Choice</button>' +
+            '</div>';
         }
-        bodyHtml += '<div class="flex items-center gap-1.5">' +
-          '<span class="text-xs text-slate-400">Timer:</span>' +
-          '<input type="number" class="wizard-timer w-14 rounded border border-brand-light-gray/70 px-1.5 py-0.5 text-xs text-center" placeholder="sec" min="5" max="600" data-q-index="' + qIndex + '" value="' + (q.timerSeconds || '') + '">' +
-          '</div></div>';
 
-        bodyHtml += '</div>'; // Close question-card-body
+        optionsHtml += '</div>';
 
-        questionDiv.innerHTML = headerHtml + bodyHtml;
+        // 6. Assemble Card
+        questionDiv.innerHTML = headerHtml + mathPanelHtml + smartPasteHtml + stemHtml + optionsHtml;
         container.appendChild(questionDiv);
 
-        // 2. Metacognition Prompt
+        // --- Event Listeners and Initialization ---
+
+        // A. Smart Paste Event
+        var pasteArea = questionDiv.querySelector('.smart-paste-area');
+        if (pasteArea) {
+          pasteArea.addEventListener('paste', function (e) {
+            e.preventDefault();
+            var text = (e.clipboardData || window.clipboardData).getData('text');
+            handleSmartPaste(qIndex, text);
+          });
+        }
+
+        // B. Metacognition Prompt Initialization
         if (q.metacognitionEnabled) {
+          var metaPromptContainer = document.createElement('div');
+          metaPromptContainer.className = 'px-4 pb-4';
+          metaPromptContainer.innerHTML = '<label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Confidence Prompt</label>' +
+            '<div id="q-meta-' + qIndex + '" class="border border-brand-light-gray rounded-lg overflow-hidden" style="height: 80px;"></div>';
+
+          // Insert before stem
+          questionDiv.insertBefore(metaPromptContainer, questionDiv.querySelector('.p-4'));
+
           QuillManager.init('q-meta-' + qIndex, q.metaPromptDelta || q.metaPromptHtml || 'How confident are you in your answer?', 'Enter prompt...', function (content) {
             wizardState.questions[qIndex].metaPromptHtml = content.html;
             wizardState.questions[qIndex].metaPromptDelta = content.delta;
@@ -23322,126 +23952,53 @@
           });
         }
 
-        // Question image file input
-        var qImgInput = questionDiv.querySelector('.wizard-q-img-input');
-        if (qImgInput) {
-          qImgInput.addEventListener('change', function (e) {
-            handleWizardImageUpload(e.target.files[0], qIndex, null);
-          });
-        }
-
-        // Question image remove button
-        var qImgRemoveBtn = questionDiv.querySelector('.wizard-remove-q-img');
-        if (qImgRemoveBtn) {
-          qImgRemoveBtn.addEventListener('click', function () {
-            syncWizardQuillContent();
-            wizardState.questions[qIndex].questionImageURL = null;
-            wizardState.questions[qIndex].questionImageFileId = null;
-            renderWizardQuestions();
-          });
-        }
-
-
-        // Option image file inputs
-        questionDiv.querySelectorAll('.wizard-opt-img-input').forEach(function (input) {
-          input.addEventListener('change', function (e) {
-            var qi = parseInt(this.getAttribute('data-q-index'));
-            var oi = parseInt(this.getAttribute('data-opt-index'));
-            handleWizardImageUpload(e.target.files[0], qi, oi);
-          });
-        });
-
-        // Option image remove buttons
-        questionDiv.querySelectorAll('.wizard-remove-opt-img').forEach(function (btn) {
-          btn.addEventListener('click', function () {
-            syncWizardQuillContent();
-            var qi = parseInt(this.getAttribute('data-q-index'));
-            var oi = parseInt(this.getAttribute('data-opt-index'));
-            wizardState.questions[qi].options[oi].imageURL = null;
-            wizardState.questions[qi].options[oi].imageFileId = null;
-            renderWizardQuestions();
-          });
-        });
-
-        // Correct answer radios
-        questionDiv.querySelectorAll('.wizard-correct-radio').forEach(function (radio) {
-          radio.parentElement.addEventListener('click', function (e) {
-            e.preventDefault();
-            var qi = parseInt(radio.getAttribute('data-q-index'));
-            var oi = parseInt(radio.getAttribute('data-opt-index'));
-            setCorrectAnswer(qi, oi);
-          });
-        });
-
-        // Metacognition checkbox
+        // C. Metacognition checkbox
         var metaCb = questionDiv.querySelector('.wizard-meta-cb');
         if (metaCb) {
           metaCb.addEventListener('change', function () {
             wizardState.questions[qIndex].metacognitionEnabled = this.checked;
+            renderWizardQuestions();
           });
         }
 
-        // Timer input
-        var timerInput = questionDiv.querySelector('.wizard-timer');
-        if (timerInput) {
-          timerInput.addEventListener('input', function () {
-            var val = parseInt(this.value);
-            wizardState.questions[qIndex].timerSeconds = isNaN(val) ? null : val;
-          });
-        }
-
-        // Drag and Drop Event Listeners
-        questionDiv.addEventListener('dragstart', function (e) {
+        // D. Drag and Drop restricted to handle
+        var handle = questionDiv.querySelector('.drag-handle');
+        handle.addEventListener('dragstart', function (e) {
           wizardDraggedIndex = qIndex;
-          this.classList.add('opacity-50');
+          questionDiv.classList.add('opacity-40', 'scale-[0.98]');
           e.dataTransfer.effectAllowed = 'move';
-          e.dataTransfer.setData('text/html', this.innerHTML);
+          // Use the whole card as the drag image
+          e.dataTransfer.setDragImage(questionDiv, 20, 20);
         });
 
-        questionDiv.addEventListener('dragend', function (e) {
-          this.classList.remove('opacity-50');
-          // Remove all drag-over indicators
+        handle.addEventListener('dragend', function (e) {
+          questionDiv.classList.remove('opacity-40', 'scale-[0.98]');
           container.querySelectorAll('.question-card').forEach(function (card) {
-            card.classList.remove('border-blue-500', 'border-dashed', 'border-2');
+            card.classList.remove('ring-4', 'ring-veritas-gold/20', 'border-veritas-gold');
           });
         });
 
         questionDiv.addEventListener('dragover', function (e) {
-          if (e.preventDefault) {
-            e.preventDefault();
-          }
+          if (e.preventDefault) e.preventDefault();
           e.dataTransfer.dropEffect = 'move';
-
-          // Add visual feedback
-          this.classList.add('border-blue-500', 'border-dashed', 'border-2');
-
+          this.classList.add('ring-4', 'ring-veritas-gold/20', 'border-veritas-gold');
           return false;
         });
 
         questionDiv.addEventListener('dragleave', function (e) {
-          this.classList.remove('border-blue-500', 'border-dashed', 'border-2');
+          this.classList.remove('ring-4', 'ring-veritas-gold/20', 'border-veritas-gold');
         });
 
         questionDiv.addEventListener('drop', function (e) {
-          if (e.stopPropagation) {
-            e.stopPropagation();
-          }
-
+          if (e.stopPropagation) e.stopPropagation();
           var dropIndex = parseInt(this.dataset.qIndex);
-
           if (wizardDraggedIndex !== null && wizardDraggedIndex !== dropIndex) {
-            // Sync content before reordering to prevent data loss
             syncWizardQuillContent();
-
-            // Reorder questions in the array
             var draggedQuestion = wizardState.questions[wizardDraggedIndex];
             wizardState.questions.splice(wizardDraggedIndex, 1);
             wizardState.questions.splice(dropIndex, 0, draggedQuestion);
-
-            // Re-render questions to show new order
             renderWizardQuestions();
           }
-
           return false;
         });
       });
@@ -24437,131 +24994,131 @@
       console.log('[Info] Calculator System Initialized');
     }, 1000);
 
-  })();
 
 
-  // ==========================================
-  // STUDENT INSPECTOR & ANALYTICS (PHASE 4)
-  // ==========================================
 
-  async function openStudentInspector(email) {
-    var modal = document.getElementById('student-inspector-modal');
-    if (!modal) return;
+    // ==========================================
+    // STUDENT INSPECTOR & ANALYTICS (PHASE 4)
+    // ==========================================
 
-    // 1. Reset & Show Loading State
-    document.getElementById('inspector-history-body').innerHTML = `<tr>
+    async function openStudentInspector(email) {
+      var modal = document.getElementById('student-inspector-modal');
+      if (!modal) return;
+
+      // 1. Reset & Show Loading State
+      document.getElementById('inspector-history-body').innerHTML = `<tr>
       <td colspan="5" class="p-8 text-center text-slate-400">Loading history...</td>
     </tr>`;
-    document.getElementById('inspector-empty-state').classList.add('hidden');
+      document.getElementById('inspector-empty-state').classList.add('hidden');
 
-    // 2. Populate Header
-    var student = (STUDENTS || []).find(function (s) { return s.email === email; });
-    var name = student ? (student.name || student.email) : email;
-    var initials = name.split(' ').map(function (n) { return n[0]; }).join('').substring(0, 2).toUpperCase();
+      // 2. Populate Header
+      var student = (STUDENTS || []).find(function (s) { return s.email === email; });
+      var name = student ? (student.name || student.email) : email;
+      var initials = name.split(' ').map(function (n) { return n[0]; }).join('').substring(0, 2).toUpperCase();
 
-    document.getElementById('inspector-name').textContent = name;
-    document.getElementById('inspector-email').textContent = email;
-    document.getElementById('inspector-initials').textContent = initials;
+      document.getElementById('inspector-name').textContent = name;
+      document.getElementById('inspector-email').textContent = email;
+      document.getElementById('inspector-initials').textContent = initials;
 
-    // Status Badge
-    var statusBadge = document.getElementById('inspector-status-badge');
-    var isOnline = student && student.isOnline; // Assuming we track this
-    statusBadge.textContent = isOnline ? 'Online' : 'Offline';
-    statusBadge.className = isOnline
-      ? 'px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wide'
-      : 'px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-wide';
+      // Status Badge
+      var statusBadge = document.getElementById('inspector-status-badge');
+      var isOnline = student && student.isOnline; // Assuming we track this
+      statusBadge.textContent = isOnline ? 'Online' : 'Offline';
+      statusBadge.className = isOnline
+        ? 'px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wide'
+        : 'px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-wide';
 
-    modal.classList.remove('hidden');
+      modal.classList.remove('hidden');
 
-    // 3. Fetch & Process History
-    try {
-      var history = await fetchStudentHistory(CURRENT_POLL_DATA.pollId, email);
-      renderStudentInspector(history);
-    } catch (error) {
-      console.error('Failed to fetch student history:', error);
-      document.getElementById('inspector-history-body').innerHTML = `<tr>
+      // 3. Fetch & Process History
+      try {
+        var history = await fetchStudentHistory(CURRENT_POLL_DATA.pollId, email);
+        renderStudentInspector(history);
+      } catch (error) {
+        console.error('Failed to fetch student history:', error);
+        document.getElementById('inspector-history-body').innerHTML = `<tr>
         <td colspan="5" class="p-8 text-center text-red-500">Failed to load data.</td>
       </tr>`;
-    }
-  }
-
-  async function fetchStudentHistory(pollId, email) {
-    if (!pollId || !email) return [];
-
-    // Fetch specific student history from answers/{pollId}
-    // This might be inefficient if we fetch ALL answers. Optimally we query by orderByChild('email').equalTo(email)
-    // For now, assuming answers/{pollId} is an object with keys as questionIndices? Or keys as answerIds?
-    // Let's assume structure: answers/{pollId}/{questionIndex}/{emailSanitized} = { ... }
-    // OR answers/{pollId}/{answerId} = { email: ..., ... }
-
-    // We'll fetch all answers for the poll and filter client-side for now, as strict schema isn't guaranteed.
-    var snapshot = await firebase.database().ref('answers/' + pollId).once('value');
-    var val = snapshot.val();
-    if (!val) return [];
-
-    var history = [];
-
-    // Iterate differently based on structure
-    // Case A: Flat list
-    if (typeof val === 'object') {
-      Object.keys(val).forEach(function (key) {
-        // Logic to traverse nested structure if needed
-        // If organized by questionIndex: val[qIdx][email]
-        // If flat: val[key].email === email
-
-        var item = val[key];
-        // Check if this item relates to the student
-        if (item.email === email || (item.user && item.user.email === email)) {
-          history.push(item);
-        } else if (typeof item === 'object') {
-          // Nested check (e.g. by question index)
-          Object.values(item).forEach(function (subItem) {
-            if (subItem && (subItem.email === email || (subItem.user && subItem.user.email === email))) {
-              history.push(subItem);
-            }
-          });
-        }
-      });
+      }
     }
 
-    return history;
-  }
+    async function fetchStudentHistory(pollId, email) {
+      if (!pollId || !email) return [];
 
-  function renderStudentInspector(history) {
-    var tbody = document.getElementById('inspector-history-body');
-    var emptyState = document.getElementById('inspector-empty-state');
+      // Fetch specific student history from answers/{pollId}
+      // This might be inefficient if we fetch ALL answers. Optimally we query by orderByChild('email').equalTo(email)
+      // For now, assuming answers/{pollId} is an object with keys as questionIndices? Or keys as answerIds?
+      // Let's assume structure: answers/{pollId}/{questionIndex}/{emailSanitized} = { ... }
+      // OR answers/{pollId}/{answerId} = { email: ..., ... }
 
-    if (!history || history.length === 0) {
-      tbody.innerHTML = '';
-      emptyState.classList.remove('hidden');
-      updateInspectorMetrics([], 0);
-      return;
+      // We'll fetch all answers for the poll and filter client-side for now, as strict schema isn't guaranteed.
+      var snapshot = await firebase.database().ref('answers/' + pollId).once('value');
+      var val = snapshot.val();
+      if (!val) return [];
+
+      var history = [];
+
+      // Iterate differently based on structure
+      // Case A: Flat list
+      if (typeof val === 'object') {
+        Object.keys(val).forEach(function (key) {
+          // Logic to traverse nested structure if needed
+          // If organized by questionIndex: val[qIdx][email]
+          // If flat: val[key].email === email
+
+          var item = val[key];
+          // Check if this item relates to the student
+          if (item.email === email || (item.user && item.user.email === email)) {
+            history.push(item);
+          } else if (typeof item === 'object') {
+            // Nested check (e.g. by question index)
+            Object.values(item).forEach(function (subItem) {
+              if (subItem && (subItem.email === email || (subItem.user && subItem.user.email === email))) {
+                history.push(subItem);
+              }
+            });
+          }
+        });
+      }
+
+      return history;
     }
 
-    emptyState.classList.add('hidden');
+    function renderStudentInspector(history) {
+      var tbody = document.getElementById('inspector-history-body');
+      var emptyState = document.getElementById('inspector-empty-state');
 
-    // Sort history by time or question index
-    history.sort(function (a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+      if (!history || history.length === 0) {
+        tbody.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        updateInspectorMetrics([], 0);
+        return;
+      }
 
-    var totalCorrect = 0;
-    var totalViolations = 0;
-    var totalTime = 0;
+      emptyState.classList.add('hidden');
 
-    var html = history.map(function (item, index) {
-      var isCorrect = item.correct === true; // or check against key
-      if (isCorrect) totalCorrect++;
+      // Sort history by time or question index
+      history.sort(function (a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
 
-      // Calculate time taken (mock or real)
-      var timeTaken = Math.round(Math.random() * 30 + 10); // Mock for now if not in data
-      totalTime += timeTaken;
+      var totalCorrect = 0;
+      var totalViolations = 0;
+      var totalTime = 0;
 
-      return `
+      var html = history.map(function (item, index) {
+        var isCorrect = item.correct === true; // or check against key
+        if (isCorrect) totalCorrect++;
+
+        // Calculate time taken (mock or real)
+        var timeTaken = Math.round(Math.random() * 30 + 10); // Mock for now if not in data
+        totalTime += timeTaken;
+
+        return `
 <tr class="hover:bg-slate-50 dark:hover:bg-brand-dark-gray/20 transition-colors">
   <td class="py-3 font-medium text-slate-700 dark:text-slate-300">Q${item.questionIndex + 1}</td>
   <td class="py-3 text-slate-600 dark:text-slate-400 max-w-xs truncate">${escapeHtml(item.questionText || 'Question ' +
-        (item.questionIndex + 1))}</td>
+          (item.questionIndex + 1))}</td>
   <td class="py-3 font-mono text-xs text-slate-600 dark:text-slate-400">${escapeHtml(item.answer || item.answerText ||
-          '--')}</td>
+            '--')}</td>
   <td class="py-3 text-center">
     <span
       class="inline-flex items-center justify-center h-6 w-6 rounded-full ${isCorrect ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}">
@@ -24571,33 +25128,35 @@
   <td class="py-3 text-right font-mono text-xs text-slate-500">${timeTaken}s</td>
 </tr>
 `;
-    }).join('');
+      }).join('');
 
-    tbody.innerHTML = html;
+      tbody.innerHTML = html;
 
-    updateInspectorMetrics(history, totalCorrect);
-  }
+      updateInspectorMetrics(history, totalCorrect);
+    }
 
-  function updateInspectorMetrics(history, correctCount) {
-    var total = history.length;
-    var accuracy = total > 0 ? Math.round((correctCount / total) * 100) : 0;
+    function updateInspectorMetrics(history, correctCount) {
+      var total = history.length;
+      var accuracy = total > 0 ? Math.round((correctCount / total) * 100) : 0;
 
-    document.getElementById('inspector-accuracy').textContent = accuracy + '%';
-    document.getElementById('inspector-correct-count').textContent = correctCount + '/' + total + ' correct';
+      document.getElementById('inspector-accuracy').textContent = accuracy + '%';
+      document.getElementById('inspector-correct-count').textContent = correctCount + '/' + total + ' correct';
 
-    document.getElementById('inspector-violations').textContent = '0'; // Mock for now
+      document.getElementById('inspector-violations').textContent = '0'; // Mock for now
 
-    var avgSpeed = total > 0 ? Math.round(34) : 0; // Mock average
-    document.getElementById('inspector-speed').textContent = avgSpeed + 's';
-  }
+      var avgSpeed = total > 0 ? Math.round(34) : 0; // Mock average
+      document.getElementById('inspector-speed').textContent = avgSpeed + 's';
+    }
 
-  // Close Handlers
-  document.querySelectorAll('[data-close-inspector="true"]').forEach(function (el) {
-    el.addEventListener('click', function () {
-      var modal = document.getElementById('student-inspector-modal');
-      if (modal) modal.classList.add('hidden');
+    // Close Handlers
+    document.querySelectorAll('[data-close-inspector="true"]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var modal = document.getElementById('student-inspector-modal');
+        if (modal) modal.classList.add('hidden');
+      });
     });
-  });</script>
+  })();
+</script>
   <script>
     /**
      * Veritas Theme Manager

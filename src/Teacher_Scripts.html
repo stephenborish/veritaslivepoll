@@ -1232,6 +1232,9 @@
       // Initialize Activity Feed
       initializeActivityFeed();
 
+      // Initialize Whiteboard
+      initializeWhiteboard();
+
       // Initialize Keyboard Shortcuts
       initializeKeyboardShortcuts();
 
@@ -6036,16 +6039,43 @@
         previewOnlyNotice('reveal answers');
         return;
       }
-      // FIREBASE MIGRATION: Call finalizeSession Cloud Function
-      // Replaces google.script.run.endQuestionAndRevealResults()
+      // Update Status via Cloud Function
+      // We do NOT use finalizeSession here, as that ends the ENTIRE poll.
+      // We just want to reveal the answer for the current question.
 
-      var finalizeFn = firebase.functions().httpsCallable('finalizeSession');
+      var setSessionFn = firebase.functions().httpsCallable('setLiveSessionState');
       var pollId = CURRENT_POLL_DATA.pollId;
+      var qIndex = CURRENT_POLL_DATA.questionIndex;
+      var currentVisibility = (CURRENT_POLL_DATA.resultsVisibility || 'HIDDEN');
+      var isRevealed = currentVisibility === 'REVEALED';
 
-      finalizeFn({ pollId: pollId })
+      var targetStatus = isRevealed ? 'OPEN' : 'REVEAL'; // Toggle logic
+      // If hiding, we might want 'PAUSED' instead of OPEN if timer was 0, but OPEN is safer resume state.
+      // Actually 'OPEN' restarts the flow. 
+      // If we want to just "Hide Answer" but keep session active/paused:
+      // Maybe set metadata `resultsVisibility: 'HIDDEN'`.
+
+      // Let's stick to status 'REVEAL' vs 'OPEN' for simplicity, assuming 'OPEN' just shows the question again.
+
+
+      // Ensure we have valid data
+      if (!pollId) { console.error('Missing pollId'); return; }
+
+      setSessionFn({
+        pollId: pollId,
+        questionIndex: qIndex,
+        status: targetStatus,
+        metadata: {
+          serverProcessed: true,
+          reason: isRevealed ? 'RESULTS_HIDDEN' : 'RESULTS_REVEALED'
+        }
+      })
         .then(function (result) {
-          console.log('Session Finalized via Cloud Function:', result.data);
+          console.log('Question Visibility Toggled via Cloud Function:', targetStatus);
           if (endShowBtn) { endShowBtn.disabled = false; }
+          // Optimistic Local Update
+          CURRENT_POLL_DATA.resultsVisibility = isRevealed ? 'HIDDEN' : 'REVEALED';
+
           isPaused = true;
 
           // Synthesize success data for updateLiveView
@@ -11511,6 +11541,153 @@
       return div.innerHTML;
     }
 
+    // --- Whiteboard Logic ---
+    var wbCanvas, wbCtx;
+    var wbIsDrawing = false;
+    var wbLastX = 0;
+    var wbLastY = 0;
+    var wbColor = '#059669';
+    var wbSize = 4;
+    var wbMode = 'pen'; // pen or eraser
+
+    function initializeWhiteboard() {
+      // Toggle Binding
+      var toggleBtn = document.getElementById('lcb-whiteboard-toggle');
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', toggleWhiteboard);
+      }
+
+      // Close Binding
+      var closeBtn = document.getElementById('wb-close-btn');
+      if (closeBtn) closeBtn.addEventListener('click', toggleWhiteboard);
+
+      // Clear Binding
+      var clearBtn = document.getElementById('wb-clear-btn');
+      if (clearBtn) clearBtn.addEventListener('click', clearWhiteboard);
+
+      // Canvas Setup
+      wbCanvas = document.getElementById('wb-canvas');
+      if (!wbCanvas) return;
+      wbCtx = wbCanvas.getContext('2d');
+
+      // Resize observer
+      window.addEventListener('resize', resizeWhiteboard);
+
+      // Drawing Events
+      wbCanvas.addEventListener('mousedown', startDrawing);
+      wbCanvas.addEventListener('mousemove', draw);
+      wbCanvas.addEventListener('mouseup', stopDrawing);
+      wbCanvas.addEventListener('mouseout', stopDrawing);
+
+      // Touch support
+      wbCanvas.addEventListener('touchstart', function (e) {
+        var touch = e.touches[0];
+        var mouseEvent = new MouseEvent('mousedown', {
+          clientX: touch.clientX, clientY: touch.clientY
+        });
+        wbCanvas.dispatchEvent(mouseEvent);
+      }, false);
+      wbCanvas.addEventListener('touchmove', function (e) {
+        var touch = e.touches[0];
+        var mouseEvent = new MouseEvent('mousemove', {
+          clientX: touch.clientX, clientY: touch.clientY
+        });
+        wbCanvas.dispatchEvent(mouseEvent);
+      }, false);
+      wbCanvas.addEventListener('touchend', function (e) {
+        var mouseEvent = new MouseEvent('mouseup', {});
+        wbCanvas.dispatchEvent(mouseEvent);
+      }, false);
+
+      // Tool Selection
+      var tools = document.querySelectorAll('.wb-tool');
+      tools.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          // Reset active state
+          tools.forEach(function (t) { t.classList.remove('active', 'scale-110', 'ring-2', 'ring-offset-2', 'ring-indigo-500'); });
+
+          btn.classList.add('active', 'scale-110', 'ring-2', 'ring-offset-2', 'ring-indigo-500');
+
+          var mode = btn.dataset.mode;
+          if (mode === 'eraser') {
+            wbMode = 'eraser';
+            wbSize = 20;
+          } else {
+            wbMode = 'pen';
+            wbColor = btn.dataset.color;
+            wbSize = parseInt(btn.dataset.size) || 4;
+          }
+        });
+      });
+    }
+
+    function toggleWhiteboard() {
+      var overlay = document.getElementById('whiteboard-overlay');
+      if (!overlay) return;
+
+      var isHidden = overlay.classList.contains('hidden');
+      if (isHidden) {
+        overlay.classList.remove('hidden');
+        resizeWhiteboard(); // Ensure size is correct upon opening
+      } else {
+        overlay.classList.add('hidden');
+      }
+    }
+
+    function resizeWhiteboard() {
+      if (!wbCanvas) return;
+      var parent = wbCanvas.parentElement;
+      if (parent) {
+        wbCanvas.width = parent.clientWidth;
+        wbCanvas.height = parent.clientHeight;
+      }
+    }
+
+    function clearWhiteboard() {
+      if (!wbCanvas || !wbCtx) return;
+      wbCtx.clearRect(0, 0, wbCanvas.width, wbCanvas.height);
+    }
+
+    function startDrawing(e) {
+      wbIsDrawing = true;
+      var rect = wbCanvas.getBoundingClientRect();
+      wbLastX = e.clientX - rect.left;
+      wbLastY = e.clientY - rect.top;
+    }
+
+    function draw(e) {
+      if (!wbIsDrawing) return;
+
+      var rect = wbCanvas.getBoundingClientRect();
+      var x = e.clientX - rect.left;
+      var y = e.clientY - rect.top;
+
+      wbCtx.beginPath();
+      wbCtx.moveTo(wbLastX, wbLastY);
+      wbCtx.lineTo(x, y);
+
+      wbCtx.lineCap = 'round';
+      wbCtx.lineJoin = 'round';
+
+      if (wbMode === 'eraser') {
+        wbCtx.globalCompositeOperation = 'destination-out';
+        wbCtx.lineWidth = wbSize;
+      } else {
+        wbCtx.globalCompositeOperation = 'source-over';
+        wbCtx.strokeStyle = wbColor;
+        wbCtx.lineWidth = wbSize;
+      }
+
+      wbCtx.stroke();
+
+      wbLastX = x;
+      wbLastY = y;
+    }
+
+    function stopDrawing() {
+      wbIsDrawing = false;
+    }
+
     /**
      * Formats student names for roster/status displays.
      * Accepts either a student object (with first/last/display fields) or a raw string.
@@ -12029,12 +12206,31 @@
         firebaseRef.on('child_changed', async function (snapshot) {
           // P0-2 FIX: Record status change
           var studentKey = snapshot.key;
-          var newStatus = snapshot.val();
+          var val = snapshot.val();
+
+          // Schema-fix: Handle object or string
+          var newStatus = (typeof val === 'object' && val) ? (val.status || 'ACTIVE') : val;
           var previousStatus = realtimeStatuses[studentKey];
 
           lastStatusChange = { studentKey: studentKey, status: newStatus, timestamp: Date.now() };
           lastRTDBEvent = { timestamp: Date.now(), type: 'child_changed' };
           console.log('[Firebase] Student status changed:', studentKey.substring(0, 8) + '...', previousStatus, '→', newStatus);
+
+          // ACTIVITY FEED: Detect violations
+          if ((newStatus === 'LOCKED' || (typeof newStatus === 'object' && newStatus.status === 'LOCKED')) && previousStatus !== 'LOCKED') {
+            // Fetch student name async
+            var sName = "Student";
+            if (missionControlStudents) {
+              for (var i = 0; i < missionControlStudents.length; i++) {
+                var k = await window.VeritasShared.generateStudentKey(missionControlStudents[i].email, currentMissionControlPollId);
+                if (k === studentKey) { sName = missionControlStudents[i].name || missionControlStudents[i].email; break; }
+              }
+            }
+            // Add to feed
+            addActivityItem('error', 'lock', sName + ' was locked out (violation detected).');
+            // Auto-open feed if critical?
+            // openActivityFeed();
+          }
 
           // Show toast when student resumes (LOCKED or not-ACTIVE -> ACTIVE)
           if (newStatus === 'ACTIVE' && previousStatus && previousStatus !== 'ACTIVE') {

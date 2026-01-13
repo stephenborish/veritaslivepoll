@@ -3680,12 +3680,33 @@
                 firebaseRef = firebaseDb.ref(path);
 
                 // 1. Set Initial State with Read-Before-Write
-                // Only set ACTIVE if current is null/undefined or DISCONNECTED.
-                // Do NOT overwrite LOCKED or FINISHED.
+                // schema-fix: Ensure we write an OBJECT, not a string, for proctoring compatibility.
                 firebaseRef.once('value').then(function (snapshot) {
                     var current = snapshot.val();
-                    if (!current || current === 'DISCONNECTED') {
-                        firebaseRef.set('ACTIVE');
+
+                    // If no data, or it's a legacy string, or disconnected string
+                    // We must initialize the proper object structure.
+                    // Preserve existing lockVersion if possible, though unlikely in init.
+
+                    var needsInit = !current || typeof current !== 'object';
+
+                    if (needsInit) {
+                        var initialData = {
+                            status: 'ACTIVE',
+                            name: window.STUDENT_NAME || 'Unknown',
+                            email: window.STUDENT_EMAIL || 'unknown',
+                            joinedAt: firebase.database.ServerValue.TIMESTAMP,
+                            lockVersion: 0,
+                            userAgent: navigator.userAgent
+                        };
+                        firebaseRef.set(initialData);
+                        console.log('[Firebase] Initialized student state object:', initialData);
+                    } else {
+                        // Ensure status is active if it was generic 'DISCONNECTED'
+                        // But obey locks.
+                        if (current.status === 'DISCONNECTED' || !current.status) {
+                            firebaseRef.update({ status: 'ACTIVE', lastActiveAt: firebase.database.ServerValue.TIMESTAMP });
+                        }
                     }
                 });
 
@@ -4113,16 +4134,27 @@
             }
 
             if (firebaseRef) {
-                firebaseRef.set('LOCKED');
+                // schema-fix: Update the OBJECT, do not overwrite with string 'LOCKED'.
+                // Using update() to preserve other fields like name, email, lockVersion.
+                firebaseRef.update({
+                    status: 'LOCKED',
+                    lastViolationReason: reason,
+                    lastViolationAt: firebase.database.ServerValue.TIMESTAMP
+                }).catch(function (err) {
+                    console.error('[Firebase] Failed to report violation lock:', err);
+                });
 
                 // P0-3 FIX: Store violation reason in separate RTDB node for teacher visibility
-                if (reason && activePollId && studentKey) {
-                    var violationsRef = firebaseDb.ref('sessions/' + activePollId + '/violations/' + studentKey);
-                    violationsRef.set({
+                if (reason && activePollId && (window.studentKey || studentKey)) {
+                    var sKey = window.studentKey || studentKey;
+                    var violationsRef = firebaseDb.ref('sessions/' + activePollId + '/violations/' + sKey);
+                    violationsRef.push({ // Use push for history
                         reason: reason,
                         timestamp: firebase.database.ServerValue.TIMESTAMP
                     });
                 }
+            } else {
+                console.warn('[Firebase] Ref not ready for violation report');
             }
 
             updateDebugHud('LOCKED', null, activePollId);
@@ -4940,10 +4972,27 @@
         }
 
         function buildSecureOption(option, index, letter) {
+            // Check for REVEAL state from global or state context
+            // Helper to find correctness
+            var isCorrect = option.isCorrect === true;
+            var isRevealed = (secureQuestionState && secureQuestionState.sessionStatus === 'REVEAL') ||
+                (secureQuestionState && secureQuestionState.question && secureQuestionState.question.resultsVisibility === 'REVEALED');
+
             var li = document.createElement('li');
             var button = document.createElement('button');
             button.type = 'button';
             button.className = 'answer-option secure-answer-option relative w-full text-left';
+
+            // REVEAL LOGIC: Highlight correct answer
+            if (isRevealed) {
+                button.disabled = true; // Disable interaction
+                if (isCorrect) {
+                    button.classList.add('ring-2', 'ring-green-500', 'bg-green-50', 'dark:bg-green-900/20');
+                } else {
+                    button.classList.add('opacity-75');
+                }
+            }
+
             button.dataset.optionIndex = index;
             button.setAttribute('aria-pressed', 'false');
             var displayText = (option && option.text) ? option.text.toString() : '';
@@ -4960,6 +5009,12 @@
             content += '<div class="option-text-wrapper">';
 
             content += '<div class="option-text ql-editor" style="padding:0;">' + displayHtml + '</div>';
+
+            // Show checkmark if revealed and correct
+            if (isRevealed && isCorrect) {
+                content += '<span class="material-symbols-outlined text-green-600 ml-2">check_circle</span>';
+            }
+
             content += '<span class="result-ribbon"></span>';
             content += '<span class="sr-only secure-selection-announcement"></span>';
             content += '</div>';
@@ -4972,7 +5027,10 @@
                 if (event && event.target && event.target.closest('.option-image')) {
                     return;
                 }
-                handleSecureOptionSelect(index);
+                // Don't allow selecting if revealed
+                if (!isRevealed) {
+                    handleSecureOptionSelect(index);
+                }
             });
             li.appendChild(button);
             return li;
@@ -5427,20 +5485,34 @@
                 securePollInFlight = false;
                 if (studentLoader) studentLoader.style.display = 'none';
 
-                var sessionSnap = snaps[0];
-                var studentSnap = snaps[1];
-
                 var sessionData = sessionSnap.val() || { status: 'CLOSED' };
-                var studentData = studentSnap.val() || { status: 'ACTIVE' };
+                var studentData = studentSnap.val();
+
+                // schema-fix: Handle both string (legacy) and object (new)
+                var sStatus = 'ACTIVE';
+                var sReason = '';
+                var sLocked = false;
+
+                if (studentData) {
+                    if (typeof studentData === 'object') {
+                        sStatus = studentData.status || 'ACTIVE';
+                        sReason = studentData.lastViolationReason || '';
+                        sLocked = sStatus === 'LOCKED';
+                    } else {
+                        sStatus = studentData; // Legacy string
+                        sLocked = sStatus === 'LOCKED';
+                    }
+                }
 
                 // Map to legacy state object
                 var state = {
-                    status: studentData.status, // ACTIVE, LOCKED, etc.
+                    status: sStatus, // ACTIVE, LOCKED, etc.
                     sessionStatus: sessionData.status,
-                    locked: studentData.status === 'LOCKED',
-                    message: studentData.lastViolationReason || '',
-                    lockReason: studentData.lastViolationReason || '',
-                    completed: studentData.status === 'FINISHED',
+                    locked: sLocked,
+                    message: sReason,
+                    lockReason: sReason,
+                    completed: sStatus === 'FINISHED',
+                    completed: sStatus === 'FINISHED', // Logic dup, but harmless
                     question: sessionData // Simplified map
                 };
 

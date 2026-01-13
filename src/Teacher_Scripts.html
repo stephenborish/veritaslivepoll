@@ -2647,6 +2647,10 @@
       }
 
       function updateUI() {
+        // FIX: Fetch header elements for toggling between dashboard and live headers
+        var headerDefaultEl = document.getElementById('header-default');
+        var headerLiveEl = document.getElementById('header-live');
+
         // Handle Top-Level Views (dashboard-root vs create-poll-view)
         if (section === 'create-poll') {
           if (dashboardRoot) dashboardRoot.style.display = 'none';
@@ -2655,6 +2659,19 @@
           if (dashboardRoot) dashboardRoot.style.display = 'flex';
           if (createPollView) createPollView.style.display = 'none';
         }
+
+        // FIX: Toggle between default header (dashboard) and live header (live session)
+        // This was missing - causing UI to not transition when starting a session
+        if (section === 'live') {
+          console.log('[UI] Switching to live header');
+          if (headerDefaultEl) headerDefaultEl.style.display = 'none';
+          if (headerLiveEl) headerLiveEl.style.display = 'flex';
+        } else {
+          console.log('[UI] Switching to default header');
+          if (headerDefaultEl) headerDefaultEl.style.display = 'flex';
+          if (headerLiveEl) headerLiveEl.style.display = 'none';
+        }
+
 
         // Toggle visibility for each main section
         if (dashboardView) dashboardView.style.display = section === 'dashboard' ? 'block' : 'none';
@@ -6762,11 +6779,15 @@
         if (status === 'LIVE' || status === 'OPEN') {
           console.log('[updateLiveView] Transitioning to LIVE session state');
           isLiveSession = true;
-          // Robustly switch view using new refactored function
-          setMainSection('live');
         } else {
           return;
         }
+      }
+
+      // FIX: Always ensure UI is in live view when status is LIVE/OPEN
+      // This was previously inside the isLiveSession check, causing race conditions
+      if (status === 'LIVE' || status === 'OPEN') {
+        setMainSection('live');
       }
 
       if (isPreLive || isEnded) {
@@ -6774,6 +6795,7 @@
         showDashboard();
         return;
       }
+
 
       if (data.error) { handleError(data.error); return; }
 
@@ -15018,6 +15040,52 @@
         return;
       }
 
+      // FIX: If no students loaded yet, try to fetch from the class roster
+      var studentsToUse = currentStudentStatusData;
+      if ((!studentsToUse || studentsToUse.length === 0) && CURRENT_POLL_DATA && CURRENT_POLL_DATA.className) {
+        console.log('[Optimization] No students loaded, fetching from roster for class:', CURRENT_POLL_DATA.className);
+
+        // Fetch roster asynchronously and update UI
+        firebase.database().ref('rosters/rosters/' + CURRENT_POLL_DATA.className).once('value')
+          .then(function (snapshot) {
+            var roster = snapshot.val();
+            if (roster && Array.isArray(roster) && roster.length > 0) {
+              console.log('[Optimization] Loaded', roster.length, 'students from roster');
+              // Transform roster to student status format
+              currentStudentStatusData = roster.map(function (s) {
+                return {
+                  name: s.name || '',
+                  email: s.email || '',
+                  status: 'Waiting...',
+                  statusNote: 'waiting',
+                  answer: '---',
+                  isCorrect: null,
+                  confidence: null,
+                  timestamp: 9999999999999
+                };
+              });
+
+              // Re-trigger update with students now populated
+              handleLightweightSessionUpdate(data);
+            } else {
+              console.warn('[Optimization] No roster found for class:', CURRENT_POLL_DATA.className);
+              // Continue without students
+              finishLightweightUpdate(data, questionDef, qIndex, []);
+            }
+          })
+          .catch(function (error) {
+            console.error('[Optimization] Failed to fetch roster:', error);
+            // Continue without students
+            finishLightweightUpdate(data, questionDef, qIndex, []);
+          });
+        return; // Exit early while roster is loading
+      }
+
+      finishLightweightUpdate(data, questionDef, qIndex, studentsToUse);
+    }
+
+    // Helper function to complete the lightweight update
+    function finishLightweightUpdate(data, questionDef, qIndex, students) {
       var syntheticData = {
         pollId: data.pollId,
         status: data.status, // OPEN
@@ -15034,8 +15102,8 @@
         // Reset results
         results: {}, // Empty counts
         totalResponses: 0,
-        totalStudents: currentStudentStatusData.length, // Keep previous count
-        studentStatusList: currentStudentStatusData.map(function (s) {
+        totalStudents: students.length,
+        studentStatusList: students.map(function (s) {
           // Reset student statuses to waiting
           return Object.assign({}, s, {
             status: 'Waiting...',
@@ -15059,6 +15127,7 @@
         pollForResults();
       }, 500);
     }
+
 
 
 

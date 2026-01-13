@@ -6038,7 +6038,7 @@
 
         <!-- Student Inspector Panel (Slide-over) -->
         <div id="student-inspector-panel"
-          class="hidden absolute top-0 right-0 h-full w-96 bg-white dark:bg-gray-800 shadow-2xl border-l border-gray-200 dark:border-gray-700 z-[60] transform transition-transform duration-300 flex flex-col">
+          class="hidden fixed top-16 bottom-0 right-0 w-96 bg-white dark:bg-gray-800 shadow-2xl border-l border-gray-200 dark:border-gray-700 z-[60] transform transition-transform duration-300 flex flex-col">
           <!-- Content injected dynamically by openStudentInspector() -->
         </div>
 
@@ -11032,6 +11032,31 @@
         bindClick('header-back-btn', onPreviousQuestion);
         bindClick('header-prev-btn', onPreviousQuestion); // New visible Previous button
         bindClick('header-next-btn', onNextQuestion);
+        bindClick('header-prev-btn', onPreviousQuestion);
+        bindClick('header-back-btn', onPreviousQuestion); // Fix: Ensure menu back button also works
+        bindClick('dashboard-sidebar-toggle-live', toggleDashboardSidebarLive);
+        bindClick('live-more-actions-btn', toggleLiveMoreMenu);
+
+        // Global Click Listener for Menus and Panels
+        document.addEventListener('click', function (e) {
+          // Close Live More Menu
+          var menu = document.getElementById('live-more-menu');
+          var btn = document.getElementById('live-more-actions-btn');
+          if (menu && !menu.classList.contains('hidden') && !menu.contains(e.target) && !btn.contains(e.target)) {
+            menu.classList.add('hidden');
+          }
+
+          // Close Student Inspector Panel
+          var panel = document.getElementById('student-inspector-panel');
+          // Don't close if clicking inside panel, or if clicking a card (which opens it)
+          if (panel && !panel.classList.contains('hidden')) {
+            var isClickInside = panel.contains(e.target);
+            var isCardClick = e.target.closest('.student-status-card') || e.target.closest('.student-row');
+            if (!isClickInside && !isCardClick) {
+              closeStudentInspector();
+            }
+          }
+        });
         bindClick('header-reset-question-btn', onResetQuestion);
         bindClick('hide-results-btn', onHideResults);
         bindClick('strip-next-btn', onNextQuestion);
@@ -15770,10 +15795,10 @@
       for (var i = 0; i < total; i++) {
         var dot = document.createElement('button');
         var isCurrent = (i === current);
-        dot.className = 'transition-all duration-200 outline-none ' +
+        dot.className = 'transition-all duration-200 outline-none flex-shrink-0 border-none p-0 ' +
           (isCurrent
-            ? 'h-3 w-3 sm:h-3.5 sm:w-3.5 bg-white shadow-lg ring-2 ring-white/30 scale-110 cursor-default rounded-full'
-            : 'h-2 w-2 sm:h-2.5 sm:w-2.5 bg-white/40 hover:bg-white/80 hover:scale-125 cursor-pointer rounded-full');
+            ? 'h-3 w-3 sm:h-3.5 sm:w-3.5 bg-white shadow-lg ring-2 ring-white/30 scale-105 cursor-default rounded-full'
+            : 'h-2 w-2 sm:h-2.5 sm:w-2.5 bg-white/40 hover:bg-white/80 hover:scale-110 cursor-pointer rounded-full');
 
         if (!isCurrent) {
           (function (idx) {
@@ -16660,25 +16685,37 @@
       }
       card.className = cardClasses;
 
+      // Status Copy Logic
+      var displayStatus = 'INVITED';
+      var rawStatus = (student.status || '').toUpperCase();
+
+      if (isLocked) displayStatus = 'VIOLATION DETECTED';
+      else if (isBlocked) displayStatus = 'BLOCKED';
+      else if (isAwaitingFullscreen) displayStatus = 'ALLOW RE-ENTRY';
+      else if (rawStatus === 'SUBMITTED') displayStatus = 'ANSWERED';
+      else if (rawStatus === 'IN PROGRESS') displayStatus = 'WORKING...';
+      else if (rawStatus === 'ACTIVE') displayStatus = 'THINKING...';
+      else if (rawStatus === 'CONNECTED') displayStatus = 'JOINED';
+      else if (rawStatus === 'TYPING') displayStatus = 'TYPING...';
+
       // Header: Name & Status Dot
-      var html = '<div class="flex justify-between items-start mb-3">';
-      html += '<div class="flex flex-col min-w-0 pr-2">';
+      // Layout: Name takes available space, Dot is fixed on right, preventing overlap
+      var html = '<div class="flex items-start justify-between mb-2 gap-2">';
+
+      // Left: Name and Status Text
+      html += '<div class="flex flex-col min-w-0 flex-1">';
       html += '<span class="font-bold text-sm text-gray-900 dark:text-white truncate" title="' + escapeHtml(name) + '">' + escapeHtml(name) + '</span>';
-
-      var statusText = student.status || 'Active';
-      if (isLocked) statusText = 'LOCKED';
-      else if (isBlocked) statusText = 'BLOCKED';
-
-      html += '<span class="text-[10px] uppercase font-bold tracking-wide text-gray-400 dark:text-gray-500">' + escapeHtml(statusText) + '</span>';
+      html += '<span class="text-[10px] uppercase font-bold tracking-wide text-gray-400 dark:text-gray-500 truncate">' + escapeHtml(displayStatus) + '</span>';
       html += '</div>';
 
-      // Status Indicator
+      // Right: Status Dot (Fixed)
       var dotColor = 'bg-gray-300';
       if (isLocked) dotColor = 'bg-red-500 animate-pulse';
       else if (student.status === 'Submitted') dotColor = 'bg-emerald-500';
-      else if ((student.status || '').toLowerCase().includes('typing')) dotColor = 'bg-indigo-400 animate-bounce';
+      else if (rawStatus === 'IN PROGRESS' || rawStatus === 'TYPING') dotColor = 'bg-indigo-400 animate-pulse';
+      else if (rawStatus === 'ACTIVE' || rawStatus === 'CONNECTED') dotColor = 'bg-blue-400';
 
-      html += '<span class="w-2.5 h-2.5 rounded-full shadow-sm ' + dotColor + '"></span>';
+      html += '<span class="flex-shrink-0 w-2.5 h-2.5 rounded-full shadow-sm mt-1 ' + dotColor + '"></span>';
       html += '</div>';
 
       // Footer: Answer & Confidence
@@ -16948,6 +16985,33 @@
                 <span class="text-gray-500">Attempt Count</span>
                 <span class="text-gray-900 dark:text-white font-mono">${student.attemptCount || 0}</span>
               </div>
+              
+              <!-- Telemetry -->
+              <div class="border-t border-gray-200 dark:border-gray-700 my-2 pt-2"></div>
+              
+              <div class="flex justify-between">
+                <span class="text-gray-500">Time Spent</span>
+                <span class="text-gray-900 dark:text-white font-mono">${student.timeOnQuestionMs ? (Math.round(student.timeOnQuestionMs / 1000) + 's') : '--'}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-500">Calculator Used</span>
+                <span class="font-bold border px-1.5 rounded text-xs ${student.usingCalculator ? 'text-amber-600 bg-amber-50 border-amber-200' : 'text-gray-400 border-gray-200'}">
+                  ${student.usingCalculator ? 'YES' : 'NO'}
+                </span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-500">Confidence</span>
+                <span class="text-gray-900 dark:text-white">${student.confidence ? student.confidence.replace('-', ' ').toUpperCase() : '--'}</span>
+              </div>
+              
+               ${isLocked ? `
+               <div class="border-t border-gray-200 dark:border-gray-700 my-2 pt-2"></div>
+               <div class="flex justify-between">
+                <span class="text-red-500 font-bold">Details</span>
+                <span class="text-red-600 font-mono text-xs">${escapeHtml(student.lastViolationReason || 'Unknown Violation')}</span>
+               </div>
+               ` : ''}
+               
             </div>
           </div>
         </div>
@@ -16969,11 +17033,17 @@
     function proctorAction(action, email) {
       if (!confirm('Are you sure you want to ' + action + ' this student?')) return;
 
+      if (!CURRENT_POLL_DATA || !CURRENT_POLL_DATA.pollId) {
+        console.error('[Proctor] No active poll data found.');
+        showToast('Error: No active poll found', 'error');
+        return;
+      }
+
       var manageProctoringFn = firebase.functions().httpsCallable('manageProctoring');
       manageProctoringFn({
         action: action,
         pollId: CURRENT_POLL_DATA.pollId,
-        email: email
+        studentEmail: email // FIX: Backend expects 'studentEmail'
       })
         .then(function (result) {
           console.log('[Proctor] Action success:', result);
@@ -20980,7 +21050,20 @@
         // Update progress locally
         var newProgress = Math.max(student.progress || 0, (payload.questionIndex || 0) + 1);
         student.progress = newProgress;
-        student.status = 'In Progress'; // Ensure status is active
+        student.status = 'Submitted'; // Or 'In Progress' if multiple questions
+
+        // Capture Telemetry & Answer Data
+        student.timeOnQuestionMs = payload.timeOnQuestionMs;
+        student.usingCalculator = payload.usingCalculator;
+        student.confidence = payload.confidenceLevel;
+        student.lastAnswerTimestamp = payload.clientTimestamp;
+
+        // If this is single question poll or current question, verify submitted status
+        if (payload.questionIndex === CURRENT_POLL_DATA.questionIndex) {
+          student.status = 'Submitted';
+        } else {
+          student.status = 'In Progress';
+        }
 
         // UI UPDATE: Find the card and update the progress bar/text immediately
         var card = document.querySelector('.student-status-card[data-email="' + CSS.escape(student.email) + '"]');

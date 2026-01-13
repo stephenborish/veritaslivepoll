@@ -245,7 +245,7 @@
         /**
          * Submit answer directly to Firebase (Fast Path)
          */
-        async function submitAnswerToFirebase(pollId, questionIndex, answer, answerId, confidence, email) {
+        async function submitAnswerToFirebase(pollId, questionIndex, answer, answerId, confidence, email, telemetry) {
             if (!firebaseDb) {
                 console.warn('[Firebase] DB not initialized, skipping fast write');
                 return null;
@@ -271,7 +271,11 @@
                     studentEmail: studentEmail,
                     confidenceLevel: confidence || null,
                     timestamp: timestamp,
-                    clientTimestamp: Date.now()
+                    clientTimestamp: Date.now(),
+                    // Capture Telemetry
+                    timeOnQuestionMs: telemetry ? telemetry.timeOnQuestion : null,
+                    usingCalculator: telemetry ? telemetry.usingCalculator : false,
+                    activityStatus: telemetry ? telemetry.status : null
                 };
 
                 // WRITE DIRECTLY TO FIREBASE (Cloud Function Trigger Path)
@@ -1566,7 +1570,8 @@
                 answerDetails.answer,
                 answerDetails.answerId,
                 answerDetails.confidenceLevel,
-                null // let function derive email
+                null, // let function derive email
+                telemetry // Pass telemetry data
             ).then(function (fbResult) {
                 if (fbResult && fbResult.success) {
                     console.log('Firebase write success, proceeding with optimistic UI update');

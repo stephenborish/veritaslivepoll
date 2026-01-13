@@ -2254,12 +2254,6 @@
         bindClick('close-modal-btn', closePollCreator);
         bindClick('close-links-modal-btn', closeLinksModal);
         bindClick('close-preview-modal-btn', closePollPreview);
-        bindClick('preview-prev-question-btn', previewPrevQuestion);
-        bindClick('preview-next-question-btn', previewNextQuestion);
-        bindClick('preview-open-links-btn', previewOpenLinks);
-        bindClick('preview-edit-question-btn', previewEditQuestion);
-        bindClick('preview-delete-question-btn', previewDeleteQuestion);
-        bindClick('preview-reorder-btn', togglePreviewReorder);
         bindClick('add-question-btn', addQuestion);
         bindClick('save-poll-btn', savePoll);
 
@@ -2377,10 +2371,9 @@
 
         if (startPollBtn) {
           console.log('[DashboardBindings] Found startPollBtn (ID: start-session-main-btn). Binding click event...');
-          // Remove any existing listeners if possible (though this is fresh init)
           startPollBtn.removeEventListener('click', onStartPoll);
           startPollBtn.addEventListener('click', onStartPoll);
-          console.log('[DashboardBindings] Click listener bound to startPollBtn.');
+          console.log('[DashboardBindings] Bound onStartPoll to start-session-main-btn');
         } else {
           console.error('[DashboardBindings] CRITICAL: startPollBtn (ID: start-session-main-btn) NOT FOUND in DOM.');
         }
@@ -2430,12 +2423,8 @@
         });
 
         bindClick('header-back-btn', onPreviousQuestion);
-        bindClick('header-prev-btn', onPreviousQuestion); // New visible Previous button
-        bindClick('header-next-btn', onNextQuestion);
         bindClick('header-prev-btn', onPreviousQuestion);
-        bindClick('header-back-btn', onPreviousQuestion); // Fix: Ensure menu back button also works
-        bindClick('dashboard-sidebar-toggle-live', toggleDashboardSidebarLive);
-        bindClick('live-more-actions-btn', toggleLiveMoreMenu);
+        bindClick('header-next-btn', onNextQuestion);
 
         // Global Click Listener for Menus and Panels
         document.addEventListener('click', function (e) {
@@ -2538,6 +2527,7 @@
         bindClick('view-links-btn', onViewLinks);
         bindClick('header-send-link-btn', onSendLink);
         bindClick('header-view-links-btn', onViewLinks);
+        console.log('[DashboardBindings] Bound link action buttons.');
 
         // Timer presets from dropdown menu
         bindClick('add-30s-btn-preset', function () {
@@ -4040,9 +4030,14 @@
     }
 
     function onPollSelectChange() {
-      // Re-fetch button to ensure reference is valid
+      console.log('[onPollSelectChange] Triggered.');
+      // Refresh all dashboard control references
       startPollBtn = document.getElementById('start-session-main-btn');
-      console.log('[onPollSelectChange] Triggered. Value:', pollSelect.value);
+      sendLinkBtn = document.getElementById('send-link-btn');
+      viewLinksBtn = document.getElementById('view-links-btn');
+      pollSelect = document.getElementById('poll-select');
+
+      if (pollSelect) console.log('[onPollSelectChange] Current value:', pollSelect.value);
 
       var pollId = pollSelect.value;
       var selectedPoll = pollId ? ALL_POLLS.find(function (p) { return p.pollId === pollId; }) : null;
@@ -5871,7 +5866,11 @@
 
     // --- Poll Lifecycle Controls ---
     async function onStartPoll(e) {
-      console.log('[onStartPoll] Clicked. Poll select value:', pollSelect ? pollSelect.value : 'N/A');
+      console.log('[onStartPoll] EVENT TRIGGERED. Element:', e && e.target ? e.target.id : 'N/A');
+      if (e) e.preventDefault();
+
+      if (!pollSelect) pollSelect = document.getElementById('poll-select');
+      console.log('[onStartPoll] Current pollSelect value:', pollSelect ? pollSelect.value : 'N/A');
       try {
         var pollId = pollSelect.value;
         if (!pollId) {
@@ -9063,7 +9062,8 @@
 </html>`;
     }
     async function onSendLink() {
-      var btn = sendLinkBtn;
+      console.log('[onSendLink] Triggered');
+      var btn = sendLinkBtn || document.getElementById('send-link-btn');
       if (!btn) {
         console.warn('Missing send link button');
         return;
@@ -12343,6 +12343,13 @@
         }
       });
     }
+
+    // Exporting critical functions to window for global accessibility
+    window.onStartPoll = onStartPoll;
+    window.onSendLink = onSendLink;
+    window.onViewLinks = onViewLinks;
+    window.initializeDashboardBindings = initializeDashboardBindings;
+    window.onPollSelectChange = onPollSelectChange;
 
     console.log('✓ Teacher Panel Ready (Enhanced UI)');
 

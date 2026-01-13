@@ -9279,350 +9279,602 @@
       document.body.style.overflow = '';
     }
 
-    // --- Poll Preview Modal Functions ---
+    // --- REDESIGNED: Poll Editor & Preview Functions ---
     var previewModal = document.getElementById('poll-preview-modal');
+    var editorSidebar = document.getElementById('editor-sidebar');
     var previewPollName = document.getElementById('preview-poll-name');
     var previewPollMeta = document.getElementById('preview-poll-meta');
     var previewQuestionsNav = document.getElementById('preview-questions-nav');
-    var previewQuestionDisplay = document.getElementById('preview-question-display');
-    var previewQuestionCounter = document.getElementById('preview-question-counter');
+
+    // Editor Form Elements
+    var editorQuestionInputContainer = document.getElementById('editor-question-input');
+    var editorTimerInput = document.getElementById('editor-timer-input');
+    var editorImgPreviewContainer = document.getElementById('editor-img-preview-container');
+    var editorImgThumbnail = document.getElementById('editor-img-thumbnail');
+    var editorOptionsList = document.getElementById('editor-options-list');
+
+    // Preview Pane Elements
+    var truePreviewContainer = document.getElementById('true-preview-container');
+    var previewStudentStem = document.getElementById('preview-student-stem');
+    var previewStudentVisual = document.getElementById('preview-student-visual');
+    var previewStudentOptions = document.getElementById('preview-student-options');
+
     var currentPreviewPoll = null;
     var currentPreviewQuestionIndex = 0;
-    var isPreviewReorderMode = false;
-    var originalQuestionOrder = null;
+    var editorQuill = null;
+    var isPreviewDirty = false;
+    var draggedItemIndex = null;
 
     function openPollPreview(pollId) {
       var poll = ALL_POLLS.find(function (p) { return p.pollId === pollId; });
-      if (!poll || !poll.questions || poll.questions.length === 0) {
-        veritasAlert('This poll has no questions.', { title: 'Cannot preview', destructive: true });
+      if (!poll) {
+        showToast('error', 'Error', 'Poll not found.');
         return;
       }
 
-      currentPreviewPoll = poll;
+      // Deep copy to avoid mutating the global state until save
+      // JSON.parse/stringify is simple way to deep copy for this data structure
+      currentPreviewPoll = JSON.parse(JSON.stringify(poll));
+
+      if (!currentPreviewPoll.questions) currentPreviewPoll.questions = [];
+      if (currentPreviewPoll.questions.length === 0) {
+        // Auto-add first question if empty
+        currentPreviewPoll.questions.push(createNewQuestionTemplate());
+      }
+
       currentPreviewQuestionIndex = 0;
-      isPreviewReorderMode = false;
-      originalQuestionOrder = null;
+      isPreviewDirty = false;
 
+      // Update Header
       previewPollName.textContent = poll.pollName || 'Untitled Poll';
-      var questionsCount = poll.questions.length;
-      var classText = poll.className || 'No class';
-      previewPollMeta.textContent = classText + ' • ' + questionsCount + ' Question' + (questionsCount !== 1 ? 's' : '');
+      updatePreviewMeta();
 
+      // Init Editor
+      initEditorQuill();
+
+      // Render
       renderPreviewNav();
-      renderPreviewQuestion();
+      loadQuestionIntoEditor(0);
 
-      // Ensure modal is appended to document.body to escape any container clipping
+      // Show Modal
       if (previewModal.parentElement !== document.body) {
         document.body.appendChild(previewModal);
       }
-
+      previewModal.style.display = 'flex';
       previewModal.classList.remove('hidden');
-      previewModal.style.cssText = 'display: flex !important; visibility: visible !important; position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; z-index: 99999 !important; background-color: rgba(0,0,0,0.6) !important;';
-      previewModal.setAttribute('aria-hidden', 'false');
-
-      // Prevent background scrolling
       document.body.style.overflow = 'hidden';
+
+      // Setup Keyboard Shortcuts
+      document.addEventListener('keydown', handlePreviewKeydown);
     }
 
     function closePollPreview() {
-      previewModal.classList.add('hidden');
+      if (isPreviewDirty) {
+        if (!confirm('You have unsaved changes. Are you sure you want to close?')) return;
+      }
+
       previewModal.style.display = 'none';
-      previewModal.style.cssText = ''; // Reset inline styles
-      // Restore body scroll
+      previewModal.classList.add('hidden');
       document.body.style.overflow = '';
+      document.removeEventListener('keydown', handlePreviewKeydown);
       currentPreviewPoll = null;
-      currentPreviewQuestionIndex = 0;
-      isPreviewReorderMode = false;
-      originalQuestionOrder = null;
     }
 
-    function renderPreviewNav() {
-      if (!currentPreviewPoll || !currentPreviewPoll.questions) return;
+    function handlePreviewKeydown(e) {
+      if (e.key === 'Escape') closePollPreview();
+      // Add more shortcuts if needed (Ctrl+S to save?)
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        saveAndClosePreview();
+      }
+    }
 
+    function createNewQuestionTemplate() {
+      return {
+        questionText: 'New Question',
+        options: [
+          { text: 'Option A', imageURL: '' },
+          { text: 'Option B', imageURL: '' },
+          { text: 'Option C', imageURL: '' },
+          { text: 'Option D', imageURL: '' }
+        ],
+        correctAnswer: 'A',
+        timerSeconds: 60,
+        questionImageURL: ''
+      };
+    }
+
+    function updatePreviewMeta() {
+      var count = currentPreviewPoll.questions.length;
+      var classText = currentPreviewPoll.className || 'No Class';
+      previewPollMeta.textContent = classText + ' • ' + count + ' Question' + (count !== 1 ? 's' : '');
+      document.getElementById('preview-question-count-badge').textContent = count;
+    }
+
+    /* --- Navigation & Sidebar --- */
+    function renderPreviewNav() {
       previewQuestionsNav.innerHTML = '';
       currentPreviewPoll.questions.forEach(function (q, index) {
-        var div = document.createElement('div');
-        div.className = 'preview-nav-item cursor-pointer rounded-lg p-3 transition-colors ' + (index === currentPreviewQuestionIndex ? 'bg-primary/20 dark:bg-primary/30 border-l-4 border-primary' : 'bg-brand-white dark:bg-brand-dark-gray/30 hover:bg-brand-light-gray/40 dark:hover:bg-brand-dark-gray/40');
-        div.dataset.questionIndex = index;
+        var el = document.createElement('div');
+        el.className = 'group flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all border border-transparent ' +
+          (index === currentPreviewQuestionIndex ? 'bg-veritas-navy/5 border-veritas-navy/10 shadow-sm' : 'hover:bg-gray-50 dark:hover:bg-gray-800');
+        el.draggable = true;
 
-        var html = '<div class="flex items-start gap-2">';
-        if (isPreviewReorderMode) {
-          html += '<span class="material-symbols-outlined text-sm text-brand-dark-gray/40 dark:text-brand-white/40 cursor-move">drag_indicator</span>';
-        }
-        html += '<div class="flex-1 min-w-0">';
-        html += '<div class="text-xs font-semibold text-brand-dark-gray/80 dark:text-brand-white/80">Q' + (index + 1) + '</div>';
-        html += '<div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 truncate mt-1">' + escapeHtml(q.questionText || 'No text') + '</div>';
-        html += '</div></div>';
+        // Drag Handle
+        var handle = document.createElement('span');
+        handle.className = 'material-symbols-outlined text-gray-400 text-lg cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity';
+        handle.textContent = 'drag_indicator';
 
-        div.innerHTML = html;
-        div.onclick = function () {
-          if (!isPreviewReorderMode) {
-            currentPreviewQuestionIndex = index;
-            renderPreviewNav();
-            renderPreviewQuestion();
-          }
+        // Index Number
+        var num = document.createElement('span');
+        num.className = 'text-xs font-bold w-5 h-5 flex items-center justify-center rounded bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 ' + (index === currentPreviewQuestionIndex ? 'bg-veritas-navy text-white dark:bg-veritas-navy dark:text-white' : '');
+        num.textContent = index + 1;
+
+        // Text Preview
+        var text = document.createElement('div');
+        text.className = 'flex-1 min-w-0';
+        // Strip HTML for sidebar preview
+        var tmp = document.createElement('div');
+        tmp.innerHTML = q.questionText || 'New Question';
+        var plainText = tmp.textContent || tmp.innerText || 'New Question';
+
+        text.innerHTML = '<p class="text-xs font-semibold text-gray-700 dark:text-gray-200 truncate">' + escapeHtml(plainText) + '</p>';
+
+        el.appendChild(handle);
+        el.appendChild(num);
+        el.appendChild(text);
+
+        // Click Handler
+        el.onclick = function () {
+          loadQuestionIntoEditor(index);
         };
 
-        if (isPreviewReorderMode) {
-          div.setAttribute('draggable', 'true');
-          setupDragHandlers(div, index);
+        // DnD Handlers
+        el.addEventListener('dragstart', function (e) {
+          draggedItemIndex = index;
+          e.dataTransfer.effectAllowed = 'move';
+          el.classList.add('opacity-50');
+        });
+        el.addEventListener('dragend', function () {
+          el.classList.remove('opacity-50');
+          draggedItemIndex = null;
+        });
+        el.addEventListener('dragover', function (e) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+        });
+        el.addEventListener('drop', function (e) {
+          e.preventDefault();
+          if (draggedItemIndex !== null && draggedItemIndex !== index) {
+            // Reorder
+            var item = currentPreviewPoll.questions.splice(draggedItemIndex, 1)[0];
+            currentPreviewPoll.questions.splice(index, 0, item);
+
+            // Update selection index
+            if (currentPreviewQuestionIndex === draggedItemIndex) {
+              currentPreviewQuestionIndex = index;
+            } else if (draggedItemIndex < currentPreviewQuestionIndex && index >= currentPreviewQuestionIndex) {
+              currentPreviewQuestionIndex--;
+            } else if (draggedItemIndex > currentPreviewQuestionIndex && index <= currentPreviewQuestionIndex) {
+              currentPreviewQuestionIndex++;
+            }
+
+            renderPreviewNav();
+            isPreviewDirty = true;
+          }
+        });
+
+        previewQuestionsNav.appendChild(el);
+      });
+
+      // Scroll to active
+      // setTimeout(() => {
+      //     var active = previewQuestionsNav.children[currentPreviewQuestionIndex];
+      //     if(active) active.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+      // }, 50);
+    }
+
+    /* --- Editor Logic --- */
+    function initEditorQuill() {
+      if (!editorQuill) {
+        editorQuill = QuillManager.init('editor-question-input', '', 'Type your question here...', function (data) {
+          if (!currentPreviewPoll) return;
+          currentPreviewPoll.questions[currentPreviewQuestionIndex].questionText = data.html;
+          updateTruePreview();
+          renderPreviewNav(); // Update sidebar text
+          isPreviewDirty = true;
+        });
+      }
+    }
+
+    function loadQuestionIntoEditor(index) {
+      currentPreviewQuestionIndex = index;
+      var q = currentPreviewPoll.questions[index];
+
+      // Update Sidebar Highlight
+      var items = previewQuestionsNav.children;
+      for (var i = 0; i < items.length; i++) {
+        if (i === index) {
+          items[i].classList.add('bg-veritas-navy/5', 'border-veritas-navy/10');
+          items[i].classList.remove('hover:bg-gray-50');
+          items[i].querySelector('span.w-5').classList.add('bg-veritas-navy', 'text-white');
+        } else {
+          items[i].classList.remove('bg-veritas-navy/5', 'border-veritas-navy/10');
+          items[i].classList.add('hover:bg-gray-50');
+          items[i].querySelector('span.w-5').classList.remove('bg-veritas-navy', 'text-white');
+        }
+      }
+
+      document.getElementById('editor-current-num').textContent = index + 1;
+
+      // Quill Content
+      if (editorQuill) {
+        var delta = editorQuill.clipboard.convert(q.questionText || '');
+        editorQuill.setContents(delta, 'silent');
+      }
+
+      // Timer
+      editorTimerInput.value = q.timerSeconds || 60;
+      editorTimerInput.onchange = function () {
+        q.timerSeconds = parseInt(this.value) || 60;
+        isPreviewDirty = true;
+      };
+
+      // Image
+      if (q.questionImageURL) {
+        editorImgThumbnail.src = q.questionImageURL;
+        editorImgPreviewContainer.classList.remove('hidden');
+      } else {
+        editorImgPreviewContainer.classList.add('hidden');
+      }
+
+      // Options
+      renderEditorOptions();
+
+      // Sync Preview
+      updateTruePreview();
+    }
+
+    function renderEditorOptions() {
+      editorOptionsList.innerHTML = '';
+      var q = currentPreviewPoll.questions[currentPreviewQuestionIndex];
+
+      q.options.forEach(function (opt, i) {
+        var letter = String.fromCharCode(65 + i);
+        var isCorrect = q.correctAnswer === letter;
+
+        var row = document.createElement('div');
+        row.className = 'flex flex-col gap-2 bg-white dark:bg-brand-dark-gray p-3 rounded-lg border ' +
+          (isCorrect ? 'border-green-500 ring-1 ring-green-500/20' : 'border-gray-200 dark:border-gray-700');
+
+        // Top Row: Radio, Text, Actions
+        var topRow = document.createElement('div');
+        topRow.className = 'flex items-center gap-3 w-full';
+
+        // Correct Answer Radio
+        var radioContainer = document.createElement('label');
+        radioContainer.className = 'flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full border cursor-pointer transition-colors ' +
+          (isCorrect ? 'bg-green-500 border-green-500 text-white' : 'bg-gray-50 border-gray-300 hover:border-gray-400 text-gray-400');
+        radioContainer.innerHTML = '<span class="text-sm font-bold">' + letter + '</span>' +
+          '<input type="radio" name="correct_answer" class="hidden" ' + (isCorrect ? 'checked' : '') + '>';
+        radioContainer.onclick = function () {
+          q.correctAnswer = letter;
+          renderEditorOptions();
+          updateTruePreview();
+          isPreviewDirty = true;
+        };
+
+        // Text Input
+        var textInput = document.createElement('input');
+        textInput.type = 'text';
+        textInput.value = opt.text || '';
+        textInput.placeholder = 'Answer option ' + letter;
+        textInput.className = 'flex-1 min-w-0 px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-veritas-navy/50 outline-none text-sm';
+        textInput.oninput = function () {
+          opt.text = this.value;
+          updateTruePreview();
+          isPreviewDirty = true;
+        };
+
+        // Actions: Image, Remove
+        var actionsDiv = document.createElement('div');
+        actionsDiv.className = 'flex items-center gap-1';
+
+        // Image Upload Btn
+        var imgBtn = document.createElement('label');
+        imgBtn.className = 'p-1.5 text-gray-400 hover:text-veritas-navy cursor-pointer transition-colors rounded hover:bg-gray-100';
+        imgBtn.title = 'Add Image';
+        imgBtn.innerHTML = '<span class="material-symbols-outlined text-lg">image</span>' +
+          '<input type="file" class="hidden" accept="image/*" onchange="handleOptionImageUpload(' + i + ', this)">';
+
+        // Remove Btn
+        var removeBtn = document.createElement('button');
+        removeBtn.className = 'p-1.5 text-gray-400 hover:text-red-500 transition-colors rounded hover:bg-gray-100';
+        removeBtn.innerHTML = '<span class="material-symbols-outlined text-lg">close</span>';
+        removeBtn.title = 'Remove Option';
+        removeBtn.onclick = function () {
+          removeOptionFromQuestion(i);
+        };
+
+        actionsDiv.appendChild(imgBtn);
+        actionsDiv.appendChild(removeBtn);
+
+        topRow.appendChild(radioContainer);
+        topRow.appendChild(textInput);
+        topRow.appendChild(actionsDiv);
+
+        row.appendChild(topRow);
+
+        // Bottom Row: Image Preview (if exists)
+        if (opt.imageURL) {
+          var imgRow = document.createElement('div');
+          imgRow.className = 'pl-11 relative group inline-block';
+
+          var img = document.createElement('img');
+          img.src = opt.imageURL;
+          img.className = 'h-20 w-auto rounded border border-gray-200 object-contain bg-gray-50';
+
+          var removeImgBtn = document.createElement('button');
+          removeImgBtn.className = 'absolute top-0 right-0 transform translate-x-1/2 -translate-y-1/2 bg-red-500 text-white rounded-full p-0.5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity';
+          removeImgBtn.innerHTML = '<span class="material-symbols-outlined text-[12px]">close</span>';
+          removeImgBtn.onclick = function () {
+            removeOptionImage(i);
+          };
+
+          imgRow.appendChild(img);
+          imgRow.appendChild(removeImgBtn);
+          row.appendChild(imgRow);
         }
 
-        previewQuestionsNav.appendChild(div);
+        editorOptionsList.appendChild(row);
       });
     }
 
-    function renderPreviewQuestion() {
-      if (!currentPreviewPoll || !currentPreviewPoll.questions || currentPreviewQuestionIndex >= currentPreviewPoll.questions.length) {
-        previewQuestionDisplay.innerHTML = '<p class="text-brand-dark-gray/60 dark:text-brand-white/60">No question selected</p>';
-        return;
+    function handleOptionImageUpload(index, input) {
+      if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function (e) {
+          var dataURL = e.target.result;
+          var q = currentPreviewPoll.questions[currentPreviewQuestionIndex];
+          if (q.options[index]) {
+            q.options[index].imageURL = dataURL;
+            renderEditorOptions();
+            updateTruePreview();
+            isPreviewDirty = true;
+          }
+        };
+        reader.readAsDataURL(input.files[0]);
       }
+    }
 
+    function removeOptionImage(index) {
       var q = currentPreviewPoll.questions[currentPreviewQuestionIndex];
-      var html = '';
-
-      // Question header
-      html += '<div class="mb-6">';
-      html += '<div class="flex items-center gap-2 mb-2">';
-      html += '<span class="text-sm font-semibold text-brand-dark-gray/60 dark:text-brand-white/60">Question ' + (currentPreviewQuestionIndex + 1) + ' of ' + currentPreviewPoll.questions.length + '</span>';
-      if (q.timerSeconds) {
-        html += '<span class="text-sm text-brand-dark-gray/50 dark:text-brand-white/50">• Timer: ' + q.timerSeconds + 's</span>';
-      }
-      html += '</div>';
-      html += '<h3 class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">' + (q.questionText || 'No question text') + '</h3>';
-      html += '</div>';
-
-      // Question image
-      if (q.questionImageURL) {
-        html += '<div class="mb-6">';
-        html += '<img src="' + (q.questionImageURL) + '" alt="Question image" class="max-w-full max-h-96 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40" referrerpolicy="no-referrer" onerror="this.style.display=\'none\';">';
-        html += '</div>';
-      }
-
-      // Answer options
-      if (q.options && q.options.length > 0) {
-        html += '<div class="space-y-3">';
-        html += '<h4 class="text-lg font-semibold text-brand-dark-gray dark:text-brand-white mb-3">Answer Options</h4>';
-        q.options.forEach(function (opt, optIndex) {
-          var letter = String.fromCharCode(65 + optIndex);
-          var isCorrect = q.correctAnswer === letter;
-          var optClass = 'flex items-start gap-3 p-4 rounded-lg border-2 transition-colors ' + (isCorrect ? 'bg-green-50 dark:bg-green-900/20 border-green-500 dark:border-green-600' : 'bg-brand-light-gray/30 dark:bg-brand-dark-gray/20 border-brand-light-gray dark:border-brand-dark-gray/40');
-
-          html += '<div class="' + optClass + '">';
-          html += '<div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold ' + (isCorrect ? 'bg-green-500 text-white' : 'bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white') + '">' + letter + '</div>';
-          html += '<div class="flex-1">';
-          if (opt.text) {
-            html += '<p class="text-brand-dark-gray dark:text-brand-white">' + escapeHtml(opt.text) + '</p>';
-          }
-          if (opt.imageURL) {
-            html += '<img src="' + (opt.imageURL) + '" alt="Option image" class="mt-2 max-w-[200px] max-h-[150px] rounded border border-brand-light-gray dark:border-brand-dark-gray/40" referrerpolicy="no-referrer" onerror="this.style.display=\'none\';">';
-          }
-          html += '</div>';
-          if (isCorrect) {
-            html += '<span class="material-symbols-outlined text-green-600 dark:text-green-400">check_circle</span>';
-          }
-          html += '</div>';
-        });
-        html += '</div>';
-      } else {
-        html += '<p class="text-brand-dark-gray/60 dark:text-brand-white/60">No answer options</p>';
-      }
-
-      previewQuestionDisplay.innerHTML = html;
-      previewQuestionCounter.textContent = (currentPreviewQuestionIndex + 1) + ' / ' + currentPreviewPoll.questions.length;
-
-      // Update navigation button states
-      document.getElementById('preview-prev-question-btn').disabled = currentPreviewQuestionIndex === 0;
-      document.getElementById('preview-next-question-btn').disabled = currentPreviewQuestionIndex === currentPreviewPoll.questions.length - 1;
-    }
-
-    function previewPrevQuestion() {
-      if (currentPreviewQuestionIndex > 0) {
-        currentPreviewQuestionIndex--;
-        renderPreviewNav();
-        renderPreviewQuestion();
+      if (q.options[index]) {
+        q.options[index].imageURL = '';
+        renderEditorOptions();
+        updateTruePreview();
+        isPreviewDirty = true;
       }
     }
 
-    function previewNextQuestion() {
-      if (currentPreviewPoll && currentPreviewQuestionIndex < currentPreviewPoll.questions.length - 1) {
-        currentPreviewQuestionIndex++;
-        renderPreviewNav();
-        renderPreviewQuestion();
-      }
-    }
-
-    function previewOpenLinks() {
-      if (!currentPreviewPoll) return;
-      var className = currentPreviewPoll.className;
-      if (!className) {
-        veritasAlert('This poll has no class assigned.', { title: 'No class', destructive: true });
+    function addOptionToQuestion() {
+      var q = currentPreviewPoll.questions[currentPreviewQuestionIndex];
+      if (q.options.length >= 8) {
+        showToast('warning', 'Limit Reached', 'Maximum 8 options allowed.');
         return;
       }
-      openLinksModal(className);
+      q.options.push({ text: '', imageURL: '' });
+      renderEditorOptions();
+      updateTruePreview();
+      isPreviewDirty = true;
     }
 
-    function previewEditQuestion() {
-      if (!currentPreviewPoll) return;
-      closePollPreview();
-      startEditPoll(currentPreviewPoll.pollId, currentPreviewQuestionIndex);
+    function removeOptionFromQuestion(index) {
+      var q = currentPreviewPoll.questions[currentPreviewQuestionIndex];
+      if (q.options.length <= 2) {
+        showToast('warning', 'Cannot Remove', 'Minimum 2 options required.');
+        return;
+      }
+      q.options.splice(index, 1);
+
+      // Reset correct answer if it was the removed one or shifted
+      // Allow dumb reset to 'A' if invalid
+      var newLetter = q.correctAnswer;
+      if (index < (q.correctAnswer.charCodeAt(0) - 65)) {
+        // If we removed an option before the correct one, the correct letter shifts down
+        newLetter = String.fromCharCode(q.correctAnswer.charCodeAt(0) - 1);
+      } else if (index === (q.correctAnswer.charCodeAt(0) - 65)) {
+        // Removed the correct answer, default to A
+        newLetter = 'A';
+      }
+      q.correctAnswer = newLetter;
+
+      renderEditorOptions();
+      updateTruePreview();
+      isPreviewDirty = true;
     }
 
-    async function previewDeleteQuestion() {
-      if (!currentPreviewPoll || !currentPreviewPoll.questions || currentPreviewPoll.questions.length === 0) return;
+    function addNewQuestionToPoll() {
+      var newQ = createNewQuestionTemplate();
+      currentPreviewPoll.questions.push(newQ);
+      updatePreviewMeta();
+      renderPreviewNav();
+      loadQuestionIntoEditor(currentPreviewPoll.questions.length - 1); // Switch to new
+      isPreviewDirty = true;
+    }
 
-      var confirmed = await veritasConfirm('Delete this question from the poll?', {
-        title: 'Delete question',
-        confirmText: 'Delete',
-        destructive: true
-      });
-      if (!confirmed) return;
+    function deleteCurrentQuestion() {
+      if (currentPreviewPoll.questions.length <= 1) {
+        showToast('warning', 'Cannot Delete', 'Poll must have at least one question.');
+        return;
+      }
+      if (!confirm('Delete this question?')) return;
 
       currentPreviewPoll.questions.splice(currentPreviewQuestionIndex, 1);
-
-      if (currentPreviewPoll.questions.length === 0) {
-        await veritasAlert('Cannot delete the last question. A poll must have at least one question.', {
-          title: 'Cannot delete',
-          destructive: true
-        });
-        currentPreviewPoll.questions.splice(currentPreviewQuestionIndex, 0, { questionText: '', options: [], correctAnswer: 'A', timerSeconds: 90 });
-        return;
-      }
 
       if (currentPreviewQuestionIndex >= currentPreviewPoll.questions.length) {
         currentPreviewQuestionIndex = currentPreviewPoll.questions.length - 1;
       }
 
-      // Save to backend
-      if (PREVIEW_MODE) {
-        renderPreviewNav();
-        renderPreviewQuestion();
-        await veritasAlert('Question deleted (preview mode).', { title: 'Question deleted' });
-        return;
-      }
-
-      var previewMetadata = {
-        sessionType: normalizeSessionTypeClient(currentPreviewPoll.sessionType),
-        timeLimitMinutes: currentPreviewPoll.timeLimitMinutes || null,
-        accessCode: currentPreviewPoll.accessCode || '',
-        availableFrom: currentPreviewPoll.availableFrom || '',
-        dueBy: currentPreviewPoll.dueBy || '',
-        secureSettings: currentPreviewPoll.secureSettings || {}
-      };
-
-      // FIREBASE MIGRATION: Update Poll via Cloud Function
-      firebase.functions().httpsCallable('updatePoll')({
-        pollId: currentPreviewPoll.pollId,
-        pollName: currentPreviewPoll.pollName,
-        className: currentPreviewPoll.className,
-        questions: currentPreviewPoll.questions,
-        metadata: previewMetadata
-      }).then(function (result) {
-        if (result.data && result.data.success) {
-          // RTDB listener will update ALL_POLLS and UI
-          renderPreviewNav();
-          renderPreviewQuestion();
-          veritasAlert('Question deleted successfully.', { title: 'Question deleted' });
-        } else {
-          throw new Error('Failed to update poll');
-        }
-      }).catch(function (error) {
-        handleError(error);
-      });
-    }
-
-    function togglePreviewReorder() {
-      isPreviewReorderMode = !isPreviewReorderMode;
-      var btn = document.getElementById('preview-reorder-btn');
-
-      if (isPreviewReorderMode) {
-        originalQuestionOrder = JSON.parse(JSON.stringify(currentPreviewPoll.questions));
-        btn.innerHTML = '<span class="material-symbols-outlined text-sm align-middle">check</span>';
-        btn.classList.add('bg-primary', 'text-white');
-        btn.classList.remove('bg-brand-dark-gray/10', 'dark:bg-brand-white/10', 'text-brand-dark-gray', 'dark:text-brand-white');
-      } else {
-        // Save the reordered questions
-        if (JSON.stringify(originalQuestionOrder) !== JSON.stringify(currentPreviewPoll.questions)) {
-          saveReorderedQuestions();
-        }
-        originalQuestionOrder = null;
-        btn.innerHTML = '<span class="material-symbols-outlined text-sm align-middle">swap_vert</span>';
-        btn.classList.remove('bg-primary', 'text-white');
-        btn.classList.add('bg-brand-dark-gray/10', 'dark:bg-brand-white/10', 'text-brand-dark-gray', 'dark:text-brand-white');
-      }
-
+      updatePreviewMeta();
       renderPreviewNav();
+      loadQuestionIntoEditor(currentPreviewQuestionIndex);
+      isPreviewDirty = true;
     }
 
-    function saveReorderedQuestions() {
-      if (!currentPreviewPoll) return;
+    function duplicateCurrentQuestion() {
+      var q = currentPreviewPoll.questions[currentPreviewQuestionIndex];
+      var copy = JSON.parse(JSON.stringify(q));
+      copy.questionText += ' (Copy)';
 
-      if (PREVIEW_MODE) {
-        veritasAlert('Question order updated (preview mode).', { title: 'Questions reordered' });
+      currentPreviewPoll.questions.splice(currentPreviewQuestionIndex + 1, 0, copy);
+      updatePreviewMeta();
+      renderPreviewNav();
+      loadQuestionIntoEditor(currentPreviewQuestionIndex + 1);
+      isPreviewDirty = true;
+    }
+
+    function handleQuestionImageUpload(input) {
+      if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function (e) {
+          var dataURL = e.target.result;
+          var q = currentPreviewPoll.questions[currentPreviewQuestionIndex];
+          q.questionImageURL = dataURL;
+
+          // Update UIs
+          editorImgThumbnail.src = dataURL;
+          editorImgPreviewContainer.classList.remove('hidden');
+          updateTruePreview();
+          isPreviewDirty = true;
+
+          // Optional: Trigger background upload to Storage here if we wanted persistent URL immediately
+          // For now, we save DataURL directly to poll object. 
+          // Note: Large images might hit Firestore limits.
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
+    }
+
+    function removeQuestionImage() {
+      var q = currentPreviewPoll.questions[currentPreviewQuestionIndex];
+      q.questionImageURL = '';
+      editorImgPreviewContainer.classList.add('hidden');
+      document.getElementById('editor-hidden-file-input').value = '';
+      updateTruePreview();
+      isPreviewDirty = true;
+    }
+
+    /* --- "True Preview" Rendering (Student View Simulation) --- */
+    function updateTruePreview() {
+      var q = currentPreviewPoll.questions[currentPreviewQuestionIndex];
+
+      // Stem
+      previewStudentStem.innerHTML = q.questionText || '<span class="text-gray-400 italic">Start typing your question...</span>';
+
+      // Image
+      if (q.questionImageURL) {
+        previewStudentVisual.querySelector('img').src = q.questionImageURL;
+        previewStudentVisual.classList.remove('hidden');
+      } else {
+        previewStudentVisual.classList.add('hidden');
+      }
+
+      // Options
+      previewStudentOptions.innerHTML = '';
+      q.options.forEach(function (opt, i) {
+        var letter = String.fromCharCode(65 + i);
+        var isCorrect = q.correctAnswer === letter;
+
+        var div = document.createElement('div');
+        div.className = 'student-option flex flex-col gap-2 ' + (isCorrect ? 'correct-preview' : '');
+
+        // Top Row
+        var topRow = document.createElement('div');
+        topRow.className = 'flex items-center gap-3 w-full';
+
+        var badge = document.createElement('div');
+        badge.className = 'student-badge';
+        badge.textContent = letter;
+
+        var text = document.createElement('div');
+        text.className = 'text-sm font-medium flex-1 break-words';
+        text.textContent = opt.text || 'Option ' + letter;
+
+        topRow.appendChild(badge);
+        topRow.appendChild(text);
+
+        if (isCorrect) {
+          var check = document.createElement('span');
+          check.className = 'material-symbols-outlined text-green-500 text-lg';
+          check.textContent = 'check_circle';
+          topRow.appendChild(check);
+        }
+
+        div.appendChild(topRow);
+
+        // Option Image
+        if (opt.imageURL) {
+          var img = document.createElement('img');
+          img.src = opt.imageURL;
+          img.className = 'w-full h-32 object-contain rounded border border-gray-100 bg-white ml-2';
+          div.appendChild(img);
+        }
+        // Wait, I appended topRow twice? No, I appended img to div. 
+        // Logic check: div.appendChild(topRow); then div.appendChild(img). Correct.
+        // Wait, in my replacement string above I put div.appendChild(topRow) BEFORE the image check, which is correct.
+
+        previewStudentOptions.appendChild(div);
+      });
+    }
+
+    /* --- Saving --- */
+    function saveAndClosePreview() {
+      if (!isPreviewDirty) {
+        closePollPreview();
         return;
       }
 
-      var reorderMetadata = {
-        sessionType: normalizeSessionTypeClient(currentPreviewPoll.sessionType),
-        timeLimitMinutes: currentPreviewPoll.timeLimitMinutes || null,
-        accessCode: currentPreviewPoll.accessCode || '',
-        availableFrom: currentPreviewPoll.availableFrom || '',
-        dueBy: currentPreviewPoll.dueBy || '',
-        secureSettings: currentPreviewPoll.secureSettings || {}
-      };
+      var saveBtn = document.getElementById('preview-save-btn');
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<div class="h-4 w-4 border-2 border-white/50 border-t-white rounded-full animate-spin"></div> Saving...';
 
+      // Call Backend
       // FIREBASE MIGRATION: Update Poll via Cloud Function
       firebase.functions().httpsCallable('updatePoll')({
         pollId: currentPreviewPoll.pollId,
         pollName: currentPreviewPoll.pollName,
         className: currentPreviewPoll.className,
         questions: currentPreviewPoll.questions,
-        metadata: reorderMetadata
+        metadata: {
+          // Preserve existing meta
+          sessionType: currentPreviewPoll.sessionType || 'live',
+          timeLimitMinutes: currentPreviewPoll.timeLimitMinutes || null,
+          accessCode: currentPreviewPoll.accessCode || '',
+          availableFrom: currentPreviewPoll.availableFrom || '',
+          dueBy: currentPreviewPoll.dueBy || '',
+          secureSettings: currentPreviewPoll.secureSettings || {}
+        }
       }).then(function (result) {
         if (result.data && result.data.success) {
-          veritasAlert('Question order updated successfully.', { title: 'Questions reordered' });
-        } else {
-          throw new Error('Failed to update poll');
-        }
-      }).catch(function (error) {
-        handleError(error);
-      });
-    }
+          showToast('success', 'Saved', 'Poll updated successfully.');
+          isPreviewDirty = false;
 
-    var draggedItemIndex = null;
-
-    function setupDragHandlers(div, index) {
-      div.addEventListener('dragstart', function (e) {
-        draggedItemIndex = index;
-        this.style.opacity = '0.4';
-        e.dataTransfer.effectAllowed = 'move';
-      });
-
-      div.addEventListener('dragend', function (e) {
-        this.style.opacity = '1';
-        draggedItemIndex = null;
-      });
-
-      div.addEventListener('dragover', function (e) {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-
-        if (draggedItemIndex !== null && draggedItemIndex !== index) {
-          var draggedQuestion = currentPreviewPoll.questions[draggedItemIndex];
-          currentPreviewPoll.questions.splice(draggedItemIndex, 1);
-          currentPreviewPoll.questions.splice(index, 0, draggedQuestion);
-
-          if (currentPreviewQuestionIndex === draggedItemIndex) {
-            currentPreviewQuestionIndex = index;
-          } else if (draggedItemIndex < currentPreviewQuestionIndex && index >= currentPreviewQuestionIndex) {
-            currentPreviewQuestionIndex--;
-          } else if (draggedItemIndex > currentPreviewQuestionIndex && index <= currentPreviewQuestionIndex) {
-            currentPreviewQuestionIndex++;
+          // Update Local Cache/State immediately for responsiveness
+          // (The RTDB listener usually does this, but good to be redundant)
+          var existingIndex = ALL_POLLS.findIndex(p => p.pollId === currentPreviewPoll.pollId);
+          if (existingIndex !== -1) {
+            ALL_POLLS[existingIndex] = currentPreviewPoll;
           }
 
-          draggedItemIndex = index;
-          renderPreviewNav();
+          closePollPreview();
+        } else {
+          throw new Error('Save failed');
         }
+      }).catch(function (error) {
+        showToast('error', 'Save Failed', error.message);
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<span class="material-symbols-outlined text-lg">save</span> Save & Close';
       });
     }
 
@@ -15823,131 +16075,131 @@
       console.log('[Info] Calculator System Initialized');
     }, 1000);
 
-  })();
 
 
-  // ==========================================
-  // STUDENT INSPECTOR & ANALYTICS (PHASE 4)
-  // ==========================================
 
-  async function openStudentInspector(email) {
-    var modal = document.getElementById('student-inspector-modal');
-    if (!modal) return;
+    // ==========================================
+    // STUDENT INSPECTOR & ANALYTICS (PHASE 4)
+    // ==========================================
 
-    // 1. Reset & Show Loading State
-    document.getElementById('inspector-history-body').innerHTML = `<tr>
+    async function openStudentInspector(email) {
+      var modal = document.getElementById('student-inspector-modal');
+      if (!modal) return;
+
+      // 1. Reset & Show Loading State
+      document.getElementById('inspector-history-body').innerHTML = `<tr>
       <td colspan="5" class="p-8 text-center text-slate-400">Loading history...</td>
     </tr>`;
-    document.getElementById('inspector-empty-state').classList.add('hidden');
+      document.getElementById('inspector-empty-state').classList.add('hidden');
 
-    // 2. Populate Header
-    var student = (STUDENTS || []).find(function (s) { return s.email === email; });
-    var name = student ? (student.name || student.email) : email;
-    var initials = name.split(' ').map(function (n) { return n[0]; }).join('').substring(0, 2).toUpperCase();
+      // 2. Populate Header
+      var student = (STUDENTS || []).find(function (s) { return s.email === email; });
+      var name = student ? (student.name || student.email) : email;
+      var initials = name.split(' ').map(function (n) { return n[0]; }).join('').substring(0, 2).toUpperCase();
 
-    document.getElementById('inspector-name').textContent = name;
-    document.getElementById('inspector-email').textContent = email;
-    document.getElementById('inspector-initials').textContent = initials;
+      document.getElementById('inspector-name').textContent = name;
+      document.getElementById('inspector-email').textContent = email;
+      document.getElementById('inspector-initials').textContent = initials;
 
-    // Status Badge
-    var statusBadge = document.getElementById('inspector-status-badge');
-    var isOnline = student && student.isOnline; // Assuming we track this
-    statusBadge.textContent = isOnline ? 'Online' : 'Offline';
-    statusBadge.className = isOnline
-      ? 'px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wide'
-      : 'px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-wide';
+      // Status Badge
+      var statusBadge = document.getElementById('inspector-status-badge');
+      var isOnline = student && student.isOnline; // Assuming we track this
+      statusBadge.textContent = isOnline ? 'Online' : 'Offline';
+      statusBadge.className = isOnline
+        ? 'px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wide'
+        : 'px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-wide';
 
-    modal.classList.remove('hidden');
+      modal.classList.remove('hidden');
 
-    // 3. Fetch & Process History
-    try {
-      var history = await fetchStudentHistory(CURRENT_POLL_DATA.pollId, email);
-      renderStudentInspector(history);
-    } catch (error) {
-      console.error('Failed to fetch student history:', error);
-      document.getElementById('inspector-history-body').innerHTML = `<tr>
+      // 3. Fetch & Process History
+      try {
+        var history = await fetchStudentHistory(CURRENT_POLL_DATA.pollId, email);
+        renderStudentInspector(history);
+      } catch (error) {
+        console.error('Failed to fetch student history:', error);
+        document.getElementById('inspector-history-body').innerHTML = `<tr>
         <td colspan="5" class="p-8 text-center text-red-500">Failed to load data.</td>
       </tr>`;
-    }
-  }
-
-  async function fetchStudentHistory(pollId, email) {
-    if (!pollId || !email) return [];
-
-    // Fetch specific student history from answers/{pollId}
-    // This might be inefficient if we fetch ALL answers. Optimally we query by orderByChild('email').equalTo(email)
-    // For now, assuming answers/{pollId} is an object with keys as questionIndices? Or keys as answerIds?
-    // Let's assume structure: answers/{pollId}/{questionIndex}/{emailSanitized} = { ... }
-    // OR answers/{pollId}/{answerId} = { email: ..., ... }
-
-    // We'll fetch all answers for the poll and filter client-side for now, as strict schema isn't guaranteed.
-    var snapshot = await firebase.database().ref('answers/' + pollId).once('value');
-    var val = snapshot.val();
-    if (!val) return [];
-
-    var history = [];
-
-    // Iterate differently based on structure
-    // Case A: Flat list
-    if (typeof val === 'object') {
-      Object.keys(val).forEach(function (key) {
-        // Logic to traverse nested structure if needed
-        // If organized by questionIndex: val[qIdx][email]
-        // If flat: val[key].email === email
-
-        var item = val[key];
-        // Check if this item relates to the student
-        if (item.email === email || (item.user && item.user.email === email)) {
-          history.push(item);
-        } else if (typeof item === 'object') {
-          // Nested check (e.g. by question index)
-          Object.values(item).forEach(function (subItem) {
-            if (subItem && (subItem.email === email || (subItem.user && subItem.user.email === email))) {
-              history.push(subItem);
-            }
-          });
-        }
-      });
+      }
     }
 
-    return history;
-  }
+    async function fetchStudentHistory(pollId, email) {
+      if (!pollId || !email) return [];
 
-  function renderStudentInspector(history) {
-    var tbody = document.getElementById('inspector-history-body');
-    var emptyState = document.getElementById('inspector-empty-state');
+      // Fetch specific student history from answers/{pollId}
+      // This might be inefficient if we fetch ALL answers. Optimally we query by orderByChild('email').equalTo(email)
+      // For now, assuming answers/{pollId} is an object with keys as questionIndices? Or keys as answerIds?
+      // Let's assume structure: answers/{pollId}/{questionIndex}/{emailSanitized} = { ... }
+      // OR answers/{pollId}/{answerId} = { email: ..., ... }
 
-    if (!history || history.length === 0) {
-      tbody.innerHTML = '';
-      emptyState.classList.remove('hidden');
-      updateInspectorMetrics([], 0);
-      return;
+      // We'll fetch all answers for the poll and filter client-side for now, as strict schema isn't guaranteed.
+      var snapshot = await firebase.database().ref('answers/' + pollId).once('value');
+      var val = snapshot.val();
+      if (!val) return [];
+
+      var history = [];
+
+      // Iterate differently based on structure
+      // Case A: Flat list
+      if (typeof val === 'object') {
+        Object.keys(val).forEach(function (key) {
+          // Logic to traverse nested structure if needed
+          // If organized by questionIndex: val[qIdx][email]
+          // If flat: val[key].email === email
+
+          var item = val[key];
+          // Check if this item relates to the student
+          if (item.email === email || (item.user && item.user.email === email)) {
+            history.push(item);
+          } else if (typeof item === 'object') {
+            // Nested check (e.g. by question index)
+            Object.values(item).forEach(function (subItem) {
+              if (subItem && (subItem.email === email || (subItem.user && subItem.user.email === email))) {
+                history.push(subItem);
+              }
+            });
+          }
+        });
+      }
+
+      return history;
     }
 
-    emptyState.classList.add('hidden');
+    function renderStudentInspector(history) {
+      var tbody = document.getElementById('inspector-history-body');
+      var emptyState = document.getElementById('inspector-empty-state');
 
-    // Sort history by time or question index
-    history.sort(function (a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+      if (!history || history.length === 0) {
+        tbody.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        updateInspectorMetrics([], 0);
+        return;
+      }
 
-    var totalCorrect = 0;
-    var totalViolations = 0;
-    var totalTime = 0;
+      emptyState.classList.add('hidden');
 
-    var html = history.map(function (item, index) {
-      var isCorrect = item.correct === true; // or check against key
-      if (isCorrect) totalCorrect++;
+      // Sort history by time or question index
+      history.sort(function (a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
 
-      // Calculate time taken (mock or real)
-      var timeTaken = Math.round(Math.random() * 30 + 10); // Mock for now if not in data
-      totalTime += timeTaken;
+      var totalCorrect = 0;
+      var totalViolations = 0;
+      var totalTime = 0;
 
-      return `
+      var html = history.map(function (item, index) {
+        var isCorrect = item.correct === true; // or check against key
+        if (isCorrect) totalCorrect++;
+
+        // Calculate time taken (mock or real)
+        var timeTaken = Math.round(Math.random() * 30 + 10); // Mock for now if not in data
+        totalTime += timeTaken;
+
+        return `
 <tr class="hover:bg-slate-50 dark:hover:bg-brand-dark-gray/20 transition-colors">
   <td class="py-3 font-medium text-slate-700 dark:text-slate-300">Q${item.questionIndex + 1}</td>
   <td class="py-3 text-slate-600 dark:text-slate-400 max-w-xs truncate">${escapeHtml(item.questionText || 'Question ' +
-        (item.questionIndex + 1))}</td>
+          (item.questionIndex + 1))}</td>
   <td class="py-3 font-mono text-xs text-slate-600 dark:text-slate-400">${escapeHtml(item.answer || item.answerText ||
-          '--')}</td>
+            '--')}</td>
   <td class="py-3 text-center">
     <span
       class="inline-flex items-center justify-center h-6 w-6 rounded-full ${isCorrect ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}">
@@ -15957,30 +16209,32 @@
   <td class="py-3 text-right font-mono text-xs text-slate-500">${timeTaken}s</td>
 </tr>
 `;
-    }).join('');
+      }).join('');
 
-    tbody.innerHTML = html;
+      tbody.innerHTML = html;
 
-    updateInspectorMetrics(history, totalCorrect);
-  }
+      updateInspectorMetrics(history, totalCorrect);
+    }
 
-  function updateInspectorMetrics(history, correctCount) {
-    var total = history.length;
-    var accuracy = total > 0 ? Math.round((correctCount / total) * 100) : 0;
+    function updateInspectorMetrics(history, correctCount) {
+      var total = history.length;
+      var accuracy = total > 0 ? Math.round((correctCount / total) * 100) : 0;
 
-    document.getElementById('inspector-accuracy').textContent = accuracy + '%';
-    document.getElementById('inspector-correct-count').textContent = correctCount + '/' + total + ' correct';
+      document.getElementById('inspector-accuracy').textContent = accuracy + '%';
+      document.getElementById('inspector-correct-count').textContent = correctCount + '/' + total + ' correct';
 
-    document.getElementById('inspector-violations').textContent = '0'; // Mock for now
+      document.getElementById('inspector-violations').textContent = '0'; // Mock for now
 
-    var avgSpeed = total > 0 ? Math.round(34) : 0; // Mock average
-    document.getElementById('inspector-speed').textContent = avgSpeed + 's';
-  }
+      var avgSpeed = total > 0 ? Math.round(34) : 0; // Mock average
+      document.getElementById('inspector-speed').textContent = avgSpeed + 's';
+    }
 
-  // Close Handlers
-  document.querySelectorAll('[data-close-inspector="true"]').forEach(function (el) {
-    el.addEventListener('click', function () {
-      var modal = document.getElementById('student-inspector-modal');
-      if (modal) modal.classList.add('hidden');
+    // Close Handlers
+    document.querySelectorAll('[data-close-inspector="true"]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var modal = document.getElementById('student-inspector-modal');
+        if (modal) modal.classList.add('hidden');
+      });
     });
-  });</script>
+  })();
+</script>

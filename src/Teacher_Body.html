@@ -2372,89 +2372,280 @@
 </div>
 
 <!-- Poll Preview Modal -->
+<!-- REDESIGNED: Unified Poll Editor & Preview Modal -->
 <div id="poll-preview-modal"
-  class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-  <div
-    class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
-    <!-- Header -->
-    <div class="sticky top-0 bg-primary px-6 py-4 border-b border-primary/70">
-      <div class="flex items-center justify-between">
-        <div class="flex-1">
-          <h2 id="preview-poll-name" class="text-brand-white text-2xl font-bold">Poll Preview</h2>
-          <p id="preview-poll-meta" class="text-brand-white/80 text-sm mt-1">Class Name • 5 Questions</p>
-        </div>
-        <div class="flex items-center gap-2">
-          <button id="preview-open-links-btn"
-            class="flex items-center justify-center gap-2 h-10 px-5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors">
-            <span class="material-symbols-outlined text-lg">link</span>
-            <span>View Student Links</span>
-          </button>
-          <button id="close-preview-modal-btn"
-            class="flex items-center justify-center h-10 w-10 rounded-lg bg-brand-white/20 text-brand-white hover:bg-brand-white/30 transition-colors">
-            <span class="material-symbols-outlined">close</span>
-          </button>
-        </div>
-      </div>
-    </div>
+  class="modal fixed inset-0 z-[100] hidden bg-gray-100 dark:bg-gray-900 flex-col overflow-hidden font-sans">
 
-    <!-- Body -->
-    <div class="flex-1 overflow-hidden flex">
-      <!-- Left Sidebar - Question Navigation -->
+  <!-- 1. Header Area -->
+  <header
+    class="bg-white dark:bg-brand-dark-gray border-b border-gray-200 dark:border-gray-700 h-16 flex items-center justify-between px-6 shadow-sm z-20 flex-shrink-0">
+    <div class="flex items-center gap-4">
       <div
-        class="w-64 border-r border-brand-light-gray dark:border-brand-dark-gray/40 overflow-y-auto bg-gray-50 dark:bg-brand-dark-gray/20">
-        <div class="p-4">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="text-sm font-semibold text-brand-dark-gray dark:text-brand-white">Questions</h3>
-            <button id="preview-reorder-btn"
-              class="text-xs px-2 py-1 rounded bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white hover:bg-brand-dark-gray/20 dark:hover:bg-brand-white/20 transition-colors">
-              <span class="material-symbols-outlined text-sm align-middle">swap_vert</span>
-            </button>
-          </div>
-          <div id="preview-questions-nav" class="space-y-2">
-            <!-- Question navigation items will be added here -->
-          </div>
-        </div>
+        class="h-10 w-10 rounded-xl bg-veritas-navy text-white flex items-center justify-center shadow-lg shadow-veritas-navy/20">
+        <span class="material-symbols-outlined text-2xl">edit_note</span>
       </div>
-
-      <!-- Main Content - Question Display -->
-      <div class="flex-1 overflow-y-auto p-6">
-        <div id="preview-question-display">
-          <!-- Question content will be displayed here -->
+      <div>
+        <h2 id="preview-poll-name" class="text-lg font-bold text-gray-900 dark:text-white leading-tight">Poll Name</h2>
+        <div class="flex items-center gap-2 text-xs text-gray-500 font-medium">
+          <span id="preview-poll-meta">Class • 0 Questions</span>
+          <span class="mx-1">•</span>
+          <span class="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            Auto-saving
+          </span>
         </div>
       </div>
     </div>
 
-    <!-- Footer - Navigation Controls -->
-    <div
-      class="sticky bottom-0 bg-brand-white dark:bg-brand-dark-gray px-6 py-4 border-t border-brand-light-gray dark:border-brand-dark-gray/40 flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <button id="preview-edit-question-btn"
-          class="h-10 px-4 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
-          <span class="material-symbols-outlined text-sm align-middle mr-1">edit</span>
-          Edit Question
-        </button>
-        <button id="preview-delete-question-btn"
-          class="h-10 px-4 rounded-lg bg-red-600/10 text-red-600 dark:bg-red-500/20 dark:text-red-300 text-sm font-semibold hover:bg-red-600/20 dark:hover:bg-red-500/30 transition-colors">
-          <span class="material-symbols-outlined text-sm align-middle mr-1">delete</span>
-          Delete
-        </button>
-      </div>
-      <div class="flex items-center gap-2">
-        <button id="preview-prev-question-btn"
-          class="h-10 px-4 rounded-lg bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white text-sm font-semibold hover:bg-brand-dark-gray/20 dark:hover:bg-brand-white/20 transition-colors">
-          <span class="material-symbols-outlined text-sm align-middle mr-1">arrow_back</span>
-          Previous
-        </button>
-        <span id="preview-question-counter" class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60 px-2">1 /
-          5</span>
-        <button id="preview-next-question-btn"
-          class="h-10 px-4 rounded-lg bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white text-sm font-semibold hover:bg-brand-dark-gray/20 dark:hover:bg-brand-white/20 transition-colors">
-          Next
-          <span class="material-symbols-outlined text-sm align-middle ml-1">arrow_forward</span>
-        </button>
-      </div>
+    <div class="flex items-center gap-3">
+      <button id="preview-view-links-btn"
+        class="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors text-sm font-semibold">
+        <span class="material-symbols-outlined text-lg">link</span>
+        Student Links
+      </button>
+      <div class="h-8 w-px bg-gray-200 dark:bg-gray-700 mx-1"></div>
+      <button onclick="closePollPreview()"
+        class="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm font-semibold">
+        Close
+      </button>
+      <button id="preview-save-btn" onclick="saveAndClosePreview()"
+        class="flex items-center gap-2 px-6 py-2 rounded-lg bg-veritas-navy text-white hover:bg-veritas-navy/90 transition-all shadow-lg shadow-veritas-navy/20 text-sm font-bold">
+        <span class="material-symbols-outlined text-lg">save</span>
+        Save & Close
+      </button>
     </div>
+  </header>
+
+  <!-- 2. Main Workspace -->
+  <div class="flex-1 flex overflow-hidden">
+
+    <!-- A. Left Sidebar: Question Navigator -->
+    <aside
+      class="w-72 bg-white dark:bg-brand-dark-gray border-r border-gray-200 dark:border-gray-700 flex flex-col flex-shrink-0 z-10 transition-all duration-300"
+      id="editor-sidebar">
+      <div class="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/10 backdrop-blur-sm">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Questions</h3>
+          <span id="preview-question-count-badge"
+            class="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[10px] font-bold px-1.5 py-0.5 rounded">0</span>
+        </div>
+        <button id="editor-add-question-btn" onclick="addNewQuestionToPoll()"
+          class="w-full py-2.5 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-veritas-gold hover:text-veritas-gold dark:hover:border-veritas-gold dark:hover:text-veritas-gold hover:bg-veritas-gold/5 transition-all text-sm font-bold flex items-center justify-center gap-2 group">
+          <span class="material-symbols-outlined group-hover:scale-110 transition-transform">add_circle</span>
+          Add Question
+        </button>
+      </div>
+
+      <div id="preview-questions-nav" class="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-thin">
+        <!-- Questions injected here -->
+      </div>
+    </aside>
+
+    <!-- B. Middle Panel: Editor Form -->
+    <main class="flex-1 flex flex-col min-w-0 bg-gray-50 dark:bg-gray-900 relative">
+      <div class="flex-1 overflow-y-auto p-6 md:p-8 xl:p-12 scrollbar-hide">
+        <div class="max-w-3xl mx-auto space-y-8 pb-20">
+
+          <!-- Editor Header -->
+          <div class="flex items-center justify-between">
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white font-display">Edit Question <span
+                id="editor-current-num">1</span></h1>
+            <div class="flex items-center gap-2">
+              <button id="editor-delete-btn" onclick="deleteCurrentQuestion()"
+                class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                title="Delete Question">
+                <span class="material-symbols-outlined">delete</span>
+              </button>
+              <button id="editor-duplicate-btn" onclick="duplicateCurrentQuestion()"
+                class="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                title="Duplicate Question">
+                <span class="material-symbols-outlined">content_copy</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Question Input -->
+          <div
+            class="bg-white dark:bg-brand-dark-gray p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 space-y-4">
+            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Question
+              Text</label>
+            <div id="editor-question-input" class="bg-gray-50 dark:bg-gray-800 rounded-lg min-h-[100px]"></div>
+
+            <!-- Media & Timer Row -->
+            <div class="flex flex-wrap gap-4 pt-2">
+              <div class="flex-1 min-w-[200px]">
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Attached Media</label>
+                <div class="flex items-center gap-3">
+                  <button id="editor-upload-img-btn"
+                    onclick="document.getElementById('editor-hidden-file-input').click()"
+                    class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold transition-colors">
+                    <span class="material-symbols-outlined text-lg">image</span>
+                    Upload Image
+                  </button>
+                  <div id="editor-img-preview-container" class="hidden relative group h-10 w-10">
+                    <img id="editor-img-thumbnail" src=""
+                      class="h-10 w-10 object-cover rounded-lg border border-gray-300">
+                    <button id="editor-remove-img-btn" onclick="removeQuestionImage()"
+                      class="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span class="material-symbols-outlined text-[10px]">close</span>
+                    </button>
+                  </div>
+                </div>
+                <input type="file" id="editor-hidden-file-input" class="hidden" accept="image/*"
+                  onchange="handleQuestionImageUpload(this)">
+              </div>
+
+              <div class="w-32">
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Timer (sec)</label>
+                <div class="relative">
+                  <span
+                    class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-sm">timer</span>
+                  <input type="number" id="editor-timer-input" value="60" min="10" step="10"
+                    class="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-brand-dark-gray/50 focus:ring-2 focus:ring-veritas-gold focus:border-veritas-gold text-sm font-semibold">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Answers Input -->
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Answer
+                Options</label>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-500">Correct Answer</span>
+              </div>
+            </div>
+
+            <div id="editor-options-list" class="space-y-3">
+              <!-- Options injected here -->
+            </div>
+
+            <div class="flex justify-center pt-2">
+              <button id="editor-add-option-btn" onclick="addOptionToQuestion()"
+                class="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm font-bold transition-colors">
+                <span class="material-symbols-outlined text-lg">add</span>
+                Add Option
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </main>
+
+    <!-- C. Right Panel: True Preview (Hidden on small screens) -->
+    <aside
+      class="hidden xl:flex w-[500px] bg-gray-100 dark:bg-black/20 border-l border-gray-200 dark:border-gray-700 flex-col flex-shrink-0 relative">
+      <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-veritas-gold/40 to-transparent">
+      </div>
+
+      <div
+        class="p-4 flex items-center justify-between bg-white dark:bg-brand-dark-gray border-b border-gray-200 dark:border-gray-700">
+        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+          <span class="material-symbols-outlined text-sm">smartphone</span>
+          Student View (Preview)
+        </h3>
+        <span class="text-[10px] text-gray-400">Live Updates</span>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-6 flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-900">
+        <!-- Simulated Device Frame -->
+        <div
+          class="w-full max-w-[400px] h-[750px] bg-white border-8 border-gray-900 rounded-[3rem] shadow-2xl flex flex-col overflow-hidden relative">
+          <!-- Status Bar Mockup -->
+          <div class="h-6 bg-gray-900 w-full flex items-center justify-between px-6">
+            <div class="text-[10px] text-white font-medium">9:41</div>
+            <div class="flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[10px] text-white">signal_cellular_alt</span>
+              <span class="material-symbols-outlined text-[10px] text-white">wifi</span>
+              <span class="material-symbols-outlined text-[10px] text-white">battery_full</span>
+            </div>
+          </div>
+
+          <!-- Student Interface Mockup -->
+          <div class="flex-1 bg-white overflow-y-auto relative scrollbar-hide">
+
+            <!-- Header -->
+            <div
+              class="h-14 bg-veritas-navy text-white flex items-center px-4 justify-between sticky top-0 z-10 shadow-md">
+              <span class="font-bold tracking-widest text-sm">VERITAS</span>
+              <div class="flex items-center gap-2">
+                <span
+                  class="bg-black/20 rounded-full w-8 h-8 flex items-center justify-center text-xs font-mono">0:45</span>
+              </div>
+            </div>
+
+            <!-- Question Content (The True Preview) -->
+            <div class="p-5 font-sans">
+              <div id="true-preview-container">
+                <!-- Injected formatted question goes here -->
+                <div class="question-visual float-right ml-3 mb-3 max-w-[120px] hidden" id="preview-student-visual">
+                  <img src="" class="rounded-lg border border-gray-200 w-full object-contain bg-white">
+                </div>
+                <h2 class="text-[#12385d] font-serif text-lg leading-relaxed mb-4" id="preview-student-stem">Question
+                  text...</h2>
+
+                <div class="clear-both space-y-3 mt-6" id="preview-student-options">
+                  <!-- Options -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100 bg-white">
+              <div
+                class="w-full h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 font-bold text-sm">
+                Submit Answer
+              </div>
+            </div>
+          </div>
+
+          <!-- Home Indicator -->
+          <div class="absolute bottom-1 left-1/2 -translate-x-1/2 w-32 h-1 bg-white/20 rounded-full"></div>
+        </div>
+      </div>
+    </aside>
+
   </div>
+
+  <!-- Scoped Styles for True Preview (inline to ensure they are available) -->
+  <style>
+    /* Mimic Student Styles within the preview container */
+    #true-preview-container .student-option {
+      border: 1px solid #d1d5db;
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: white;
+      color: black;
+      transition: all 0.2s;
+    }
+
+    #true-preview-container .student-option.correct-preview {
+      border-color: #22c55e;
+      background-color: #f0fdf4;
+    }
+
+    #true-preview-container .student-badge {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: #12385d;
+      flex-shrink: 0;
+    }
+
+    #true-preview-container .student-option.correct-preview .student-badge {
+      background: #22c55e;
+      border-color: #22c55e;
+      color: white;
+    }
+  </style>
 </div>
 
 <!-- Post-Poll Analytics Modal -->

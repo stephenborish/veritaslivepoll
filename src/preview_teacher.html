@@ -3991,11 +3991,7 @@
       /* P0-5: Preserve newlines like student view */
     }
 
-    /* P0-6 FIX: Prevent flex growth in left column that causes variable gap */
-    .live-view-grid>div:first-child {
-      /* Left column should not use flex-1 growth on the answer section */
-      /* This ensures question card always appears at consistent distance from header */
-    }
+
 
     .live-student-panel {
       box-shadow: 0 8px 20px rgba(18, 56, 93, 0.06);
@@ -5273,7 +5269,7 @@
               <div class="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs text-white/70">
                 <span id="live-question-info"
                   class="font-mono tracking-wider uppercase bg-white/10 px-1 sm:px-1.5 py-0.5 rounded">Q1 / 10</span>
-                <span id="question-dots" class="hidden md:flex gap-1"></span>
+                <div id="question-progress-container" class="hidden md:flex items-center gap-1.5 ml-1"></div>
               </div>
             </div>
           </div>
@@ -14889,7 +14885,7 @@
           document.getElementById('header-poll-name').textContent = data.pollName;
 
           // Update question dots
-          updateQuestionDots(data.questionIndex, data.totalQuestions);
+          updateQuestionProgress(data.questionIndex, data.totalQuestions);
 
           // Enable/disable navigation buttons
           var backBtn = document.getElementById('header-back-btn');
@@ -15115,13 +15111,46 @@
           }
         }
 
-        function updateQuestionDots(current, total) {
-          var dotsContainer = document.getElementById('question-dots');
-          dotsContainer.innerHTML = '';
-          for (var i = 0; i < total; i++) {
-            var dot = document.createElement('span');
-            dot.className = 'h-2 w-2 rounded-full ' + (i === current ? 'bg-primary' : 'bg-primary/50');
-            dotsContainer.appendChild(dot);
+        function updateQuestionProgress(current, total) {
+          var container = document.getElementById('question-progress-container');
+          if (!container) return;
+          container.innerHTML = '';
+          var maxVisible = 10;
+          var startIdx = 0;
+          var endIdx = total;
+          if (total > maxVisible) {
+            startIdx = Math.max(0, current - Math.floor(maxVisible / 2));
+            endIdx = Math.min(total, startIdx + maxVisible);
+            if (endIdx - startIdx < maxVisible) startIdx = Math.max(0, endIdx - maxVisible);
+          }
+          if (startIdx > 0) {
+            var ellipsis = document.createElement('span');
+            ellipsis.className = 'text-white/30 text-xs mx-1';
+            ellipsis.textContent = '...';
+            container.appendChild(ellipsis);
+          }
+          for (var i = startIdx; i < endIdx; i++) {
+            var step = document.createElement('button');
+            var isCurrent = (i === current);
+            var isPast = (i < current);
+            step.className = 'question-step flex items-center justify-center rounded-full transition-all duration-300 ';
+            if (isCurrent) {
+              step.className += 'w-8 h-8 sm:w-9 sm:h-9 bg-veritas-gold text-white font-bold text-xs sm:text-sm shadow-lg scale-110 active ring-2 ring-white/20 z-10';
+              step.innerHTML = '<span>' + (i + 1) + '</span>';
+            } else if (isPast) {
+              step.className += 'w-6 h-6 sm:w-7 sm:h-7 bg-emerald-500/80 text-white font-bold text-[10px] sm:text-xs hover:bg-emerald-500 hover:scale-105';
+              step.innerHTML = '<span class="material-symbols-outlined text-xs sm:text-sm">check</span>';
+            } else {
+              step.className += 'w-6 h-6 sm:w-7 sm:h-7 bg-white/10 text-white/50 border border-white/10 font-bold text-[10px] sm:text-xs hover:bg-white/20 hover:text-white';
+              step.innerHTML = '<span>' + (i + 1) + '</span>';
+            }
+            container.appendChild(step);
+          }
+          if (endIdx < total) {
+            var ellipsisEnd = document.createElement('span');
+            ellipsisEnd.className = 'text-white/30 text-xs mx-1';
+            ellipsisEnd.textContent = '...';
+            container.appendChild(ellipsisEnd);
           }
         }
 

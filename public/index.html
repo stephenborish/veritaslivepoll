@@ -5367,7 +5367,29 @@
     color: var(--text-muted);
     font-style: italic;
   }
-</style>
+
+  /* Question Progress Stepper */
+  .question-step {
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .question-step.active {
+    animation: question-pulse 2s infinite;
+  }
+
+  @keyframes question-pulse {
+    0% {
+      box-shadow: 0 0 0 0 rgba(197, 160, 90, 0.6);
+    }
+
+    70% {
+      box-shadow: 0 0 0 10px rgba(197, 160, 90, 0);
+    }
+
+    100% {
+      box-shadow: 0 0 0 0 rgba(197, 160, 90, 0);
+    }
+  }
 </style>
 </head>
 
@@ -5489,8 +5511,9 @@
           </h1>
           <div class="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs text-white/70">
             <span id="live-question-info"
-              class="font-mono tracking-wider uppercase bg-white/10 px-1 sm:px-1.5 py-0.5 rounded">Q1 / 10</span>
-            <span id="question-dots" class="hidden md:flex gap-1"></span>
+              class="font-mono tracking-wider uppercase bg-white/10 px-2 py-0.5 rounded-md border border-white/5">Q1 /
+              10</span>
+            <div id="question-progress-container" class="hidden md:flex items-center gap-1.5 ml-1"></div>
           </div>
         </div>
       </div>
@@ -15817,8 +15840,8 @@
       // Update header
       safeSetText('header-poll-name', data.pollName);
 
-      // Update question dots
-      updateQuestionDots(data.questionIndex, data.totalQuestions);
+      // Update question progress stepper
+      updateQuestionProgress(data.questionIndex, data.totalQuestions);
 
       // Enable/disable navigation buttons
       safeSetDisabled('header-back-btn', data.questionIndex <= 0);
@@ -16057,27 +16080,69 @@
         });
     }
 
-    function updateQuestionDots(current, total) {
-      var dotsContainer = document.getElementById('question-dots');
-      if (!dotsContainer) return;
+    function updateQuestionProgress(current, total) {
+      var container = document.getElementById('question-progress-container');
+      if (!container) return;
 
-      dotsContainer.innerHTML = '';
-      for (var i = 0; i < total; i++) {
-        var dot = document.createElement('button');
+      container.innerHTML = '';
+
+      // Limit number of circles to prevent overflow in header
+      var maxVisible = 10;
+      var startIdx = 0;
+      var endIdx = total;
+
+      if (total > maxVisible) {
+        // Center the current question in the visible range
+        startIdx = Math.max(0, current - Math.floor(maxVisible / 2));
+        endIdx = Math.min(total, startIdx + maxVisible);
+        // Adjust start if we hit the end
+        if (endIdx - startIdx < maxVisible) {
+          startIdx = Math.max(0, endIdx - maxVisible);
+        }
+      }
+
+      if (startIdx > 0) {
+        var ellipsis = document.createElement('span');
+        ellipsis.className = 'text-white/30 text-xs mx-1';
+        ellipsis.textContent = '...';
+        container.appendChild(ellipsis);
+      }
+
+      for (var i = startIdx; i < endIdx; i++) {
+        var step = document.createElement('button');
         var isCurrent = (i === current);
-        dot.className = 'transition-all duration-200 outline-none flex-shrink-0 border-none p-0 ' +
-          (isCurrent
-            ? 'h-3 w-3 sm:h-3.5 sm:w-3.5 bg-white shadow-lg ring-2 ring-white/30 scale-105 cursor-default rounded-full'
-            : 'h-2 w-2 sm:h-2.5 sm:w-2.5 bg-white/40 hover:bg-white/80 hover:scale-110 cursor-pointer rounded-full');
+        var isPast = (i < current);
 
-        if (!isCurrent) {
-          (function (idx) {
-            dot.onclick = function () { jumpToQuestion(idx); };
-            dot.title = "Jump to Q" + (idx + 1);
-          })(i);
+        step.className = 'question-step flex items-center justify-center rounded-full transition-all duration-300 ';
+
+        if (isCurrent) {
+          step.className += 'w-8 h-8 sm:w-9 sm:h-9 bg-veritas-gold text-white font-bold text-xs sm:text-sm shadow-lg scale-110 active ring-2 ring-white/20 z-10';
+          step.innerHTML = '<span>' + (i + 1) + '</span>';
+        } else if (isPast) {
+          step.className += 'w-6 h-6 sm:w-7 sm:h-7 bg-emerald-500/80 text-white font-bold text-[10px] sm:text-xs hover:bg-emerald-500 hover:scale-105';
+          // Use a checkmark for past questions if we want
+          step.innerHTML = '<span class="material-symbols-outlined text-xs sm:text-sm">check</span>';
+        } else {
+          step.className += 'w-6 h-6 sm:w-7 sm:h-7 bg-white/10 text-white/50 border border-white/10 font-bold text-[10px] sm:text-xs hover:bg-white/20 hover:text-white';
+          step.innerHTML = '<span>' + (i + 1) + '</span>';
         }
 
-        dotsContainer.appendChild(dot);
+        (function (idx) {
+          step.onclick = function (e) {
+            e.stopPropagation();
+            if (idx !== current) jumpToQuestion(idx);
+          };
+          step.title = "Jump to Question " + (idx + 1);
+        })(i);
+
+        container.appendChild(step);
+      }
+
+      if (endIdx < total) {
+        var ellipsisEnd = document.createElement('span');
+        ellipsisEnd.className = 'text-white/30 text-xs mx-1';
+        ellipsisEnd.textContent = '...';
+        container.appendChild(ellipsisEnd);
       }
     }
 

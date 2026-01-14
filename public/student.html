@@ -8711,6 +8711,17 @@
         function startApp() {
             initCalculatorDrag();
             initVisuals();
+
+            // FIX: Start Firebase Connection
+            var pollId = window.currentPollId || sessionStorage.getItem('veritas_active_poll_id');
+            var email = window.STUDENT_EMAIL || sessionStorage.getItem('veritas_student_email');
+
+            if (pollId && email) {
+                console.log('[App] Starting Firebase Sidecar for poll:', pollId);
+                initFirebaseSidecar(pollId, email);
+            } else {
+                console.warn('[App] Cannot start sidecar - missing pollId or email');
+            }
         }
 
         function initAuth() {
@@ -8718,6 +8729,12 @@
             // 1. Check for Token in URL
             var urlParams = new URLSearchParams(window.location.search);
             var token = urlParams.get('token');
+            var pollId = urlParams.get('pollId');
+
+            if (pollId) {
+                window.currentPollId = pollId;
+                sessionStorage.setItem('veritas_active_poll_id', pollId);
+            }
 
             if (token) {
                 console.log('[Auth] Token found in URL:', token);

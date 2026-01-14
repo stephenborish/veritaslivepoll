@@ -6245,6 +6245,8 @@
         return;
       }
       navigationRequestInFlight = true;
+      // FAILSAFE: Reset flag after 5 seconds in case of network zombie
+      setTimeout(function () { navigationRequestInFlight = false; isNavigating = false; }, 5000);
       if (pollInterval) clearInterval(pollInterval);
       pauseTimerCountdown();
       stopVisualTimer();
@@ -7370,11 +7372,11 @@
         } else if (isLive) {
           // It is the LIVE question, but NOT selected (Teacher is looking elsewhere)
           // Make it distinct (e.g. Green pulsing or just Green)
-          step.className += 'w-6 h-6 sm:w-7 sm:h-7 bg-green-500 text-white font-bold text-[10px] sm:text-xs hover:scale-105 ring-2 ring-green-400/50';
-          step.innerHTML = '<span class="material-symbols-outlined text-xs">podium</span>';
+          step.className += 'w-8 h-8 bg-green-500 text-white font-bold hover:scale-105 ring-2 ring-green-400/50';
+          step.innerHTML = '<span class="material-symbols-outlined text-lg">podium</span>';
         } else if (isPast) {
-          step.className += 'w-6 h-6 sm:w-7 sm:h-7 bg-emerald-500/80 text-white font-bold text-[10px] sm:text-xs hover:bg-emerald-500 hover:scale-105';
-          step.innerHTML = '<span class="material-symbols-outlined text-xs sm:text-sm">check</span>';
+          step.className += 'w-8 h-8 bg-emerald-500/80 text-white font-bold hover:bg-emerald-500 hover:scale-105';
+          step.innerHTML = '<span class="material-symbols-outlined text-lg">check</span>';
         } else {
           step.className += 'w-6 h-6 sm:w-7 sm:h-7 bg-white/10 text-white/50 border border-white/10 font-bold text-[10px] sm:text-xs hover:bg-white/20 hover:text-white hover:scale-105';
           step.innerHTML = '<span>' + (i + 1) + '</span>';
@@ -13668,7 +13670,8 @@
     }
 
     function attachManageHandlers() {
-      var buttons = document.querySelectorAll('#individual-session-students-grid [data-action="manage-student"]');
+      // FIX: Target buttons in both the new card grid and legacy/table views
+      var buttons = document.querySelectorAll('.mission-manage-btn, [data-action="manage-student"]');
       buttons.forEach(function (btn) {
         btn.addEventListener('click', function () {
           var email = btn.dataset.email;

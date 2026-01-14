@@ -3080,6 +3080,12 @@
 
       console.log('[Firebase] loadInitialData: Fetching polls and classes from RTDB...');
 
+      var currentUser = firebase.auth().currentUser;
+      if (!currentUser || !currentUser.email) {
+        console.warn('[Firebase] loadInitialData skipped: No authenticated teacher (User: ' + (currentUser ? 'Anonymous' : 'Null') + ').');
+        return;
+      }
+
       var db = firebase.database();
 
       // Fetch both Polls and Classes in parallel

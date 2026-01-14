@@ -2,7 +2,7 @@
 import os
 import re
 
-base_dir = '/Users/stephenborish/Downloads/VERITAS LIVE (Dec. 5)/veritaslivepoll/src'
+base_dir = os.path.dirname(os.path.abspath(__file__))
 view_file = os.path.join(base_dir, 'Teacher_View.html')
 output_file = os.path.join(base_dir, 'preview_teacher.html')
 

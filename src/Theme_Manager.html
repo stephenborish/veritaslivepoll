@@ -4,82 +4,29 @@
      * Handles Dark Mode persistence, system preference detection, and UI toggling.
      */
     (function () {
-        var ThemeManager = {
-            LOCAL_STORAGE_KEY: 'veritas_theme',
-
+        // Enforce Light Mode strictly
+        var ThemeEnforcer = {
             init: function () {
-                this.applyTheme(this.getPreferredTheme());
-                this.injectToggle();
+                // Force removal of dark class if present
+                document.documentElement.classList.remove('dark');
+                // Ensure light class is present (optional but safe)
+                document.documentElement.classList.add('light');
 
-                // Listen for system changes
-                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-                    if (!localStorage.getItem(this.LOCAL_STORAGE_KEY)) {
-                        this.applyTheme(e.matches ? 'dark' : 'light');
-                    }
-                });
-            },
-
-            getPreferredTheme: function () {
-                var stored = localStorage.getItem(this.LOCAL_STORAGE_KEY);
-                if (stored) return stored;
-                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            },
-
-            applyTheme: function (theme) {
-                if (theme === 'dark') {
-                    document.documentElement.classList.add('dark');
-                } else {
-                    document.documentElement.classList.remove('dark');
-                }
-                localStorage.setItem(this.LOCAL_STORAGE_KEY, theme);
-                this.updateButtonState(theme);
-            },
-
-            toggle: function () {
-                var current = this.getPreferredTheme();
-                var next = current === 'dark' ? 'light' : 'dark';
-                this.applyTheme(next);
-            },
-
-            updateButtonState: function (theme) {
-                var btn = document.getElementById('theme-toggle-btn');
-                if (!btn) return;
-
-                var icon = btn.querySelector('.material-symbols-outlined');
-                if (icon) {
-                    icon.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
-                }
-                btn.setAttribute('aria-label', 'Switch to ' + (theme === 'dark' ? 'light' : 'dark') + ' mode');
-            },
-
-            injectToggle: function () {
-                if (document.getElementById('theme-toggle-btn')) return;
-
-                var btn = document.createElement('button');
-                btn.id = 'theme-toggle-btn';
-                btn.className = 'theme-toggle fixed bottom-6 right-6 z-50 p-3 rounded-full shadow-lg transition-all duration-300 hover:scale-110 focus:outline-none';
-
-                // Styles are inline or tailwind, but we need dynamic logic for colors
-                // We'll use classes that adapt to dark mode via Tailwind
-                btn.classList.add('bg-white', 'dark:bg-slate-800', 'text-slate-800', 'dark:text-yellow-400');
-
-                btn.innerHTML = '<span class="material-symbols-outlined text-xl">dark_mode</span>';
-                btn.onclick = this.toggle.bind(this);
-
-                document.body.appendChild(btn);
-                this.updateButtonState(this.getPreferredTheme());
+                // Clear any stored preference to avoid confusion if we ever re-enable
+                try {
+                    localStorage.removeItem('veritas_theme');
+                } catch (e) { }
             }
         };
 
         // Initialize on load
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => ThemeManager.init());
+            document.addEventListener('DOMContentLoaded', () => ThemeEnforcer.init());
         } else {
-            ThemeManager.init();
+            ThemeEnforcer.init();
         }
 
-        // Expose global
-        window.ThemeManager = ThemeManager;
+        window.ThemeManager = ThemeEnforcer;
     })();
 </script>
 

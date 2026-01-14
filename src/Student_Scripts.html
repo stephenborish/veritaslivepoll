@@ -70,15 +70,41 @@
             });
         }
 
-        // Rich Text Renderer (Sanitization)
+        // Rich Text Renderer (Sanitization & Math/Formula Support)
         function renderRichText(htmlContent) {
             if (!htmlContent) return '';
-            // Use DOMPurify if available, otherwise fallback to simple text or unsafe (if absolutely necessary, but we have DOMPurify)
+
+            var cleanHtml = htmlContent;
+
+            // 1. Sanitize
             if (typeof DOMPurify !== 'undefined') {
-                return DOMPurify.sanitize(htmlContent);
+                cleanHtml = DOMPurify.sanitize(htmlContent, {
+                    ADD_TAGS: ['math', 'annotation', 'semantics', 'mrow', 'mi', 'mo', 'mn', 'msup', 'sub', 'sup'], // Allow MathML tags if present
+                    ADD_ATTR: ['class', 'style'] // Allow classes for Quill/KaTeX
+                });
+            } else {
+                console.warn('DOMPurify not loaded - rendering as raw HTML');
             }
-            console.warn('DOMPurify not loaded - rendering as raw HTML (risk) or text');
-            return htmlContent; // Fallback, assuming teacher content is trusted, but DOMPurify is safer
+
+            // 2. Post-Process for KaTeX (Scan for LaTeX delimiters if not already rendered)
+            // Note: If the editor saves as HTML with KaTeX rendered spans, we just display it.
+            // If it saves as raw text with $$...$$, we might need to parse, but Quill usually handles this.
+
+            // 3. Return wrapped content (optional)
+            return '<div class="ql-editor">' + cleanHtml + '</div>';
+        }
+
+        function triggerMathRender() {
+            // Re-render KaTeX if any auto-render scripts are used, or strictly rely on existing spans.
+            // If using KaTeX auto-render extension:
+            if (window.renderMathInElement) {
+                renderMathInElement(document.body, {
+                    delimiters: [
+                        { left: '$$', right: '$$', display: true },
+                        { left: '$', right: '$', display: false }
+                    ]
+                });
+            }
         }
 
         async function initFirebaseSidecar(pollId, studentEmail) {
@@ -616,8 +642,15 @@
                         timestamp: firebase.database.ServerValue.TIMESTAMP
                     });
                 }
+            } else if (firebaseDb && activePollId && (window.studentKey || studentKey)) {
+                // Lazy-init ref if missing (e.g. strict mode violation before full init)
+                var sKey = window.studentKey || studentKey;
+                var path = 'sessions/' + activePollId + '/students/' + sKey;
+                firebaseRef = firebaseDb.ref(path);
+                // Retry update
+                reportFirebaseViolation(reason, activePollId);
             } else {
-                console.warn('[Firebase] Ref not ready for violation report');
+                console.log('[Firebase] RTDB Ref not ready - relying on Cloud Function for violation report');
             }
 
             updateDebugHud('LOCKED', null, activePollId);
@@ -2376,7 +2409,7 @@
                 }
 
                 showLockEnforcementUI();
-                google.script.run = null; // Removed legacy
+                // google.script.run legacy cleanup removed to prevent ReferenceError
                 var reportStudentViolation = firebaseFunctions.httpsCallable('reportStudentViolation');
                 reportStudentViolation({
                     pollId: activePollId,
@@ -3351,8 +3384,15 @@
                 telemetry: ActivityMonitor.getInstance().getTelemetry()
             };
 
+            var pollId = window.currentPollId || sessionStorage.getItem('veritas_active_poll_id');
+            if (!pollId) {
+                console.warn('[Polling] No active poll ID found, skipping');
+                pollInFlight = false;
+                return;
+            }
+
             // FIXED: Fetch from Firebase
-            firebase.database().ref('sessions/' + activePollId + '/live_session').once('value')
+            firebase.database().ref('sessions/' + pollId + '/live_session').once('value')
                 .then(function (snapshot) {
                     pollInFlight = false;
                     var data = snapshot.val();
@@ -3818,8 +3858,10 @@
                     qText = "[Question Text Missing]";
                 }
 
-                // Use innerHTML instead of textContent to support the spinner span
-                questionTextEl.innerHTML = qText;
+                // Use innerHTML instead of textContent to support the spinner span, via renderRichText
+                questionTextEl.innerHTML = renderRichText(qText);
+                // Trigger math render
+                triggerMathRender();
                 questionTextEl.style.display = 'block'; // Force visibility
                 questionTextEl.classList.remove('hidden');
             }
@@ -3896,6 +3938,9 @@
                 showWaitingForNextPhase('Response Captured');
                 return;
             }
+
+            // CRITICAL: Trigger Math Render after ALL content (question + options) is injected
+            triggerMathRender();
         }
 
         function submitAnswer(pollId, questionIndex, answerText, answerId) {
@@ -4089,9 +4134,12 @@
             content += '<div class="option-body">';
             content += '<div class="option-text-wrapper">';
             if (displayText) {
-                // Remove carriage returns and normalize line endings before converting to <br>
-                var cleanText = displayText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-                content += '<p class="option-text">' + escapeHtml(cleanText).replace(/\n/g, '<br>') + '</p>';
+                // Use renderRichText to support formatting and math in options
+                // Note: renderRichText returns a div with .ql-editor class
+                // We wrap it in a container that preserves the class .option-text for styling
+                content += '<div class="option-text">';
+                content += renderRichText(displayText);
+                content += '</div>';
             }
             content += '<span class="sr-only result-announcement"></span>';
             content += '</div>';
@@ -4107,7 +4155,10 @@
 
             btn.innerHTML = content;
             btn.addEventListener('click', function (event) {
-                if (event && event.target && event.target.closest('.option-image')) {
+                // Prevent submission if clicking an image (e.g. for zoom)
+                // Robust check for any image element within the click target chain
+                if (event && event.target && (event.target.closest('.option-image') || event.target.closest('img'))) {
+                    console.log('[Interaction] Image clicked - ignoring submission to allow zoom');
                     return;
                 }
 
@@ -5116,6 +5167,16 @@
             } else {
                 // Already authenticated (injected)
                 console.log('[Auth] Authenticated via injection:', window.STUDENT_EMAIL);
+
+                // CRITICAL FIX: Ensure Firebase Auth is active even for injected sessions
+                // This satisfies database rules that require auth != null
+                if (firebase.auth && !firebase.auth().currentUser) {
+                    console.log('[Auth] ensuring anonymous auth for injected session...');
+                    firebase.auth().signInAnonymously().catch(function (e) {
+                        console.warn('[Auth] Background anon sign-in warning:', e);
+                    });
+                }
+
                 startApp();
             }
         }

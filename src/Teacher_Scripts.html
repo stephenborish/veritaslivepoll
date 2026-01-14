@@ -62,6 +62,37 @@
     var initialQuestionOrder = [];
     var draggedQuestionId = null;
     var pollSearchQuery = '';
+
+    // Helper: Rich Text Rendering
+    function renderRichText(htmlContent) {
+      if (!htmlContent) return '';
+      var cleanHtml = htmlContent;
+      if (typeof DOMPurify !== 'undefined') {
+        cleanHtml = DOMPurify.sanitize(htmlContent, {
+          ADD_TAGS: ['math', 'annotation', 'semantics', 'mrow', 'mi', 'mo', 'mn', 'msup', 'sub', 'sup'],
+          ADD_ATTR: ['class', 'style', 'src', 'alt', 'width', 'height'] // Ensure images pass through
+        });
+      }
+      return '<div class="ql-editor">' + cleanHtml + '</div>';
+    }
+
+    // Helper: Trigger MathJax/KaTeX
+    function triggerMathRender() {
+      if (window.renderMathInElement) {
+        renderMathInElement(document.body, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '$', right: '$', display: false }
+          ]
+        });
+      } else if (window.MathLive) {
+        // MathLive auto-render might be needed if using <math-field> read-only, but usually KaTeX handles global render
+        // If using MathLive's renderMathInDocument equivalent:
+        if (window.MathLive.renderMathInDocument) {
+          window.MathLive.renderMathInDocument();
+        }
+      }
+    }
     var sessionHudState = {
       lastCompletionPct: null,
       lastAccuracyPct: null,
@@ -3443,11 +3474,7 @@
           handleError(error);
         });
 
-      /* LEGACY GAS LOAD REMOVED
-      google.script.run
-        .withSuccessHandler(...)
-        .getPollForEditing(pollId);
-      */
+      // Legacy GAS load removed
     }
 
     function renderPollCards(polls) {
@@ -6045,7 +6072,7 @@
         previewOnlyNotice('pause the live poll');
         return;
       }
-      google.script.run = null; // Removed GAS call
+      // google.script.run legacy cleanup removed
 
       var setSessionFn = firebase.functions().httpsCallable('setLiveSessionState');
       var pollId = CURRENT_POLL_DATA.pollId;
@@ -7050,8 +7077,9 @@
       }
 
       safeSetText('live-question-info', 'Q' + (data.questionIndex + 1) + '/' + data.totalQuestions);
-      safeSetText('live-question-text', data.questionText);
-      safeSetText('live-question-text-compact', data.questionText);
+      // Use safeSetInnerHTML explicitly for known rich text fields
+      safeSetInnerHTML('live-question-text', data.questionText);
+      safeSetInnerHTML('live-question-text-compact', data.questionText);
 
       // Handle question image with cache-busting
       var questionImageContainer = document.getElementById('question-image-container');
@@ -7317,7 +7345,8 @@
         cardHtml += '<div class="flex-1 min-w-0">';
 
         if (answerText) {
-          cardHtml += '<p class="text-[1.125rem] font-medium text-brand-dark-gray dark:text-brand-white break-words leading-relaxed">' + escapeHtml(answerText) + '</p>';
+          // Use renderRichText for proper formatting of math/bold in results
+          cardHtml += '<div class="text-[1.125rem] font-medium text-brand-dark-gray dark:text-brand-white break-words leading-relaxed ql-editor-reset">' + renderRichText(answerText) + '</div>';
         } else if (!imageURL) {
           cardHtml += '<p class="text-sm font-medium text-gray-400 dark:text-gray-500">(No content)</p>';
         }
@@ -7358,6 +7387,9 @@
         card.innerHTML = cardHtml;
         container.appendChild(card);
       });
+
+      // Render any math formulas in the newly added cards
+      triggerMathRender();
     }
 
     function renderLiveMetacognition(metacognition) {
@@ -8579,15 +8611,7 @@
       }
       return;
 
-      /* LEGACY POLLING REMOVED
-      
-      google.script.run
-        .withSuccessHandler(function (data) {
-          // ...
-          updateLiveView(data);
-        })
-        .getLivePollData(pollId, questionIndex);
-      */
+      // Legacy polling removed
     }
 
 
@@ -11913,6 +11937,30 @@
       return date.toLocaleString();
     }
 
+    function safeSetText(id, text) {
+      // If the text contains HTML tags (basic check), use rich text renderer
+      // otherwise use textContent for safety/perf
+      var el = document.getElementById(id);
+      if (el) {
+        if (typeof text === 'string' && (text.includes('<') && text.includes('>'))) {
+          // Likely HTML
+          el.innerHTML = renderRichText(text);
+          // Trigger math render if needed
+          triggerMathRender();
+        } else {
+          el.textContent = text || '';
+        }
+      }
+    }
+
+    // Explicit innerHTML setter for known rich text areas
+    function safeSetInnerHTML(id, html) {
+      var el = document.getElementById(id);
+      if (el) {
+        el.innerHTML = renderRichText(html);
+        triggerMathRender();
+      }
+    }
     function escapeHtml(text) {
       if (!text) return '';
       var div = document.createElement('div');

@@ -32,6 +32,7 @@
 <!-- KaTeX (Formula Rendering) -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 
 <!-- MathLive (Visual Formula Editor) -->
 <script src="https://unpkg.com/mathlive"></script>
@@ -768,6 +769,19 @@
     flex-direction: column;
     gap: 24px;
     min-height: 90vh;
+  }
+
+  /* Responsive Images for Rich Content */
+  .ql-editor img,
+  .option-text img,
+  .option-image {
+    max-width: 100% !important;
+    height: auto !important;
+    border-radius: 8px;
+    display: block;
+    margin: 8px 0;
+    cursor: zoom-in;
+    /* Indicate zoomable */
   }
 
   .hud-bar {
@@ -2460,12 +2474,61 @@
     position: absolute;
     right: 0;
     bottom: -6px;
-    width: 0;
-    height: 0;
-    border-style: solid;
-    border-width: 0 8px 6px 0;
     border-color: transparent #111 transparent transparent;
     /* Dark triangle for fold effect */
+  }
+
+  /* Rich Text Content Styles (Quill & Formats) */
+  .ql-editor {
+    padding: 0;
+    font-family: inherit;
+    font-size: inherit;
+    overflow-y: visible;
+  }
+
+  .ql-editor p {
+    margin-bottom: 0.5em;
+  }
+
+  .ql-align-center {
+    text-align: center;
+  }
+
+  .ql-align-right {
+    text-align: right;
+  }
+
+  .ql-align-justify {
+    text-align: justify;
+  }
+
+  .ql-editor img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    display: inline-block;
+    margin: 4px 0;
+  }
+
+  .ql-editor .math-tex {
+    display: inline-block;
+    font-size: 1.1em;
+    padding: 0 2px;
+  }
+
+  /* Override for specific question text container */
+  #question-text img,
+  button[data-answer-text] img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin-top: 8px;
+    display: block;
+  }
+
+  button[data-answer-text] .ql-editor p {
+    margin: 0;
+    /* Tighten up answer choices */
   }
 
   /* Correct / Incorrect States */
@@ -3601,6 +3664,25 @@
         var liveSessionRef = null;
         var connectedRef = null;
 
+        // EAGER INIT: Ensure Firebase handles are ready before any UI interaction
+        if (typeof firebase !== 'undefined' && typeof FIREBASE_CONFIG !== 'undefined') {
+            if (!firebase.apps.length) {
+                try {
+                    firebase.initializeApp(FIREBASE_CONFIG);
+                    console.log('[Init] Firebase initialized eagerly');
+                } catch (e) {
+                    console.error('[Init] Firebase eager init failed:', e);
+                }
+            }
+            // Set global references immediately
+            if (firebase.apps.length) {
+                firebaseDb = firebase.database();
+                if (firebase.functions) {
+                    firebaseFunctions = firebase.functions();
+                }
+            }
+        }
+
         // UUID Generator (Polyfill)
         function generateUUID() {
             if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -3612,15 +3694,41 @@
             });
         }
 
-        // Rich Text Renderer (Sanitization)
+        // Rich Text Renderer (Sanitization & Math/Formula Support)
         function renderRichText(htmlContent) {
             if (!htmlContent) return '';
-            // Use DOMPurify if available, otherwise fallback to simple text or unsafe (if absolutely necessary, but we have DOMPurify)
+
+            var cleanHtml = htmlContent;
+
+            // 1. Sanitize
             if (typeof DOMPurify !== 'undefined') {
-                return DOMPurify.sanitize(htmlContent);
+                cleanHtml = DOMPurify.sanitize(htmlContent, {
+                    ADD_TAGS: ['math', 'annotation', 'semantics', 'mrow', 'mi', 'mo', 'mn', 'msup', 'sub', 'sup'], // Allow MathML tags if present
+                    ADD_ATTR: ['class', 'style'] // Allow classes for Quill/KaTeX
+                });
+            } else {
+                console.warn('DOMPurify not loaded - rendering as raw HTML');
             }
-            console.warn('DOMPurify not loaded - rendering as raw HTML (risk) or text');
-            return htmlContent; // Fallback, assuming teacher content is trusted, but DOMPurify is safer
+
+            // 2. Post-Process for KaTeX (Scan for LaTeX delimiters if not already rendered)
+            // Note: If the editor saves as HTML with KaTeX rendered spans, we just display it.
+            // If it saves as raw text with $$...$$, we might need to parse, but Quill usually handles this.
+
+            // 3. Return wrapped content (optional)
+            return '<div class="ql-editor">' + cleanHtml + '</div>';
+        }
+
+        function triggerMathRender() {
+            // Re-render KaTeX if any auto-render scripts are used, or strictly rely on existing spans.
+            // If using KaTeX auto-render extension:
+            if (window.renderMathInElement) {
+                renderMathInElement(document.body, {
+                    delimiters: [
+                        { left: '$$', right: '$$', display: true },
+                        { left: '$', right: '$', display: false }
+                    ]
+                });
+            }
         }
 
         async function initFirebaseSidecar(pollId, studentEmail) {
@@ -4158,8 +4266,15 @@
                         timestamp: firebase.database.ServerValue.TIMESTAMP
                     });
                 }
+            } else if (firebaseDb && activePollId && (window.studentKey || studentKey)) {
+                // Lazy-init ref if missing (e.g. strict mode violation before full init)
+                var sKey = window.studentKey || studentKey;
+                var path = 'sessions/' + activePollId + '/students/' + sKey;
+                firebaseRef = firebaseDb.ref(path);
+                // Retry update
+                reportFirebaseViolation(reason, activePollId);
             } else {
-                console.warn('[Firebase] Ref not ready for violation report');
+                console.log('[Firebase] RTDB Ref not ready - relying on Cloud Function for violation report');
             }
 
             updateDebugHud('LOCKED', null, activePollId);
@@ -5918,7 +6033,7 @@
                 }
 
                 showLockEnforcementUI();
-                google.script.run = null; // Removed legacy
+                // google.script.run legacy cleanup removed to prevent ReferenceError
                 var reportStudentViolation = firebaseFunctions.httpsCallable('reportStudentViolation');
                 reportStudentViolation({
                     pollId: activePollId,
@@ -6877,6 +6992,13 @@
 
         function pollForStatus() {
             if (isInteractionBlocked || pollInFlight) return;
+
+            // Safety Guard: properties may not be ready if init failed
+            if (!firebase || !firebase.apps || !firebase.apps.length) {
+                console.warn('[Polling] Firebase not initialized yet, skipping poll');
+                return;
+            }
+
             pollInFlight = true;
             var context = {
                 lastStateVersion: lastStateVersion,
@@ -6886,8 +7008,15 @@
                 telemetry: ActivityMonitor.getInstance().getTelemetry()
             };
 
+            var pollId = window.currentPollId || sessionStorage.getItem('veritas_active_poll_id');
+            if (!pollId) {
+                console.warn('[Polling] No active poll ID found, skipping');
+                pollInFlight = false;
+                return;
+            }
+
             // FIXED: Fetch from Firebase
-            firebase.database().ref('sessions/' + activePollId + '/live_session').once('value')
+            firebase.database().ref('sessions/' + pollId + '/live_session').once('value')
                 .then(function (snapshot) {
                     pollInFlight = false;
                     var data = snapshot.val();
@@ -7353,8 +7482,10 @@
                     qText = "[Question Text Missing]";
                 }
 
-                // Use innerHTML instead of textContent to support the spinner span
-                questionTextEl.innerHTML = qText;
+                // Use innerHTML instead of textContent to support the spinner span, via renderRichText
+                questionTextEl.innerHTML = renderRichText(qText);
+                // Trigger math render
+                triggerMathRender();
                 questionTextEl.style.display = 'block'; // Force visibility
                 questionTextEl.classList.remove('hidden');
             }
@@ -7431,6 +7562,9 @@
                 showWaitingForNextPhase('Response Captured');
                 return;
             }
+
+            // CRITICAL: Trigger Math Render after ALL content (question + options) is injected
+            triggerMathRender();
         }
 
         function submitAnswer(pollId, questionIndex, answerText, answerId) {
@@ -7624,9 +7758,12 @@
             content += '<div class="option-body">';
             content += '<div class="option-text-wrapper">';
             if (displayText) {
-                // Remove carriage returns and normalize line endings before converting to <br>
-                var cleanText = displayText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-                content += '<p class="option-text">' + escapeHtml(cleanText).replace(/\n/g, '<br>') + '</p>';
+                // Use renderRichText to support formatting and math in options
+                // Note: renderRichText returns a div with .ql-editor class
+                // We wrap it in a container that preserves the class .option-text for styling
+                content += '<div class="option-text">';
+                content += renderRichText(displayText);
+                content += '</div>';
             }
             content += '<span class="sr-only result-announcement"></span>';
             content += '</div>';
@@ -7642,7 +7779,10 @@
 
             btn.innerHTML = content;
             btn.addEventListener('click', function (event) {
-                if (event && event.target && event.target.closest('.option-image')) {
+                // Prevent submission if clicking an image (e.g. for zoom)
+                // Robust check for any image element within the click target chain
+                if (event && event.target && (event.target.closest('.option-image') || event.target.closest('img'))) {
+                    console.log('[Interaction] Image clicked - ignoring submission to allow zoom');
                     return;
                 }
 
@@ -8651,6 +8791,16 @@
             } else {
                 // Already authenticated (injected)
                 console.log('[Auth] Authenticated via injection:', window.STUDENT_EMAIL);
+
+                // CRITICAL FIX: Ensure Firebase Auth is active even for injected sessions
+                // This satisfies database rules that require auth != null
+                if (firebase.auth && !firebase.auth().currentUser) {
+                    console.log('[Auth] ensuring anonymous auth for injected session...');
+                    firebase.auth().signInAnonymously().catch(function (e) {
+                        console.warn('[Auth] Background anon sign-in warning:', e);
+                    });
+                }
+
                 startApp();
             }
         }
@@ -8721,82 +8871,29 @@
      * Handles Dark Mode persistence, system preference detection, and UI toggling.
      */
     (function () {
-        var ThemeManager = {
-            LOCAL_STORAGE_KEY: 'veritas_theme',
-
+        // Enforce Light Mode strictly
+        var ThemeEnforcer = {
             init: function () {
-                this.applyTheme(this.getPreferredTheme());
-                this.injectToggle();
+                // Force removal of dark class if present
+                document.documentElement.classList.remove('dark');
+                // Ensure light class is present (optional but safe)
+                document.documentElement.classList.add('light');
 
-                // Listen for system changes
-                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-                    if (!localStorage.getItem(this.LOCAL_STORAGE_KEY)) {
-                        this.applyTheme(e.matches ? 'dark' : 'light');
-                    }
-                });
-            },
-
-            getPreferredTheme: function () {
-                var stored = localStorage.getItem(this.LOCAL_STORAGE_KEY);
-                if (stored) return stored;
-                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            },
-
-            applyTheme: function (theme) {
-                if (theme === 'dark') {
-                    document.documentElement.classList.add('dark');
-                } else {
-                    document.documentElement.classList.remove('dark');
-                }
-                localStorage.setItem(this.LOCAL_STORAGE_KEY, theme);
-                this.updateButtonState(theme);
-            },
-
-            toggle: function () {
-                var current = this.getPreferredTheme();
-                var next = current === 'dark' ? 'light' : 'dark';
-                this.applyTheme(next);
-            },
-
-            updateButtonState: function (theme) {
-                var btn = document.getElementById('theme-toggle-btn');
-                if (!btn) return;
-
-                var icon = btn.querySelector('.material-symbols-outlined');
-                if (icon) {
-                    icon.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
-                }
-                btn.setAttribute('aria-label', 'Switch to ' + (theme === 'dark' ? 'light' : 'dark') + ' mode');
-            },
-
-            injectToggle: function () {
-                if (document.getElementById('theme-toggle-btn')) return;
-
-                var btn = document.createElement('button');
-                btn.id = 'theme-toggle-btn';
-                btn.className = 'theme-toggle fixed bottom-6 right-6 z-50 p-3 rounded-full shadow-lg transition-all duration-300 hover:scale-110 focus:outline-none';
-
-                // Styles are inline or tailwind, but we need dynamic logic for colors
-                // We'll use classes that adapt to dark mode via Tailwind
-                btn.classList.add('bg-white', 'dark:bg-slate-800', 'text-slate-800', 'dark:text-yellow-400');
-
-                btn.innerHTML = '<span class="material-symbols-outlined text-xl">dark_mode</span>';
-                btn.onclick = this.toggle.bind(this);
-
-                document.body.appendChild(btn);
-                this.updateButtonState(this.getPreferredTheme());
+                // Clear any stored preference to avoid confusion if we ever re-enable
+                try {
+                    localStorage.removeItem('veritas_theme');
+                } catch (e) { }
             }
         };
 
         // Initialize on load
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => ThemeManager.init());
+            document.addEventListener('DOMContentLoaded', () => ThemeEnforcer.init());
         } else {
-            ThemeManager.init();
+            ThemeEnforcer.init();
         }
 
-        // Expose global
-        window.ThemeManager = ThemeManager;
+        window.ThemeManager = ThemeEnforcer;
     })();
 </script>
 

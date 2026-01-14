@@ -15,7 +15,7 @@ function readFile(filename) {
     // Try .html, then .gs (rare for views but possible), then raw
     let candidates = [filename];
     if (!filename.includes('.')) {
-        candidates = [filename + '.html', filename + '.gs', filename + '.js', filename + '.css'];
+        candidates = [filename + '.html', filename + '.js', filename + '.css'];
     }
 
     for (const c of candidates) {
@@ -58,8 +58,7 @@ function processTemplateVars(content, context = {}) {
     content = content.replace(/<\?=\s*studentEmail\s*\?>/g, '');
 
     // Replace basic <?= var ?> for specific known vars
-    content = content.replace(/<\?=\s*Session\.getActiveUser\(\)\.getEmail\(\)\s*\?>/g, "teacher@demo.com"); // Stub
-    content = content.replace(/<\?=\s*examConfig\.examName\s*\?>/g, "Demo Exam"); // Stub if caught in template
+    // GAS variable mocks removed
 
     return content;
 }

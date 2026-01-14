@@ -5535,119 +5535,20 @@
           <button id="add-10s-btn" type="button"
             class="hidden md:flex w-7 h-7 sm:w-8 sm:h-8 items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors"
             title="+10s">
-            <span class="material-symbols-outlined text-base sm:text-lg">add</span>
-          </button>
 
-          <div class="w-px h-4 sm:h-5 bg-white/20 mx-0.5 sm:mx-1"></div>
-
-          <button id="start-btn" type="button"
-            class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm transition-colors"
-            title="Start (Space)">
-            <span class="material-symbols-outlined text-lg sm:text-xl">play_arrow</span>
-          </button>
-          <button id="pause-btn" type="button"
-            class="hidden w-7 h-7 sm:w-8 sm:h-8 items-center justify-center rounded bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition-colors"
-            title="Pause (Space)">
-            <span class="material-symbols-outlined text-lg sm:text-xl">pause</span>
-          </button>
-          <button id="reset-btn" type="button"
-            class="hidden sm:flex w-7 h-7 sm:w-8 sm:h-8 items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-            title="Reset (R)">
-            <span class="material-symbols-outlined text-base sm:text-lg">refresh</span>
-          </button>
+            <div class="w-px h-6 bg-white/10 mx-1"></div>
+            <button id="header-calc-toggle" type="button"
+              class="flex items-center gap-2 h-9 px-3 rounded bg-white/10 text-white text-sm font-semibold hover:bg-white/15 transition-colors"
+              aria-pressed="false" aria-live="polite" data-role="calculator-toggle">
+              <span class="material-symbols-outlined text-base">calculate</span>
+              <span class="hidden sm:inline">Calculator</span>
+              <span id="header-calc-state" class="text-xs uppercase tracking-wide opacity-80">Off</span>
+            </button>
         </div>
-
-        <div class="hidden sm:block w-px h-6 bg-white/10 mx-1"></div>
-        <button id="header-prev-btn" type="button"
-          class="hidden md:flex items-center gap-2 h-8 sm:h-9 px-3 sm:px-4 rounded bg-white/10 text-white font-bold text-xs sm:text-sm hover:bg-white/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Previous Question (←)">
-          <span class="material-symbols-outlined text-sm sm:text-base">arrow_back</span>
-          <span>Prev</span>
-        </button>
-        <button id="header-next-btn" type="button"
-          class="hidden md:flex items-center gap-2 h-8 sm:h-9 px-3 sm:px-4 rounded bg-white text-veritas-navy font-bold text-xs sm:text-sm shadow hover:bg-gray-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Next Question (→)">
-          <span>Next</span>
-          <span class="material-symbols-outlined text-sm sm:text-base">arrow_forward</span>
-        </button>
-        <button id="header-end-show-btn" type="button"
-          class="flex items-center gap-1 sm:gap-2 h-7 sm:h-9 px-2 sm:px-4 rounded bg-veritas-gold text-white font-bold text-xs sm:text-sm shadow hover:bg-veritas-gold/90 transition-all"
-          title="End & Reveal (E)">
-          <span class="material-symbols-outlined text-sm sm:text-base">visibility</span>
-          <span class="hidden sm:inline">Reveal</span>
-        </button>
-
-        <!-- More Actions Dropdown Trigger -->
-        <div class="relative">
-          <button id="live-more-actions-btn"
-            class="h-7 w-7 sm:h-9 sm:w-9 flex items-center justify-center rounded text-white hover:bg-white/10 transition-colors"
-            aria-label="More actions" aria-haspopup="true">
-            <span class="material-symbols-outlined text-lg sm:text-xl">more_vert</span>
-          </button>
-          <!-- Dropdown Menu -->
-          <div id="live-more-menu"
-            class="hidden absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-50 origin-top-right ring-1 ring-black ring-opacity-5 focus:outline-none"
-            role="menu">
-            <button id="header-edit-poll-btn"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">edit</span> Edit Poll
-            </button>
-            <div class="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
-            <button id="header-back-btn"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">arrow_back</span> Previous Question
-            </button>
-            <button id="header-reset-question-btn"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">replay</span> Reset Question
-            </button>
-            <div class="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
-            <button id="add-30s-btn-preset"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">av_timer</span> Add 30 Seconds
-            </button>
-            <button id="add-60s-btn-preset"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">av_timer</span> Add 1 Minute
-            </button>
-            <div class="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
-            <button id="header-send-link-btn"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">mail</span> Send Links
-            </button>
-            <button id="header-view-links-btn"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">link</span> View Links
-            </button>
-            <div class="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
-            <button id="header-stop-btn"
-              class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">stop_circle</span> End Session
-            </button>
-          </div>
-        </div>
-
-        <div class="w-px h-6 bg-white/10 mx-1"></div>
-        <button id="header-calc-toggle" type="button"
-          class="flex items-center gap-2 h-9 px-3 rounded bg-white/10 text-white text-sm font-semibold hover:bg-white/15 transition-colors"
-          aria-pressed="false" aria-live="polite" data-role="calculator-toggle">
-          <span class="material-symbols-outlined text-base">calculate</span>
-          <span class="hidden sm:inline">Calculator</span>
-          <span id="header-calc-state" class="text-xs uppercase tracking-wide opacity-80">Off</span>
-        </button>
       </div>
-    </div>
 
-    <!-- Hidden legacy buttons to prevent JS errors -->
-    <button id="header-start-btn" class="hidden"></button>
+      <!-- Hidden legacy buttons to prevent JS errors -->
+      <button id="header-start-btn" class="hidden"></button>
   </header>
 
   <div class="flex flex-grow overflow-hidden min-h-0">
@@ -8914,6 +8815,8 @@
     var ALL_POLLS = [];
     var ALL_CLASSES = [];
     var CURRENT_POLL_DATA = {};
+    var localTeacherViewIndex = null; // Decoupled view state. Null means synced with live.
+
     var currentStudentStatusData = [];
     var studentSearchQuery = '';
     var studentTableSort = { column: 'lastName', direction: 'asc' };
@@ -10182,8 +10085,8 @@
       // Initialize Comboboxes (logic below...)
       initializeComboboxes();
 
-      // Load Initial Data
-      loadInitialData();
+      // Load Initial Data is handled by initializeBackend()
+      // loadInitialData();
 
       // Initialize Legacy Listeners (Zoom, etc)
       initializeLegacyListeners();
@@ -11316,6 +11219,7 @@
         bindClick('header-start-btn', onResumePoll);
         bindClick('header-end-show-btn', onEndQuestionAndShowAnswer);
         bindClick('header-stop-btn', onEndPoll);
+        bindClick('header-present-btn', onPresentQuestion); // New Present Button
 
         var calcToggleBtn = document.getElementById('header-calc-toggle');
         if (calcToggleBtn) {
@@ -15309,9 +15213,9 @@
         // Update local state and UI
         setLiveCalculatorToggleState(targetState, true);
 
-        // Show toast feedback
-        showToast('success', targetState ? 'Calculator enabled' : 'Calculator disabled',
-          targetState ? 'Students can now access the calculator.' : 'Calculator has been disabled for students.');
+        // Show toast feedback - Removed per user request
+        // showToast('success', targetState ? 'Calculator enabled' : 'Calculator disabled',
+        //  targetState ? 'Students can now access the calculator.' : 'Calculator has been disabled for students.');
       } catch (error) {
         liveCalculatorToggle.removeAttribute('aria-busy');
         liveCalculatorToggle.disabled = false;
@@ -15814,6 +15718,11 @@
         setMainSection('live');
       }
 
+      // Sync local view if it was null (first load)
+      if (typeof localTeacherViewIndex === 'undefined' || localTeacherViewIndex === null) {
+        localTeacherViewIndex = data.questionIndex;
+      }
+
       if (isPreLive || isEnded) {
         console.log('[updateLiveView] Session is PRE_LIVE or ENDED, showing dashboard');
         showDashboard();
@@ -15869,8 +15778,47 @@
       // Update header
       safeSetText('header-poll-name', data.pollName);
 
+      // Update header
+      safeSetText('header-poll-name', data.pollName);
+
+      // Determine which question to render: Local or Live?
+      var renderIndex = (localTeacherViewIndex !== null) ? localTeacherViewIndex : data.questionIndex;
+      var isSynced = (localTeacherViewIndex === data.questionIndex);
+
+      // Update Present Button Visibility
+      var presentBtn = document.getElementById('header-present-btn');
+      if (presentBtn) {
+        if (!isSynced && renderIndex !== data.questionIndex) {
+          presentBtn.classList.remove('hidden');
+        } else {
+          presentBtn.classList.add('hidden');
+        }
+      }
+
       // Update question progress stepper
-      updateQuestionProgress(data.questionIndex, data.totalQuestions);
+      // Pass both current live index and local view index
+      updateQuestionProgress(data.questionIndex, data.totalQuestions, localTeacherViewIndex);
+
+      // Render the Question Content (Question Text/Image) based on LOCAL view
+      if (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[renderIndex]) {
+        // Manually update the question text display if needed, 
+        // depends on if your UI renders from CURRENT_POLL_DATA.questionIndex or passed args.
+        // The current `updateLiveView` seems to handle other things, 
+        // but we might need a dedicated `renderQuestionCard(index)` if `updateLiveView` relies on `data`.
+        // For now, let's assume `updateLiveView` updates sidebars etc. 
+        // We need to inject the QUESTION TEXT for `renderIndex`.
+
+        // Actually, `updateLiveView` doesn't seem to render the question card text explicitly in the lines we saw?
+        // Wait, let's check `Teacher_Scripts.html` for where the question text is put into the DOM.
+        // It might be in `handleLightweightSessionUpdate` or similar.
+
+        // Ah, we might need to find where the Question Text is updated.
+        // Looking at the code I read... I didn't see explicit `document.getElementById('question-text').textContent = ...` in `updateLiveView`.
+        // It might be in `renderResultsBars` or separate function.
+
+        // Let's force a render of the question card for `renderIndex`
+        renderQuestionCardContent(renderIndex);
+      }
 
       // Enable/disable navigation buttons
       safeSetDisabled('header-back-btn', data.questionIndex <= 0);
@@ -16088,6 +16036,39 @@
       isPaused = false;
       isNavigating = true;
 
+      /*
+         DECOUPLED NAVIGATION:
+         Instead of calling 'setLiveSessionState' immediately, 
+         we just update the local view state. 
+      */
+
+      localTeacherViewIndex = index;
+
+      // Trigger a UI update to show the new question
+      // Synthesize a data object merging current live data with new local index? 
+      // No, `updateLiveView` takes specific `data`. 
+      // Better to call our render loop.
+
+      // We can re-use updateLiveView if we reconstruct the state object, 
+      // OR just call our new `renderQuestionCardContent` and `updateQuestionProgress`.
+
+      // Let's assume we have `CURRENT_POLL_DATA` up to date with LIVE data.
+      updateQuestionProgress(CURRENT_POLL_DATA.questionIndex, CURRENT_POLL_DATA.totalQuestions, localTeacherViewIndex);
+      renderQuestionCardContent(localTeacherViewIndex);
+
+      // Show/Hide Present Button
+      var presentBtn = document.getElementById('header-present-btn');
+      if (presentBtn) {
+        if (localTeacherViewIndex !== CURRENT_POLL_DATA.questionIndex) {
+          presentBtn.classList.remove('hidden');
+        } else {
+          presentBtn.classList.add('hidden');
+        }
+      }
+
+      isNavigating = false;
+
+      /*
       var setSessionFn = firebase.functions().httpsCallable('setLiveSessionState');
       var pollId = CURRENT_POLL_DATA.pollId;
       var qDef = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[index]) ? CURRENT_POLL_DATA.questions[index] : null;
@@ -16108,9 +16089,12 @@
           isNavigating = false;
           handleError(error);
         });
+       */
     }
 
-    function updateQuestionProgress(current, total) {
+    function updateQuestionProgress(currentLive, total, currentLocal) {
+      if (currentLocal === undefined || currentLocal === null) currentLocal = currentLive;
+
       var container = document.getElementById('question-progress-container');
       if (!container) return;
 
@@ -16121,11 +16105,10 @@
       var startIdx = 0;
       var endIdx = total;
 
+      // Center around LOCAL view
       if (total > maxVisible) {
-        // Center the current question in the visible range
-        startIdx = Math.max(0, current - Math.floor(maxVisible / 2));
+        startIdx = Math.max(0, currentLocal - Math.floor(maxVisible / 2));
         endIdx = Math.min(total, startIdx + maxVisible);
-        // Adjust start if we hit the end
         if (endIdx - startIdx < maxVisible) {
           startIdx = Math.max(0, endIdx - maxVisible);
         }
@@ -16140,16 +16123,28 @@
 
       for (var i = startIdx; i < endIdx; i++) {
         var step = document.createElement('button');
-        step.type = 'button'; // Ensure it doesn't submit forms
-        var isCurrent = (i === current);
-        var isPast = (i < current);
+        step.type = 'button';
 
-        // Base classes - added cursor-pointer
+        var isLive = (i === currentLive);
+        var isSelected = (i === currentLocal);
+        var isPast = (i < currentLive);
+
         step.className = 'question-step flex items-center justify-center rounded-full transition-all duration-300 cursor-pointer ';
 
-        if (isCurrent) {
+        if (isSelected) {
+          // Selected (Gold)
           step.className += 'w-8 h-8 sm:w-9 sm:h-9 bg-veritas-gold text-white font-bold text-xs sm:text-sm shadow-lg scale-110 active ring-2 ring-white/20 z-10';
           step.innerHTML = '<span>' + (i + 1) + '</span>';
+
+          // If this is ALSO the live question, maybe add an indicator?
+          if (isLive) {
+            // It's both selected and live. The gold style covers it.
+          }
+        } else if (isLive) {
+          // It is the LIVE question, but NOT selected (Teacher is looking elsewhere)
+          // Make it distinct (e.g. Green pulsing or just Green)
+          step.className += 'w-6 h-6 sm:w-7 sm:h-7 bg-green-500 text-white font-bold text-[10px] sm:text-xs hover:scale-105 ring-2 ring-green-400/50';
+          step.innerHTML = '<span class="material-symbols-outlined text-xs">podium</span>';
         } else if (isPast) {
           step.className += 'w-6 h-6 sm:w-7 sm:h-7 bg-emerald-500/80 text-white font-bold text-[10px] sm:text-xs hover:bg-emerald-500 hover:scale-105';
           step.innerHTML = '<span class="material-symbols-outlined text-xs sm:text-sm">check</span>';
@@ -16161,9 +16156,9 @@
         (function (idx) {
           step.onclick = function (e) {
             e.stopPropagation();
-            if (idx !== current) jumpToQuestion(idx);
+            jumpToQuestion(idx);
           };
-          step.title = "Jump to Question " + (idx + 1);
+          step.title = "View Question " + (idx + 1);
         })(i);
 
         container.appendChild(step);
@@ -25278,6 +25273,97 @@
         if (modal) modal.classList.add('hidden');
       });
     });
+
+    // --- New Navigation Helper Functions ---
+
+    function renderQuestionCardContent(index) {
+      // This function is responsible for updating the 'Question Card' area 
+      // to show the question at `index`, regardless of what is 'Live'.
+
+      if (!CURRENT_POLL_DATA.questions || !CURRENT_POLL_DATA.questions[index]) return;
+      var q = CURRENT_POLL_DATA.questions[index];
+
+      // 1. Update Question Text
+      var qTextEl = document.getElementById('live-question-text');
+      if (qTextEl) {
+        qTextEl.textContent = q.questionText || '';
+      }
+
+      // 2. Update Question Image
+      var qImgContainer = document.getElementById('live-question-image-container');
+      var qImg = document.getElementById('live-question-image');
+      if (qImgContainer && qImg) {
+        var imgUrl = getImagePreviewUrl(q.questionImage || q.questionImageURL, q.questionImageFileId);
+        if (imgUrl) {
+          qImg.src = imgUrl;
+          qImgContainer.classList.remove('hidden');
+        } else {
+          qImgContainer.classList.add('hidden');
+        }
+      }
+
+      var resultsContainer = document.getElementById('results-bars');
+      if (resultsContainer) {
+        // Re-render empty bars for the new question's options
+        resultsContainer.innerHTML = '';
+
+        var options = q.answers || q.options || [];
+        if (options.length > 0) {
+          options.forEach(function (opt, idx) {
+            var row = document.createElement('div');
+            row.className = 'mb-3';
+            var label = String.fromCharCode(65 + idx);
+
+            row.innerHTML = `
+                        <div class="flex justify-between text-sm mb-1">
+                           <span class="font-bold">${label}. ${escapeHtml(opt.text || '')}</span>
+                           <span class="text-gray-500">View Only</span>
+                        </div>
+                        <div class="h-8 w-full bg-gray-100 rounded-lg overflow-hidden relative">
+                           <div class="h-full bg-gray-200" style="width: 0%"></div>
+                        </div>
+                     `;
+            resultsContainer.appendChild(row);
+          });
+        }
+      }
+
+      // Update Q# Info
+      var infoEl = document.getElementById('live-question-info');
+      if (infoEl) {
+        infoEl.textContent = 'Q' + (index + 1) + ' / ' + CURRENT_POLL_DATA.questions.length;
+      }
+    }
+
+    function onPresentQuestion() {
+      if (localTeacherViewIndex === null) return;
+
+      // Push the local index to the live session
+      var pollId = CURRENT_POLL_DATA.pollId;
+      var index = localTeacherViewIndex;
+      var qDef = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[index]) ? CURRENT_POLL_DATA.questions[index] : null;
+
+      var presentBtn = document.getElementById('header-present-btn');
+      if (presentBtn) setButtonLoading(presentBtn, true);
+
+      var setSessionFn = firebase.functions().httpsCallable('setLiveSessionState');
+      setSessionFn({
+        pollId: pollId,
+        questionIndex: index,
+        status: 'OPEN',
+        questionText: qDef ? qDef.questionText : '',
+        options: qDef ? qDef.options : []
+      }).then(function () {
+        if (presentBtn) setButtonLoading(presentBtn, false);
+        if (presentBtn) presentBtn.classList.add('hidden');
+        // Sync local state since we just pushed it
+        // Wait for RTDB update to confirm
+      }).catch(function (err) {
+        if (presentBtn) setButtonLoading(presentBtn, false);
+        handleError(err);
+      });
+    }
+
   })();
 </script>
   <script>

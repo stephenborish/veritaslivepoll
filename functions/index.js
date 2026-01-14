@@ -72,6 +72,18 @@ exports.setLiveSessionState = onCall({ cors: true }, async (request) => {
     logger.info(`Secure Key Stored for Q${questionIndex}`);
   }
 
+  // REVEAL LOGIC: If results are revealed, expose the correct answer
+  if (payload.metadata && payload.metadata.resultsVisibility === 'REVEALED' && questionIndex !== undefined) {
+    const keyPath = `sessions/${pollId}/answers_key/${questionIndex}`;
+    const keyRef = admin.database().ref(keyPath);
+    const keySnap = await keyRef.once('value');
+    const storedKey = keySnap.val();
+    if (storedKey) {
+      payload.correctAnswer = storedKey;
+      logger.info(`Exposing correct answer for Q${questionIndex} (REVEALED)`);
+    }
+  }
+
   await sessionRef.set(payload);
 
   return { success: true, timestamp: Date.now() };

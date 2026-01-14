@@ -6024,7 +6024,7 @@
         <!-- TI-84 Iframe Container (Draggable) -->
         <!-- Hidden by default, toggled via #header-calc-toggle -->
         <div id="calculator-draggable"
-          class="hidden absolute top-20 right-20 w-[300px] h-[580px] bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden flex flex-col shadow-indigo-500/20">
+          class="hidden absolute top-20 right-20 w-[400px] h-[640px] bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden flex flex-col shadow-indigo-500/20">
           <!-- Drag Handle -->
           <div id="calculator-drag-handle"
             class="h-8 bg-gray-100 dark:bg-gray-700 cursor-move flex items-center justify-between px-3 border-b border-gray-200 dark:border-gray-600">
@@ -14961,13 +14961,15 @@
       // Ensure we have valid data
       if (!pollId) { console.error('Missing pollId'); return; }
 
+      var targetVisibility = isRevealed ? 'HIDDEN' : 'REVEALED';
+
       setSessionFn({
         pollId: pollId,
         questionIndex: qIndex,
-        status: targetStatus,
+        status: 'LIVE',
         metadata: {
           serverProcessed: true,
-          reason: isRevealed ? 'RESULTS_HIDDEN' : 'RESULTS_REVEALED'
+          resultsVisibility: targetVisibility
         }
       })
         .then(function (result) {
@@ -14982,7 +14984,7 @@
           var syntheticData = {
             pollId: pollId,
             questionIndex: CURRENT_POLL_DATA.questionIndex,
-            status: 'ENDED',
+            status: 'LIVE',
             sessionPhase: 'RESULTS_REVEALED',
             resultsVisibility: 'REVEALED'
           };
@@ -16107,7 +16109,7 @@
       var setSessionFn = firebase.functions().httpsCallable('setLiveSessionState');
       var pollId = CURRENT_POLL_DATA.pollId;
       var qDef = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[index]) ? CURRENT_POLL_DATA.questions[index] : null;
-
+  
       setSessionFn({
         pollId: pollId,
         questionIndex: index,
@@ -16168,7 +16170,7 @@
 
         if (isSelected) {
           // Selected (Gold)
-          step.className += 'w-8 h-8 sm:w-9 sm:h-9 bg-veritas-gold text-white font-bold text-xs sm:text-sm shadow-lg scale-110 active ring-2 ring-white/20 z-10';
+          step.className += 'w-8 h-8 sm:w-9 sm:h-9 bg-veritas-gold text-white font-bold text-xs sm:text-sm shadow-md ring-2 ring-white/20 z-10';
           step.innerHTML = '<span>' + (i + 1) + '</span>';
 
           // If this is ALSO the live question, maybe add an indicator?
@@ -25154,46 +25156,8 @@
     // STUDENT INSPECTOR & ANALYTICS (PHASE 4)
     // ==========================================
 
-    async function openStudentInspector(email) {
-      var modal = document.getElementById('student-inspector-modal');
-      if (!modal) return;
+    // [Duplicate openStudentInspector function removed]
 
-      // 1. Reset & Show Loading State
-      document.getElementById('inspector-history-body').innerHTML = `<tr>
-      <td colspan="5" class="p-8 text-center text-slate-400">Loading history...</td>
-    </tr>`;
-      document.getElementById('inspector-empty-state').classList.add('hidden');
-
-      // 2. Populate Header
-      var student = (STUDENTS || []).find(function (s) { return s.email === email; });
-      var name = student ? (student.name || student.email) : email;
-      var initials = name.split(' ').map(function (n) { return n[0]; }).join('').substring(0, 2).toUpperCase();
-
-      document.getElementById('inspector-name').textContent = name;
-      document.getElementById('inspector-email').textContent = email;
-      document.getElementById('inspector-initials').textContent = initials;
-
-      // Status Badge
-      var statusBadge = document.getElementById('inspector-status-badge');
-      var isOnline = student && student.isOnline; // Assuming we track this
-      statusBadge.textContent = isOnline ? 'Online' : 'Offline';
-      statusBadge.className = isOnline
-        ? 'px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wide'
-        : 'px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-wide';
-
-      modal.classList.remove('hidden');
-
-      // 3. Fetch & Process History
-      try {
-        var history = await fetchStudentHistory(CURRENT_POLL_DATA.pollId, email);
-        renderStudentInspector(history);
-      } catch (error) {
-        console.error('Failed to fetch student history:', error);
-        document.getElementById('inspector-history-body').innerHTML = `<tr>
-        <td colspan="5" class="p-8 text-center text-red-500">Failed to load data.</td>
-      </tr>`;
-      }
-    }
 
     async function fetchStudentHistory(pollId, email) {
       if (!pollId || !email) return [];
@@ -25352,7 +25316,7 @@
             row.innerHTML = `
                         <div class="flex justify-between text-sm mb-1">
                            <span class="font-bold">${label}. ${escapeHtml(opt.text || '')}</span>
-                           <span class="text-gray-500">View Only</span>
+                           <span class="text-gray-400 text-xs">Waiting...</span>
                         </div>
                         <div class="h-8 w-full bg-gray-100 rounded-lg overflow-hidden relative">
                            <div class="h-full bg-gray-200" style="width: 0%"></div>
@@ -25387,7 +25351,8 @@
         questionIndex: index,
         status: 'OPEN',
         questionText: qDef ? qDef.questionText : '',
-        options: qDef ? qDef.options : []
+        options: qDef ? qDef.options : [],
+        correctAnswer: qDef ? qDef.correctAnswer : ''
       }).then(function () {
         if (presentBtn) setButtonLoading(presentBtn, false);
         if (presentBtn) presentBtn.classList.add('hidden');

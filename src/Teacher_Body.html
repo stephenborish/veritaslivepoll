@@ -605,11 +605,11 @@
         </div>
 
         <!-- 2. Main High-Density Grid -->
-        <main class="flex-1 flex overflow-hidden">
+        <main class="flex-1 flex flex-col lg:flex-row overflow-hidden">
 
-          <!-- LEFT PANEL: Question & Content (45%) -->
+          <!-- LEFT PANEL: Question & Content (45% on large screens) -->
           <div id="live-question-panel"
-            class="w-[45%] flex flex-col border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10">
+            class="w-full lg:w-[45%] h-1/3 lg:h-full flex flex-col border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10">
             <div class="flex-1 overflow-y-auto p-6 space-y-6">
               <!-- Question Card -->
               <div class="space-y-4">
@@ -646,8 +646,9 @@
             </div>
           </div>
 
-          <!-- RIGHT PANEL: Proctoring Mission Control (55%) -->
-          <div id="live-student-panel" class="w-[55%] flex flex-col bg-gray-50/50 dark:bg-gray-900/50">
+          <!-- RIGHT PANEL: Proctoring Mission Control (55% on large screens) -->
+          <div id="live-student-panel"
+            class="w-full lg:w-[55%] h-2/3 lg:h-full flex flex-col bg-gray-50/50 dark:bg-gray-900/50">
 
             <!-- Metrics Heads-Up Display -->
             <div

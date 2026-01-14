@@ -451,7 +451,7 @@
 
       if (fabNextBtn) {
         fabNextBtn.addEventListener('click', function () {
-          nextQuestion();
+          if (typeof onNextQuestion === 'function') onNextQuestion();
           closeFABMenu();
         });
       }
@@ -459,8 +459,10 @@
       if (fabShowResultsBtn) {
         fabShowResultsBtn.addEventListener('click', function () {
           const endShowBtn = document.getElementById('header-end-show-btn');
-          if (endShowBtn && endShowBtn.style.display !== 'none') {
-            endShowBtn.click();
+          if (endShowBtn) {
+            // Simulate click or call function directly if known
+            if (typeof onEndQuestionAndShowAnswer === 'function') onEndQuestionAndShowAnswer();
+            else endShowBtn.click();
           }
           closeFABMenu();
         });
@@ -468,14 +470,14 @@
 
       if (fabResetBtn) {
         fabResetBtn.addEventListener('click', function () {
-          resetLiveQuestion();
+          if (typeof onResetQuestion === 'function') onResetQuestion();
           closeFABMenu();
         });
       }
 
       if (fabStopBtn) {
         fabStopBtn.addEventListener('click', function () {
-          stopPoll();
+          if (typeof onStopPoll === 'function') onStopPoll();
           closeFABMenu();
         });
       }

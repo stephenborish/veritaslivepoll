@@ -33,6 +33,7 @@
 <!-- KaTeX (Formula Rendering) -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 
 <!-- MathLive (Visual Formula Editor) -->
 <script src="https://unpkg.com/mathlive"></script>
@@ -206,7 +207,7 @@
       </div>
       <div class="flex items-center space-x-3">
         <span class="text-sm text-gray-300 hidden sm:block">
-          teacher@demo.com
+          <?= Session.getActiveUser().getEmail() ?>
         </span>
       </div>
     </div>

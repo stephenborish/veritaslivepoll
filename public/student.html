@@ -346,11 +346,11 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
   <script>
-    window.SESSION_TOKEN = 'dummy-token';
+    window.SESSION_TOKEN = '';
     // CRITICAL: Store student email for violation reporting fallback
     // This ensures violations can be attributed even if SESSION_TOKEN is lost/invalid
-    window.STUDENT_EMAIL = 'student1@example.com';
-    var FIREBASE_CONFIG = null;
+    window.STUDENT_EMAIL = '';
+    var FIREBASE_CONFIG = {"apiKey":"AIzaSyAv0bCe5KIuQx_sou8toBy5DG2PYaB_pBM","authDomain":"classroomproctor.firebaseapp.com","databaseURL":"https://classroomproctor-default-rtdb.firebaseio.com","projectId":"classroomproctor","storageBucket":"classroomproctor.firebasestorage.app","messagingSenderId":"600627073908","appId":"1:600627073908:web:935970f5849b28f6ad5221"};
     if (!FIREBASE_CONFIG) {
       console.warn('FIREBASE_CONFIG missing, using default fallback.');
       FIREBASE_CONFIG = {
@@ -366,7 +366,7 @@
     }
     var Veritas = Veritas || {};
     Veritas.Config = Veritas.Config || {};
-    Veritas.Config.DEBUG_FIREBASE = true;
+    Veritas.Config.DEBUG_FIREBASE = false;
 
     // Store student email in sessionStorage for persistence across page refreshes
     if (window.STUDENT_EMAIL) {

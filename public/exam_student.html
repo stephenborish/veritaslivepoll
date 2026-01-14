@@ -33,6 +33,7 @@
 <!-- KaTeX (Formula Rendering) -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 
 <!-- MathLive (Visual Formula Editor) -->
 <script src="https://unpkg.com/mathlive"></script>
@@ -271,7 +272,7 @@
         <span class="material-symbols-outlined text-6xl text-veritas-navy">school</span>
       </div>
       <h1 class="text-2xl font-bold text-gray-900 mb-2">
-        Demo Exam
+        <?= examConfig.examName ?>
       </h1>
       <p class="text-gray-500 mb-6">Duration:
         <?= examConfig.durationMinutes > 0 ? examConfig.durationMinutes + ' mins' : 'Untimed' ?>
@@ -305,7 +306,7 @@
     <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 flex-shrink-0">
       <div class="flex items-center gap-4">
         <span class="font-bold text-lg text-gray-900">
-          Demo Exam
+          <?= examConfig.examName ?>
         </span>
         <span class="text-sm text-gray-500 border-l border-gray-300 pl-4">
           <?= studentInfo.displayName ?>

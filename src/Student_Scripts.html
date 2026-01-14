@@ -5147,7 +5147,11 @@
                     })
                     .catch(function (error) {
                         console.error('[Auth] Token validation failed:', error);
-                        alert('Invalid link: ' + error.message);
+                        if (error.code === 'auth/admin-restricted-operation') {
+                            alert('Configuration Error: Anonymous Authentication is disabled in Firebase Console. Please enable it in Authentication > Sign-in method.');
+                        } else {
+                            alert('Invalid link: ' + error.message);
+                        }
                         // Fallback to login screen
                         showLoginScreen();
                     });

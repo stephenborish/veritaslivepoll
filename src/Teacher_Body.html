@@ -94,12 +94,14 @@
   </header>
 
   <!-- Header - Live Poll State (COMPACT REDESIGN - Mobile Optimized) -->
+  <!-- Header - Live Poll State -->
   <header id="header-live" class="shrink-0 bg-veritas-navy shadow-md border-b border-veritas-gold/30 z-20"
     style="display: none;">
-    <div class="flex w-full items-center justify-between px-2 sm:px-4 py-2 gap-2 sm:gap-4 min-h-[48px] sm:h-16">
+    <div
+      class="flex w-full items-center justify-between px-2 sm:px-4 py-2 gap-2 sm:gap-4 min-h-[48px] sm:h-16 relative">
 
-      <!-- Left: Poll Context (More compact on mobile) -->
-      <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink">
+      <!-- Left: Poll Context -->
+      <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink z-10">
         <button id="dashboard-sidebar-toggle-live" type="button"
           class="flex-shrink-0 h-7 w-7 sm:h-8 sm:w-8 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
           aria-label="Toggle navigation">
@@ -107,21 +109,44 @@
         </button>
         <div class="min-w-0 flex flex-col justify-center">
           <h1 id="header-poll-name"
-            class="text-white font-bold text-xs sm:text-sm md:text-base truncate leading-tight max-w-[100px] sm:max-w-none">
+            class="text-white font-bold text-xs sm:text-sm md:text-base truncate leading-tight max-w-[100px] sm:max-w-[200px]">
             Poll Name
           </h1>
-          <div class="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs text-white/70">
-            <span id="live-question-info"
-              class="font-mono tracking-wider uppercase bg-white/10 px-2 py-0.5 rounded-md border border-white/5">Q1 /
-              10</span>
-            <div id="question-progress-container" class="hidden md:flex items-center gap-1.5 ml-1"></div>
+          <div class="flex items-center gap-2">
+            <span class="flex h-2 w-2 rounded-full bg-green-500"></span>
+            <span class="text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider">Live</span>
           </div>
         </div>
       </div>
 
-      <!-- Right: Timer & Primary Actions (Compact on mobile) -->
-      <div class="flex items-center gap-1 sm:gap-3 flex-shrink-0">
-        <!-- Timer Control (Compact on mobile) -->
+      <!-- Center: Question Navigation (Absolute Center) -->
+      <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-3 z-10">
+        <!-- Present Button -->
+        <button id="header-present-btn" type="button"
+          class="hidden h-8 px-3 rounded-full bg-veritas-gold text-white text-xs font-bold shadow-lg hover:bg-veritas-gold/90 transition-transform active:scale-95 flex items-center gap-1">
+          <span class="material-symbols-outlined text-base">present_to_all</span>
+          <span class="hidden sm:inline">Present</span>
+        </button>
+
+        <span id="live-question-info"
+          class="hidden font-mono tracking-wider uppercase bg-white/10 px-2 py-0.5 rounded-md border border-white/5 text-white/80 text-xs">Q1
+          / 10</span>
+
+        <button id="header-prev-btn" type="button"
+          class="p-1.5 rounded-full text-white/50 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+          disabled>
+          <span class="material-symbols-outlined">chevron_left</span>
+        </button>
+        <div id="question-progress-container" class="flex items-center gap-1.5"></div>
+        <button id="header-next-btn" type="button"
+          class="p-1.5 rounded-full text-white/50 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-30 disabled:hover:bg-transparent">
+          <span class="material-symbols-outlined">chevron_right</span>
+        </button>
+      </div>
+
+      <!-- Right: Timer & Actions -->
+      <div class="flex items-center gap-1 sm:gap-3 flex-shrink-0 z-10">
+        <!-- Timer Control -->
         <div id="timer-main-container"
           class="flex items-center gap-0.5 sm:gap-2 bg-black/20 rounded-lg p-0.5 sm:p-1 border border-white/10 transition-colors">
           <button id="subtract-10s-btn" type="button"
@@ -135,20 +160,88 @@
           <button id="add-10s-btn" type="button"
             class="hidden md:flex w-7 h-7 sm:w-8 sm:h-8 items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors"
             title="+10s">
+            <span class="material-symbols-outlined text-base sm:text-lg">add</span>
+          </button>
 
-            <div class="w-px h-6 bg-white/10 mx-1"></div>
+          <div class="w-px h-4 sm:h-5 bg-white/20 mx-0.5 sm:mx-1"></div>
+
+          <button id="start-btn" type="button"
+            class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm transition-colors"
+            title="Start (Space)">
+            <span class="material-symbols-outlined text-lg sm:text-xl">play_arrow</span>
+          </button>
+          <button id="pause-btn" type="button"
+            class="hidden w-7 h-7 sm:w-8 sm:h-8 items-center justify-center rounded bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition-colors"
+            title="Pause (Space)">
+            <span class="material-symbols-outlined text-lg sm:text-xl">pause</span>
+          </button>
+          <button id="reset-btn" type="button"
+            class="hidden sm:flex w-7 h-7 sm:w-8 sm:h-8 items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+            title="Reset (R)">
+            <span class="material-symbols-outlined text-base sm:text-lg">refresh</span>
+          </button>
+        </div>
+
+        <div class="hidden sm:block w-px h-6 bg-white/10 mx-1"></div>
+
+        <button id="header-end-show-btn" type="button"
+          class="flex items-center gap-1 sm:gap-2 h-7 sm:h-9 px-2 sm:px-4 rounded bg-veritas-gold text-white font-bold text-xs sm:text-sm shadow hover:bg-veritas-gold/90 transition-all"
+          title="End & Reveal (E)">
+          <span class="material-symbols-outlined text-sm sm:text-base">visibility</span>
+          <span class="hidden sm:inline">Reveal</span>
+        </button>
+
+        <!-- More Actions Dropdown -->
+        <div class="relative">
+          <button id="live-more-actions-btn"
+            class="h-7 w-7 sm:h-9 sm:w-9 flex items-center justify-center rounded text-white hover:bg-white/10 transition-colors"
+            aria-label="More actions" aria-haspopup="true">
+            <span class="material-symbols-outlined text-lg sm:text-xl">more_vert</span>
+          </button>
+          <!-- Dropdown Menu -->
+          <div id="live-more-menu"
+            class="hidden absolute right-0 top-full mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-50 origin-top-right ring-1 ring-black ring-opacity-5 focus:outline-none"
+            role="menu">
+
+            <!-- Calculator Toggle (Inside Menu) -->
             <button id="header-calc-toggle" type="button"
-              class="flex items-center gap-2 h-9 px-3 rounded bg-white/10 text-white text-sm font-semibold hover:bg-white/15 transition-colors"
-              aria-pressed="false" aria-live="polite" data-role="calculator-toggle">
-              <span class="material-symbols-outlined text-base">calculate</span>
-              <span class="hidden sm:inline">Calculator</span>
-              <span id="header-calc-state" class="text-xs uppercase tracking-wide opacity-80">Off</span>
+              class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between group"
+              role="menuitem" data-role="calculator-toggle">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-gray-400 group-hover:text-veritas-gold">calculate</span>
+                <span>Calculator</span>
+              </div>
+              <span id="header-calc-state" class="text-xs uppercase font-bold tracking-wide opacity-60">Off</span>
             </button>
+            <div class="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
+
+            <button id="header-edit-poll-btn"
+              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+              role="menuitem">
+              <span class="material-symbols-outlined text-base">edit</span> Edit Poll
+            </button>
+            <button id="header-reset-question-btn"
+              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+              role="menuitem">
+              <span class="material-symbols-outlined text-base">replay</span> Reset Question
+            </button>
+            <button id="header-send-link-btn"
+              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+              role="menuitem">
+              <span class="material-symbols-outlined text-base">mail</span> Send Links
+            </button>
+            <button id="header-stop-btn"
+              class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+              role="menuitem">
+              <span class="material-symbols-outlined text-base">stop_circle</span> End Session
+            </button>
+          </div>
         </div>
       </div>
+    </div>
 
-      <!-- Hidden legacy buttons to prevent JS errors -->
-      <button id="header-start-btn" class="hidden"></button>
+    <!-- Hidden legacy buttons to prevent JS errors -->
+    <button id="header-start-btn" class="hidden"></button>
   </header>
 
   <div class="flex flex-grow overflow-hidden min-h-0">

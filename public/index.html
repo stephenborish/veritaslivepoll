@@ -11547,6 +11547,10 @@
         var headerDefaultEl = document.getElementById('header-default');
         var headerLiveEl = document.getElementById('header-live');
 
+        // FIX: Fetch Live Control Bar and FAB
+        var liveControlBar = document.getElementById('live-control-bar');
+        var fabContainer = document.getElementById('fab-container');
+
         // Handle Top-Level Views (dashboard-root vs create-poll-view)
         if (section === 'create-poll') {
           if (dashboardRoot) dashboardRoot.style.display = 'none';
@@ -11562,10 +11566,20 @@
           console.log('[UI] Switching to live header');
           if (headerDefaultEl) headerDefaultEl.style.display = 'none';
           if (headerLiveEl) headerLiveEl.style.display = 'flex';
+
+          // Show Live Controls
+          if (liveControlBar) liveControlBar.classList.remove('hidden');
+          if (liveControlBar) liveControlBar.style.display = 'flex';
+          if (fabContainer) fabContainer.style.display = 'block';
         } else {
           console.log('[UI] Switching to default header');
           if (headerDefaultEl) headerDefaultEl.style.display = 'flex';
           if (headerLiveEl) headerLiveEl.style.display = 'none';
+
+          // Hide Live Controls
+          if (liveControlBar) liveControlBar.classList.add('hidden');
+          if (liveControlBar) liveControlBar.style.display = 'none';
+          if (fabContainer) fabContainer.style.display = 'none';
         }
 
 

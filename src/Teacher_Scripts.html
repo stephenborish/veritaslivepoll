@@ -18,6 +18,8 @@
     var ALL_POLLS = [];
     var ALL_CLASSES = [];
     var CURRENT_POLL_DATA = {};
+    var localTeacherViewIndex = null; // Decoupled view state. Null means synced with live.
+
     var currentStudentStatusData = [];
     var studentSearchQuery = '';
     var studentTableSort = { column: 'lastName', direction: 'asc' };
@@ -2420,6 +2422,7 @@
         bindClick('header-start-btn', onResumePoll);
         bindClick('header-end-show-btn', onEndQuestionAndShowAnswer);
         bindClick('header-stop-btn', onEndPoll);
+        bindClick('header-present-btn', onPresentQuestion); // New Present Button
 
         var calcToggleBtn = document.getElementById('header-calc-toggle');
         if (calcToggleBtn) {
@@ -6413,9 +6416,9 @@
         // Update local state and UI
         setLiveCalculatorToggleState(targetState, true);
 
-        // Show toast feedback
-        showToast('success', targetState ? 'Calculator enabled' : 'Calculator disabled',
-          targetState ? 'Students can now access the calculator.' : 'Calculator has been disabled for students.');
+        // Show toast feedback - Removed per user request
+        // showToast('success', targetState ? 'Calculator enabled' : 'Calculator disabled',
+        //  targetState ? 'Students can now access the calculator.' : 'Calculator has been disabled for students.');
       } catch (error) {
         liveCalculatorToggle.removeAttribute('aria-busy');
         liveCalculatorToggle.disabled = false;
@@ -6918,6 +6921,11 @@
         setMainSection('live');
       }
 
+      // Sync local view if it was null (first load)
+      if (typeof localTeacherViewIndex === 'undefined' || localTeacherViewIndex === null) {
+        localTeacherViewIndex = data.questionIndex;
+      }
+
       if (isPreLive || isEnded) {
         console.log('[updateLiveView] Session is PRE_LIVE or ENDED, showing dashboard');
         showDashboard();
@@ -6973,8 +6981,47 @@
       // Update header
       safeSetText('header-poll-name', data.pollName);
 
+      // Update header
+      safeSetText('header-poll-name', data.pollName);
+
+      // Determine which question to render: Local or Live?
+      var renderIndex = (localTeacherViewIndex !== null) ? localTeacherViewIndex : data.questionIndex;
+      var isSynced = (localTeacherViewIndex === data.questionIndex);
+
+      // Update Present Button Visibility
+      var presentBtn = document.getElementById('header-present-btn');
+      if (presentBtn) {
+        if (!isSynced && renderIndex !== data.questionIndex) {
+          presentBtn.classList.remove('hidden');
+        } else {
+          presentBtn.classList.add('hidden');
+        }
+      }
+
       // Update question progress stepper
-      updateQuestionProgress(data.questionIndex, data.totalQuestions);
+      // Pass both current live index and local view index
+      updateQuestionProgress(data.questionIndex, data.totalQuestions, localTeacherViewIndex);
+
+      // Render the Question Content (Question Text/Image) based on LOCAL view
+      if (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[renderIndex]) {
+        // Manually update the question text display if needed, 
+        // depends on if your UI renders from CURRENT_POLL_DATA.questionIndex or passed args.
+        // The current `updateLiveView` seems to handle other things, 
+        // but we might need a dedicated `renderQuestionCard(index)` if `updateLiveView` relies on `data`.
+        // For now, let's assume `updateLiveView` updates sidebars etc. 
+        // We need to inject the QUESTION TEXT for `renderIndex`.
+
+        // Actually, `updateLiveView` doesn't seem to render the question card text explicitly in the lines we saw?
+        // Wait, let's check `Teacher_Scripts.html` for where the question text is put into the DOM.
+        // It might be in `handleLightweightSessionUpdate` or similar.
+
+        // Ah, we might need to find where the Question Text is updated.
+        // Looking at the code I read... I didn't see explicit `document.getElementById('question-text').textContent = ...` in `updateLiveView`.
+        // It might be in `renderResultsBars` or separate function.
+
+        // Let's force a render of the question card for `renderIndex`
+        renderQuestionCardContent(renderIndex);
+      }
 
       // Enable/disable navigation buttons
       safeSetDisabled('header-back-btn', data.questionIndex <= 0);
@@ -7192,6 +7239,39 @@
       isPaused = false;
       isNavigating = true;
 
+      /*
+         DECOUPLED NAVIGATION:
+         Instead of calling 'setLiveSessionState' immediately, 
+         we just update the local view state. 
+      */
+
+      localTeacherViewIndex = index;
+
+      // Trigger a UI update to show the new question
+      // Synthesize a data object merging current live data with new local index? 
+      // No, `updateLiveView` takes specific `data`. 
+      // Better to call our render loop.
+
+      // We can re-use updateLiveView if we reconstruct the state object, 
+      // OR just call our new `renderQuestionCardContent` and `updateQuestionProgress`.
+
+      // Let's assume we have `CURRENT_POLL_DATA` up to date with LIVE data.
+      updateQuestionProgress(CURRENT_POLL_DATA.questionIndex, CURRENT_POLL_DATA.totalQuestions, localTeacherViewIndex);
+      renderQuestionCardContent(localTeacherViewIndex);
+
+      // Show/Hide Present Button
+      var presentBtn = document.getElementById('header-present-btn');
+      if (presentBtn) {
+        if (localTeacherViewIndex !== CURRENT_POLL_DATA.questionIndex) {
+          presentBtn.classList.remove('hidden');
+        } else {
+          presentBtn.classList.add('hidden');
+        }
+      }
+
+      isNavigating = false;
+
+      /*
       var setSessionFn = firebase.functions().httpsCallable('setLiveSessionState');
       var pollId = CURRENT_POLL_DATA.pollId;
       var qDef = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[index]) ? CURRENT_POLL_DATA.questions[index] : null;
@@ -7212,9 +7292,12 @@
           isNavigating = false;
           handleError(error);
         });
+       */
     }
 
-    function updateQuestionProgress(current, total) {
+    function updateQuestionProgress(currentLive, total, currentLocal) {
+      if (currentLocal === undefined || currentLocal === null) currentLocal = currentLive;
+
       var container = document.getElementById('question-progress-container');
       if (!container) return;
 
@@ -7225,11 +7308,10 @@
       var startIdx = 0;
       var endIdx = total;
 
+      // Center around LOCAL view
       if (total > maxVisible) {
-        // Center the current question in the visible range
-        startIdx = Math.max(0, current - Math.floor(maxVisible / 2));
+        startIdx = Math.max(0, currentLocal - Math.floor(maxVisible / 2));
         endIdx = Math.min(total, startIdx + maxVisible);
-        // Adjust start if we hit the end
         if (endIdx - startIdx < maxVisible) {
           startIdx = Math.max(0, endIdx - maxVisible);
         }
@@ -7244,16 +7326,28 @@
 
       for (var i = startIdx; i < endIdx; i++) {
         var step = document.createElement('button');
-        step.type = 'button'; // Ensure it doesn't submit forms
-        var isCurrent = (i === current);
-        var isPast = (i < current);
+        step.type = 'button';
 
-        // Base classes - added cursor-pointer
+        var isLive = (i === currentLive);
+        var isSelected = (i === currentLocal);
+        var isPast = (i < currentLive);
+
         step.className = 'question-step flex items-center justify-center rounded-full transition-all duration-300 cursor-pointer ';
 
-        if (isCurrent) {
+        if (isSelected) {
+          // Selected (Gold)
           step.className += 'w-8 h-8 sm:w-9 sm:h-9 bg-veritas-gold text-white font-bold text-xs sm:text-sm shadow-lg scale-110 active ring-2 ring-white/20 z-10';
           step.innerHTML = '<span>' + (i + 1) + '</span>';
+
+          // If this is ALSO the live question, maybe add an indicator?
+          if (isLive) {
+            // It's both selected and live. The gold style covers it.
+          }
+        } else if (isLive) {
+          // It is the LIVE question, but NOT selected (Teacher is looking elsewhere)
+          // Make it distinct (e.g. Green pulsing or just Green)
+          step.className += 'w-6 h-6 sm:w-7 sm:h-7 bg-green-500 text-white font-bold text-[10px] sm:text-xs hover:scale-105 ring-2 ring-green-400/50';
+          step.innerHTML = '<span class="material-symbols-outlined text-xs">podium</span>';
         } else if (isPast) {
           step.className += 'w-6 h-6 sm:w-7 sm:h-7 bg-emerald-500/80 text-white font-bold text-[10px] sm:text-xs hover:bg-emerald-500 hover:scale-105';
           step.innerHTML = '<span class="material-symbols-outlined text-xs sm:text-sm">check</span>';
@@ -7265,9 +7359,9 @@
         (function (idx) {
           step.onclick = function (e) {
             e.stopPropagation();
-            if (idx !== current) jumpToQuestion(idx);
+            jumpToQuestion(idx);
           };
-          step.title = "Jump to Question " + (idx + 1);
+          step.title = "View Question " + (idx + 1);
         })(i);
 
         container.appendChild(step);
@@ -16382,5 +16476,96 @@
         if (modal) modal.classList.add('hidden');
       });
     });
+
+    // --- New Navigation Helper Functions ---
+
+    function renderQuestionCardContent(index) {
+      // This function is responsible for updating the 'Question Card' area 
+      // to show the question at `index`, regardless of what is 'Live'.
+
+      if (!CURRENT_POLL_DATA.questions || !CURRENT_POLL_DATA.questions[index]) return;
+      var q = CURRENT_POLL_DATA.questions[index];
+
+      // 1. Update Question Text
+      var qTextEl = document.getElementById('live-question-text');
+      if (qTextEl) {
+        qTextEl.textContent = q.questionText || '';
+      }
+
+      // 2. Update Question Image
+      var qImgContainer = document.getElementById('live-question-image-container');
+      var qImg = document.getElementById('live-question-image');
+      if (qImgContainer && qImg) {
+        var imgUrl = getImagePreviewUrl(q.questionImage || q.questionImageURL, q.questionImageFileId);
+        if (imgUrl) {
+          qImg.src = imgUrl;
+          qImgContainer.classList.remove('hidden');
+        } else {
+          qImgContainer.classList.add('hidden');
+        }
+      }
+
+      var resultsContainer = document.getElementById('results-bars');
+      if (resultsContainer) {
+        // Re-render empty bars for the new question's options
+        resultsContainer.innerHTML = '';
+
+        var options = q.answers || q.options || [];
+        if (options.length > 0) {
+          options.forEach(function (opt, idx) {
+            var row = document.createElement('div');
+            row.className = 'mb-3';
+            var label = String.fromCharCode(65 + idx);
+
+            row.innerHTML = `
+                        <div class="flex justify-between text-sm mb-1">
+                           <span class="font-bold">${label}. ${escapeHtml(opt.text || '')}</span>
+                           <span class="text-gray-500">View Only</span>
+                        </div>
+                        <div class="h-8 w-full bg-gray-100 rounded-lg overflow-hidden relative">
+                           <div class="h-full bg-gray-200" style="width: 0%"></div>
+                        </div>
+                     `;
+            resultsContainer.appendChild(row);
+          });
+        }
+      }
+
+      // Update Q# Info
+      var infoEl = document.getElementById('live-question-info');
+      if (infoEl) {
+        infoEl.textContent = 'Q' + (index + 1) + ' / ' + CURRENT_POLL_DATA.questions.length;
+      }
+    }
+
+    function onPresentQuestion() {
+      if (localTeacherViewIndex === null) return;
+
+      // Push the local index to the live session
+      var pollId = CURRENT_POLL_DATA.pollId;
+      var index = localTeacherViewIndex;
+      var qDef = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[index]) ? CURRENT_POLL_DATA.questions[index] : null;
+
+      var presentBtn = document.getElementById('header-present-btn');
+      if (presentBtn) setButtonLoading(presentBtn, true);
+
+      var setSessionFn = firebase.functions().httpsCallable('setLiveSessionState');
+      setSessionFn({
+        pollId: pollId,
+        questionIndex: index,
+        status: 'OPEN',
+        questionText: qDef ? qDef.questionText : '',
+        options: qDef ? qDef.options : []
+      }).then(function () {
+        if (presentBtn) setButtonLoading(presentBtn, false);
+        if (presentBtn) presentBtn.classList.add('hidden');
+        // Sync local state since we just pushed it
+        // Wait for RTDB update to confirm
+      }).catch(function (err) {
+        if (presentBtn) setButtonLoading(presentBtn, false);
+        handleError(err);
+      });
+    }
+
   })();
 </script>

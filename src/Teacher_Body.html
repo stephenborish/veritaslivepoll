@@ -135,119 +135,20 @@
           <button id="add-10s-btn" type="button"
             class="hidden md:flex w-7 h-7 sm:w-8 sm:h-8 items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors"
             title="+10s">
-            <span class="material-symbols-outlined text-base sm:text-lg">add</span>
-          </button>
 
-          <div class="w-px h-4 sm:h-5 bg-white/20 mx-0.5 sm:mx-1"></div>
-
-          <button id="start-btn" type="button"
-            class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm transition-colors"
-            title="Start (Space)">
-            <span class="material-symbols-outlined text-lg sm:text-xl">play_arrow</span>
-          </button>
-          <button id="pause-btn" type="button"
-            class="hidden w-7 h-7 sm:w-8 sm:h-8 items-center justify-center rounded bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition-colors"
-            title="Pause (Space)">
-            <span class="material-symbols-outlined text-lg sm:text-xl">pause</span>
-          </button>
-          <button id="reset-btn" type="button"
-            class="hidden sm:flex w-7 h-7 sm:w-8 sm:h-8 items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-            title="Reset (R)">
-            <span class="material-symbols-outlined text-base sm:text-lg">refresh</span>
-          </button>
+            <div class="w-px h-6 bg-white/10 mx-1"></div>
+            <button id="header-calc-toggle" type="button"
+              class="flex items-center gap-2 h-9 px-3 rounded bg-white/10 text-white text-sm font-semibold hover:bg-white/15 transition-colors"
+              aria-pressed="false" aria-live="polite" data-role="calculator-toggle">
+              <span class="material-symbols-outlined text-base">calculate</span>
+              <span class="hidden sm:inline">Calculator</span>
+              <span id="header-calc-state" class="text-xs uppercase tracking-wide opacity-80">Off</span>
+            </button>
         </div>
-
-        <div class="hidden sm:block w-px h-6 bg-white/10 mx-1"></div>
-        <button id="header-prev-btn" type="button"
-          class="hidden md:flex items-center gap-2 h-8 sm:h-9 px-3 sm:px-4 rounded bg-white/10 text-white font-bold text-xs sm:text-sm hover:bg-white/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Previous Question (←)">
-          <span class="material-symbols-outlined text-sm sm:text-base">arrow_back</span>
-          <span>Prev</span>
-        </button>
-        <button id="header-next-btn" type="button"
-          class="hidden md:flex items-center gap-2 h-8 sm:h-9 px-3 sm:px-4 rounded bg-white text-veritas-navy font-bold text-xs sm:text-sm shadow hover:bg-gray-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Next Question (→)">
-          <span>Next</span>
-          <span class="material-symbols-outlined text-sm sm:text-base">arrow_forward</span>
-        </button>
-        <button id="header-end-show-btn" type="button"
-          class="flex items-center gap-1 sm:gap-2 h-7 sm:h-9 px-2 sm:px-4 rounded bg-veritas-gold text-white font-bold text-xs sm:text-sm shadow hover:bg-veritas-gold/90 transition-all"
-          title="End & Reveal (E)">
-          <span class="material-symbols-outlined text-sm sm:text-base">visibility</span>
-          <span class="hidden sm:inline">Reveal</span>
-        </button>
-
-        <!-- More Actions Dropdown Trigger -->
-        <div class="relative">
-          <button id="live-more-actions-btn"
-            class="h-7 w-7 sm:h-9 sm:w-9 flex items-center justify-center rounded text-white hover:bg-white/10 transition-colors"
-            aria-label="More actions" aria-haspopup="true">
-            <span class="material-symbols-outlined text-lg sm:text-xl">more_vert</span>
-          </button>
-          <!-- Dropdown Menu -->
-          <div id="live-more-menu"
-            class="hidden absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-50 origin-top-right ring-1 ring-black ring-opacity-5 focus:outline-none"
-            role="menu">
-            <button id="header-edit-poll-btn"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">edit</span> Edit Poll
-            </button>
-            <div class="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
-            <button id="header-back-btn"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">arrow_back</span> Previous Question
-            </button>
-            <button id="header-reset-question-btn"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">replay</span> Reset Question
-            </button>
-            <div class="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
-            <button id="add-30s-btn-preset"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">av_timer</span> Add 30 Seconds
-            </button>
-            <button id="add-60s-btn-preset"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">av_timer</span> Add 1 Minute
-            </button>
-            <div class="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
-            <button id="header-send-link-btn"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">mail</span> Send Links
-            </button>
-            <button id="header-view-links-btn"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">link</span> View Links
-            </button>
-            <div class="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
-            <button id="header-stop-btn"
-              class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">stop_circle</span> End Session
-            </button>
-          </div>
-        </div>
-
-        <div class="w-px h-6 bg-white/10 mx-1"></div>
-        <button id="header-calc-toggle" type="button"
-          class="flex items-center gap-2 h-9 px-3 rounded bg-white/10 text-white text-sm font-semibold hover:bg-white/15 transition-colors"
-          aria-pressed="false" aria-live="polite" data-role="calculator-toggle">
-          <span class="material-symbols-outlined text-base">calculate</span>
-          <span class="hidden sm:inline">Calculator</span>
-          <span id="header-calc-state" class="text-xs uppercase tracking-wide opacity-80">Off</span>
-        </button>
       </div>
-    </div>
 
-    <!-- Hidden legacy buttons to prevent JS errors -->
-    <button id="header-start-btn" class="hidden"></button>
+      <!-- Hidden legacy buttons to prevent JS errors -->
+      <button id="header-start-btn" class="hidden"></button>
   </header>
 
   <div class="flex flex-grow overflow-hidden min-h-0">

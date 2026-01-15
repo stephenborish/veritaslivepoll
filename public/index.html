@@ -7903,62 +7903,51 @@
             <span class="text-[10px] text-gray-400">Live Updates</span>
           </div>
 
-          <div
-            class="flex-1 overflow-y-auto p-6 flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-900">
-            <!-- Simulated Device Frame -->
+          <div class="flex-1 overflow-y-auto p-6 flex flex-col items-center bg-gray-100 dark:bg-gray-900">
+            <!-- Desktop Frame -->
             <div
-              class="w-full max-w-[400px] h-[750px] bg-white border-8 border-gray-900 rounded-[3rem] shadow-2xl flex flex-col overflow-hidden relative">
-              <!-- Status Bar Mockup -->
-              <div class="h-6 bg-gray-900 w-full flex items-center justify-between px-6">
-                <div class="text-[10px] text-white font-medium">9:41</div>
-                <div class="flex items-center gap-1.5">
-                  <span class="material-symbols-outlined text-[10px] text-white">signal_cellular_alt</span>
-                  <span class="material-symbols-outlined text-[10px] text-white">wifi</span>
-                  <span class="material-symbols-outlined text-[10px] text-white">battery_full</span>
+              class="w-full max-w-2xl bg-white border border-gray-200 rounded-xl shadow-lg flex flex-col overflow-hidden relative min-h-[500px]">
+
+              <!-- Student Interface Header (Simplifed for Desktop) -->
+              <div
+                class="h-14 bg-veritas-navy text-white flex items-center px-6 justify-between sticky top-0 z-10 shadow-md">
+                <div class="flex items-center gap-3">
+                  <span class="font-bold tracking-widest text-lg">VERITAS</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="bg-white/20 rounded px-3 py-1 text-sm font-mono">0:45</span>
                 </div>
               </div>
 
-              <!-- Student Interface Mockup -->
-              <div class="flex-1 bg-white overflow-y-auto relative scrollbar-hide">
+              <!-- Content Body -->
+              <div class="flex-1 overflow-y-auto p-8 relative">
 
-                <!-- Header -->
-                <div
-                  class="h-14 bg-veritas-navy text-white flex items-center px-4 justify-between sticky top-0 z-10 shadow-md">
-                  <span class="font-bold tracking-widest text-sm">VERITAS</span>
-                  <div class="flex items-center gap-2">
-                    <span
-                      class="bg-black/20 rounded-full w-8 h-8 flex items-center justify-center text-xs font-mono">0:45</span>
+                <div id="true-preview-container" class="max-w-3xl mx-auto">
+                  <!-- Question Visual -->
+                  <div class="question-visual float-right ml-6 mb-4 max-w-[200px] hidden" id="preview-student-visual">
+                    <img src="" class="rounded-lg border border-gray-200 w-full object-contain bg-white shadow-sm">
+                  </div>
+
+                  <!-- Question Stem -->
+                  <h2 class="text-[#12385d] font-serif text-2xl leading-relaxed mb-8" id="preview-student-stem">
+                    Question text...
+                  </h2>
+
+                  <!-- Options Stack -->
+                  <div class="clear-both space-y-4" id="preview-student-options">
+                    <!-- Options will be injected here -->
                   </div>
                 </div>
 
-                <!-- Question Content (The True Preview) -->
-                <div class="p-5 font-sans">
-                  <div id="true-preview-container">
-                    <!-- Injected formatted question goes here -->
-                    <div class="question-visual float-right ml-3 mb-3 max-w-[120px] hidden" id="preview-student-visual">
-                      <img src="" class="rounded-lg border border-gray-200 w-full object-contain bg-white">
-                    </div>
-                    <h2 class="text-[#12385d] font-serif text-lg leading-relaxed mb-4" id="preview-student-stem">
-                      Question
-                      text...</h2>
+              </div>
 
-                    <div class="clear-both space-y-3 mt-6" id="preview-student-options">
-                      <!-- Options -->
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Footer -->
-                <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100 bg-white">
-                  <div
-                    class="w-full h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 font-bold text-sm">
-                    Submit Answer
-                  </div>
+              <!-- Footer (Desktop Style) -->
+              <div class="p-6 border-t border-gray-100 bg-gray-50 flex justify-end">
+                <div class="px-8 py-3 bg-gray-200 rounded-lg text-gray-400 font-bold text-sm select-none">
+                  Submit Answer
                 </div>
               </div>
 
-              <!-- Home Indicator -->
-              <div class="absolute bottom-1 left-1/2 -translate-x-1/2 w-32 h-1 bg-white/20 rounded-full"></div>
             </div>
           </div>
         </aside>
@@ -18635,13 +18624,13 @@
             row.className = 'flex flex-col gap-2 bg-white dark:bg-brand-dark-gray p-3 rounded-lg border ' +
               (isCorrect ? 'border-green-500 ring-1 ring-green-500/20' : 'border-gray-200 dark:border-gray-700');
 
-            // Top Row: Radio, Text, Actions
+            // Top Row: Radio, Editor, Actions
             var topRow = document.createElement('div');
-            topRow.className = 'flex items-center gap-3 w-full';
+            topRow.className = 'flex items-start gap-3 w-full'; // Changed to items-start for editor height
 
             // Correct Answer Radio
             var radioContainer = document.createElement('label');
-            radioContainer.className = 'flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full border cursor-pointer transition-colors ' +
+            radioContainer.className = 'flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full border cursor-pointer transition-colors mt-1 ' +
               (isCorrect ? 'bg-green-500 border-green-500 text-white' : 'bg-gray-50 border-gray-300 hover:border-gray-400 text-gray-400');
             radioContainer.innerHTML = '<span class="text-sm font-bold">' + letter + '</span>' +
               '<input type="radio" name="correct_answer" class="hidden" ' + (isCorrect ? 'checked' : '') + '>';
@@ -18652,21 +18641,21 @@
               isPreviewDirty = true;
             };
 
-            // Text Input
-            var textInput = document.createElement('input');
-            textInput.type = 'text';
-            textInput.value = opt.text || '';
-            textInput.placeholder = 'Answer option ' + letter;
-            textInput.className = 'flex-1 min-w-0 px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-veritas-navy/50 outline-none text-sm';
-            textInput.oninput = function () {
-              opt.text = this.value;
-              updateTruePreview();
-              isPreviewDirty = true;
-            };
+            // Option Editor Container (Quill)
+            var editorContainer = document.createElement('div');
+            editorContainer.className = 'flex-1 min-w-0 flex flex-col gap-1';
 
-            // Actions: Image, Remove
+            var quillId = 'editor-option-quill-' + i;
+            var quillDiv = document.createElement('div');
+            quillDiv.id = quillId;
+            quillDiv.className = 'bg-white rounded-md border border-gray-300 dark:border-gray-600 overflow-hidden';
+            quillDiv.style.minHeight = '60px'; // Ensure space for toolbar + content
+
+            editorContainer.appendChild(quillDiv);
+
+            // Actions: Image, Remove (Right Side)
             var actionsDiv = document.createElement('div');
-            actionsDiv.className = 'flex items-center gap-1';
+            actionsDiv.className = 'flex flex-col items-center gap-1 mt-1';
 
             // Image Upload Btn
             var imgBtn = document.createElement('label');
@@ -18681,6 +18670,9 @@
             removeBtn.innerHTML = '<span class="material-symbols-outlined text-lg">close</span>';
             removeBtn.title = 'Remove Option';
             removeBtn.onclick = function () {
+              // Cleanup Quill instance before removing? 
+              // QuillManager doesn't expose delete explicitly but init handles re-entry.
+              // Just removing from DOM is fine, GC will eventually handle or next init will overwrite.
               removeOptionFromQuestion(i);
             };
 
@@ -18688,7 +18680,7 @@
             actionsDiv.appendChild(removeBtn);
 
             topRow.appendChild(radioContainer);
-            topRow.appendChild(textInput);
+            topRow.appendChild(editorContainer);
             topRow.appendChild(actionsDiv);
 
             row.appendChild(topRow);
@@ -18696,7 +18688,7 @@
             // Bottom Row: Image Preview (if exists)
             if (opt.imageURL) {
               var imgRow = document.createElement('div');
-              imgRow.className = 'pl-11 relative group inline-block';
+              imgRow.className = 'pl-11 relative group inline-block mt-2';
 
               var img = document.createElement('img');
               img.src = opt.imageURL;
@@ -18715,6 +18707,16 @@
             }
 
             editorOptionsList.appendChild(row);
+
+            // Initialize Quill (Must be after appendTo DOM)
+            // Use a small timeout to ensure DOM is ready? Usually sync is fine if appended.
+            setTimeout(function () {
+              QuillManager.init(quillId, opt.text || '', 'Option ' + letter, function (data) {
+                opt.text = data.html;
+                updateTruePreview();
+                isPreviewDirty = true;
+              });
+            }, 0);
           });
         }
 
@@ -18886,8 +18888,8 @@
             badge.textContent = letter;
 
             var text = document.createElement('div');
-            text.className = 'text-sm font-medium flex-1 break-words';
-            text.textContent = opt.text || 'Option ' + letter;
+            text.className = 'text-sm font-medium flex-1 break-words ql-editor-reset'; // Added ql-editor-reset for Quill styles
+            text.innerHTML = opt.text || 'Option ' + letter;
 
             topRow.appendChild(badge);
             topRow.appendChild(text);

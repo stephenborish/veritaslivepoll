@@ -5084,6 +5084,71 @@
             }
         }
 
+        // FIX: Helper function to find an active poll for the student's class
+        // Uses polls-first approach since anonymous users can read polls but not sessions root
+        function findActivePollForClass(className) {
+            return new Promise(function (resolve, reject) {
+                if (!className) {
+                    console.warn('[findActivePollForClass] No className provided');
+                    resolve(null);
+                    return;
+                }
+
+                var db = firebase.database();
+                console.log('[findActivePollForClass] Searching for active polls in class:', className);
+
+                // Step 1: Query polls for this class (anonymous users can read polls)
+                db.ref('polls').orderByChild('className').equalTo(className).once('value')
+                    .then(function (pollsSnap) {
+                        var polls = pollsSnap.val() || {};
+                        var pollIds = Object.keys(polls);
+                        console.log('[findActivePollForClass] Found', pollIds.length, 'polls for class');
+
+                        if (pollIds.length === 0) {
+                            resolve(null);
+                            return;
+                        }
+
+                        // Step 2: Check each poll's live_session status
+                        var checkPromises = pollIds.map(function (pollId) {
+                            return db.ref('sessions/' + pollId + '/live_session').once('value')
+                                .then(function (sessionSnap) {
+                                    var session = sessionSnap.val();
+                                    if (session && session.status && session.status !== 'ENDED' && session.status !== 'PRE_LIVE') {
+                                        console.log('[findActivePollForClass] Active session found:', pollId, 'status:', session.status);
+                                        return pollId;
+                                    }
+                                    return null;
+                                })
+                                .catch(function (err) {
+                                    console.warn('[findActivePollForClass] Could not check session for poll', pollId, err.message);
+                                    return null;
+                                });
+                        });
+
+                        return Promise.all(checkPromises);
+                    })
+                    .then(function (results) {
+                        if (!results) {
+                            resolve(null);
+                            return;
+                        }
+                        // Find first non-null result (active poll)
+                        var activeId = results.find(function (id) { return id !== null; });
+                        if (activeId) {
+                            console.log('[findActivePollForClass] Returning active poll:', activeId);
+                        } else {
+                            console.log('[findActivePollForClass] No active polls found for class:', className);
+                        }
+                        resolve(activeId || null);
+                    })
+                    .catch(function (err) {
+                        console.error('[findActivePollForClass] Query error:', err);
+                        reject(err);
+                    });
+            });
+        }
+
         function startApp() {
             initCalculatorDrag();
             initVisuals();
@@ -5138,17 +5203,19 @@
                     .then(function (snapshot) {
                         var data = snapshot.val();
                         if (data && data.email) {
-                            console.log('[Auth] Token verified. Student:', data.email);
+                            console.log('[Auth] Token verified. Student:', data.email, 'Class:', data.className);
                             window.STUDENT_EMAIL = data.email;
-                            window.SESSION_TOKEN = token; // Treat URL token as session token
+                            window.SESSION_TOKEN = token;
+                            window.STUDENT_CLASS = data.className;
 
                             // Persist
                             try {
                                 sessionStorage.setItem('veritas_student_email', data.email);
                                 sessionStorage.setItem('veritas_session_token', token);
+                                if (data.className) sessionStorage.setItem('veritas_student_class', data.className);
                             } catch (e) { }
 
-                            // Ensure overlay is hidden (double check)
+                            // Ensure overlay is hidden
                             if (window.LoginManager) LoginManager.hide();
                             var loginOverlay = document.getElementById('login-overlay');
                             if (loginOverlay) loginOverlay.style.display = 'none';
@@ -5157,7 +5224,25 @@
                             var appContainer = document.getElementById('student-container');
                             if (appContainer) appContainer.style.display = 'block';
 
-                            startApp();
+                            // FIX: If no pollId in URL, find active poll for this class
+                            if (!window.currentPollId) {
+                                console.log('[Auth] No pollId in URL, searching for active session...');
+                                findActivePollForClass(data.className).then(function (foundPollId) {
+                                    if (foundPollId) {
+                                        console.log('[Auth] Found active poll:', foundPollId);
+                                        window.currentPollId = foundPollId;
+                                        sessionStorage.setItem('veritas_active_poll_id', foundPollId);
+                                    } else {
+                                        console.warn('[Auth] No active poll found for class:', data.className);
+                                    }
+                                    startApp();
+                                }).catch(function (err) {
+                                    console.error('[Auth] Error finding active poll:', err);
+                                    startApp(); // Start anyway, will show waiting screen
+                                });
+                            } else {
+                                startApp();
+                            }
                         } else {
                             throw new Error('Invalid or expired link.');
                         }

@@ -16487,8 +16487,10 @@
         }
 
         function deriveProctorStatus(student) {
-          if (!student) { return null; }
-          return normalizeProctorStatus(student.status || student.proctorStatus || null);
+          if (!student) { return 'UNKNOWN'; }
+          var raw = student.status || student.proctorStatus;
+          if (!raw) return 'INVITED'; // Default if joined but no status
+          return normalizeProctorStatus(raw);
         }
 
         function isLockedStatus(student) {
@@ -17408,13 +17410,17 @@
 
           var html = `
         <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900">
-          <div>
             <h3 class="text-lg font-bold text-gray-900 dark:text-white">${escapeHtml(name)}</h3>
             <span class="text-xs px-2 py-0.5 rounded font-bold uppercase tracking-wide ${statusColor}">${status}</span>
           </div>
-          <button onclick="closeStudentInspector()" class="text-gray-400 hover:text-gray-600">
-            <span class="material-symbols-outlined">close</span>
-          </button>
+          <div class="flex items-center gap-2">
+             <button onclick="copyStudentLink('${escapeHtml(student.email)}')" class="text-veritas-navy hover:text-blue-700 p-2 rounded-full hover:bg-blue-50 transition-colors" title="Copy Poll Link for Student">
+                <span class="material-symbols-outlined">link</span>
+             </button>
+             <button onclick="closeStudentInspector()" class="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors">
+               <span class="material-symbols-outlined">close</span>
+             </button>
+          </div>
         </div>
 
         <div class="flex-1 overflow-y-auto p-6 space-y-6">
@@ -17493,11 +17499,31 @@
 
         function closeStudentInspector() {
           var panel = document.getElementById('student-inspector-panel');
-          if (panel) panel.classList.add('hidden');
+          if (panel) {
+            panel.classList.add('hidden');
+            panel.style.display = 'none';
+          }
         }
 
-        // Expose close to window for onclick
         window.closeStudentInspector = closeStudentInspector;
+
+        function copyStudentLink(email) {
+          // Basic link construction - assumes current poll ID is valid
+          if (!CURRENT_POLL_DATA || !CURRENT_POLL_DATA.pollId) {
+            showToast('error', 'Error', 'No active poll found.');
+            return;
+          }
+          var link = window.location.origin + '/student.html?pollId=' + CURRENT_POLL_DATA.pollId;
+
+          navigator.clipboard.writeText(link).then(function () {
+            showToast('success', 'Link Copied', 'Student poll link copied to clipboard.');
+          }, function (err) {
+            console.error('Async: Could not copy text: ', err);
+            // Fallback
+            prompt("Copy this link:", link);
+          });
+        }
+        window.copyStudentLink = copyStudentLink;
         window.proctorAction = proctorAction;
 
         function proctorAction(action, email) {

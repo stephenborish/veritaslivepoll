@@ -8534,9 +8534,9 @@
         <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900">
           <div>
             <h3 class="text-lg font-bold text-gray-900 dark:text-white">${escapeHtml(name)}</h3>
-            <span class="text-xs px-2 py-0.5 rounded font-bold uppercase tracking-wide ${statusColor}">${status}</span>
+            <span class="text-xs px-2 py-0.5 rounded font-bold uppercase tracking-wide ${statusColor}">${status || 'UNKNOWN'}</span>
           </div>
-          <button onclick="closeStudentInspector()" class="text-gray-400 hover:text-gray-600">
+          <button onclick="closeStudentInspector()" class="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
             <span class="material-symbols-outlined">close</span>
           </button>
         </div>
@@ -8551,9 +8551,12 @@
                 <span>Unlock Student</span>
               </button>` : ''}
               
-              <button onclick="proctorAction('RESET', '${email}')" class="flex items-center justify-center gap-2 p-3 bg-white border border-gray-300 text-gray-700 rounded-lg font-bold hover:bg-gray-50 transition-all">
-                <span class="material-symbols-outlined">restart_alt</span>
                 <span>Reset Question</span>
+              </button>
+              
+              <button onclick="resendLinkToStudent('${email}')" class="flex items-center justify-center gap-2 p-3 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg font-bold hover:bg-blue-100 transition-all">
+                <span class="material-symbols-outlined">send</span>
+                <span>Re-send Link</span>
               </button>
               
               ${!isBlocked ? `
@@ -8613,16 +8616,98 @@
 
       panel.innerHTML = html;
       panel.classList.remove('hidden');
+      // Force reflow
+      void panel.offsetWidth;
+      panel.classList.remove('translate-x-full');
     }
 
     function closeStudentInspector() {
       var panel = document.getElementById('student-inspector-panel');
-      if (panel) panel.classList.add('hidden');
+      if (panel) {
+        panel.classList.add('translate-x-full');
+        // Wait for transition then hide
+        setTimeout(function () {
+          panel.classList.add('hidden');
+        }, 300);
+      }
     }
 
     // Expose close to window for onclick
     window.closeStudentInspector = closeStudentInspector;
     window.proctorAction = proctorAction;
+    window.resendLinkToStudent = resendLinkToStudent;
+
+    async function resendLinkToStudent(email) {
+      if (!confirm('Re-send the unique poll link to ' + email + '?')) return;
+
+      var btn = document.getElementById('send-link-btn');
+      var className = btn && btn.dataset.className;
+
+      // Fallback: Try to find class name in UI if not on button
+      if (!className) {
+        // Attempt to get from a global or infer
+        if (CURRENT_POLL_DATA && CURRENT_POLL_DATA.className) {
+          className = CURRENT_POLL_DATA.className;
+        }
+      }
+
+      if (!className) {
+        showToast('Error: Could not determine class name', 'error');
+        return;
+      }
+
+      var baseUrl = window.location.origin + '/student.html';
+
+      showToast('info', 'Sending Link', 'Preparing email for ' + email + '...');
+
+      try {
+        // 1. Get roster/links (re-using manage roster to get the token)
+        var result = await callManageRoster({
+          action: 'SEND_EMAILS',
+          className: className,
+          pollId: CURRENT_POLL_DATA.pollId
+        });
+
+        var payload = result.data;
+        if (!payload.success) throw new Error('Could not retrieve student link data');
+
+        // 2. Filter for OUR student
+        var targetLink = payload.links.find(function (l) { return l.email === email; });
+
+        if (!targetLink) {
+          throw new Error('Student not found in roster for this class');
+        }
+
+        // 3. Construct specific payload for just this student
+        var isSecure = (CURRENT_POLL_DATA.sessionType || "").toUpperCase().includes("SECURE");
+        var fullLink = baseUrl + '?token=' + targetLink.token;
+        var htmlBody = generateEmailHtml(targetLink.name, fullLink, isSecure, email);
+
+        var singleStudentPayload = {
+          subject: payload.subject,
+          students: [{
+            email: email,
+            name: targetLink.name,
+            subject: payload.subject,
+            body: htmlBody
+          }]
+        };
+
+        // 4. Send Email
+        var emailResult = await firebase.functions().httpsCallable('sendEmail')(singleStudentPayload);
+        var response = emailResult.data;
+
+        if (response.success && response.sentCount > 0) {
+          showToast('success', 'Link Sent', 'Email sent to ' + email);
+        } else {
+          throw new Error(response.error || 'Failed to send email');
+        }
+
+      } catch (e) {
+        console.error(e);
+        showToast('error', 'Send Failed', e.message);
+      }
+    }
 
     function proctorAction(action, email) {
       if (!confirm('Are you sure you want to ' + action + ' this student?')) return;

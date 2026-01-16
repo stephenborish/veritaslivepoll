@@ -92,6 +92,7 @@ buildPage('Student_View.html', 'student.html');
 buildPage('ExamManagerView.html', 'exam_manager.html');
 buildPage('ExamTeacherView.html', 'exam_teacher.html');
 buildPage('ExamStudentView.html', 'exam_student.html');
-// buildPage('QuestionBankView.html', 'question_bank.html'); // Optional if needed
+buildPage('QuestionBankView.html', 'question_bank.html');
+// buildPage('OtherView.html', 'other.html');
 
 console.log("Build complete.");

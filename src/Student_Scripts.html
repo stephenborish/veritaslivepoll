@@ -3844,10 +3844,12 @@
                 if (!qText && data.options && data.options.length > 0) {
                     // Fallback: If options exist but text is missing, show loading
                     qText = '<span class="animate-pulse text-gray-500 italic">Loading question...</span>';
-                    console.warn('[renderQuestion] Question text is missing, showing loader', data);
+                    console.error('[renderQuestion] Missing question text. Full data:', JSON.stringify(data, null, 2));
+                    console.warn('[renderQuestion] Question text is missing, showing loader');
                     // Force immediate full poll to resolve this
                     if (typeof startPolling === 'function') startPolling(true);
                 } else if (!qText) {
+                    console.error('[renderQuestion] No question text and no options. Full data:', JSON.stringify(data, null, 2));
                     qText = "[Question Text Missing]";
                 }
 

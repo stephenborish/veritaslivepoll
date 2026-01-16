@@ -26,7 +26,6 @@
     },
     "sessions": {
       "$pollId": {
-        ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
         "live_session": {
           ".read": "auth != null",
           ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'"

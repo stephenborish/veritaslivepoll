@@ -4887,10 +4887,6 @@
       loadingEl.classList.remove('hidden');
       reportEl.classList.add('hidden');
 
-      // google.script.run
-      //   .withSuccessHandler(function (data) { ... })
-      //   .getEnhancedPostPollAnalytics(pollId);
-
       const getAnalytics = firebase.functions().httpsCallable('getAnalytics');
       getAnalytics({ pollId: pollId })
         .then(function (result) {
@@ -6097,8 +6093,6 @@
         previewOnlyNotice('pause the live poll');
         return;
       }
-      // google.script.run legacy cleanup removed
-
       var setSessionFn = firebase.functions().httpsCallable('setLiveSessionState');
       var pollId = CURRENT_POLL_DATA.pollId;
       var qIndex = CURRENT_POLL_DATA.questionIndex || 0;

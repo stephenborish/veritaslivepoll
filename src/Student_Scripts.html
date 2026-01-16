@@ -1812,14 +1812,7 @@
             } catch (err) {
                 console.warn('Unable to exit fullscreen', err);
             }
-            try {
-                if (google && google.script && google.script.host && typeof google.script.host.close === 'function') {
-                    google.script.host.close();
-                    return;
-                }
-            } catch (err) {
-                console.warn('Unable to close Apps Script host', err);
-            }
+
             if (typeof window !== 'undefined' && typeof window.close === 'function') {
                 window.close();
             }

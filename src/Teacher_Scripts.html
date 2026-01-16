@@ -6157,30 +6157,11 @@
         }
       })
         .then(function (result) {
-          console.log('Question Visibility Toggled via Cloud Function:', targetStatus);
+          console.log('Question Visibility Toggled via Cloud Function (REVEALED=' + !isRevealed + ')');
           if (endShowBtn) { endShowBtn.disabled = false; }
-          // Optimistic Local Update
-          CURRENT_POLL_DATA.resultsVisibility = isRevealed ? 'HIDDEN' : 'REVEALED';
-
-          isPaused = true;
-
-          // Synthesize success data for updateLiveView
-          var syntheticData = {
-            pollId: pollId,
-            questionIndex: CURRENT_POLL_DATA.questionIndex,
-            status: 'LIVE',
-            sessionPhase: 'RESULTS_REVEALED',
-            resultsVisibility: 'REVEALED'
-          };
-
-          updateLiveView(syntheticData);
-
-          broadcastSessionState(pollId, {
-            status: 'ENDED',
-            sessionPhase: 'RESULTS_REVEALED',
-            resultsVisibility: 'REVEALED',
-            questionIndex: CURRENT_POLL_DATA.questionIndex
-          });
+          // We rely on the Realtime Database listener (initFirebaseMissionControl) 
+          // to trigger updateLiveView(data) with full context.
+          // This avoids "optimistic" UI breaks where we only have partial data.
         })
         .catch(function (error) {
           console.error('Finalize Session Error:', error);
@@ -8545,6 +8526,8 @@
                 <span>Unlock Student</span>
               </button>` : ''}
               
+              <button onclick="proctorAction('RESET', '${email}')" class="flex items-center justify-center gap-2 p-3 bg-white border border-gray-300 text-gray-700 rounded-lg font-bold hover:bg-gray-50 transition-all">
+                <span class="material-symbols-outlined">restart_alt</span>
                 <span>Reset Question</span>
               </button>
               

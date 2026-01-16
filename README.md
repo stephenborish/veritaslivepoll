@@ -164,25 +164,34 @@ After deployment, access your app at:
 
 ## Local Development
 
+### Simplified Development Commands
+
+Starting with Version 3.0, you can use the following `npm` commands from the root directory:
+
+```bash
+# Full local development (Build + Watch + Emulate)
+npm run dev
+
+# Run only the File Watcher (Auto-rebuild src -> public)
+npm run watch
+
+# Run only the Firebase Emulators
+npm run emulate
+
+# Manual Rebuild
+npm run build
+```
+
 ### Using Firebase Emulators
 
-```bash
-# Start all emulators
-firebase emulators:start
+The emulators provide a local instance of Firebase services, allowing you to test without affecting production data.
 
-# Or start specific emulators
-firebase emulators:start --only functions,database,firestore,hosting
-```
-
-The emulator UI is available at `http://localhost:4000`
-
-### File Watcher (Auto-rebuild)
-
-```bash
-node watch.js
-```
-
-This watches for changes in `src/` and automatically rebuilds the public files.
+- **Emulator UI**: `http://localhost:4000`
+- **Hosting**: `http://localhost:5002` (Teacher Dashboard)
+- **Functions Port**: `5001`
+- **Firestore Port**: `8080`
+- **RTDB Port**: `9000`
+- **Auth Port**: `9099`
 
 ---
 

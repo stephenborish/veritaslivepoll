@@ -1,0 +1,20 @@
+{
+  "name": "veritaslivepoll",
+  "version": "3.0.0",
+  "description": "Veritas Live Poll - Integrated Development Environment",
+  "main": "builder.js",
+  "scripts": {
+    "build": "node builder.js",
+    "watch": "node watch.js",
+    "emulate": "firebase emulators:start",
+    "dev": "npm run build && node -e \"const { spawn } = require('child_process'); spawn('node', ['watch.js'], { stdio: 'inherit' }); spawn('firebase', ['emulators:start'], { stdio: 'inherit' });\"",
+    "emulators": "firebase emulators:start --only functions,database,firestore,hosting",
+    "logs": "firebase functions:log"
+  },
+  "keywords": [],
+  "author": "Stephen Borish",
+  "license": "MIT",
+  "devDependencies": {
+    "firebase-tools": "^13.0.0"
+  }
+}

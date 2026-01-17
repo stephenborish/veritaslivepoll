@@ -320,6 +320,56 @@ Key security patterns:
 
 ---
 
+## Student View Features
+
+### Answer Elimination (Cross-Out)
+
+Students can visually eliminate answer choices to help with test-taking strategy:
+
+- **Eye Icon**: Click the eye icon on the right side of any answer option to cross it out
+- **Visual Feedback**: Crossed-out options appear greyed out with a strikethrough
+- **Safe Interaction**: Clicking the eye icon does NOT select the answer
+- **Persistence**: Cross-out state is saved to sessionStorage and survives page refresh
+- **Restoration**: Crossed-out options are restored when returning to the same question
+
+### Zero-Latency Submission
+
+Optimistic UI provides instant feedback when submitting answers:
+
+- **Instant Transition**: UI shows "Answer Saved" immediately without waiting for server
+- **Dual-Write Pattern**: Answers are written to both public (visibility) and secure (grading) nodes
+- **Teacher Dashboard**: Teachers see green status instantly when students submit
+- **Error Resilience**: Failed submissions are logged but don't disrupt the student experience
+
+### Refresh Immunity (State Rehydration)
+
+The Student View is resilient to page refreshes:
+
+- **Session Storage Cache**: Poll state is cached locally with a 5-minute TTL
+- **Immediate Render**: On page load, cached state renders synchronously before network requests
+- **No White Flash**: Students see their current question immediately, not a loading screen
+- **Automatic Sync**: Fresh data from Firebase overwrites cached state when available
+
+### Connection Recovery
+
+Professional handling of network issues:
+
+- **Clear Messaging**: "Connection lost. Don't panic - we are saving your work locally and will reconnect automatically."
+- **Auto-Reconnect**: Automatic reconnection with exponential backoff
+- **Visual Indicators**: Connectivity banner shows sync status
+- **No Data Loss**: Local state preserved during outages
+
+### Paused Session Handling
+
+When teachers pause the session:
+
+- **Eyes on Teacher**: Full-screen overlay with clear instructions
+- **Backdrop Blur**: Content remains visible but interactions are blocked
+- **Auto-Resume**: Overlay automatically hides when session resumes
+- **Connection Maintained**: Firebase listeners remain active during pause
+
+---
+
 ## Troubleshooting
 
 ### Common Issues

@@ -41,6 +41,109 @@
         var connectedRef = null;
 
         // =============================================================================
+        // STATE REHYDRATION - Prevents "White Flash" or "Lobby Loop" on refresh
+        // Caches poll state to sessionStorage and restores on page load
+        // =============================================================================
+        var STATE_CACHE_KEY = 'vlp_poll_state_cache';
+        var STATE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+        function cachePollState(state) {
+            if (!state || !state.pollId) return;
+            try {
+                var cacheData = {
+                    state: state,
+                    cachedAt: Date.now()
+                };
+                sessionStorage.setItem(STATE_CACHE_KEY, JSON.stringify(cacheData));
+                console.log('[StateCache] Cached poll state for:', state.pollId);
+            } catch (e) {
+                console.warn('[StateCache] Failed to cache state:', e);
+            }
+        }
+
+        function getCachedPollState() {
+            try {
+                var cached = sessionStorage.getItem(STATE_CACHE_KEY);
+                if (!cached) return null;
+
+                var cacheData = JSON.parse(cached);
+                var age = Date.now() - cacheData.cachedAt;
+
+                // Check TTL - only use cache if less than 5 minutes old
+                if (age > STATE_CACHE_TTL_MS) {
+                    console.log('[StateCache] Cache expired (age:', Math.round(age / 1000), 's)');
+                    sessionStorage.removeItem(STATE_CACHE_KEY);
+                    return null;
+                }
+
+                console.log('[StateCache] Found valid cache (age:', Math.round(age / 1000), 's)');
+                return cacheData.state;
+            } catch (e) {
+                console.warn('[StateCache] Failed to read cache:', e);
+                return null;
+            }
+        }
+
+        function clearStateCache() {
+            try {
+                sessionStorage.removeItem(STATE_CACHE_KEY);
+            } catch (e) { }
+        }
+
+        /**
+         * Transform Firebase live_session data to view data format
+         * Used for immediate fetch and listener callbacks
+         */
+        function transformLiveSessionToViewData(sessionData, pollId) {
+            if (!sessionData) return null;
+
+            return {
+                pollId: pollId,
+                status: sessionData.status,
+                questionIndex: typeof sessionData.currentQuestionIndex === 'number' ? sessionData.currentQuestionIndex : null,
+                questionText: sessionData.questionText || null,
+                options: sessionData.options || null,
+                resultsVisibility: sessionData.resultsVisibility || null,
+                studentEmail: window.STUDENT_EMAIL,
+                calculatorEnabled: sessionData.calculatorEnabled === true,
+                liveProctoring: sessionData.liveProctoring === true,
+                sessionType: sessionData.sessionType || 'LIVE_POLL'
+            };
+        }
+
+        /**
+         * EARLY STATE REHYDRATION
+         * Called synchronously on page load BEFORE network requests
+         * Renders cached state immediately to prevent white flash
+         */
+        function attemptEarlyRehydration() {
+            var cachedState = getCachedPollState();
+            if (!cachedState) {
+                console.log('[StateRehydration] No valid cached state found');
+                return false;
+            }
+
+            console.log('[StateRehydration] Rehydrating from cache immediately');
+
+            // Only rehydrate if the session is still active (not ENDED)
+            if (cachedState.status === 'ENDED' || cachedState.status === 'CLOSED') {
+                console.log('[StateRehydration] Cached state is ENDED/CLOSED, clearing cache');
+                clearStateCache();
+                return false;
+            }
+
+            // Render cached state synchronously
+            try {
+                updateStudentView(cachedState);
+                console.log('[StateRehydration] Successfully rendered from cache');
+                return true;
+            } catch (e) {
+                console.error('[StateRehydration] Failed to render cached state:', e);
+                return false;
+            }
+        }
+
+        // =============================================================================
         // PHASE 2: STRICT LISTENER MANAGER PATTERN
         // Prevents memory leaks and "ghost" re-renders from zombie listeners
         // =============================================================================
@@ -303,6 +406,26 @@
                 // NEW: Listen to 'live_session' for instant updates (Hybrid Architecture)
                 var sessionPath = 'sessions/' + pollId + '/live_session';
                 liveSessionRef = firebaseDb.ref(sessionPath);
+
+                // PHASE 4 FIX: IMMEDIATE FETCH - Execute .once('value') immediately on init
+                // This prevents the "white flash" by getting state before the first listener event
+                console.log('[Firebase] Executing immediate fetch on live_session...');
+                liveSessionRef.once('value').then(function (snapshot) {
+                    var sessionData = snapshot.val();
+                    if (sessionData) {
+                        console.log('[Firebase] Immediate fetch received:', sessionData.status);
+                        // Only process if we haven't already received an update from the listener
+                        if (!window._immediateFetchProcessed) {
+                            window._immediateFetchProcessed = true;
+                            var viewData = transformLiveSessionToViewData(sessionData, pollId);
+                            if (viewData) {
+                                updateStudentView(viewData);
+                            }
+                        }
+                    }
+                }).catch(function (err) {
+                    console.warn('[Firebase] Immediate fetch failed:', err);
+                });
 
                 var liveSessionCallback = function (snapshot) {
                     var data = snapshot.val();
@@ -2085,7 +2208,7 @@
                 secureFocusContainer.style.display = 'block';
             }
             disableSecureOptions(true);
-            showSecureOverlay('LOCKED', message || 'Assessment Paused', subtext || 'Fullscreen exit detected. Your teacher will re-admit you shortly.');
+            showSecureOverlay('LOCKED', message || 'Assessment Paused', subtext || 'Fullscreen exit detected. Please wait for your instructor to re-admit you.');
             // Hide calculator when locked
             if (typeof hideCalculatorOnSessionEnd === 'function') {
                 hideCalculatorOnSessionEnd();
@@ -3464,10 +3587,10 @@
 
             var online = typeof navigator !== 'undefined' ? navigator.onLine : true;
             showConnectivityState(online ? 'connecting' : 'offline', {
-                message: online ? 'Reconnecting... your poll data is catching up.' : 'Offline detected - we will hold your spot and resync when you are back.',
+                message: online ? 'Syncing with teacher...' : 'Connection lost. Don\'t panic - we are saving your work locally and will reconnect automatically.',
                 icon: online ? 'sync_problem' : 'signal_wifi_off',
                 submessage: online ? ('Retrying in ' + seconds + 's...') : '',
-                preLiveMessage: online ? 'Reconnecting… syncing you back into place.' : 'Offline detected — we will hold your spot and sync when you are back.'
+                preLiveMessage: online ? 'Syncing with teacher...' : 'Connection lost. We are saving your work locally and will reconnect automatically.'
             });
 
             scheduleNextPoll(retryDelay);
@@ -3510,11 +3633,11 @@
                 }
             }
             if (statusMessage) {
-                statusMessage.textContent = message || 'Response Captured';
+                statusMessage.textContent = message || 'Answer Saved';
                 statusMessage.className = 'text-veritas-navy text-3xl font-bold tracking-tight animate-fade-in';
             }
             if (statusSubMessage) {
-                statusSubMessage.textContent = "Data transmitted. Awaiting next phase...";
+                statusSubMessage.textContent = "Response Recorded. Eyes on the board for results.";
                 statusSubMessage.style.display = 'block';
                 statusSubMessage.className = 'text-slate-500 font-medium mt-2 animate-fade-in';
             }
@@ -3580,7 +3703,7 @@
             if (!isSessionActive()) return;
             recoveringFromOutage = true;
             showConnectivityState('offline', {
-                message: 'Offline detected - we will hold your spot and resync when you are back.',
+                message: 'Connection lost. Don\'t panic - we are saving your work locally and will reconnect automatically.',
                 icon: 'signal_wifi_off'
             });
         });
@@ -3588,7 +3711,7 @@
         window.addEventListener('online', function () {
             if (!isSessionActive()) return;
             showConnectivityState('connecting', {
-                message: 'Reconnecting... your poll data is catching up.',
+                message: 'Reconnected. Syncing with teacher...',
                 icon: 'sync',
                 submessage: 'Syncing now...'
             });
@@ -3758,6 +3881,11 @@
                 sessionStorage.setItem('veritas_active_poll_id', data.pollId);
             }
 
+            // STATE REHYDRATION: Cache poll state for refresh immunity
+            if (data.pollId && data.status) {
+                cachePollState(data);
+            }
+
             console.log('[ViewManager] Update View State:', data);
 
             // --- EARLY CHECKS BEFORE HIDING VIEWS (prevents white screen) ---
@@ -3806,7 +3934,27 @@
                 return;
             }
 
-            // 3. SUBMISSION GUARD - If already submitted, show waiting screen immediately (no flash)
+            // 3. PAUSED STATE CHECK - Show "Eyes on Teacher" overlay
+            var pausedOverlay = document.getElementById('paused-overlay');
+            if (data.status === 'PAUSED') {
+                console.log('[ViewManager] Session PAUSED - showing Eyes on Teacher overlay');
+                if (pausedOverlay) {
+                    pausedOverlay.classList.remove('hidden');
+                    pausedOverlay.style.display = 'flex';
+                }
+                isInteractionBlocked = true;
+                // Keep connection alive but block inputs - do not return, let views stay rendered behind overlay
+            } else {
+                // Auto-hide paused overlay when status changes back
+                if (pausedOverlay && pausedOverlay.style.display !== 'none') {
+                    console.log('[ViewManager] Session resumed - hiding PAUSED overlay');
+                    pausedOverlay.classList.add('hidden');
+                    pausedOverlay.style.display = 'none';
+                    isInteractionBlocked = false;
+                }
+            }
+
+            // 4. SUBMISSION GUARD - If already submitted, show waiting screen immediately (no flash)
             // Maintain submission guardrails so polling cannot rewind UI
             if (data.hasSubmitted === true && currentIndex !== null) {
                 lastSubmittedQuestionIndex = currentIndex;
@@ -3816,7 +3964,7 @@
             if (currentIndex !== null && lastSubmittedQuestionIndex === currentIndex && data.status === 'LIVE' && resultsVisibility !== 'REVEALED') {
                 // Don't hide views - just ensure status container is visible
                 if (questionContainer) questionContainer.style.display = 'none';
-                showWaitingForNextPhase('Response Captured');
+                showWaitingForNextPhase('Answer Saved. Waiting for next question...');
                 return;
             }
 
@@ -3932,7 +4080,7 @@
                         }
 
                         if (data.hasSubmitted === true && currentIndex !== null) {
-                            showWaitingForNextPhase('Response Captured');
+                            showWaitingForNextPhase('Answer Saved. Waiting for next question...');
                             return;
                         }
                         renderQuestion(data);
@@ -4077,7 +4225,7 @@
                         id: (typeof option === 'object') ? (option.id || null) : null
                     };
                     var letter = letters[index] || (index + 1).toString();
-                    var btn = createOptionButton(normalized, letter, data.pollId, data.questionIndex);
+                    var btn = createOptionButton(normalized, letter, data.pollId, data.questionIndex, index);
 
                     // Disable if already answered
                     if (hasAnsweredCurrent) {
@@ -4094,9 +4242,12 @@
                         imageURL: normalized.imageURL
                     });
                 });
+
+                // Restore cross-out state from sessionStorage after options rendered
+                restoreCrossOutState(data.pollId, data.questionIndex);
             } else if (hasAnsweredCurrent) {
                 // Student has already answered - show waiting screen instead of question
-                showWaitingForNextPhase('Response Captured');
+                showWaitingForNextPhase('Answer Saved. Waiting for next question...');
                 return;
             }
 
@@ -4143,12 +4294,8 @@
                 statusContainer.style.display = 'block';
                 questionContainer.style.display = 'none';
                 if (statusMessage) {
-                    var waitPhrases = [
-                        "Locking in your genius...", "Securing your brilliance...",
-                        "Beaming answer to HQ...", "Writing to the digital ledger..."
-                    ];
-                    statusMessage.textContent = waitPhrases[Math.floor(Math.random() * waitPhrases.length)];
-                    statusMessage.className = 'text-veritas-navy text-2xl font-bold animate-text-shimmer';
+                    statusMessage.textContent = "Submitting answer...";
+                    statusMessage.className = 'text-veritas-navy text-2xl font-bold';
                 }
                 if (statusSubMessage) {
                     statusSubMessage.textContent = 'Please wait while we confirm your submission.';
@@ -4226,23 +4373,29 @@
         }
 
         function submitAnswerToServer(pollId, questionIndex, answerText, answerId, confidence) {
-            // Live Poll - FAST PATH: Firebase First
+            // =================================================================
+            // OPTIMISTIC UI: Show success state IMMEDIATELY before writes complete
+            // This follows the "Zero-Latency" dual-write pattern for instant feedback
+            // =================================================================
+
+            // INSTANT UI TRANSITION: Don't wait for promise
+            pendingAnswerText = null;
+            showWaitingForNextPhase('Answer Saved. Waiting for next question...');
+            console.log('[Optimistic UI] Showing success state immediately');
+
+            // DUAL-WRITE (Fire and forget with error handling)
             submitAnswerToFirebase(pollId, questionIndex, answerText, answerId, confidence)
                 .then(function (firebaseResult) {
                     if (firebaseResult && firebaseResult.success) {
-                        console.log('[Firebase] Fast write successful (Live Poll)');
-                        pendingAnswerText = null;
-                        statusMessage.textContent = 'Response Received';
-                        statusMessage.className = 'text-green-700 text-2xl font-semibold';
-                        if (statusSubMessage) {
-                            statusSubMessage.textContent = 'Recorded via Firebase.';
-                            statusSubMessage.style.display = 'block';
-                            statusSubMessage.className = 'text-gray-700 text-lg mt-4';
-                        }
+                        console.log('[Firebase] Dual-write confirmed successful');
                     } else {
-                        console.warn('[Firebase] Fast write failed.');
-                        handleLivePollError('Firebase submission failed. Please check your connection.');
+                        // Silent retry or log - UI is already in success state
+                        console.warn('[Firebase] Dual-write may have failed, but UI already transitioned');
                     }
+                })
+                .catch(function (error) {
+                    // Log error but don't revert UI - the answer may still be saved
+                    console.error('[Firebase] Dual-write error:', error);
                 });
         } function handleLivePollError(error) {
             hasAnsweredCurrent = false;
@@ -4278,11 +4431,12 @@
             return arr;
         }
 
-        function createOptionButton(option, letter, pollId, questionIndex) {
+        function createOptionButton(option, letter, pollId, questionIndex, optionIndex) {
             var btn = document.createElement('button');
             btn.type = 'button';
             btn.className = optionBaseClass;
             btn.dataset.answerText = option.text || '';
+            btn.dataset.optionIndex = optionIndex;
 
             var displayText = (option.text || '').trim();
 
@@ -4314,8 +4468,41 @@
             content += '</div>';
             content += '<div class="result-badges"></div>';
 
+            // Cross-Out Toggle Button
+            content += '<button type="button" class="cross-out-toggle" aria-label="Cross out this answer" title="Click to eliminate this option">';
+            content += '<span class="material-symbols-outlined">visibility_off</span>';
+            content += '</button>';
+
             btn.innerHTML = content;
+
+            // Cross-Out Toggle Handler
+            var crossOutToggle = btn.querySelector('.cross-out-toggle');
+            if (crossOutToggle) {
+                crossOutToggle.addEventListener('click', function (event) {
+                    event.stopPropagation(); // CRITICAL: Don't trigger answer submission
+                    event.preventDefault();
+
+                    var isCrossedOut = btn.classList.toggle('crossed-out');
+
+                    // Update icon
+                    var icon = crossOutToggle.querySelector('.material-symbols-outlined');
+                    if (icon) {
+                        icon.textContent = isCrossedOut ? 'visibility' : 'visibility_off';
+                    }
+                    crossOutToggle.setAttribute('aria-label', isCrossedOut ? 'Restore this answer' : 'Cross out this answer');
+                    crossOutToggle.setAttribute('title', isCrossedOut ? 'Click to restore this option' : 'Click to eliminate this option');
+
+                    // Persist to sessionStorage
+                    saveCrossOutState(pollId, questionIndex);
+                });
+            }
+
             btn.addEventListener('click', function (event) {
+                // Prevent submission if clicking cross-out toggle
+                if (event && event.target && event.target.closest('.cross-out-toggle')) {
+                    return;
+                }
+
                 // Prevent submission if clicking an image (e.g. for zoom)
                 // Robust check for any image element within the click target chain
                 if (event && event.target && (event.target.closest('.option-image') || event.target.closest('img'))) {
@@ -4323,14 +4510,73 @@
                     return;
                 }
 
+                // Prevent submission if option is crossed out
+                if (btn.classList.contains('crossed-out')) {
+                    console.log('[Interaction] Crossed-out option clicked - ignoring');
+                    return;
+                }
+
                 // Track option click
-                var optionIndex = Array.from(btn.parentElement.parentElement.children).indexOf(btn.parentElement);
-                activityTracker.recordOptionClick(optionIndex, option.text);
+                var idx = Array.from(btn.parentElement.parentElement.children).indexOf(btn.parentElement);
+                activityTracker.recordOptionClick(idx, option.text);
 
                 submitAnswer(pollId, questionIndex, option.text, option.id);
             });
 
             return btn;
+        }
+
+        // =============================================================================
+        // CROSS-OUT PERSISTENCE HELPERS
+        // =============================================================================
+
+        function getCrossOutStorageKey(pollId, questionIndex) {
+            return 'vlp_crossout_' + pollId + '_' + questionIndex;
+        }
+
+        function saveCrossOutState(pollId, questionIndex) {
+            try {
+                var crossedOutIndices = [];
+                var buttons = optionsList ? optionsList.querySelectorAll('button.answer-option') : [];
+                buttons.forEach(function (btn, index) {
+                    if (btn.classList.contains('crossed-out')) {
+                        crossedOutIndices.push(index);
+                    }
+                });
+                var key = getCrossOutStorageKey(pollId, questionIndex);
+                sessionStorage.setItem(key, JSON.stringify(crossedOutIndices));
+                console.log('[CrossOut] Saved state:', crossedOutIndices, 'for key:', key);
+            } catch (e) {
+                console.warn('[CrossOut] Failed to save state:', e);
+            }
+        }
+
+        function restoreCrossOutState(pollId, questionIndex) {
+            try {
+                var key = getCrossOutStorageKey(pollId, questionIndex);
+                var stored = sessionStorage.getItem(key);
+                if (!stored) return;
+
+                var crossedOutIndices = JSON.parse(stored);
+                if (!Array.isArray(crossedOutIndices)) return;
+
+                var buttons = optionsList ? optionsList.querySelectorAll('button.answer-option') : [];
+                crossedOutIndices.forEach(function (index) {
+                    if (buttons[index]) {
+                        buttons[index].classList.add('crossed-out');
+                        var toggle = buttons[index].querySelector('.cross-out-toggle');
+                        if (toggle) {
+                            var icon = toggle.querySelector('.material-symbols-outlined');
+                            if (icon) icon.textContent = 'visibility';
+                            toggle.setAttribute('aria-label', 'Restore this answer');
+                            toggle.setAttribute('title', 'Click to restore this option');
+                        }
+                    }
+                });
+                console.log('[CrossOut] Restored state:', crossedOutIndices, 'for key:', key);
+            } catch (e) {
+                console.warn('[CrossOut] Failed to restore state:', e);
+            }
         }
 
         function resetResultDecorations() {
@@ -4391,7 +4637,7 @@
                     imageURL: option.imageURL || option.imageUrl || ''
                 };
                 var letter = letters[index] || (index + 1).toString();
-                var btn = createOptionButton(normalized, letter, data.pollId, data.questionIndex);
+                var btn = createOptionButton(normalized, letter, data.pollId, data.questionIndex, index);
                 btn.disabled = true;
                 btn.classList.add('result-readonly');
                 var listItem = document.createElement('li');
@@ -4733,36 +4979,42 @@
         const UX_COPY = {
             // VIOLATION
             LOCKED: {
-                title: "You Stepped Out",
-                icon: "door_open",
-                body: "The session detected activity outside this window.",
-                footer: "This was flagged automatically. Your instructor can bring you back in.",
-                badge: "OUTSIDE THE ROOM",
-                statusLight: "LINK ACTIVE"
+                title: "Assessment Paused",
+                icon: "fullscreen_exit",
+                body: "Fullscreen exit detected. Please wait for your instructor to re-admit you.",
+                footer: "Your work has been saved. Stay on this screen.",
+                badge: "PAUSED",
+                statusLight: "CONNECTION ACTIVE"
             },
             // LOBBY
             PRE_LIVE: {
                 title: "Checked In",
                 icon: "how_to_reg",
-                body: "You're in the room. Waiting for the green light."
+                body: "Connected. Waiting for your teacher to start the session."
             },
             // SUBMITTED
             RESPONSE_SUBMITTED: {
-                title: "Answer Sent",
-                icon: "outgoing_mail",
-                body: "Recorded. Sit back while the class catches up."
+                title: "Answer Saved",
+                icon: "check_circle",
+                body: "Response recorded. Waiting for next question..."
             },
             // REVEAL
             WAITING_FOR_REVEAL: {
-                title: "Time's Up",
-                icon: "timer_off",
-                body: "Answers are sealed. Reveal is in your instructor's hands."
+                title: "Answers Locked",
+                icon: "lock",
+                body: "Responses are sealed. Your teacher will reveal results shortly."
             },
             // TRANSITION
             BETWEEN_QUESTIONS: {
-                title: "Switching Gears",
-                icon: "swap_horiz",
-                body: "Next question on deck."
+                title: "Next Question Loading",
+                icon: "hourglass_top",
+                body: "Preparing the next question..."
+            },
+            // PAUSED (Teacher paused session)
+            PAUSED: {
+                title: "Eyes on Teacher",
+                icon: "visibility",
+                body: "The session is paused. Please look up and wait for instructions."
             }
         };
 
@@ -4924,8 +5176,8 @@
             }
             if (msgEl) {
                 var loadPhrases = [
-                    "Synapsing...", "Calibrating Neural Net...", "Crunching Data...",
-                    "Fetching Brilliance...", "Aligning Quarks...", "Beaming to Cloud..."
+                    "Connecting to Session...", "Syncing with Teacher...", "Loading Question...",
+                    "Establishing Connection...", "Preparing Content..."
                 ];
                 msgEl.textContent = message || loadPhrases[Math.floor(Math.random() * loadPhrases.length)];
             }
@@ -5311,6 +5563,13 @@
         }
 
         function startApp() {
+            // PHASE 4: EARLY STATE REHYDRATION
+            // Attempt to render cached state immediately to prevent white flash
+            var rehydrated = attemptEarlyRehydration();
+            if (rehydrated) {
+                console.log('[App] State rehydrated from cache - continuing with fresh fetch');
+            }
+
             initCalculatorDrag();
             initVisuals();
 

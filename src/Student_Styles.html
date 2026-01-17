@@ -2110,4 +2110,123 @@
     /* Red-700 */
     content: 'cancel';
   }
+
+  /* =========================
+     CROSS-OUT / ELIMINATION FEATURE
+     ========================= */
+
+  .cross-out-toggle {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid rgba(18, 56, 93, 0.15);
+    color: rgba(18, 56, 93, 0.5);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    z-index: 10;
+    opacity: 0;
+  }
+
+  .answer-option:hover .cross-out-toggle,
+  .answer-option:focus-within .cross-out-toggle {
+    opacity: 1;
+  }
+
+  .cross-out-toggle:hover {
+    background: rgba(18, 56, 93, 0.08);
+    border-color: rgba(18, 56, 93, 0.3);
+    color: rgba(18, 56, 93, 0.8);
+  }
+
+  .cross-out-toggle:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(18, 56, 93, 0.2);
+  }
+
+  .cross-out-toggle .material-symbols-outlined {
+    font-size: 18px;
+  }
+
+  /* Crossed-out state */
+  .answer-option.crossed-out {
+    opacity: 0.45;
+    filter: grayscale(40%);
+    background: #f8f9fa;
+    border-color: #d1d5db;
+    position: relative;
+  }
+
+  .answer-option.crossed-out::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 16px;
+    right: 56px;
+    height: 2px;
+    background: linear-gradient(90deg, rgba(107, 114, 128, 0.6), rgba(107, 114, 128, 0.4));
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  .answer-option.crossed-out .option-text {
+    color: #9ca3af;
+  }
+
+  .answer-option.crossed-out .letter-badge {
+    background: #e5e7eb;
+    border-color: #d1d5db;
+    color: #9ca3af;
+  }
+
+  .answer-option.crossed-out:hover {
+    opacity: 0.55;
+    transform: none;
+    box-shadow: 0 2px 6px rgba(18, 56, 93, 0.05);
+  }
+
+  .answer-option.crossed-out .cross-out-toggle {
+    opacity: 1;
+    background: rgba(107, 114, 128, 0.1);
+    border-color: rgba(107, 114, 128, 0.3);
+    color: #6b7280;
+  }
+
+  /* Disable cross-out on submitted/results */
+  .answer-option.answer-option-disabled .cross-out-toggle,
+  .answer-option.result-readonly .cross-out-toggle,
+  .results-stage .answer-option .cross-out-toggle {
+    display: none;
+  }
+
+  /* Ensure answer option has relative positioning for cross-out toggle */
+  .answer-option {
+    position: relative;
+    padding-right: 52px;
+  }
+
+  /* Mobile adjustments */
+  @media (max-width: 640px) {
+    .cross-out-toggle {
+      opacity: 1;
+      right: 8px;
+      width: 28px;
+      height: 28px;
+    }
+
+    .cross-out-toggle .material-symbols-outlined {
+      font-size: 16px;
+    }
+
+    .answer-option.crossed-out::after {
+      right: 44px;
+    }
+  }
 </style>

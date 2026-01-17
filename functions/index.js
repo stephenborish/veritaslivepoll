@@ -97,7 +97,8 @@ exports.setLiveSessionState = onCall({ cors: true }, async (request) => {
  * 1. Async: Client writes/disconnects immediately.
  * 2. Atomic: Server updates student list.
  *
- * PHASE 4: IDEMPOTENCY IMPLEMENTATION
+ * PHASE 4: CONTEXTUAL GRADING & IDEMPOTENCY
+ * - Validates questionIndex against current live_session state
  * - Checks if this exact answer has already been processed (via responseId)
  * - Uses transaction to prevent race conditions
  * - Can run multiple times for the same answer without corrupting data
@@ -136,7 +137,22 @@ exports.onAnswerSubmitted = onValueWritten(
       }
     }
 
+    // PHASE 4.1: CONTEXTUAL GRADING - Verify questionIndex matches live session
+    // This prevents late submissions for Q1 being graded against Q2's key
+    const liveSessionRef = admin.database().ref(`sessions/${pollId}/live_session`);
+    const liveSessionSnap = await liveSessionRef.once("value");
+    const liveSession = liveSessionSnap.val();
+
+    let isLateSubmission = false;
+    if (liveSession && liveSession.questionIndex !== undefined) {
+      if (questionIndex < liveSession.questionIndex) {
+        isLateSubmission = true;
+        logger.warn(`Late submission detected: Student answering Q${questionIndex} while session is on Q${liveSession.questionIndex}`);
+      }
+    }
+
     // 1. Fetch Correct Answer from Secure Key Store
+    // PHASE 4.1: Use the questionIndex from the answer payload, not the current live session
     let isCorrect = null;
     if (questionIndex !== undefined) {
       const keyPath = `sessions/${pollId}/answers_key/${questionIndex}`;
@@ -180,6 +196,7 @@ exports.onAnswerSubmitted = onValueWritten(
           lastAnswerTimestamp: admin.database.ServerValue.TIMESTAMP,
           lastAnswerCorrect: isCorrect,
           lastAnswerQuestionIndex: questionIndex,
+          isLateSubmission: isLateSubmission,
         };
       }
 
@@ -189,6 +206,7 @@ exports.onAnswerSubmitted = onValueWritten(
         currentData.lastAnswerTimestamp = admin.database.ServerValue.TIMESTAMP;
         currentData.lastAnswerCorrect = isCorrect;
         currentData.lastAnswerQuestionIndex = questionIndex;
+        currentData.isLateSubmission = isLateSubmission;
         return currentData;
       }
 
@@ -199,6 +217,7 @@ exports.onAnswerSubmitted = onValueWritten(
         currentData.lastAnswerCorrect = isCorrect;
       }
       currentData.lastAnswerQuestionIndex = questionIndex;
+      currentData.isLateSubmission = isLateSubmission;
 
       return currentData;
     });
@@ -210,11 +229,12 @@ exports.onAnswerSubmitted = onValueWritten(
         responseId: responseId,
         processedAt: admin.database.ServerValue.TIMESTAMP,
         isCorrect: isCorrect,
+        isLateSubmission: isLateSubmission,
       });
     }
 
     logger.info(
-      `Student ${studentEmailKey} marked FINISHED (Correct: ${isCorrect}, Q${questionIndex})`,
+      `Student ${studentEmailKey} marked FINISHED (Correct: ${isCorrect}, Q${questionIndex}, Late: ${isLateSubmission})`,
     );
   });
 /**
@@ -222,6 +242,10 @@ exports.onAnswerSubmitted = onValueWritten(
  * 1. Reads all answers for the poll.
  * 2. Writes a permanent history record.
  * 3. Clears the live session state.
+ *
+ * PHASE 4.2: ATOMIC UPDATES
+ * - Uses multi-path update to atomically move data to history
+ * - Ensures no data is lost during the transfer
  */
 exports.finalizeSession = onCall({ cors: true }, async (request) => {
   const { pollId } = request.data;
@@ -233,6 +257,7 @@ exports.finalizeSession = onCall({ cors: true }, async (request) => {
   const answersRef = db.ref(`answers/${pollId}`);
   const liveSessionRef = db.ref(`sessions/${pollId}/live_session`);
   const historyRef = db.ref(`history/${pollId}`);
+  const studentsRef = db.ref(`sessions/${pollId}/students`);
 
   // 1. Fetch all answers
   const answersSnap = await answersRef.once("value");
@@ -247,6 +272,10 @@ exports.finalizeSession = onCall({ cors: true }, async (request) => {
   const sessionSnap = await liveSessionRef.once("value");
   const sessionData = sessionSnap.val() || {};
 
+  // 4. Fetch student status data for comprehensive history
+  const studentsSnap = await studentsRef.once("value");
+  const students = studentsSnap.val() || {};
+
   const sessionId = Date.now().toString(); // Simple ID
 
   const historyPayload = {
@@ -259,20 +288,28 @@ exports.finalizeSession = onCall({ cors: true }, async (request) => {
     totalResponses: Object.keys(answers).length,
     answers: answers, // Persist raw answers
     questions: pollMeta.questions || [], // Snapshot of questions at time of run
+    students: students, // Persist student status for proctoring audit trail
+    sessionMetadata: sessionData.metadata || {}, // Preserve session settings
     // Todo: Add aggregated stats here
   };
 
-  // 3. Write to History
-  await historyRef.child(sessionId).set(historyPayload);
+  // PHASE 4.2: ATOMIC MULTI-PATH UPDATE
+  // Write history and update session status atomically to prevent data loss
+  const updates = {};
+  updates[`history/${pollId}/${sessionId}`] = historyPayload;
+  updates[`sessions/${pollId}/live_session/status`] = "ENDED";
+  updates[`sessions/${pollId}/live_session/endedAt`] = admin.database.ServerValue.TIMESTAMP;
+  updates[`sessions/${pollId}/live_session/finalizedSessionId`] = sessionId;
 
-  // 4. Clear/Reset Live Session (Optional, or just mark as CLOSED)
-  // For now, we just mark it as ended
-  await liveSessionRef.update({
-    status: "ENDED",
-    endedAt: admin.database.ServerValue.TIMESTAMP,
-  });
+  try {
+    // Atomic write - all succeed or all fail
+    await db.ref().update(updates);
+    logger.info(`Session Finalized (Atomic): ${pollId} -> ${sessionId}`);
+  } catch (error) {
+    logger.error(`Session Finalization Failed: ${pollId}`, error);
+    throw new HttpsError("internal", "Failed to finalize session atomically");
+  }
 
-  logger.info(`Session Finalized: ${pollId} -> ${sessionId}`);
   return { success: true, sessionId: sessionId };
 });
 

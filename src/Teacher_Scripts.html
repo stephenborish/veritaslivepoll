@@ -1345,10 +1345,14 @@
     }
 
     // =============================================================================
-    // PHASE 3: STATE REHYDRATION (THE "REFRESH" TRAP FIX)
+    // PHASE 1: STATE REHYDRATION (THE "REFRESH IMMUNITY" FIX)
     // Scenario: Teacher accidentally refreshes the page mid-poll
     // Solution: Read the existing live_session state first. If poll is live,
     //           restore the active question view instantly instead of showing "Setup"
+    // ENHANCEMENTS:
+    //   - Restore timer state with server time sync
+    //   - Restore proctoring state
+    //   - Restore student progress
     // =============================================================================
     async function rehydrateActiveSession() {
       try {
@@ -1384,7 +1388,7 @@
         var status = liveSessionData.status || '';
         var sessionPhase = liveSessionData.sessionPhase || (liveSessionData.metadata && liveSessionData.metadata.sessionPhase) || '';
 
-        if (status === 'CLOSED' || sessionPhase === 'ENDED') {
+        if (status === 'CLOSED' || status === 'ENDED' || sessionPhase === 'ENDED') {
           console.log('[Rehydration] Poll is closed/ended - cleaning up and showing dashboard');
           sessionStorage.removeItem('veritas_active_poll_id');
           return;
@@ -1416,11 +1420,32 @@
           pollId: activePollId,
           pollName: poll.pollName || poll.name,
           questions: poll.questions || [],
-          questionIndex: liveSessionData.questionIndex || 0,
+          questionIndex: liveSessionData.questionIndex !== undefined ? liveSessionData.questionIndex : 0,
           totalQuestions: poll.questions ? poll.questions.length : 0,
           className: poll.className,
           sessionType: poll.sessionType || 'LIVE_POLL'
         };
+
+        // PHASE 1.3: SYNC TIMER - Calculate actual remaining time
+        var questionDef = CURRENT_POLL_DATA.questions[CURRENT_POLL_DATA.questionIndex] || {};
+        var timerPreset = questionDef.timerSeconds || (liveSessionData.metadata && liveSessionData.metadata.timeLimit) || 0;
+
+        if (timerPreset > 0 && liveSessionData.metadata && liveSessionData.metadata.startedAt) {
+          var startedAt = liveSessionData.metadata.startedAt;
+          var startTime = new Date(startedAt).getTime();
+          var currentTime = Date.now();
+          var elapsedSeconds = Math.floor((currentTime - startTime) / 1000);
+          var remainingSeconds = Math.max(0, timerPreset - elapsedSeconds);
+
+          console.log('[Rehydration] Timer sync: preset=' + timerPreset + 's, elapsed=' + elapsedSeconds + 's, remaining=' + remainingSeconds + 's');
+
+          // Store for timer restoration
+          if (typeof window !== 'undefined') {
+            window.REHYDRATED_TIMER_REMAINING = remainingSeconds;
+            window.REHYDRATED_TIMER_PRESET = timerPreset;
+            window.REHYDRATED_TIMER_ACTIVE = status === 'OPEN' && remainingSeconds > 0;
+          }
+        }
 
         // Initialize Firebase Mission Control for proctoring
         if (typeof initFirebaseMissionControl === 'function') {
@@ -1431,8 +1456,6 @@
         isLiveSession = true;
 
         // Synthesize view data from live session
-        var questionDef = CURRENT_POLL_DATA.questions[CURRENT_POLL_DATA.questionIndex] || {};
-
         var syntheticData = {
           pollId: activePollId,
           status: status || 'OPEN',
@@ -1471,7 +1494,7 @@
           setTimeout(pollForResults, 500);
         }
 
-        showToast('info', 'Session Restored', 'Live poll rehydrated after page refresh.', 3000);
+        showToast('success', 'Session Restored', 'Live poll resumed. Timer synced with server.', 3000);
 
       } catch (error) {
         console.error('[Rehydration] Error restoring session:', error);
@@ -6398,14 +6421,27 @@
         });
     }
 
+    // PHASE 3: Global sequence counter for race condition prevention
+    var globalSequenceId = 0;
+
     function onNextQuestion() {
       if (navigationRequestInFlight) {
-        console.warn('Navigation already in progress; ignoring extra Next click');
+        console.warn('[Navigation] Already in progress; ignoring extra Next click');
         return;
       }
       navigationRequestInFlight = true;
+
+      // PHASE 3.3: RACE CONDITION GUARD - Generate unique sequence ID
+      globalSequenceId++;
+      var thisSequenceId = globalSequenceId;
+      console.log('[Navigation] Starting with sequenceId:', thisSequenceId);
+
       // FAILSAFE: Reset flag after 5 seconds in case of network zombie
-      setTimeout(function () { navigationRequestInFlight = false; isNavigating = false; }, 5000);
+      setTimeout(function () {
+        navigationRequestInFlight = false;
+        isNavigating = false;
+      }, 5000);
+
       if (pollInterval) clearInterval(pollInterval);
       pauseTimerCountdown();
       stopVisualTimer();
@@ -6417,6 +6453,7 @@
       isPaused = false;
       violationsAlertDismissed = false; // Reset violations alert for new question
       isNavigating = true; // Set flag to prevent polling during navigation
+
       if (PREVIEW_MODE) {
         isNavigating = false;
         navigationRequestInFlight = false;
@@ -6424,36 +6461,31 @@
         return;
       }
 
-      // OPTIMISTIC UPDATE: Update UI immediately using local data
+      // PHASE 3.1: OPTIMISTIC UPDATE - Update UI immediately using local data
       // This eliminates the visual lag for the teacher while the server processes the request
-      if (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions) {
-        var nextIndex = (CURRENT_POLL_DATA.questionIndex || 0) + 1;
-        if (nextIndex < CURRENT_POLL_DATA.questions.length) {
-          console.log('[Optimistic] Advancing UI to question index:', nextIndex);
-
-          var optimisticData = {
-            mode: 'lightweight',
-            pollId: CURRENT_POLL_DATA.pollId,
-            questionIndex: nextIndex,
-            status: 'OPEN',
-            metadata: {
-              sessionPhase: 'LIVE',
-              resultsVisibility: 'HIDDEN',
-              startedAt: new Date().toISOString()
-            }
-          };
-
-          // 1. Update UI instantly
-          handleLightweightSessionUpdate(optimisticData);
-
-          // 2. Broadcast to Firebase instantly (Fast Path for students)
-          // handleLightweightSessionUpdate already calls broadcastSessionState,
-          // but we want to ensure the optimistic payload is what's sent.
-        }
-      }
-
       var nextIndex = (CURRENT_POLL_DATA.questionIndex || 0) + 1;
-      // Optimistic update logic preserved above...
+      if (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions && nextIndex < CURRENT_POLL_DATA.questions.length) {
+        console.log('[Optimistic] Advancing UI to question index:', nextIndex, 'sequenceId:', thisSequenceId);
+
+        var optimisticData = {
+          mode: 'lightweight',
+          pollId: CURRENT_POLL_DATA.pollId,
+          questionIndex: nextIndex,
+          status: 'OPEN',
+          metadata: {
+            sessionPhase: 'LIVE',
+            resultsVisibility: 'HIDDEN',
+            startedAt: new Date().toISOString(),
+            sequenceId: thisSequenceId // Track this update
+          }
+        };
+
+        // 1. Update UI instantly
+        handleLightweightSessionUpdate(optimisticData);
+
+        // 2. Broadcast to Firebase instantly (Fast Path for students)
+        // handleLightweightSessionUpdate already calls broadcastSessionState
+      }
 
       var setSessionFn = firebase.functions().httpsCallable('setLiveSessionState');
       var pollId = CURRENT_POLL_DATA.pollId;
@@ -6461,23 +6493,41 @@
       // Fetch qDef for payload - CRITICAL for fast path
       var qDef = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[nextIndex]) ? CURRENT_POLL_DATA.questions[nextIndex] : null;
 
+      // PHASE 3.2: FIRE-AND-FORGET with Sequence Validation
       setSessionFn({
         pollId: pollId,
         questionIndex: nextIndex,
         status: 'OPEN',
         questionText: qDef ? qDef.questionText : '',
-        options: qDef ? qDef.options : []
+        options: qDef ? qDef.options : [],
+        metadata: {
+          sequenceId: thisSequenceId, // Send to backend for validation
+          timestamp: Date.now()
+        }
       })
         .then(function (result) {
-          // UI updates handled by listeners, but we unblock navigation
-          setTimeout(function () {
-            isNavigating = false;
-            navigationRequestInFlight = false;
-          }, 500);
+          console.log('[Navigation] Server confirmed sequenceId:', thisSequenceId);
+
+          // PHASE 3.3: Validate server accepted our sequence
+          // If a newer navigation happened, don't unblock the old one
+          if (thisSequenceId === globalSequenceId) {
+            setTimeout(function () {
+              isNavigating = false;
+              navigationRequestInFlight = false;
+            }, 500);
+          } else {
+            console.warn('[Navigation] Sequence mismatch: local=' + globalSequenceId + ', this=' + thisSequenceId + ' (ignoring stale response)');
+          }
         })
         .catch(function (error) {
-          isNavigating = false;
-          navigationRequestInFlight = false;
+          console.error('[Navigation] Error with sequenceId:', thisSequenceId, error);
+
+          // Only unblock if this is still the latest sequence
+          if (thisSequenceId === globalSequenceId) {
+            isNavigating = false;
+            navigationRequestInFlight = false;
+          }
+
           handleError(error);
         });
     }
@@ -8139,36 +8189,74 @@
         }
       }
 
+      // PHASE 2.1: OPTIMISTIC UI - Update immediately before server responds
+      // This eliminates the visual lag and prevents double-clicks
       if (buttonElement) {
         buttonElement.disabled = true;
-        buttonElement.querySelector('span:last-child').textContent = 'Unlocking...';
+        var iconSpan = buttonElement.querySelector('span.material-symbols-outlined');
+        var labelSpan = buttonElement.querySelector('span:last-child');
+
+        if (iconSpan) iconSpan.textContent = 'progress_activity';
+        if (iconSpan) iconSpan.classList.add('animate-spin');
+        if (labelSpan) labelSpan.textContent = 'Unlocking...';
+      }
+
+      // PHASE 2.1: OPTIMISTIC STATUS UPDATE
+      // Immediately update local student status to AWAITING_FULLSCREEN (Blue)
+      var optimisticUpdate = false;
+      currentStudentStatusData = currentStudentStatusData.map(function (s) {
+        if (s.email === email) {
+          optimisticUpdate = true;
+          return Object.assign({}, s, {
+            status: 'AWAITING_FULLSCREEN',
+            optimistic: true // Flag for rollback if server rejects
+          });
+        }
+        return s;
+      });
+
+      if (optimisticUpdate) {
+        renderStudentStatus(); // Re-render with optimistic state
+        console.log('[Optimistic UI] Student', email, 'marked as AWAITING_FULLSCREEN (pending server confirmation)');
       }
 
       if (PREVIEW_MODE) {
         await previewOnlyNotice('approve unlock requests');
         if (buttonElement) {
           buttonElement.disabled = false;
-          buttonElement.querySelector('span:last-child').textContent = formatStudentName(email);
+          var iconSpan = buttonElement.querySelector('span.material-symbols-outlined');
+          var labelSpan = buttonElement.querySelector('span:last-child');
+          if (iconSpan) {
+            iconSpan.textContent = 'lock_open';
+            iconSpan.classList.remove('animate-spin');
+          }
+          if (labelSpan) labelSpan.textContent = formatStudentName(email);
         }
         return;
       }
 
       recordTeacherAction('Unlock ' + email);
 
-      // FIREBASE MIGRATION: Approve unlock via Cloud Function
-      callManageRoster({
-        action: 'APPROVE_UNLOCK',
+      // PHASE 2.2: VERSIONED LOCKS - Send lockVersion to prevent stale unlocks
+      var manageProctoring = firebase.functions().httpsCallable('manageProctoring');
+      manageProctoring({
+        action: 'UNLOCK',
         pollId: pollId,
         studentEmail: email,
-        lockVersion: lockVersion
+        expectedLockVersion: lockVersion // Server validates this matches current lock
       }).then(function (result) {
         var response = result.data;
         if (response && response.success) {
-          // Success: Instant UI feedback is good, but RTDB listener handles the source of truth
+          // Success: Server confirmed unlock
           if (buttonElement) {
             buttonElement.disabled = false;
-            var lastSpan = buttonElement.querySelector('span:last-child');
-            if (lastSpan) lastSpan.textContent = 'Unlocked';
+            var iconSpan = buttonElement.querySelector('span.material-symbols-outlined');
+            var labelSpan = buttonElement.querySelector('span:last-child');
+            if (iconSpan) {
+              iconSpan.textContent = 'check_circle';
+              iconSpan.classList.remove('animate-spin');
+            }
+            if (labelSpan) lastSpan.textContent = 'Unlocked';
 
             setTimeout(function () {
               if (currentManagedStudent && currentManagedStudent.email === email) {
@@ -8181,12 +8269,35 @@
           throw new Error((response && response.error) || 'Failed to approve unlock');
         }
       }).catch(function (error) {
+        console.error('[Unlock Error]', error);
+
+        // PHASE 2.1: ROLLBACK OPTIMISTIC UPDATE on failure
+        currentStudentStatusData = currentStudentStatusData.map(function (s) {
+          if (s.email === email && s.optimistic) {
+            delete s.optimistic;
+            return Object.assign({}, s, { status: 'LOCKED' }); // Revert to locked
+          }
+          return s;
+        });
+        renderStudentStatus();
+
         if (buttonElement) {
           buttonElement.disabled = false;
-          var lastSpan = buttonElement.querySelector('span:last-child');
-          if (lastSpan) lastSpan.textContent = 'Approve Unlock';
+          var iconSpan = buttonElement.querySelector('span.material-symbols-outlined');
+          var labelSpan = buttonElement.querySelector('span:last-child');
+          if (iconSpan) {
+            iconSpan.textContent = 'lock_open';
+            iconSpan.classList.remove('animate-spin');
+          }
+          if (labelSpan) labelSpan.textContent = 'Approve Unlock';
         }
-        handleError(error);
+
+        // Check if this is a version mismatch
+        if (error.message && error.message.includes('version_mismatch')) {
+          showToast('warning', 'Unlock Failed', 'Student violated policy again. Refresh and retry.', 5000);
+        } else {
+          handleError(error);
+        }
       });
     }
 
@@ -14158,12 +14269,33 @@
       if (errorMessage) errorMessage.textContent = message;
     }
 
+    // PHASE 5: Global storage for current book view data (for CSV export)
+    var currentBookViewData = null;
+
     function renderBookView(data) {
+      // PHASE 5.0: Store data globally for CSV export
+      currentBookViewData = data;
+
       // Update header
       var title = document.getElementById('book-view-title');
       var subtitle = document.getElementById('book-view-subtitle');
       if (title) title.textContent = data.pollName + ' - Book View';
       if (subtitle) subtitle.textContent = data.className + ' • ' + data.questionCount + ' questions • ' + data.studentDetails.length + ' students';
+
+      // PHASE 5.1: Add CSV Export Button to header
+      var exportBtn = document.getElementById('book-export-csv-btn');
+      if (!exportBtn) {
+        // Create export button if it doesn't exist
+        var headerActions = document.querySelector('#book-view-section .flex.items-center.gap-4');
+        if (headerActions) {
+          exportBtn = document.createElement('button');
+          exportBtn.id = 'book-export-csv-btn';
+          exportBtn.className = 'flex items-center gap-2 px-4 py-2 bg-veritas-gold text-white rounded-lg hover:bg-veritas-gold/90 transition-colors font-semibold';
+          exportBtn.innerHTML = '<span class="material-symbols-outlined text-sm">download</span><span>Export CSV</span>';
+          exportBtn.onclick = function () { exportBookViewToCSV(); };
+          headerActions.appendChild(exportBtn);
+        }
+      }
 
       // Render class overview
       renderClassOverview(data.classOverview, data.questionCount);
@@ -14177,6 +14309,88 @@
       // Render response matrix
       renderResponseMatrix(data.studentDetails, data.questionCount);
     }
+
+    // PHASE 5.2: CSV EXPORT IMPLEMENTATION
+    function exportBookViewToCSV() {
+      if (!currentBookViewData) {
+        showToast('error', 'Export Error', 'No book view data available to export.');
+        return;
+      }
+
+      try {
+        var data = currentBookViewData;
+        var csv = [];
+
+        // Header row: Student Name, Email, Score, Q1, Q2, Q3...
+        var headerRow = ['Student Name', 'Email', 'Score', 'Percentage'];
+        for (var i = 0; i < data.questionCount; i++) {
+          headerRow.push('Q' + (i + 1));
+        }
+        csv.push(headerRow.join(','));
+
+        // Data rows
+        data.studentDetails.forEach(function (student) {
+          var row = [];
+
+          // Escape CSV values (handle commas and quotes)
+          function escapeCSV(value) {
+            if (value === null || value === undefined) return '';
+            var stringValue = String(value);
+            if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+              return '"' + stringValue.replace(/"/g, '""') + '"';
+            }
+            return stringValue;
+          }
+
+          row.push(escapeCSV(student.name));
+          row.push(escapeCSV(student.email || ''));
+          row.push(student.totalScore + '/' + student.maxScore);
+          row.push(student.percentage + '%');
+
+          // Add question responses
+          student.questionResponses.forEach(function (qResp) {
+            if (qResp.answered) {
+              var cellValue = qResp.isCorrect ? '✓ ' + qResp.studentAnswer : '✗ ' + qResp.studentAnswer;
+              row.push(escapeCSV(cellValue));
+            } else {
+              row.push('—');
+            }
+          });
+
+          csv.push(row.join(','));
+        });
+
+        // Create CSV file and download
+        var csvContent = csv.join('\n');
+        var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        var link = document.createElement('a');
+        var url = URL.createObjectURL(blob);
+
+        var fileName = (data.pollName || 'Poll') + '_' + (data.className || 'Class') + '_Results.csv';
+        fileName = fileName.replace(/[^a-z0-9_\-]/gi, '_'); // Sanitize filename
+
+        link.setAttribute('href', url);
+        link.setAttribute('download', fileName);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        showToast('success', 'Export Complete', 'CSV file downloaded successfully.', 3000);
+
+        // Track export action
+        if (typeof recordTeacherAction === 'function') {
+          recordTeacherAction('Export Book View CSV: ' + data.pollName);
+        }
+
+      } catch (error) {
+        console.error('[CSV Export] Error:', error);
+        showToast('error', 'Export Failed', 'Failed to generate CSV file: ' + error.message);
+      }
+    }
+
+    // PHASE 5.3: Make exportBookViewToCSV globally accessible
+    window.exportBookViewToCSV = exportBookViewToCSV;
 
     function renderClassOverview(overview, questionCount) {
       var totalStudents = document.getElementById('book-class-total-students');

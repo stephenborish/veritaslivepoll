@@ -419,6 +419,46 @@
     }
     window.showToast = showToast;
 
+    // =============================================================================
+    // PHASE 4: TEACHER CONNECTIVITY RECOVERY TOAST
+    // Visual "Reconnecting..." toast that appears onDisconnect and disappears onConnect
+    // =============================================================================
+    var teacherConnectivityToastVisible = false;
+    var teacherConnectivityToastEl = null;
+
+    function showTeacherConnectivityToast(isConnected) {
+      // Create toast element if it doesn't exist
+      if (!teacherConnectivityToastEl) {
+        teacherConnectivityToastEl = document.createElement('div');
+        teacherConnectivityToastEl.id = 'teacher-connectivity-toast';
+        teacherConnectivityToastEl.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] px-6 py-3 rounded-full shadow-lg transition-all duration-300 flex items-center gap-3';
+        teacherConnectivityToastEl.style.cssText = 'opacity: 0; pointer-events: none;';
+        document.body.appendChild(teacherConnectivityToastEl);
+      }
+
+      if (!isConnected && !teacherConnectivityToastVisible) {
+        // Show "Reconnecting..." toast
+        teacherConnectivityToastEl.innerHTML = '<span class="inline-block w-3 h-3 rounded-full bg-amber-400 animate-pulse"></span><span class="font-semibold text-amber-900">Reconnecting to Server...</span>';
+        teacherConnectivityToastEl.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] px-6 py-3 rounded-full shadow-lg transition-all duration-300 flex items-center gap-3 bg-amber-100 border border-amber-300';
+        teacherConnectivityToastEl.style.opacity = '1';
+        teacherConnectivityToastEl.style.pointerEvents = 'auto';
+        teacherConnectivityToastVisible = true;
+        console.log('[Connectivity] Teacher - showing reconnecting toast');
+      } else if (isConnected && teacherConnectivityToastVisible) {
+        // Show brief "Connected" confirmation then hide
+        teacherConnectivityToastEl.innerHTML = '<span class="inline-block w-3 h-3 rounded-full bg-emerald-500"></span><span class="font-semibold text-emerald-900">Connected - Syncing Data</span>';
+        teacherConnectivityToastEl.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] px-6 py-3 rounded-full shadow-lg transition-all duration-300 flex items-center gap-3 bg-emerald-100 border border-emerald-300';
+
+        // Hide after 2 seconds
+        setTimeout(function () {
+          teacherConnectivityToastEl.style.opacity = '0';
+          teacherConnectivityToastEl.style.pointerEvents = 'none';
+          teacherConnectivityToastVisible = false;
+          console.log('[Connectivity] Teacher - hiding toast - connection restored');
+        }, 2000);
+      }
+    }
+
     // === Floating Action Button (FAB) System ===
     let fabMenuOpen = false;
 
@@ -1298,6 +1338,146 @@
 
       // Initialize Main Dashboard Bindings (The new gated init)
       initializeDashboardBindings();
+
+      // PHASE 3: STATE REHYDRATION - Check for active session on page refresh
+      // The "Refresh Trap" fix: Restore live control panel if poll is active
+      rehydrateActiveSession();
+    }
+
+    // =============================================================================
+    // PHASE 3: STATE REHYDRATION (THE "REFRESH" TRAP FIX)
+    // Scenario: Teacher accidentally refreshes the page mid-poll
+    // Solution: Read the existing live_session state first. If poll is live,
+    //           restore the active question view instantly instead of showing "Setup"
+    // =============================================================================
+    async function rehydrateActiveSession() {
+      try {
+        // Check sessionStorage for active poll state
+        var activePollId = sessionStorage.getItem('veritas_active_poll_id');
+
+        if (!activePollId) {
+          console.log('[Rehydration] No active poll in sessionStorage - showing dashboard');
+          return;
+        }
+
+        console.log('[Rehydration] Found active poll:', activePollId, '- checking Firebase...');
+
+        // Query Firebase for the live_session state
+        if (typeof firebase === 'undefined' || !firebase.database) {
+          console.warn('[Rehydration] Firebase not available - showing dashboard');
+          return;
+        }
+
+        var db = firebase.database();
+        var liveSessionRef = db.ref('sessions/' + activePollId + '/live_session');
+
+        var snapshot = await liveSessionRef.once('value');
+        var liveSessionData = snapshot.val();
+
+        if (!liveSessionData) {
+          console.log('[Rehydration] No live_session data found - poll may have ended');
+          sessionStorage.removeItem('veritas_active_poll_id');
+          return;
+        }
+
+        // Check if the session is still active (not CLOSED or ENDED)
+        var status = liveSessionData.status || '';
+        var sessionPhase = liveSessionData.sessionPhase || (liveSessionData.metadata && liveSessionData.metadata.sessionPhase) || '';
+
+        if (status === 'CLOSED' || sessionPhase === 'ENDED') {
+          console.log('[Rehydration] Poll is closed/ended - cleaning up and showing dashboard');
+          sessionStorage.removeItem('veritas_active_poll_id');
+          return;
+        }
+
+        console.log('[Rehydration] Poll is ACTIVE (status: ' + status + ', phase: ' + sessionPhase + ') - restoring live view');
+
+        // Find the poll in ALL_POLLS to get full poll data
+        var poll = ALL_POLLS ? ALL_POLLS.find(function (p) { return p.pollId === activePollId; }) : null;
+
+        if (!poll) {
+          // Poll not in cache, need to fetch it
+          console.log('[Rehydration] Poll not in ALL_POLLS cache - fetching from server...');
+          // Try to fetch poll data
+          var pollRef = db.ref('polls/' + activePollId);
+          var pollSnapshot = await pollRef.once('value');
+          poll = pollSnapshot.val();
+
+          if (!poll) {
+            console.error('[Rehydration] Could not find poll data for:', activePollId);
+            sessionStorage.removeItem('veritas_active_poll_id');
+            return;
+          }
+          poll.pollId = activePollId;
+        }
+
+        // Restore CURRENT_POLL_DATA
+        CURRENT_POLL_DATA = {
+          pollId: activePollId,
+          pollName: poll.pollName || poll.name,
+          questions: poll.questions || [],
+          questionIndex: liveSessionData.questionIndex || 0,
+          totalQuestions: poll.questions ? poll.questions.length : 0,
+          className: poll.className,
+          sessionType: poll.sessionType || 'LIVE_POLL'
+        };
+
+        // Initialize Firebase Mission Control for proctoring
+        if (typeof initFirebaseMissionControl === 'function') {
+          initFirebaseMissionControl(activePollId);
+        }
+
+        // Show the live view (not the dashboard)
+        isLiveSession = true;
+
+        // Synthesize view data from live session
+        var questionDef = CURRENT_POLL_DATA.questions[CURRENT_POLL_DATA.questionIndex] || {};
+
+        var syntheticData = {
+          pollId: activePollId,
+          status: status || 'OPEN',
+          questionIndex: CURRENT_POLL_DATA.questionIndex,
+          pollName: CURRENT_POLL_DATA.pollName,
+          questionText: questionDef.questionText || liveSessionData.questionText || '',
+          questionImageURL: questionDef.questionImageURL || liveSessionData.questionImageURL || '',
+          options: questionDef.options || liveSessionData.options || [],
+          totalQuestions: CURRENT_POLL_DATA.totalQuestions,
+          correctAnswer: questionDef.correctAnswer,
+          timerSeconds: questionDef.timerSeconds,
+          metadata: liveSessionData.metadata || {},
+          authoritativeStatus: 'LIVE',
+          results: {},
+          totalResponses: 0,
+          totalStudents: 0,
+          studentStatusList: []
+        };
+
+        console.log('[Rehydration] SUCCESS - Restoring live view with data:', syntheticData);
+
+        // Show live view container and call updateLiveView
+        if (typeof showLiveView === 'function') {
+          showLiveView(syntheticData);
+        } else if (typeof updateLiveView === 'function') {
+          // Fallback: directly update live view
+          var dashboardContent = document.getElementById('dashboard-content');
+          var liveView = document.getElementById('live-view');
+          if (dashboardContent) dashboardContent.style.display = 'none';
+          if (liveView) liveView.style.display = 'block';
+          updateLiveView(syntheticData);
+        }
+
+        // Start polling for live results
+        if (typeof pollForResults === 'function') {
+          setTimeout(pollForResults, 500);
+        }
+
+        showToast('info', 'Session Restored', 'Live poll rehydrated after page refresh.', 3000);
+
+      } catch (error) {
+        console.error('[Rehydration] Error restoring session:', error);
+        // On error, just show dashboard
+        sessionStorage.removeItem('veritas_active_poll_id');
+      }
     }
 
     function initTeacherAuth() {
@@ -6019,6 +6199,10 @@
           var res = result.data;
           if (res && res.success) {
             console.log('[onStartPoll] Session started successfully. Triggering UI transition...');
+
+            // PHASE 3: Save active poll ID for state rehydration on refresh
+            sessionStorage.setItem('veritas_active_poll_id', pollId);
+
             handleLightweightSessionUpdate({
               pollId: pollId,
               status: 'OPEN',
@@ -6486,6 +6670,10 @@
         destructive: true
       });
       if (!confirmed) return;
+
+      // PHASE 3: Clear active poll ID for state rehydration
+      sessionStorage.removeItem('veritas_active_poll_id');
+
       showDashboard();
       if (PREVIEW_MODE) {
         previewOnlyNotice('end the live poll');
@@ -12793,6 +12981,9 @@
           realtimeConnected = snap.val() === true;
           console.log('[Firebase] Connection status changed:', realtimeConnected ? 'CONNECTED' : 'DISCONNECTED', 'pollId:', pollId);
 
+          // PHASE 4: Show/hide Teacher connectivity recovery toast
+          showTeacherConnectivityToast(realtimeConnected);
+
           // ADAPTIVE POLLING: Reduce server load when Firebase is active
           // Periodic polling is now primarily for metrics (progress/score)
           // Realtime status (ACTIVE/LOCKED) is handled via Firebase events
@@ -12810,6 +13001,14 @@
             pollInterval = setInterval(pollForResults, currentPollInterval);
           } else {
             currentPollInterval = newInterval; // Set for next start
+          }
+
+          // PHASE 4: Auto-recovery on reconnect - trigger poll to sync state
+          if (realtimeConnected) {
+            console.log('[Connectivity Recovery] Teacher reconnected - syncing state');
+            if (typeof pollForResults === 'function' && isLiveSession) {
+              setTimeout(pollForResults, 500);
+            }
           }
 
           // P0-2 FIX: Record event
@@ -13059,6 +13258,16 @@
       }
     }
 
+    // PHASE 3: Helper to check if student is idle based on lastActive timestamp
+    // Returns true if lastActive is more than 30 seconds old
+    function isStudentIdle(lastActiveTimestamp) {
+      if (!lastActiveTimestamp) return false;
+      var nowMs = Date.now();
+      var lastActiveMs = typeof lastActiveTimestamp === 'number' ? lastActiveTimestamp : new Date(lastActiveTimestamp).getTime();
+      var IDLE_THRESHOLD_MS = 30000; // 30 seconds
+      return (nowMs - lastActiveMs) > IDLE_THRESHOLD_MS;
+    }
+
     async function updateRealtimeUI() {
       var updatesFound = false;
 
@@ -13069,16 +13278,27 @@
       if (missionControlStudents && currentMissionControlPollId) {
         await Promise.all(missionControlStudents.map(async function (student) {
           var key = await window.VeritasShared.generateStudentKey(student.email, currentMissionControlPollId);
-          var rtStatus = realtimeStatuses[key];
+          var rtStatusData = realtimeStatuses[key];
 
-          if (rtStatus) {
+          if (rtStatusData) {
             var newStatus = student.status;
             var newConnection = student.connection ? student.connection.status : 'GRAY';
 
+            // PHASE 3: Extract status and lastActive from object or legacy string
+            var rtStatus = (typeof rtStatusData === 'object' && rtStatusData) ? rtStatusData.status : rtStatusData;
+            var lastActive = (typeof rtStatusData === 'object' && rtStatusData) ? (rtStatusData.lastActive || rtStatusData.lastActiveAt) : null;
+
+            // PHASE 3: Check for idle status based on lastActive
+            var isIdle = isStudentIdle(lastActive);
+
             if (rtStatus === 'ACTIVE') {
               if (student.status !== 'Submitted') {
-                newStatus = 'In Progress';
+                newStatus = isIdle ? 'Idle' : 'In Progress';
               }
+              newConnection = isIdle ? 'YELLOW' : 'GREEN';
+            } else if (rtStatus === 'Submitted') {
+              // PHASE 2: Instant "Green" from dual-write submissions
+              newStatus = 'Submitted';
               newConnection = 'GREEN';
             } else if (rtStatus === 'LOCKED') {
               newStatus = 'LOCKED';
@@ -13086,10 +13306,15 @@
               newConnection = 'GREEN';
             } else if (rtStatus === 'DISCONNECTED') {
               newConnection = 'RED';
+              newStatus = 'Offline';
             } else if (rtStatus === 'FINISHED') {
               newStatus = 'Submitted';
               newConnection = 'GREEN';
             }
+
+            // PHASE 3: Store idle flag for UI rendering
+            student.isIdle = isIdle;
+            student.lastActive = lastActive;
 
             if (student.status !== newStatus || (student.connection && student.connection.status !== newConnection)) {
               student.status = newStatus;
@@ -13110,24 +13335,39 @@
         var livePollUpdatesFound = false;
         await Promise.all(currentStudentStatusData.map(async function (student) {
           var key = await window.VeritasShared.generateStudentKey(student.email, CURRENT_POLL_DATA.pollId);
-          var rtStatus = realtimeStatuses[key];
+          var rtStatusData = realtimeStatuses[key];
 
-          if (rtStatus) {
+          if (rtStatusData) {
             var newStatus = student.status;
+
+            // PHASE 3: Extract status and lastActive from object or legacy string
+            var rtStatus = (typeof rtStatusData === 'object' && rtStatusData) ? rtStatusData.status : rtStatusData;
+            var lastActive = (typeof rtStatusData === 'object' && rtStatusData) ? (rtStatusData.lastActive || rtStatusData.lastActiveAt) : null;
+
+            // PHASE 3: Check for idle status based on lastActive
+            var isIdle = isStudentIdle(lastActive);
 
             // Map Firebase status to Live Poll status strings
             if (rtStatus === 'ACTIVE') {
               if (student.status !== 'Submitted') {
-                newStatus = 'In Progress';
+                newStatus = isIdle ? 'Idle' : 'In Progress';
               }
+            } else if (rtStatus === 'Submitted') {
+              // PHASE 2: Instant "Green" from dual-write submissions
+              newStatus = 'Submitted';
             } else if (rtStatus === 'LOCKED') {
               newStatus = 'LOCKED';
               student.proctorStatus = 'LOCKED';
             } else if (rtStatus === 'DISCONNECTED') {
-              // Keep current status but could add offline indicator
+              // Mark as offline if disconnected
+              newStatus = 'Offline';
             } else if (rtStatus === 'FINISHED') {
               newStatus = 'Submitted';
             }
+
+            // PHASE 3: Store idle flag for UI rendering
+            student.isIdle = isIdle;
+            student.lastActive = lastActive;
 
             if (student.status !== newStatus) {
               student.status = newStatus;

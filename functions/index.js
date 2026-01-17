@@ -96,6 +96,11 @@ exports.setLiveSessionState = onCall({ cors: true }, async (request) => {
  * Benefits:
  * 1. Async: Client writes/disconnects immediately.
  * 2. Atomic: Server updates student list.
+ *
+ * PHASE 4: IDEMPOTENCY IMPLEMENTATION
+ * - Checks if this exact answer has already been processed (via responseId)
+ * - Uses transaction to prevent race conditions
+ * - Can run multiple times for the same answer without corrupting data
  */
 exports.onAnswerSubmitted = onValueWritten(
   {
@@ -111,46 +116,105 @@ exports.onAnswerSubmitted = onValueWritten(
 
     logger.info(`Answer: Poll ${pollId} from ${studentEmailKey}`, data);
 
+    // PHASE 4: IDEMPOTENCY CHECK
+    // Check if this exact submission has already been processed using responseId
+    const responseId = data.responseId;
+    const questionIndex = data.questionIndex;
+
+    if (responseId) {
+      // Check if this responseId was already processed
+      const processedPath = `sessions/${pollId}/processed_answers/${studentEmailKey}/${questionIndex}`;
+      const processedRef = admin.database().ref(processedPath);
+      const processedSnap = await processedRef.once("value");
+
+      if (processedSnap.exists()) {
+        const processedData = processedSnap.val();
+        if (processedData.responseId === responseId) {
+          logger.info(`Answer already processed (idempotent skip): ${responseId}`);
+          return; // Already processed, skip
+        }
+      }
+    }
+
     // 1. Fetch Correct Answer from Secure Key Store
     let isCorrect = null;
-    if (data.questionIndex !== undefined) {
-      const keyPath = `sessions/${pollId}/answers_key/${data.questionIndex}`;
+    if (questionIndex !== undefined) {
+      const keyPath = `sessions/${pollId}/answers_key/${questionIndex}`;
       const keyRef = admin.database().ref(keyPath);
       const keySnap = await keyRef.once("value");
       const correctVal = keySnap.val();
 
       if (correctVal !== null && data.answer) {
         // Simple string comparison for now.
-        // TODO: Enhance for multi-select arrays if needed.
+        // Handle both string and array answers
         const ansStr = String(data.answer).trim().toLowerCase();
         const keyStr = String(correctVal).trim().toLowerCase();
         isCorrect = (ansStr === keyStr);
+
+        // PHASE 4: Also handle True/False question type variations
+        // Normalize T/F variations (true, True, TRUE, t, T, 1, yes, etc.)
+        if (!isCorrect) {
+          const trueVariations = ['true', 't', '1', 'yes', 'y'];
+          const falseVariations = ['false', 'f', '0', 'no', 'n'];
+
+          const ansNorm = trueVariations.includes(ansStr) ? 'true' :
+            (falseVariations.includes(ansStr) ? 'false' : ansStr);
+          const keyNorm = trueVariations.includes(keyStr) ? 'true' :
+            (falseVariations.includes(keyStr) ? 'false' : keyStr);
+
+          isCorrect = (ansNorm === keyNorm);
+        }
       }
     }
 
-    // 2. Update Teacher Dashboard View
-    // Ideally, the 'answers' node should rely on the *studentKey*, not email.
-    // For this migration, we assume client sends studentKey.
-
-    const studentStatusPath =
-      `sessions/${pollId}/students/${studentEmailKey}`;
+    // 2. Update Teacher Dashboard View using TRANSACTION for safety
+    const studentStatusPath = `sessions/${pollId}/students/${studentEmailKey}`;
     const studentStatusRef = admin.database().ref(studentStatusPath);
 
-    // Check current status to avoid overwriting LOCKED state?
-    // For now, simple set to FINISHED is consistent with legacy behavior.
-    // We update status AND payload the correctness result if available
-    const updatePayload = {
-      status: "FINISHED",
-      lastAnswerTimestamp: admin.database.ServerValue.TIMESTAMP,
-    };
+    // Use transaction to prevent race conditions and preserve other fields
+    await studentStatusRef.transaction((currentData) => {
+      if (!currentData) {
+        // Student entry doesn't exist, create minimal entry
+        return {
+          status: "FINISHED",
+          lastAnswerTimestamp: admin.database.ServerValue.TIMESTAMP,
+          lastAnswerCorrect: isCorrect,
+          lastAnswerQuestionIndex: questionIndex,
+        };
+      }
 
-    if (isCorrect !== null) {
-      updatePayload.lastAnswerCorrect = isCorrect;
+      // PHASE 4: Don't overwrite LOCKED status (security constraint)
+      if (currentData.status === 'LOCKED' || currentData.status === 'BLOCKED') {
+        // Preserve locked status but record the answer attempt
+        currentData.lastAnswerTimestamp = admin.database.ServerValue.TIMESTAMP;
+        currentData.lastAnswerCorrect = isCorrect;
+        currentData.lastAnswerQuestionIndex = questionIndex;
+        return currentData;
+      }
+
+      // Normal update
+      currentData.status = "FINISHED";
+      currentData.lastAnswerTimestamp = admin.database.ServerValue.TIMESTAMP;
+      if (isCorrect !== null) {
+        currentData.lastAnswerCorrect = isCorrect;
+      }
+      currentData.lastAnswerQuestionIndex = questionIndex;
+
+      return currentData;
+    });
+
+    // PHASE 4: Mark this answer as processed (for idempotency)
+    if (responseId && questionIndex !== undefined) {
+      const processedPath = `sessions/${pollId}/processed_answers/${studentEmailKey}/${questionIndex}`;
+      await admin.database().ref(processedPath).set({
+        responseId: responseId,
+        processedAt: admin.database.ServerValue.TIMESTAMP,
+        isCorrect: isCorrect,
+      });
     }
 
-    await studentStatusRef.update(updatePayload);
     logger.info(
-      `Student ${studentEmailKey} marked FINISHED (Correct: ${isCorrect})`,
+      `Student ${studentEmailKey} marked FINISHED (Correct: ${isCorrect}, Q${questionIndex})`,
     );
   });
 /**

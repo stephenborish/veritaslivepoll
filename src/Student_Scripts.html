@@ -40,6 +40,83 @@
         var liveSessionRef = null;
         var connectedRef = null;
 
+        // =============================================================================
+        // PHASE 2: STRICT LISTENER MANAGER PATTERN
+        // Prevents memory leaks and "ghost" re-renders from zombie listeners
+        // =============================================================================
+        var ListenerManager = (function () {
+            var registeredListeners = {};
+
+            return {
+                /**
+                 * Attach a listener with automatic cleanup tracking
+                 * @param {string} key - Unique identifier for this listener
+                 * @param {object} ref - Firebase reference
+                 * @param {string} eventType - Event type ('value', 'child_added', etc.)
+                 * @param {function} callback - Callback function
+                 */
+                attach: function (key, ref, eventType, callback) {
+                    // CRITICAL: Detach existing listener for this key first
+                    this.detach(key);
+
+                    // Attach new listener
+                    ref.on(eventType, callback);
+
+                    // Track for cleanup
+                    registeredListeners[key] = {
+                        ref: ref,
+                        eventType: eventType,
+                        callback: callback,
+                        attachedAt: Date.now()
+                    };
+
+                    console.log('[ListenerManager] Attached listener: ' + key);
+                },
+
+                /**
+                 * Detach a specific listener by key
+                 * @param {string} key - Unique identifier for the listener
+                 */
+                detach: function (key) {
+                    if (registeredListeners[key]) {
+                        var listener = registeredListeners[key];
+                        try {
+                            listener.ref.off(listener.eventType, listener.callback);
+                            console.log('[ListenerManager] Detached listener: ' + key);
+                        } catch (e) {
+                            console.warn('[ListenerManager] Error detaching ' + key + ':', e);
+                        }
+                        delete registeredListeners[key];
+                    }
+                },
+
+                /**
+                 * Detach all listeners (for cleanup on session change)
+                 */
+                detachAll: function () {
+                    var keys = Object.keys(registeredListeners);
+                    keys.forEach(function (key) {
+                        ListenerManager.detach(key);
+                    });
+                    console.log('[ListenerManager] Detached all listeners (' + keys.length + ' total)');
+                },
+
+                /**
+                 * Get count of active listeners (for debugging)
+                 */
+                getActiveCount: function () {
+                    return Object.keys(registeredListeners).length;
+                },
+
+                /**
+                 * List all active listener keys (for debugging)
+                 */
+                listActive: function () {
+                    return Object.keys(registeredListeners);
+                }
+            };
+        })();
+
         // EAGER INIT: Ensure Firebase handles are ready before any UI interaction
         if (typeof firebase !== 'undefined' && typeof FIREBASE_CONFIG !== 'undefined') {
             if (!firebase.apps.length) {
@@ -110,41 +187,24 @@
         async function initFirebaseSidecar(pollId, studentEmail) {
             if (!FIREBASE_CONFIG || !pollId || !studentEmail) return;
 
-            // CHECK: If pollId changed, cleanup old listeners
+            // PHASE 2 FIX: Use ListenerManager for strict cleanup of zombie listeners
+            // CHECK: If pollId changed, cleanup ALL old listeners via ListenerManager
             if (currentFirebasePollId && currentFirebasePollId !== pollId) {
-                console.log('[Firebase] PollId changed from ' + currentFirebasePollId + ' to ' + pollId + ' - Validating cleanup...');
+                console.log('[Firebase] PollId changed from ' + currentFirebasePollId + ' to ' + pollId + ' - Cleaning up via ListenerManager...');
 
-                // 1. Detach Student Status Listener
-                if (firebaseRef) {
-                    try {
-                        firebaseRef.off();
-                        console.log('[Firebase] Detached old student status listener');
-                    } catch (e) { console.warn('Error detaching firebaseRef:', e); }
-                    firebaseRef = null;
-                }
+                // Use ListenerManager to detach all listeners for the old poll
+                ListenerManager.detachAll();
 
-                // 2. Detach Live Session Listener
-                if (liveSessionRef) {
-                    try {
-                        liveSessionRef.off();
-                        console.log('[Firebase] Detached old live session listener');
-                    } catch (e) { console.warn('Error detaching liveSessionRef:', e); }
-                    liveSessionRef = null;
-                }
-
-                // 3. Detach Connected Listener (optional, but cleaner)
-                if (connectedRef) {
-                    try {
-                        connectedRef.off();
-                    } catch (e) { }
-                    connectedRef = null;
-                }
-
+                // Clear ref handles
+                firebaseRef = null;
+                liveSessionRef = null;
+                connectedRef = null;
                 currentFirebasePollId = null;
             }
 
             // Prevent double init for same pollId
             if (firebaseRef && currentFirebasePollId === pollId) {
+                console.log('[Firebase] Already initialized for pollId: ' + pollId + ' (Active listeners: ' + ListenerManager.getActiveCount() + ')');
                 return;
             }
 
@@ -195,21 +255,29 @@
                     }
                 });
 
-                // 2. On Disconnect -> DISCONNECTED
-                firebaseRef.onDisconnect().set('DISCONNECTED');
+                // 2. On Disconnect -> Update status to DISCONNECTED (preserving object structure)
+                // CRITICAL FIX: Use update() instead of set() to preserve student object fields
+                firebaseRef.onDisconnect().update({
+                    status: 'DISCONNECTED',
+                    lastDisconnectedAt: firebase.database.ServerValue.TIMESTAMP
+                });
 
-                // 3. Listen for changes (Remote Lock/Unlock)
-                firebaseRef.on('value', function (snapshot) {
+                // 3. Listen for changes (Remote Lock/Unlock) - VIA LISTENER MANAGER
+                var studentStatusCallback = function (snapshot) {
                     var status = snapshot.val();
                     handleRemoteStatusChange(status);
                     updateDebugHud(status, null, currentFirebasePollId);
-                });
+                };
+                ListenerManager.attach('studentStatus_' + pollId, firebaseRef, 'value', studentStatusCallback);
 
-                // Connection State for HUD & Adaptive Polling
+                // Connection State for HUD, Adaptive Polling & Connectivity Toast - VIA LISTENER MANAGER
                 connectedRef = firebaseDb.ref('.info/connected');
-                connectedRef.on('value', function (snap) {
+                var connectionCallback = function (snap) {
                     var connected = snap.val() === true;
                     updateDebugHud(null, connected, currentFirebasePollId);
+
+                    // PHASE 4: Show/hide connectivity recovery toast
+                    showConnectivityToast(connected);
 
                     // ADAPTIVE POLLING: Reduce server load when Firebase is active
                     // If connected, we receive "signals" for state changes, so we can poll slowly.
@@ -217,22 +285,38 @@
                     if (connected) {
                         console.log('[Adaptive Polling] Firebase connected - switching to balanced poll (5s)');
                         defaultPollInterval = 5000;
+
+                        // PHASE 4: Auto-recovery - trigger soft poll to check if we missed a slide transition
+                        console.log('[Connectivity Recovery] Reconnected - triggering soft poll to sync state');
+                        if (typeof startPolling === 'function') {
+                            startPolling(true); // Force immediate poll
+                        }
                     } else {
                         console.log('[Adaptive Polling] Firebase disconnected - switching to fast poll (2.5s)');
                         defaultPollInterval = 2500;
                     }
-                });
+                };
+                ListenerManager.attach('connectionState', connectedRef, 'value', connectionCallback);
 
-                // 4. Signal-to-Poll: Listen for public state changes
+                // 4. Signal-to-Poll: Listen for public state changes - VIA LISTENER MANAGER
                 // When teacher advances slide, a signal is written here.
                 // NEW: Listen to 'live_session' for instant updates (Hybrid Architecture)
                 var sessionPath = 'sessions/' + pollId + '/live_session';
                 liveSessionRef = firebaseDb.ref(sessionPath);
 
-                liveSessionRef.on('value', function (snapshot) {
+                var liveSessionCallback = function (snapshot) {
                     var data = snapshot.val();
                     if (data) {
                         console.log('[Firebase] Live Session update received:', data);
+
+                        // SYNC SPINE: Capture the server's question index and validate local state
+                        if (typeof data.questionIndex === 'number') {
+                            var serverQuestionIndex = data.questionIndex;
+                            // If server says different question than our local lastQuestionIndex, we MUST sync
+                            if (lastQuestionIndex !== serverQuestionIndex) {
+                                console.log('[Sync Spine] Server question index (' + serverQuestionIndex + ') differs from local (' + lastQuestionIndex + ') - forcing sync');
+                            }
+                        }
 
                         // If we have full metadata and a current pollId, update UI directly
                         // We strictly check for question content to ensure it's a 'Fast Path' signal
@@ -261,7 +345,9 @@
                                 }
                             }
 
+                            // IMMEDIATE MATH RENDER: Call triggerMathRender after view update for fast path
                             updateStudentView(statePayload);
+                            setTimeout(triggerMathRender, 50); // Allow DOM to settle
                         } else {
                             // Fallback to polling for full state if data is incomplete
                             // FIX: If status changed (e.g. CLOSED), we should respect that even without text
@@ -282,14 +368,61 @@
                             startPolling(true);
                         }
                     }
-                });
+                };
+                ListenerManager.attach('liveSession_' + pollId, liveSessionRef, 'value', liveSessionCallback);
 
-                console.log('[Firebase] Sidecar initialized for', path);
+                console.log('[Firebase] Sidecar initialized for', path, '(Listeners: ' + ListenerManager.getActiveCount() + ')');
+            }
+        }
+
+        // =============================================================================
+        // PHASE 4: CONNECTIVITY RECOVERY TOAST
+        // Visual "Reconnecting..." toast that appears onDisconnect and disappears onConnect
+        // =============================================================================
+        var connectivityToastVisible = false;
+        var connectivityToastEl = null;
+
+        function showConnectivityToast(isConnected) {
+            // Create toast element if it doesn't exist
+            if (!connectivityToastEl) {
+                connectivityToastEl = document.createElement('div');
+                connectivityToastEl.id = 'connectivity-toast';
+                connectivityToastEl.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] px-6 py-3 rounded-full shadow-lg transition-all duration-300 flex items-center gap-3';
+                connectivityToastEl.style.cssText = 'opacity: 0; pointer-events: none;';
+                document.body.appendChild(connectivityToastEl);
+            }
+
+            if (!isConnected && !connectivityToastVisible) {
+                // Show "Reconnecting..." toast
+                connectivityToastEl.innerHTML = '<span class="inline-block w-3 h-3 rounded-full bg-amber-400 animate-pulse"></span><span class="font-semibold text-amber-900">Reconnecting...</span>';
+                connectivityToastEl.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] px-6 py-3 rounded-full shadow-lg transition-all duration-300 flex items-center gap-3 bg-amber-100 border border-amber-300';
+                connectivityToastEl.style.opacity = '1';
+                connectivityToastEl.style.pointerEvents = 'auto';
+                connectivityToastVisible = true;
+                console.log('[Connectivity] Showing reconnecting toast');
+            } else if (isConnected && connectivityToastVisible) {
+                // Show brief "Connected" confirmation then hide
+                connectivityToastEl.innerHTML = '<span class="inline-block w-3 h-3 rounded-full bg-emerald-500"></span><span class="font-semibold text-emerald-900">Connected</span>';
+                connectivityToastEl.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] px-6 py-3 rounded-full shadow-lg transition-all duration-300 flex items-center gap-3 bg-emerald-100 border border-emerald-300';
+
+                // Hide after 2 seconds
+                setTimeout(function () {
+                    connectivityToastEl.style.opacity = '0';
+                    connectivityToastEl.style.pointerEvents = 'none';
+                    connectivityToastVisible = false;
+                    console.log('[Connectivity] Hiding toast - connection restored');
+                }, 2000);
             }
         }
 
         /**
-         * Submit answer directly to Firebase (Fast Path)
+         * Submit answer directly to Firebase (Fast Path) - DUAL-WRITE IMPLEMENTATION
+         *
+         * PHASE 2 FIX: Implements "Dual-Write" submission pattern to eliminate Cloud Function lag.
+         * Write 1: Full answer payload to secure answers/ node (for grading)
+         * Write 2: CONCURRENT status update to public sessions/{pollId}/students/{studentKey} node
+         *
+         * Result: Teacher sees student turn "Green" INSTANTLY while backend grades securely in background.
          */
         async function submitAnswerToFirebase(pollId, questionIndex, answer, answerId, confidence, email, telemetry) {
             if (!firebaseDb) {
@@ -324,20 +457,36 @@
                     activityStatus: telemetry ? telemetry.status : null
                 };
 
-                // WRITE DIRECTLY TO FIREBASE (Cloud Function Trigger Path)
-                // Path: answers/{pollId}/{studentKey}
-                // The Cloud Function 'onAnswerSubmitted' listens here to grade/process.
+                // Determine student key
                 var key = studentKey || studentEmail.replace(/\./g, ',');
                 if (!key) {
                     console.error('[Firebase] No student key available for submission');
                     return null;
                 }
 
-                var path = 'answers/' + pollId + '/' + key;
+                // DUAL-WRITE IMPLEMENTATION
+                // Write 1: Full answer payload to secure answers/ node (for grading via Cloud Function)
+                var answerPath = 'answers/' + pollId + '/' + key;
+                var answerWritePromise = firebaseDb.ref(answerPath).set(payload);
 
-                await firebaseDb.ref(path).set(payload);
+                // Write 2: CONCURRENT status update to public student node (for instant Teacher visibility)
+                // This allows the Teacher to see "Submitted" status IMMEDIATELY without waiting for Cloud Function
+                var studentStatusPath = 'sessions/' + pollId + '/students/' + key;
+                var statusPayload = {
+                    status: 'Submitted',
+                    lastActive: firebase.database.ServerValue.TIMESTAMP,
+                    lastSubmissionQuestionIndex: questionIndex,
+                    lastSubmissionTimestamp: firebase.database.ServerValue.TIMESTAMP
+                };
+                var statusWritePromise = firebaseDb.ref(studentStatusPath).update(statusPayload);
 
-                console.log('[Firebase] Write to ' + path + ' successful:', payload);
+                // Execute both writes concurrently for minimum latency
+                await Promise.all([answerWritePromise, statusWritePromise]);
+
+                console.log('[Firebase] DUAL-WRITE successful:');
+                console.log('  - Answer path: ' + answerPath);
+                console.log('  - Status path: ' + studentStatusPath);
+
                 return { success: true, responseId: responseId, timestamp: timestamp };
             } catch (e) {
                 console.error('[Firebase] Fast Answer Failed:', e);
@@ -580,14 +729,28 @@
             hud.innerHTML = html;
         }
 
-        function handleRemoteStatusChange(status) {
-            console.log('[Firebase] Remote status update:', status);
-            if (status === 'LOCKED') {
+        function handleRemoteStatusChange(statusData) {
+            console.log('[Firebase] Remote status update:', statusData);
+
+            // SYNC SPINE FIX: Handle both legacy string status and proper object status
+            // The status can be either a string 'LOCKED'/'ACTIVE' (legacy) or an object {status: 'LOCKED', ...}
+            var statusValue;
+            if (typeof statusData === 'string') {
+                statusValue = statusData;
+            } else if (statusData && typeof statusData === 'object') {
+                statusValue = statusData.status;
+            } else {
+                console.warn('[Firebase] Invalid status data received:', statusData);
+                return;
+            }
+
+            if (statusValue === 'LOCKED') {
                 // Server commanded lock
                 if (!LockManager.isLocked()) {
-                    LockManager.lock('Teacher Remote Lock');
+                    var lockReason = (statusData && statusData.lastViolationReason) || 'Teacher Remote Lock';
+                    LockManager.lock(lockReason);
                 }
-            } else if (status === 'ACTIVE') {
+            } else if (statusValue === 'ACTIVE' || statusValue === 'AWAITING_FULLSCREEN') {
                 // Teacher signalled unlock
                 // IMPLEMENTATION FIX: Check both LockManager and Poison Pill state
                 var isLocked = LockManager.isLocked() || isPoisonPillActive();
@@ -600,6 +763,9 @@
                 } else {
                     console.log('[Firebase] Unlock signal received but not locally locked - ignoring');
                 }
+            } else if (statusValue === 'DISCONNECTED') {
+                // Student was disconnected - this should trigger reconnection logic
+                console.log('[Firebase] Detected DISCONNECTED state - will recover on reconnect');
             }
         }
 

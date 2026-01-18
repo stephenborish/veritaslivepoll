@@ -2424,6 +2424,10 @@
             console.log('Attaching onclick handler to start session button (Early Bind)');
             startSessionBtn.onclick = function () {
                 console.log('!!! BEGIN SESSION BUTTON CLICKED !!!');
+
+                // FIX: Mark session as started - this gate prevents auto-bypass of entry screen
+                studentSessionStarted = true;
+
                 if (entryScreen) entryScreen.style.display = 'none';
                 if (studentContainer) studentContainer.style.display = 'block';
                 isInteractionBlocked = false;
@@ -2520,6 +2524,10 @@
         var secureSessionActive = false; // Must be TRUE for lock logic to engage
         var isEnteringFullscreen = false; // Grace period flag
         // -----------------------------
+
+        // --- ENTRY GATE: Prevent auto-bypass of entry screen ---
+        // Student must explicitly click "Begin Poll" to enter the session
+        var studentSessionStarted = false;
 
         var optionBaseClass = 'answer-option relative w-full text-left';
         var optionSelectedClass = optionBaseClass + ' answer-option-selected';
@@ -4058,6 +4066,20 @@
                 }
             } else {
                 // Live Poll Logic (Legacy)
+
+                // FIX: ENTRY GATE - Require student to click "Begin Poll" before showing content
+                // This prevents Firebase listener from auto-bypassing the entry screen
+                if (!studentSessionStarted) {
+                    console.log('[ViewManager] Blocking Live Poll render - student has not clicked Begin Poll');
+                    // Show entry screen and wait for user interaction
+                    if (entryScreen) {
+                        entryScreen.style.display = 'block';
+                        entryScreen.classList.remove('hidden');
+                    }
+                    ViewManager.show('entry-screen');
+                    return; // Stop here until student clicks Begin Poll
+                }
+
                 if (data.sessionPhase === 'LOBBY') {
                     ViewManager.show('pre-live-card');
                     updatePreLiveCard(data);

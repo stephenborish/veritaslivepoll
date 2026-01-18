@@ -1,3628 +1,3 @@
-<!DOCTYPE html>
-<html class="light" lang="en">
-
-<head>
-  <!-- =============================================================================
-     VERITAS LIVE POLL - SHARED HEAD ELEMENTS
-     =============================================================================
-     Purpose: Common <head> elements for all pages
-     Used by: TeacherView.html, StudentView.html
-     Phase: 3A - Shared Components
-     ============================================================================= -->
-
-<base target="_top">
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<!-- Google Fonts -->
-<link href="https://fonts.googleapis.com" rel="preconnect" />
-<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap"
-     rel="stylesheet" />
-
-<!-- Material Symbols -->
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
-
-<!-- Quill.js (Rich Text Editor) -->
-<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
-<!-- Image Resize Module -->
-<script src="https://cdn.jsdelivr.net/npm/quill-image-resize-module@3.0.0/image-resize.min.js"></script>
-
-<!-- KaTeX (Formula Rendering) -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
-
-<!-- MathLive (Visual Formula Editor) -->
-<script src="https://unpkg.com/mathlive"></script>
-
-<!-- DOMPurify (Security) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.5/purify.min.js"></script>
-
-<!-- Clarity Tracking -->
-<script type="text/javascript">
-     (function (c, l, a, r, i, t, y) {
-          c[a] = c[a] || function () { (c[a].q = c[a].q || []).push(arguments) };
-          t = l.createElement(r); t.async = 1; t.src = "https://www.clarity.ms/tag/" + i;
-          y = l.getElementsByTagName(r)[0]; y.parentNode.insertBefore(t, y);
-     })(window, document, "clarity", "script", "unrh0cofey");
-</script>
-  <title>Veritas Live Poll - Student</title>
-
-  <!-- =============================================================================
-     VERITAS LIVE POLL - SHARED TAILWIND CONFIGURATION
-     =============================================================================
-     Purpose: Centralized Tailwind CSS configuration for design system consistency
-     Used by: TeacherView.html, StudentView.html
-     Phase: 3A - Shared Components
-     ============================================================================= -->
-
-<!-- Tailwind CSS CDN with Plugins -->
-<script src="https://cdn.tailwindcss.com/3.3.5"></script>
-
-<!-- Tailwind Configuration -->
-<script>
-  tailwind.config = {
-    darkMode: "class",
-    theme: {
-      extend: {
-        colors: {
-          // Veritas Brand Colors (Primary Design System)
-          "veritas-navy": "#12385d",
-          "veritas-gold": "#c5a05a",
-          primary: "#12385d",
-
-          // Supporting Brand Colors
-          "brand-white": "#ffffff",
-          "brand-light-gray": "#d9e0e7",
-          "brand-dark-gray": "#242424",
-          "background-light": "#f7f8fa",
-          "background-dark": "#0f1723",
-
-          // Semantic Colors
-          "success-green": "#1b5e20",
-          "success-bg": "#e8f5ec",
-          "error-red": "#c62828",
-          "text-primary": "#111111",
-          "text-secondary": "#4b5563",
-          "text-muted": "#6b7280"
-        },
-        fontFamily: {
-          display: ["Inter", "sans-serif"],
-          serif: ["Noto Serif", "serif"]
-        },
-        borderRadius: {
-          DEFAULT: "0.25rem",
-          lg: "0.5rem",
-          xl: "0.75rem",
-          "2xl": "1rem",
-          full: "9999px"
-        },
-        spacing: {
-          '18': '4.5rem',
-          '88': '22rem',
-          '128': '32rem'
-        },
-        animation: {
-          // Teacher animations
-          'fade-up': 'fadeUp 0.4s ease-out forwards',
-          'pulse-glow': 'pulseGlow 3s ease-in-out infinite',
-
-          // Student animations
-          'fade-in': 'fadeIn 0.6s ease-out forwards',
-          'spin-slow': 'spin 3s linear infinite',
-          'pulse-dot': 'pulseDot 1.2s ease-in-out infinite'
-        },
-        keyframes: {
-          fadeUp: {
-            '0%': { opacity: '0', transform: 'translateY(20px)' },
-            '100%': { opacity: '1', transform: 'translateY(0)' }
-          },
-          pulseGlow: {
-            '0%, 100%': { boxShadow: '0 0 0 0 rgba(197, 160, 90, 0.4)' },
-            '50%': { boxShadow: '0 0 20px 4px rgba(197, 160, 90, 0.4)' }
-          },
-          fadeIn: {
-            'from': { opacity: '0', transform: 'translateY(10px)' },
-            'to': { opacity: '1', transform: 'translateY(0)' }
-          },
-          'pulseDot': {
-            '0%, 80%, 100%': { opacity: '0.25', transform: 'scale(0.85)' },
-            '40%': { opacity: '1', transform: 'scale(1)' }
-          }
-        }
-      }
-    }
-  };
-</script>
-  <script>
-(function (global) {
-  'use strict';
-
-  function clampSeconds(value) {
-    var seconds = Number(value);
-    if (!isFinite(seconds)) {
-      seconds = 0;
-    }
-    return Math.max(0, Math.floor(seconds));
-  }
-
-  function formatClock(seconds) {
-    var total = clampSeconds(seconds);
-    var minutes = Math.floor(total / 60);
-    var remaining = total % 60;
-    var m = minutes < 10 ? '0' + minutes : String(minutes);
-    var s = remaining < 10 ? '0' + remaining : String(remaining);
-    return m + ':' + s;
-  }
-
-  function createCountdown(options) {
-    options = options || {};
-    var onTick = typeof options.onTick === 'function' ? options.onTick : function () {};
-    var onExpire = typeof options.onExpire === 'function' ? options.onExpire : function () {};
-    var intervalId = null;
-    var remaining = 0;
-    var running = false;
-
-    function clearTimer() {
-      if (intervalId) {
-        clearInterval(intervalId);
-        intervalId = null;
-      }
-      running = false;
-    }
-
-    function notifyTick() {
-      onTick(remaining);
-    }
-
-    function tickOnce() {
-      if (!running) return;
-      remaining = Math.max(0, remaining - 1);
-      notifyTick();
-      if (remaining <= 0) {
-        clearTimer();
-        onExpire();
-      }
-    }
-
-    return {
-      start: function (seconds) {
-        remaining = clampSeconds(seconds);
-        clearTimer();
-        if (remaining === 0) {
-          notifyTick();
-          onExpire();
-          return;
-        }
-        running = true;
-        notifyTick();
-        intervalId = setInterval(tickOnce, 1000);
-      },
-      pause: function () {
-        if (!running) return;
-        clearTimer();
-      },
-      stop: function () {
-        clearTimer();
-      },
-      add: function (deltaSeconds) {
-        var next = clampSeconds(remaining + Number(deltaSeconds));
-        remaining = next;
-        notifyTick();
-        if (remaining === 0 && running) {
-          clearTimer();
-          onExpire();
-        }
-      },
-      set: function (seconds) {
-        remaining = clampSeconds(seconds);
-        notifyTick();
-        if (remaining === 0 && running) {
-          clearTimer();
-          onExpire();
-        }
-      },
-      getRemaining: function () {
-        return remaining;
-      },
-      isRunning: function () {
-        return running;
-      }
-    };
-  }
-
-  function createHeartbeat(options) {
-    options = options || {};
-    var onBeat = typeof options.onBeat === 'function' ? options.onBeat : function () {};
-    var intervalMs = Math.max(500, Number(options.intervalMs) || 3000);
-    var timerId = null;
-
-    function scheduleNext() {
-      timerId = setTimeout(function () {
-        timerId = null;
-        onBeat();
-        scheduleNext();
-      }, intervalMs);
-    }
-
-    return {
-      start: function (fireImmediately) {
-        if (timerId) return;
-        if (fireImmediately) {
-          onBeat();
-        }
-        scheduleNext();
-      },
-      stop: function () {
-        if (timerId) {
-          clearTimeout(timerId);
-          timerId = null;
-        }
-      },
-      isRunning: function () {
-        return timerId !== null;
-      },
-      pulse: function () {
-        onBeat();
-      },
-      updateInterval: function (nextInterval) {
-        intervalMs = Math.max(500, Number(nextInterval) || intervalMs);
-        if (timerId) {
-          clearTimeout(timerId);
-          timerId = null;
-          scheduleNext();
-        }
-      }
-    };
-  }
-
-  function createFullscreenManager(doc, options) {
-    var documentRef = doc || document;
-    options = options || {};
-    var onChange = typeof options.onChange === 'function' ? options.onChange : function () {};
-    var targetElement = options.element || documentRef.documentElement;
-
-    function isFullscreen() {
-      return !!(documentRef.fullscreenElement || documentRef.webkitFullscreenElement || documentRef.msFullscreenElement);
-    }
-
-    function request() {
-      if (!targetElement) {
-        return Promise.reject(new Error('No element available for fullscreen'));
-      }
-      var req = targetElement.requestFullscreen || targetElement.webkitRequestFullscreen || targetElement.msRequestFullscreen;
-      if (!req) {
-        return Promise.reject(new Error('Fullscreen API unavailable'));
-      }
-      return req.call(targetElement);
-    }
-
-    function exit() {
-      var exitFn = documentRef.exitFullscreen || documentRef.webkitExitFullscreen || documentRef.msExitFullscreen;
-      if (exitFn) {
-        return exitFn.call(documentRef);
-      }
-      return Promise.resolve();
-    }
-
-    function handleChange() {
-      onChange({
-        isFullscreen: isFullscreen(),
-        hidden: documentRef.hidden
-      });
-    }
-
-    documentRef.addEventListener('fullscreenchange', handleChange);
-    documentRef.addEventListener('webkitfullscreenchange', handleChange);
-    documentRef.addEventListener('visibilitychange', handleChange);
-
-    return {
-      request: request,
-      exit: exit,
-      isFullscreen: isFullscreen,
-      dispose: function () {
-        documentRef.removeEventListener('fullscreenchange', handleChange);
-        documentRef.removeEventListener('webkitfullscreenchange', handleChange);
-        documentRef.removeEventListener('visibilitychange', handleChange);
-      }
-    };
-  }
-
-  global.SecureAssessmentShared = {
-    formatClock: formatClock,
-    createCountdown: createCountdown,
-    createHeartbeat: createHeartbeat,
-    createFullscreenManager: createFullscreenManager
-  };
-})(this);
-</script>
-
-
-  <!-- Firebase SDKs (compat) -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-
-  <script>
-    window.SESSION_TOKEN = 'dummy-token';
-    // CRITICAL: Store student email for violation reporting fallback
-    // This ensures violations can be attributed even if SESSION_TOKEN is lost/invalid
-    window.STUDENT_EMAIL = 'student1@example.com';
-    var FIREBASE_CONFIG = null;
-    if (!FIREBASE_CONFIG) {
-      console.warn('FIREBASE_CONFIG missing, using default fallback.');
-      FIREBASE_CONFIG = {
-        apiKey: "AIzaSyAv0bCe5KIuQx_sou8toBy5DG2PYaB_pBM",
-        authDomain: "classroomproctor.firebaseapp.com",
-        databaseURL: "https://classroomproctor-default-rtdb.firebaseio.com",
-        projectId: "classroomproctor",
-        storageBucket: "classroomproctor.firebasestorage.app",
-        messagingSenderId: "600627073908",
-        appId: "1:600627073908:web:935970f5849b28f6ad5221"
-      };
-      window.USING_FALLBACK_CONFIG = true;
-    }
-    var Veritas = Veritas || {};
-    Veritas.Config = Veritas.Config || {};
-    Veritas.Config.DEBUG_FIREBASE = true;
-
-    // Store student email in sessionStorage for persistence across page refreshes
-    if (window.STUDENT_EMAIL) {
-      try {
-        sessionStorage.setItem('veritas_student_email', window.STUDENT_EMAIL);
-      } catch (e) { /* Storage may be unavailable */ }
-    }
-  </script>
-
-  <!-- =============================================================================
-     VERITAS LIVE POLL - SHARED CSS CUSTOM PROPERTIES
-     =============================================================================
-     Purpose: Centralized CSS variables for design system consistency
-     Used by: TeacherView.html, StudentView.html
-     Phase: 3A - Shared Components
-     ============================================================================= -->
-
-<style>
-  /* Veritas Design System - CSS Custom Properties */
-  :root {
-    /* Brand Colors */
-    --veritas-navy: #12385d;
-    --veritas-gold: #c5a05a;
-    --brand-white: #ffffff;
-    --brand-light-gray: #d9e0e7;
-    --brand-dark-gray: #242424;
-
-    /* Background Colors */
-    --bg-light: #f7f8fa;
-    --bg-dark: #0f1723;
-    --bg-card: #ffffff;
-    --bg-elevated: #f8fafc;
-    --bg-glass: rgba(255, 255, 255, 0.7);
-    --bg-glass-dark: rgba(15, 23, 42, 0.7);
-
-    /* Text Colors */
-    --text-primary: #111111;
-    --text-secondary: #4b5563;
-    --text-muted: #6b7280;
-    --text-on-navy: #ffffff;
-
-    /* Semantic Colors */
-    --success-green: #1b5e20;
-    --success-light: #2e7d32;
-    --success-bg: #e8f5ec;
-    --success-bg-light: #ecfdf5;
-    --error-red: #c62828;
-
-    /* Opacity Modifiers */
-    --navy-06: rgba(18, 56, 93, 0.06);
-    --navy-10: rgba(18, 56, 93, 0.1);
-    --navy-12: rgba(18, 56, 93, 0.12);
-    --navy-14: rgba(18, 56, 93, 0.14);
-    --gold-08: rgba(197, 160, 90, 0.08);
-
-    /* Spacing Scale (following 8px baseline) */
-    --space-xs: 4px;
-    --space-sm: 8px;
-    --space-md: 16px;
-    --space-lg: 24px;
-    --space-xl: 32px;
-    --space-2xl: 48px;
-
-    /* Border Radius */
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 14px;
-    --radius-xl: 16px;
-    --radius-2xl: 24px;
-    --radius-full: 9999px;
-
-    /* Depth & Glassmorphism */
-    --glass-blur: blur(12px);
-    --glass-border: rgba(255, 255, 255, 0.2);
-    --glass-border-dark: rgba(255, 255, 255, 0.1);
-    --shadow-glass: 0 8px 32px 0 rgba(18, 56, 93, 0.1);
-    --shadow-premium: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-
-    /* Interactive Glows */
-    --glow-navy: 0 0 15px rgba(18, 56, 93, 0.3);
-    --glow-gold: 0 0 15px rgba(197, 160, 90, 0.3);
-
-    /* Enhanced Semantic Colors (WCAG AA Compliant) */
-    --primary: #12385d;
-    --primary-hover: #0f2d4a;
-    --primary-light: #1a4a7a;
-    --secondary: #c5a05a;
-    --secondary-hover: #b08f4d;
-
-    /* Status Colors with Better Contrast */
-    --success: #16a34a;
-    --success-bg: #dcfce7;
-    --success-border: #86efac;
-    --warning: #f59e0b;
-    --warning-bg: #fef3c7;
-    --warning-border: #fcd34d;
-    --error: #dc2626;
-    --error-bg: #fee2e2;
-    --error-border: #fca5a5;
-    --info: #3b82f6;
-    --info-bg: #dbeafe;
-    --info-border: #93c5fd;
-
-    /* Interactive States */
-    --focus-ring: 0 0 0 3px rgba(18, 56, 93, 0.2);
-    --hover-lift: 0 4px 12px rgba(0, 0, 0, 0.1);
-    --active-press: 0 2px 4px rgba(0, 0, 0, 0.1);
-
-    /* Typography Scale */
-    --text-xs: 0.75rem;
-    /* 12px */
-    --text-sm: 0.875rem;
-    /* 14px */
-    --text-base: 1rem;
-    /* 16px */
-    --text-lg: 1.125rem;
-    /* 18px */
-    --text-xl: 1.25rem;
-    /* 20px */
-    --text-2xl: 1.5rem;
-    /* 24px */
-    --text-3xl: 1.875rem;
-    /* 30px */
-    --text-4xl: 2.25rem;
-    /* 36px */
-
-    /* Line Heights */
-    --leading-tight: 1.25;
-    --leading-normal: 1.5;
-    --leading-relaxed: 1.75;
-
-    /* Animation Timings */
-    --duration-fast: 150ms;
-    --duration-normal: 200ms;
-    --duration-slow: 300ms;
-    --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
-    --ease-in-out: cubic-bezier(0.4, 0, 0.6, 1);
-  }
-</style>
-  <style>
-  /* Veritas Design System - CSS Custom Properties */
-  :root {
-    /* Brand Colors */
-    --veritas-navy: #12385d;
-    --veritas-gold: #c5a05a;
-    --brand-white: #ffffff;
-    --brand-light-gray: #d9e0e7;
-    --brand-dark-gray: #242424;
-
-    /* Background Colors */
-    --bg-light: #f7f8fa;
-    --bg-dark: #0f1723;
-    --bg-card: #ffffff;
-
-    /* Text Colors */
-    --text-primary: #111111;
-    --text-secondary: #4b5563;
-    --text-muted: #6b7280;
-    --text-on-navy: #ffffff;
-
-    /* FORCE HIDE LOGIN for Students - Default State */
-    --login-display: none;
-  }
-
-  /* Specific Override for Student View */
-  #login-overlay {
-    display: none !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-    visibility: hidden !important;
-  }
-
-  /* Only show if explicitly enabled by JS class on body */
-  body.auth-required #login-overlay {
-    display: flex !important;
-    opacity: 1 !important;
-    pointer-events: auto !important;
-    visibility: visible !important;
-  }
-
-  :root {
-    --success-green: #1b5e20;
-    --success-bg: #e8f5ec;
-    --error-red: #c62828;
-
-    /* Opacity Modifiers */
-    --navy-10: rgba(18, 56, 93, 0.1);
-    --navy-12: rgba(18, 56, 93, 0.12);
-    --gold-08: rgba(197, 160, 90, 0.08);
-
-    /* Spacing Scale (following 8px baseline) */
-    --space-xs: 4px;
-    --space-sm: 8px;
-    --space-md: 16px;
-    --space-lg: 24px;
-    --space-xl: 32px;
-    --space-2xl: 48px;
-
-    /* Border Radius */
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 14px;
-    --radius-full: 9999px;
-
-    /* Animation Timing */
-    --transition-smooth: 400ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-fast: 200ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-bounce: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-
-  .motion-safe-transition {
-    transition: all var(--transition-smooth);
-  }
-
-  .motion-pulse {
-    animation: motion-pulse 2s infinite ease-in-out;
-  }
-
-  .motion-slide-up {
-    animation: motion-slide-up var(--transition-smooth) forwards;
-  }
-
-  .motion-slide-in-right {
-    animation: motion-slide-in-right var(--transition-smooth) forwards;
-  }
-
-  .motion-fade-in {
-    animation: motion-fade-in var(--transition-fast) forwards;
-  }
-
-  @keyframes motion-pulse {
-
-    0%,
-    100% {
-      transform: scale(1);
-      opacity: 0.8;
-    }
-
-    50% {
-      transform: scale(1.15);
-      opacity: 1;
-    }
-  }
-
-  @keyframes motion-slide-up {
-    from {
-      transform: translateY(12px);
-      opacity: 0;
-    }
-
-    to {
-      transform: translateY(0);
-      opacity: 1;
-    }
-  }
-
-  @keyframes motion-slide-in-right {
-    from {
-      transform: translateX(20px);
-      opacity: 0;
-    }
-
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-
-  @keyframes motion-fade-in {
-    from {
-      opacity: 0;
-    }
-
-    to {
-      opacity: 1;
-    }
-  }
-
-  /* Creative Animations */
-  @keyframes draw-check {
-    0% {
-      stroke-dashoffset: 100;
-      opacity: 0;
-    }
-
-    20% {
-      opacity: 1;
-    }
-
-    100% {
-      stroke-dashoffset: 0;
-      opacity: 1;
-    }
-  }
-
-  @keyframes motion-float {
-
-    0%,
-    100% {
-      transform: translateY(0);
-    }
-
-    50% {
-      transform: translateY(-10px);
-    }
-  }
-
-  @keyframes motion-pulse-ring {
-    0% {
-      transform: scale(0.8);
-      box-shadow: 0 0 0 0 rgba(18, 56, 93, 0.4);
-      opacity: 0.8;
-    }
-
-    70% {
-      transform: scale(1);
-      box-shadow: 0 0 0 20px rgba(18, 56, 93, 0);
-      opacity: 0;
-    }
-
-    100% {
-      transform: scale(0.8);
-      box-shadow: 0 0 0 0 rgba(18, 56, 93, 0);
-      opacity: 0;
-    }
-  }
-
-  @keyframes text-shimmer {
-    0% {
-      background-position: -200% center;
-    }
-
-    100% {
-      background-position: 200% center;
-    }
-  }
-
-  .animate-draw-check {
-    stroke-dasharray: 100;
-    stroke-dashoffset: 100;
-    animation: draw-check 0.8s cubic-bezier(0.65, 0, 0.45, 1) forwards;
-  }
-
-  .animate-float {
-    animation: motion-float 3s ease-in-out infinite;
-  }
-
-  .animate-pulse-ring {
-    animation: motion-pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-
-  .animate-text-shimmer {
-    background: linear-gradient(90deg, #12385d 0%, #3b82f6 50%, #12385d 100%);
-    background-size: 200% auto;
-    color: transparent;
-    -webkit-background-clip: text;
-    background-clip: text;
-    animation: text-shimmer 3s linear infinite;
-  }
-
-  /* Premium Waiting Particles */
-  .shimmer-particle {
-    position: absolute;
-    width: 6px;
-    height: 6px;
-    background: var(--veritas-gold);
-    border-radius: 50%;
-    opacity: 0.3;
-    filter: blur(2px);
-    animation: particle-rise 6s linear infinite;
-  }
-
-  @keyframes particle-rise {
-    0% {
-      transform: translateY(0) scale(1);
-      opacity: 0;
-    }
-
-    50% {
-      opacity: 0.5;
-    }
-
-    100% {
-      transform: translateY(-100px) scale(1.5);
-      opacity: 0;
-    }
-  }
-
-  body {
-    background: #ffffff;
-    color: #000000;
-    font-family: "Inter", sans-serif;
-  }
-
-  .page-shell {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 96px clamp(16px, 4vw, 40px) 48px;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-    min-height: 90vh;
-  }
-
-  /* Responsive Images for Rich Content */
-  .ql-editor img,
-  .option-text img,
-  .option-image {
-    max-width: 100% !important;
-    height: auto !important;
-    border-radius: 8px;
-    display: block;
-    margin: 8px 0;
-    cursor: zoom-in;
-    /* Indicate zoomable */
-  }
-
-  .hud-bar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 64px;
-    background: var(--veritas-navy);
-    color: #ffffff;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 clamp(16px, 3vw, 32px);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
-    z-index: 60;
-  }
-
-  .hud-left {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    text-transform: uppercase;
-  }
-
-  .hud-brand {
-    font-weight: 800;
-    letter-spacing: 0.18em;
-    font-size: 1.1rem;
-  }
-
-  .hud-mode {
-    color: rgba(255, 255, 255, 0.75);
-    font-size: 0.82rem;
-    letter-spacing: 0.08em;
-    font-weight: 600;
-  }
-
-  .hud-center {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    text-align: center;
-    pointer-events: none;
-  }
-
-  .hud-progress {
-    margin: 0;
-    color: #ffffff;
-    letter-spacing: 0.14em;
-    font-weight: 700;
-    font-size: 0.95rem;
-  }
-
-  .hud-right {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .hud-timer {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .hud-icon-btn {
-    width: 36px;
-    height: 36px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    background: transparent;
-    color: #ffffff;
-    cursor: pointer;
-    transition: background-color 120ms ease, border-color 120ms ease;
-  }
-
-  .hud-icon-btn:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.5);
-  }
-
-  .hud-timer-value {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    font-weight: 700;
-    font-size: 1.05rem;
-    letter-spacing: 0.08em;
-  }
-
-  .hud-timer.alert-warning .hud-timer-value {
-    color: #c2410c;
-  }
-
-  .hud-timer.alert-danger .hud-timer-value {
-    color: #b91c1c;
-    animation: pulse-dot 1s ease-in-out infinite;
-  }
-
-  .hud-timer.timer-hidden .hud-timer-value {
-    color: rgba(255, 255, 255, 0.6);
-    letter-spacing: 0.08em;
-  }
-
-  body.secure-overlay-active {
-    overflow: hidden;
-  }
-
-  #student-container {
-    width: 100%;
-    max-width: none;
-    margin: 0 auto;
-    padding-left: clamp(8px, 2vw, 16px);
-    padding-right: clamp(8px, 2vw, 16px);
-  }
-
-  .secure-topbar-timer {
-    display: inline-flex;
-    align-items: center;
-    gap: 12px;
-    padding: 5px 11px;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    background: rgba(4, 12, 30, 0.45);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
-  }
-
-  .secure-topbar-time {
-    font-size: 1.45rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    color: #fff;
-  }
-
-  .student-card,
-  .secure-session-card {
-    width: 100%;
-    max-width: 1200px;
-    margin: 0 auto;
-    background: transparent;
-    color: #000000;
-    border-radius: 0;
-    border: none;
-    box-shadow: none;
-    padding: 0;
-    overflow: visible;
-  }
-
-  .student-card-body,
-  .student-card-options,
-  .secure-session-body {
-    padding: 0;
-  }
-
-  .student-question-number,
-  .student-card-header,
-  .secure-session-header {
-    display: none;
-  }
-
-  .question-layout {
-    display: block;
-    width: 100%;
-  }
-
-  .question-layout.no-image .question-textual {
-    width: 100%;
-  }
-
-  .question-textual {
-    display: block;
-    width: 100%;
-  }
-
-  .student-stem {
-    font-family: "Noto Serif", serif;
-    font-size: 1.125rem;
-    /* Standardized to 18px */
-    line-height: 1.6;
-    font-weight: 400;
-    color: #12385d;
-    margin: 0 0 16px;
-    text-align: left;
-    word-wrap: break-word;
-  }
-
-  #secure-question-text {
-    font-family: "Inter", sans-serif;
-    font-size: 1.125rem;
-    /* Standardized to 18px */
-    line-height: 1.6;
-    font-weight: 400;
-    color: #000000;
-    margin: 0;
-    text-align: left;
-  }
-
-  .student-subline {
-    color: #4b5563;
-    margin: 0;
-    text-align: left;
-  }
-
-  .question-visual {
-    float: right;
-    margin-left: 16px;
-    margin-bottom: 12px;
-    max-width: 280px;
-  }
-
-  .question-visual img {
-    max-height: 280px;
-    width: 100%;
-    object-fit: contain;
-    border-radius: 12px;
-    border: 1px solid #e5e7eb;
-    padding: 8px;
-    background: #ffffff;
-    cursor: zoom-in;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
-  }
-
-  .answer-area {
-    margin-top: 20px;
-    clear: both;
-  }
-
-  .student-choices {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 14px;
-    padding: 0;
-    margin: 0;
-    list-style: none;
-  }
-
-  .answer-option {
-    background: #ffffff;
-    border: 1px solid #d1d5db;
-    border-radius: 12px;
-    padding: 10px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
-    color: #000000;
-  }
-
-  .answer-option:hover:not(.answer-option-disabled) {
-    border-color: #9ca3af;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
-  }
-
-  .answer-option .option-body {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .answer-option .option-leading {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .letter-badge {
-    width: 32px;
-    height: 32px;
-    border-radius: 10px;
-    border: 1px solid #cbd5e1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    color: #12385d;
-    background: #f8fafc;
-    flex-shrink: 0;
-  }
-
-  .answer-option .option-text {
-    color: #000000;
-    font-size: 1.125rem;
-    /* Standardized to 18px */
-    line-height: 1.6;
-    font-family: "Inter", sans-serif;
-    margin: 0;
-    text-align: left;
-  }
-
-  .answer-option .option-image {
-    width: 100%;
-    height: 150px;
-    border-radius: 12px;
-    border: 1px solid #e5e7eb;
-    box-shadow: none;
-    object-fit: cover;
-    margin: 0 0 6px;
-  }
-
-  .answer-option .result-ribbon,
-  .answer-option .result-indicator {
-    display: none;
-  }
-
-  .answer-option.answer-option-selected {
-    border: 2px solid #12385d;
-    box-shadow: 0 0 0 3px rgba(18, 56, 93, 0.18);
-    background: #e8f1fa;
-  }
-
-  .answer-option.answer-option-selected .letter-badge {
-    background-color: #12385d;
-    border-color: #12385d;
-    color: #ffffff;
-  }
-
-  .secure-session-body {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-    width: 100%;
-    overflow: visible;
-    padding-bottom: 8px;
-  }
-
-  #secure-options-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    overflow: visible;
-    padding-bottom: 4px;
-  }
-
-  .secure-session-footer {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: #ffffff;
-    border-top: 1px solid #e5e7eb;
-    box-shadow: 0 -8px 20px rgba(0, 0, 0, 0.08);
-    padding: 14px clamp(16px, 3vw, 32px);
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 12px;
-    z-index: 55;
-  }
-
-  body.secure-mode-active .page-shell {
-    padding-bottom: 56px;
-  }
-
-  /* Hide non-secure entry surfaces when secure mode is active */
-  body.secure-mode-active #entry-screen,
-  body.secure-mode-active #pre-live-card {
-    display: none !important;
-  }
-
-  @media (max-width: 768px) {
-    .page-shell {
-      padding: 80px 16px 40px;
-    }
-
-    .hud-bar {
-      flex-wrap: wrap;
-      height: auto;
-      gap: 8px;
-      padding: 10px 14px;
-    }
-
-    .hud-left,
-    .hud-right {
-      width: 100%;
-      justify-content: space-between;
-    }
-
-    .hud-center {
-      position: static;
-      transform: none;
-      width: 100%;
-      text-align: left;
-      order: 3;
-    }
-
-    .hud-progress {
-      font-size: 0.9rem;
-      letter-spacing: 0.08em;
-    }
-
-    .secure-session-footer {
-      flex-direction: column;
-      align-items: stretch;
-    }
-
-    .secure-submit-btn {
-      width: 100%;
-    }
-
-    .question-visual {
-      float: none;
-      margin: 0 0 12px;
-      max-width: 100%;
-    }
-  }
-
-  .student-card {
-    width: 100%;
-    max-width: 1200px;
-    margin: 0 auto;
-    background: transparent;
-    color: #000000;
-    border-radius: 0;
-    border: none;
-    box-shadow: none;
-    overflow: visible;
-    padding: 0;
-  }
-
-  .student-card.results-stage,
-  .student-card.showing-results {
-    background: transparent;
-  }
-
-  .student-card-header,
-  .student-question-number,
-  .student-card-body {
-    display: none;
-  }
-
-  .student-card-body-content {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .student-question-image {
-    width: 100%;
-    max-width: 320px;
-    /* Standardize max width for wrap */
-    max-height: 380px;
-    object-fit: contain;
-    border-radius: 12px;
-    border: 1px solid rgba(18, 56, 93, 0.1);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
-    cursor: zoom-in;
-    padding: 8px;
-    background: #ffffff;
-    transition: transform 200ms ease, box-shadow 200ms ease;
-  }
-
-  .student-question-image:hover {
-    transform: scale(1.02);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
-  }
-
-
-  .student-card-options {
-    padding: 7px 4px 17px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    max-width: 100%;
-    overflow: visible;
-  }
-
-  .student-pre-live-card {
-    max-width: 720px;
-    text-align: center;
-  }
-
-  .secure-session-card {
-    position: relative;
-    width: 100%;
-    max-width: 1200px;
-    margin: 0 auto;
-    background: transparent;
-    border-radius: 0;
-    border: none;
-    box-shadow: none;
-    min-height: auto;
-    display: flex;
-    flex-direction: column;
-    overflow-x: hidden;
-    padding: 0;
-  }
-
-  .secure-session-header {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 18px;
-    align-items: center;
-    justify-content: space-between;
-    padding: clamp(16px, 3vw, 32px) clamp(24px, 4vw, 48px);
-    border-bottom: 1px solid rgba(18, 56, 93, 0.1);
-    background: linear-gradient(120deg, rgba(18, 56, 93, 0.08), rgba(197, 160, 90, 0.12));
-  }
-
-  .secure-session-meta {
-    font-size: 0.8rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--text-secondary);
-  }
-
-  .secure-session-progress {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  .secure-connection-dot {
-    width: 14px;
-    height: 14px;
-    border-radius: 999px;
-    box-shadow: 0 0 12px rgba(18, 56, 93, 0.35);
-  }
-
-  .secure-connection-warning {
-    padding: 8px 19px;
-    background: #fffbeb;
-    color: #92400e;
-    border-top: 1px solid #fef3c7;
-    border-bottom: 1px solid #fef3c7;
-    font-weight: 500;
-  }
-
-  .secure-session-body {
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-    flex: 1;
-    max-width: 100%;
-    overflow-x: hidden;
-    /* Fix: Answer Choices Layout Collapse */
-    min-height: 0;
-    padding-bottom: 24px;
-  }
-
-  .secure-question-pane,
-  .secure-options-pane {
-    display: none;
-  }
-
-  .secure-answer-option .letter-badge {
-    width: 32px;
-    height: 32px;
-  }
-
-  .secure-session-footer {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: #ffffff;
-    border-top: 1px solid #e5e7eb;
-    box-shadow: 0 -8px 20px rgba(0, 0, 0, 0.08);
-    padding: 14px clamp(16px, 3vw, 32px);
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 12px;
-    z-index: 55;
-  }
-
-  /* Fix: Ensure page shell has enough padding so footer doesn't cover content */
-  body.secure-mode-active .page-shell {
-    padding-bottom: 120px !important;
-  }
-
-  @media (max-width: 1023px) {
-    .secure-session-footer {
-      align-items: stretch;
-    }
-
-    .secure-submit-btn {
-      width: 100%;
-    }
-  }
-
-  @media (max-height: 760px) {
-    .secure-session-card {
-      min-height: auto;
-    }
-  }
-
-  .secure-connection-indicator {
-    position: fixed;
-    top: clamp(48px, 6vw, 88px);
-    right: clamp(18px, 4vw, 64px);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 8px;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    background: rgba(15, 23, 42, 0.4);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-    color: #fff;
-    z-index: 30;
-  }
-
-  .secure-submit-btn {
-    width: 100%;
-    max-width: 240px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    border-radius: 999px;
-    border: none;
-    padding: 8px 14px;
-    background: linear-gradient(135deg, #12385d, #1b4c7a);
-    color: #fff;
-    font-weight: 600;
-    font-size: 1.05rem;
-    letter-spacing: 0.03em;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-  }
-
-  .secure-submit-btn:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 15px 30px rgba(18, 56, 93, 0.2);
-  }
-
-  .secure-submit-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .secure-submit-hint {
-    margin-top: 4px;
-    font-size: 0.95rem;
-    color: rgba(18, 56, 93, 0.7);
-    text-align: right;
-    width: 100%;
-  }
-
-  .secure-lobby-card {
-    border-radius: 32px;
-    border: 1px solid rgba(18, 56, 93, 0.08);
-    background: #ffffff;
-    color: #0f172a;
-    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
-  }
-
-  .secure-lobby-chip {
-    display: flex;
-    flex-direction: column;
-    padding: 10px 12px;
-    border-radius: 18px;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    background: rgba(18, 56, 93, 0.03);
-    min-width: 150px;
-  }
-
-  .secure-rules-list li {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    font-size: 0.95rem;
-    color: #334155;
-  }
-
-  .student-pre-live-body {
-    align-items: center;
-    gap: 18px;
-  }
-
-  .student-pre-live-icon {
-    width: 72px;
-    height: 72px;
-    border-radius: 50%;
-    background: var(--navy-10);
-    color: var(--veritas-navy);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2.4rem;
-    margin: 0 auto;
-  }
-
-  .student-pre-live-footer {
-    align-items: center;
-    gap: 16px;
-  }
-
-  .student-pre-live-status {
-    display: inline-flex;
-    align-items: center;
-    gap: 12px;
-    font-weight: 600;
-    letter-spacing: 0.28em;
-    color: var(--veritas-navy);
-    font-size: 0.75rem;
-  }
-
-  .student-pre-live-label {
-    font-weight: 700;
-  }
-
-  .student-pre-live-pips {
-    display: inline-flex;
-    gap: 6px;
-  }
-
-  .student-pre-live-pips .pip {
-    width: 10px;
-    height: 10px;
-    border-radius: 999px;
-    background: rgba(18, 56, 93, 0.35);
-    animation: motion-pulse 1.2s ease-in-out infinite;
-  }
-
-  .student-pre-live-reconnect {
-    font-size: 0.9rem;
-    color: var(--error-red);
-    margin: 0;
-  }
-
-  /* .student-stem styling moved to unified section above (line 320) */
-
-  .student-subline {
-    font-size: 0.95rem;
-    color: rgba(17, 17, 17, 0.72);
-    margin: 0;
-  }
-
-  .student-no-responses {
-    font-size: 0.95rem;
-    font-style: italic;
-    color: var(--veritas-navy);
-    text-align: left;
-    margin: 0;
-  }
-
-  .student-choices {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    max-width: 100%;
-    overflow: visible;
-    /* FIX: Changed from hidden to visible to prevent answer cutoff */
-  }
-
-  .student-choices li {
-    list-style: none;
-    margin: 0 !important;
-    padding: 0 !important;
-    line-height: 1;
-    width: 100%;
-    display: block;
-  }
-
-  .student-card img {
-    max-width: 100%;
-    height: auto;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--navy-12);
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
-  }
-
-  .answer-option {
-    position: relative;
-    width: 100%;
-    max-width: 100%;
-    text-align: left;
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    background: var(--bg-card);
-    color: var(--text-primary);
-    border-radius: var(--radius-md);
-    border: 1px solid rgba(18, 56, 93, 0.18);
-    padding: 10px 12px;
-    box-shadow: 0 2px 8px rgba(18, 56, 93, 0.08);
-    transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease, background-color 200ms ease;
-    cursor: pointer;
-    appearance: none;
-    box-sizing: border-box;
-    overflow: hidden;
-  }
-
-  .answer-option:hover {
-    border-color: var(--veritas-navy);
-    box-shadow: 0 6px 18px rgba(18, 56, 93, 0.16);
-    transform: translateY(-1px);
-  }
-
-  .answer-option:focus-visible {
-    outline: 3px solid rgba(18, 56, 93, 0.4);
-    outline-offset: 2px;
-  }
-
-  .answer-option.result-readonly {
-    pointer-events: none;
-    cursor: default !important;
-    box-shadow: 0 2px 6px rgba(18, 56, 93, 0.05);
-  }
-
-  .answer-option.answer-option-disabled {
-    opacity: 0.55;
-    pointer-events: none;
-    cursor: default;
-    box-shadow: 0 2px 6px rgba(18, 56, 93, 0.05);
-  }
-
-  .answer-option .result-indicator {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: var(--radius-full);
-    font-size: 0.95rem;
-    font-weight: 700;
-    background-color: rgba(18, 56, 93, 0.08);
-    color: var(--veritas-navy);
-    opacity: 0;
-    transform: scale(0.85);
-    position: absolute;
-    top: 16px;
-    right: 18px;
-    transition: opacity 220ms ease, transform 220ms ease, background-color 220ms ease, color 220ms ease;
-  }
-
-  .percentage-bubble {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4px 12px;
-    border-radius: 999px;
-    background-color: #f3f4f6;
-    color: #111827;
-    font-size: 0.9rem;
-    font-weight: 600;
-    opacity: 0;
-    transform: scale(0.85);
-    margin-left: auto;
-    margin-right: 8px;
-    transition: opacity 220ms ease, transform 220ms ease;
-  }
-
-  #question-container.showing-results .answer-option .result-indicator {
-    opacity: 1;
-    transform: scale(1);
-  }
-
-  #question-container.showing-results .answer-option .percentage-bubble {
-    opacity: 1;
-    transform: scale(1);
-  }
-
-  .answer-option .letter-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
-    background-color: rgba(18, 56, 93, 0.08);
-    border: 1px solid rgba(18, 56, 93, 0.22);
-    color: var(--veritas-navy);
-    font-weight: 600;
-    font-size: 1.05rem;
-    transition: background-color 220ms ease, border-color 220ms ease, color 220ms ease, transform 220ms ease;
-  }
-
-  .answer-option .option-leading {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 12px;
-    align-self: flex-start;
-    flex: 1;
-    min-width: 0;
-  }
-
-  .answer-option .option-body {
-    flex: 1;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-    max-width: 100%;
-    justify-content: flex-start;
-    overflow: hidden;
-  }
-
-  .answer-option .option-text-wrapper {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    min-width: 0;
-  }
-
-  .answer-option .option-text {
-    color: #1c1c1c;
-    font-size: 1.05rem;
-    line-height: 1.6;
-    font-family: "Inter", sans-serif;
-    margin: 0;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    word-break: break-word;
-    max-width: 100%;
-  }
-
-  .answer-option .option-image {
-    max-width: min(300px, 100%);
-    width: 100%;
-    height: auto;
-    border-radius: var(--radius-md);
-    border: 1px solid rgba(18, 56, 93, 0.16);
-    box-shadow: 0 3px 10px rgba(18, 56, 93, 0.12);
-    margin-bottom: 12px;
-    cursor: pointer;
-    transition: transform 200ms ease, box-shadow 200ms ease;
-  }
-
-  .answer-option .option-image:hover {
-    transform: scale(1.02);
-    box-shadow: 0 6px 16px rgba(18, 56, 93, 0.16);
-  }
-
-  .answer-option .result-ribbon {
-    font-size: 0.9rem;
-    font-weight: 600;
-    align-self: flex-end;
-    color: var(--veritas-navy);
-    display: none;
-  }
-
-  .answer-option .result-ribbon.is-visible {
-    display: inline-flex;
-    margin-top: 8px;
-  }
-
-  .answer-option.result-correct .result-ribbon {
-    color: var(--success-green);
-  }
-
-  .answer-option.result-incorrect .result-ribbon {
-    color: var(--text-secondary);
-  }
-
-  #question-container.results-stage .answer-option {
-    pointer-events: none;
-    cursor: default !important;
-  }
-
-  #question-container.showing-results .answer-option {
-    transition: background-color 240ms ease, border-color 240ms ease, color 240ms ease, box-shadow 240ms ease;
-  }
-
-  .answer-option.answer-option-selected {
-    border-color: var(--veritas-navy);
-    box-shadow: 0 0 0 3px rgba(18, 56, 93, 0.2);
-  }
-
-  .answer-option.answer-option-selected .letter-badge {
-    background-color: var(--veritas-navy);
-    border-color: var(--veritas-navy);
-    color: var(--brand-white);
-    transform: scale(1.02);
-  }
-
-  .answer-option.answer-option-selected .option-text {
-    color: var(--veritas-navy);
-  }
-
-  .answer-option.result-correct {
-    background-color: var(--success-bg) !important;
-    border-color: #2e7d32 !important;
-    box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.2);
-  }
-
-  .answer-option.result-correct .letter-badge {
-    background-color: rgba(46, 125, 50, 0.18) !important;
-    border-color: rgba(46, 125, 50, 0.4) !important;
-    color: var(--success-green) !important;
-  }
-
-  .answer-option.result-correct .option-text {
-    color: var(--success-green) !important;
-  }
-
-  .answer-option.result-correct .result-indicator {
-    background-color: rgba(46, 125, 50, 0.2);
-    color: var(--success-green);
-  }
-
-  .answer-option.result-incorrect {
-    background-color: #f5f6f8 !important;
-    border-color: rgba(17, 24, 39, 0.12) !important;
-    color: #1c1c1c !important;
-    box-shadow: none;
-  }
-
-  .answer-option.result-incorrect .letter-badge {
-    background-color: rgba(18, 56, 93, 0.06) !important;
-    border-color: rgba(18, 56, 93, 0.16) !important;
-    color: var(--veritas-navy) !important;
-  }
-
-  .answer-option.result-incorrect .result-indicator {
-    background-color: rgba(244, 67, 54, 0.12);
-    color: var(--error-red);
-  }
-
-  .answer-option.result-incorrect.result-your-choice {
-    border-color: rgba(198, 40, 40, 0.45) !important;
-    box-shadow: 0 0 0 2px rgba(198, 40, 40, 0.15);
-  }
-
-  .answer-option.result-your-choice .option-text {
-    color: var(--error-red) !important;
-  }
-
-  .prevent-select {
-    -webkit-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-    -webkit-touch-callout: none;
-  }
-
-  .prevent-select button,
-  .prevent-select .material-symbols-outlined {
-    -webkit-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-  }
-
-  .student-card img,
-  .student-card video,
-  .student-card figure {
-    max-width: 100%;
-    height: auto;
-  }
-
-  .veritas-modal-root {
-    position: fixed;
-    inset: 0;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-  }
-
-  .veritas-modal-root.is-active {
-    display: flex;
-  }
-
-  .veritas-modal-backdrop {
-    position: absolute;
-    inset: 0;
-    background: rgba(9, 17, 34, 0.55);
-    backdrop-filter: blur(3px);
-  }
-
-  .veritas-modal-dialog {
-    position: relative;
-    z-index: 1;
-    width: min(520px, 92vw);
-    border-radius: 16px;
-    background: var(--bg-card);
-    border-top: 4px solid var(--veritas-gold);
-    box-shadow: 0 24px 48px rgba(9, 17, 34, 0.25);
-    padding: 17px;
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-    animation: veritas-modal-in 220ms ease;
-  }
-
-  .veritas-modal-header h2 {
-    margin: 0;
-    font-size: 1.25rem;
-    color: var(--veritas-navy);
-    font-weight: 700;
-  }
-
-  .veritas-modal-body {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    color: var(--text-primary);
-    font-size: 0.98rem;
-    line-height: 1.55;
-  }
-
-  .veritas-modal-subtext {
-    color: var(--text-secondary);
-    font-size: 0.85rem;
-  }
-
-  .veritas-modal-input {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .veritas-modal-input input {
-    border-radius: 10px;
-    border: 1px solid rgba(18, 56, 93, 0.28);
-    padding: 6px 7px;
-    font-size: 0.95rem;
-    transition: border-color 160ms ease, box-shadow 160ms ease;
-  }
-
-  .veritas-modal-input input:focus-visible {
-    outline: none;
-    border-color: var(--veritas-navy);
-    box-shadow: 0 0 0 3px rgba(18, 56, 93, 0.2);
-  }
-
-  .veritas-modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-
-  .veritas-modal-button {
-    border: none;
-    border-radius: 999px;
-    padding: 6px 13px;
-    font-weight: 600;
-    font-size: 0.95rem;
-    cursor: pointer;
-    transition: transform 140ms ease, box-shadow 140ms ease, background-color 140ms ease, color 140ms ease;
-  }
-
-  .veritas-modal-button.primary {
-    background: var(--veritas-navy);
-    color: var(--brand-white);
-    box-shadow: 0 8px 20px rgba(18, 56, 93, 0.25);
-  }
-
-  .veritas-modal-button.primary:hover:not([disabled]) {
-    background: #0f2d4a;
-    transform: translateY(-1px);
-  }
-
-  .veritas-modal-button.secondary {
-    background: transparent;
-    color: var(--veritas-navy);
-    border: 1px solid rgba(18, 56, 93, 0.3);
-  }
-
-  .veritas-modal-button.secondary:hover:not([disabled]) {
-    background: rgba(18, 56, 93, 0.08);
-  }
-
-  .veritas-modal-button.destructive {
-    background: var(--error-red);
-    color: var(--brand-white);
-    box-shadow: 0 8px 18px rgba(198, 40, 40, 0.25);
-  }
-
-  .veritas-modal-button.destructive:hover:not([disabled]) {
-    background: #a61b1b;
-  }
-
-  .veritas-modal-button[disabled] {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-  }
-
-  .veritas-modal-spinner {
-    width: 18px;
-    height: 18px;
-    border-radius: 999px;
-    border: 2px solid rgba(255, 255, 255, 0.6);
-    border-top-color: transparent;
-    animation: veritas-spin 0.7s linear infinite;
-    display: none;
-    margin-left: 10px;
-  }
-
-  .veritas-modal-button.loading .veritas-modal-spinner {
-    display: inline-block;
-  }
-
-  .veritas-modal-button.loading span {
-    opacity: 0.75;
-  }
-
-  .dark .veritas-modal-dialog {
-    background: rgba(15, 23, 35, 0.96);
-    color: #e2e8f0;
-    border-top-color: #c5a05a;
-    box-shadow: 0 24px 48px rgba(2, 6, 23, 0.55);
-  }
-
-  .dark .veritas-modal-header h2 {
-    color: #f8fafc;
-  }
-
-  .dark .veritas-modal-body {
-    color: #f1f5f9;
-  }
-
-  .dark .veritas-modal-subtext {
-    color: #cbd5f5;
-  }
-
-  .dark .veritas-modal-input input {
-    background: rgba(15, 23, 42, 0.7);
-    border-color: rgba(148, 163, 184, 0.4);
-    color: #f8fafc;
-  }
-
-  .dark .veritas-modal-input input:focus-visible {
-    border-color: #93c5fd;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35);
-  }
-
-  .dark .veritas-modal-button.secondary {
-    color: #e2e8f0;
-    border-color: rgba(148, 163, 184, 0.4);
-  }
-
-  .dark .veritas-modal-button.secondary:hover:not([disabled]) {
-    background: rgba(148, 163, 184, 0.16);
-  }
-
-  .dark .veritas-modal-button.primary {
-    background: #234776;
-  }
-
-  .dark .veritas-modal-button.primary:hover:not([disabled]) {
-    background: #1a3456;
-  }
-
-  .dark .veritas-modal-backdrop {
-    background: rgba(2, 6, 23, 0.7);
-    backdrop-filter: blur(4px);
-  }
-
-  body.veritas-modal-open {
-    overflow: hidden;
-  }
-
-  @keyframes veritas-modal-in {
-    from {
-      opacity: 0;
-      transform: translateY(16px) scale(0.98);
-    }
-
-    to {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-  }
-
-  @keyframes veritas-spin {
-    from {
-      transform: rotate(0deg);
-    }
-
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
-  @media (max-width: 480px) {
-    .student-card {
-      width: min(98vw, 480px);
-      margin: 12px auto;
-    }
-
-    .student-card-header {
-      padding: 8px 12px 6px;
-    }
-
-    .student-card-body {
-      padding: 13px 12px 5px;
-    }
-
-    .student-card-options {
-      padding: 5px 12px 13px;
-      gap: 10px;
-    }
-
-    .answer-option {
-      flex-direction: column;
-      align-items: stretch;
-    }
-
-    .answer-option .letter-badge {
-      width: 40px;
-      height: 40px;
-    }
-
-    .veritas-modal-dialog {
-      width: min(98vw, 480px);
-      padding: 13px;
-      gap: 16px;
-    }
-
-    .veritas-modal-actions {
-      width: 100%;
-      justify-content: stretch;
-    }
-
-    .veritas-modal-button {
-      flex: 1;
-    }
-  }
-
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
-  .status-card {
-    background: #ffffff !important;
-    color: #111827 !important;
-  }
-
-  .status-card .material-symbols-outlined {
-    color: var(--veritas-navy) !important;
-  }
-
-  .confidence-selector {
-    margin-top: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .confidence-btn {
-    height: 3.5rem;
-    padding: 0 1.5rem;
-    border-radius: 0.75rem;
-    border: 2px solid;
-    transition: all 200ms ease;
-    font-weight: 600;
-    font-size: 1.125rem;
-    cursor: pointer;
-    color: #111827 !important;
-  }
-
-  .confidence-btn[data-confidence="guessing"] {
-    background-color: #fecaca;
-    border-color: #ef4444;
-  }
-
-  .confidence-btn[data-confidence="guessing"]:hover {
-    background-color: #fca5a5;
-    border-color: #dc2626;
-  }
-
-  .confidence-btn[data-confidence="somewhat-sure"] {
-    background-color: #fde68a;
-    border-color: #f59e0b;
-  }
-
-  .confidence-btn[data-confidence="somewhat-sure"]:hover {
-    background-color: #fcd34d;
-    border-color: #d97706;
-  }
-
-  .confidence-btn[data-confidence="very-sure"] {
-    background-color: #bfdbfe;
-    border-color: #3b82f6;
-  }
-
-  .confidence-btn[data-confidence="very-sure"]:hover {
-    background-color: #93c5fd;
-    border-color: #2563eb;
-  }
-
-  .confidence-btn[data-confidence="certain"] {
-    background-color: #bbf7d0;
-    border-color: #22c55e;
-  }
-
-  .confidence-btn[data-confidence="certain"]:hover {
-    background-color: #86efac;
-    border-color: #16a34a;
-  }
-
-  /* Student Landing Page Animations */
-  @keyframes drawLine {
-    from {
-      transform: scaleX(0);
-    }
-
-    to {
-      transform: scaleX(1);
-    }
-  }
-
-  @keyframes shimmerBg {
-    0% {
-      background-position: -1000px 0;
-    }
-
-    100% {
-      background-position: 1000px 0;
-    }
-  }
-
-  @keyframes floatParticle {
-
-    0%,
-    100% {
-      transform: translateY(0) translateX(0);
-      opacity: 0.4;
-    }
-
-    50% {
-      transform: translateY(-20px) translateX(10px);
-      opacity: 0.8;
-    }
-  }
-
-  @keyframes pulseDot {
-
-    0%,
-    80%,
-    100% {
-      opacity: 0.3;
-      transform: scale(1);
-    }
-
-    40% {
-      opacity: 1;
-      transform: scale(1.2);
-    }
-  }
-
-  .shimmer-particle {
-    position: absolute;
-    width: 4px;
-    height: 4px;
-    background: radial-gradient(circle, #c5a05a, transparent);
-    border-radius: 50%;
-    animation: floatParticle 6s ease-in-out infinite;
-    pointer-events: none;
-  }
-
-  .waiting-dots .dot {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    margin: 0 4px;
-    background: #12385d;
-    border-radius: 50%;
-    animation: pulseDot 1.4s ease-in-out infinite;
-  }
-
-  .waiting-dots .dot:nth-child(1) {
-    animation-delay: 0s;
-  }
-
-  .waiting-dots .dot:nth-child(2) {
-    animation-delay: 0.2s;
-  }
-
-  .waiting-dots .dot:nth-child(3) {
-    animation-delay: 0.4s;
-  }
-
-  /* =========================
-       METACOGNITION CONFIDENCE
-       ========================= */
-
-  .secure-confidence-prompt {
-    padding: 2rem;
-    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-    border-radius: 12px;
-    margin-top: 1.5rem;
-    animation: fadeInUp 0.3s ease-out;
-  }
-
-  .confidence-wrapper {
-    max-width: 600px;
-    margin: 0 auto;
-  }
-
-  .confidence-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #1f2937;
-    text-align: center;
-    margin-bottom: 1.5rem;
-  }
-
-  .confidence-buttons {
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-
-  .confidence-btn {
-    flex: 1;
-    min-width: 140px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 1.25rem 1rem;
-    border: 2px solid transparent;
-    border-radius: 10px;
-    background: white;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  .confidence-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  }
-
-  .confidence-guessing {
-    border-color: #ef4444;
-  }
-
-  .confidence-guessing:hover {
-    background: #fef2f2;
-    border-color: #dc2626;
-  }
-
-  .confidence-somewhat {
-    border-color: #f59e0b;
-  }
-
-  .confidence-somewhat:hover {
-    background: #fffbeb;
-    border-color: #d97706;
-  }
-
-  .confidence-very {
-    border-color: #10b981;
-  }
-
-  .confidence-very:hover {
-    background: #f0fdf4;
-    border-color: #059669;
-  }
-
-  .confidence-emoji {
-    font-size: 2rem;
-    line-height: 1;
-  }
-
-  .confidence-label {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #374151;
-  }
-
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  /* Mobile responsiveness for confidence buttons */
-  @media (max-width: 640px) {
-    .confidence-buttons {
-      flex-direction: column;
-    }
-
-    .confidence-btn {
-      min-width: 100%;
-    }
-  }
-
-  /* =============================================================================
-     REVIEW MODE & FLASHLIGHT (Redesign)
-     ============================================================================= */
-
-  /* Flashlight Overlay */
-  /* Privacy Blur Mode (Replaces Flashlight) */
-  .privacy-active .question-textual,
-  .privacy-active .answer-area,
-  .privacy-active .question-visual {
-    filter: blur(8px);
-    transition: filter 0.3s ease;
-    cursor: help;
-  }
-
-  .privacy-active .question-textual:hover,
-  .privacy-active .answer-area:hover,
-  .privacy-active .question-visual:hover {
-    filter: none;
-  }
-
-  /* Flashlight Overlay - REMOVED/HIDDEN */
-  #flashlight-overlay {
-    display: none !important;
-  }
-
-
-  /* Review Ribbon */
-  .review-ribbon-strip {
-    position: absolute;
-    left: -32px;
-    top: 0;
-    bottom: 0;
-    width: 24px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    writing-mode: vertical-rl;
-    text-orientation: mixed;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.15em;
-    color: var(--text-muted);
-    border-right: 1px solid var(--brand-light-gray);
-    text-transform: uppercase;
-    opacity: 0.6;
-    pointer-events: none;
-  }
-
-  /* Ensure parent allows ribbon positioning */
-  .student-card.results-stage {
-    position: relative;
-    overflow: visible !important;
-  }
-
-  /* Answer Options in Review Mode */
-  .student-choices button.result-readonly {
-    cursor: default !important;
-    transform: none !important;
-    box-shadow: none !important;
-    background-color: #ffffff;
-    /* Default bg */
-    border-color: var(--brand-light-gray);
-    padding-right: 60px;
-    /* Space for flag */
-    transition: background-color 0.3s ease, border-color 0.3s ease;
-  }
-
-  .student-choices button.result-readonly:hover {
-    box-shadow: none !important;
-    transform: none !important;
-    background-color: #ffffff;
-    /* No hover bg change */
-  }
-
-  /* Flags */
-  .percentage-flag {
-    position: absolute;
-    top: 12px;
-    right: -8px;
-    background: var(--brand-dark-gray);
-    color: white;
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 4px 8px;
-    border-radius: 4px 0 0 4px;
-    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
-    z-index: 10;
-  }
-
-  .percentage-flag::after {
-    content: '';
-    position: absolute;
-    right: 0;
-    bottom: -6px;
-    border-color: transparent #111 transparent transparent;
-    /* Dark triangle for fold effect */
-  }
-
-  /* Rich Text Content Styles (Quill & Formats) */
-  .ql-editor {
-    padding: 0;
-    font-family: inherit;
-    font-size: inherit;
-    overflow-y: visible;
-  }
-
-  .ql-editor p {
-    margin-bottom: 0.5em;
-  }
-
-  .ql-align-center {
-    text-align: center;
-  }
-
-  .ql-align-right {
-    text-align: right;
-  }
-
-  .ql-align-justify {
-    text-align: justify;
-  }
-
-  .ql-editor img {
-    max-width: 100%;
-    height: auto;
-    border-radius: 8px;
-    display: inline-block;
-    margin: 4px 0;
-  }
-
-  .ql-editor .math-tex {
-    display: inline-block;
-    font-size: 1.1em;
-    padding: 0 2px;
-  }
-
-  /* Override for specific question text container */
-  #question-text img,
-  button[data-answer-text] img {
-    max-width: 100%;
-    height: auto;
-    border-radius: 8px;
-    margin-top: 8px;
-    display: block;
-  }
-
-  button[data-answer-text] .ql-editor p {
-    margin: 0;
-    /* Tighten up answer choices */
-  }
-
-  /* Correct / Incorrect States */
-  .student-choices button.result-correct {
-    background-color: #f0fdf4 !important;
-    /* Green-50 */
-    border-color: #4ade80 !important;
-    /* Green-400 */
-  }
-
-  .student-choices button.result-incorrect {
-    background-color: #fef2f2 !important;
-    /* Red-50 */
-    border-color: #f87171 !important;
-    /* Red-400 */
-    opacity: 1 !important;
-  }
-
-  .student-choices button.result-neutral {
-    opacity: 0.6;
-  }
-
-  /* Badges */
-  .result-badges {
-    position: absolute;
-    bottom: 8px;
-    right: 12px;
-    display: flex;
-    gap: 6px;
-    pointer-events: none;
-  }
-
-  .badge-pill {
-    font-size: 0.65rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    padding: 2px 6px;
-    border-radius: 4px;
-    letter-spacing: 0.05em;
-  }
-
-  .badge-correct {
-    color: #166534;
-    /* Green-800 */
-    background: #bbf7d0;
-    /* Green-200 */
-  }
-
-  .badge-your-choice {
-    color: #1e40af;
-    /* Blue-800 */
-    background: #bfdbfe;
-    /* Blue-200 */
-  }
-
-  /* Remove old elements */
-  .result-readonly .percentage-bubble {
-    display: none !important;
-    /* Hide old bubbles */
-  }
-
-  .result-readonly .result-indicator {
-    display: none !important;
-    /* Hide old big circles */
-  }
-
-  /* Icon Markers (Check/X) */
-  .result-icon-marker {
-    position: absolute;
-    top: 50%;
-    right: 16px;
-    transform: translateY(-50%);
-    font-family: 'Material Symbols Outlined';
-    font-size: 24px;
-    font-weight: normal;
-    line-height: 1;
-  }
-
-  .result-correct .result-icon-marker {
-    color: #15803d;
-    /* Green-700 */
-    content: 'check_circle';
-  }
-
-  .result-incorrect .result-icon-marker {
-    color: #b91c1c;
-    /* Red-700 */
-    content: 'cancel';
-  }
-</style>
-</head>
-
-<body class="light">
-  <body class="font-display bg-white text-black min-h-screen">
-  <!-- Lock Overlay - Shows when student violates proctoring rules -->
-  <div id="lock-overlay"
-    class="fixed inset-0 z-[9998] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center"
-    style="display: none;">
-    <!-- Content injected by showLockEnforcementUI() -->
-  </div>
-
-  <!-- Transition Loading Overlay - Shows during view transitions -->
-  <div id="transition-overlay"
-    class="fixed inset-0 z-[9990] bg-white/95 backdrop-blur-sm flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-200"
-    style="display: none;">
-    <div class="flex flex-col items-center gap-4">
-      <div class="flex flex-row gap-2">
-        <div class="w-3 h-3 rounded-full bg-veritas-navy animate-bounce"></div>
-        <div class="w-3 h-3 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.15s]"></div>
-        <div class="w-3 h-3 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.3s]"></div>
-      </div>
-      <p id="transition-message" class="text-veritas-navy text-sm font-medium">Loading...</p>
-    </div>
-  </div>
-
-  <!-- Flashlight Overlay for Review Mode -->
-  <div id="flashlight-overlay" class="fixed inset-0 z-[8000] pointer-events-none" style="display: none;"></div>
-
-  <!-- Global Heads-Up Display -->
-  <header class="hud-bar">
-    <div class="hud-left">
-      <span class="hud-brand" aria-label="Veritas">VERITAS</span>
-      <span id="student-mode-label" class="hud-mode">Live Poll</span>
-    </div>
-    <div class="hud-center">
-      <p id="question-progress" class="hud-progress" aria-live="polite">QUESTION --</p>
-    </div>
-    <div class="hud-right">
-      <div id="secure-topbar-timer" class="hud-timer hidden" aria-live="polite">
-        <button id="timer-visibility-toggle" type="button" class="hud-icon-btn" aria-pressed="false"
-          aria-label="Hide timer">
-          <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
-        </button>
-        <span id="secure-countdown" class="hud-timer-value">00:00</span>
-      </div>
-      <div id="loader" class="loader" style="display: none;">
-        <div class="h-6 w-6 animate-spin rounded-full border-2 border-white/80 border-t-transparent"></div>
-      </div>
-    </div>
-  </header>
-
-  <main class="page-shell">
-    <div id="connectivity-banner"
-      class="hidden fixed top-20 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-lg flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-800 shadow-lg transition-all duration-200 backdrop-blur-sm">
-      <span id="connectivity-icon" class="material-symbols-outlined text-2xl">sync</span>
-      <div class="flex flex-col text-left flex-1">
-        <span id="connectivity-message" class="text-sm font-semibold">Reconnecting... your poll data is catching
-          up.</span>
-        <span id="connectivity-submessage" class="text-xs text-amber-700/80 opacity-0"></span>
-      </div>
-    </div>
-    <!-- Entry Screen - Clean Professional Landing Panel -->
-    <div id="entry-screen" class="w-full max-w-4xl mx-auto text-left animate-fade-in px-6">
-      <div class="space-y-8">
-        <div class="flex items-center gap-4">
-          <div class="w-14 h-14 rounded-xl flex items-center justify-center"
-            style="background: #12385d; color: #ffffff;">
-            <span class="material-symbols-outlined text-3xl">fact_check</span>
-          </div>
-          <div>
-            <p class="text-sm font-semibold uppercase tracking-[0.22em] text-[#12385d]">Veritas</p>
-            <h1 class="text-4xl sm:text-5xl font-bold" style="color: #12385d; letter-spacing: -0.01em;">Live Polls</h1>
-          </div>
-        </div>
-        <p class="text-lg text-gray-700 leading-relaxed max-w-2xl">Your session will begin in fullscreen for a
-          distraction-free experience. Click below to get started.</p>
-        <button id="start-session-btn" type="button"
-          class="inline-flex items-center justify-center gap-3 px-10 py-3 rounded-full text-white text-lg font-semibold transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-[#12385d]/20"
-          style="background: #12385d;">
-          <span class="material-symbols-outlined text-2xl">play_arrow</span>
-          <span>Begin Poll</span>
-        </button>
-      </div>
-    </div>
-
-
-    <!-- Student App Container -->
-    <div class="w-full max-w-6xl mx-auto" id="student-container" style="display: none;">
-      <div id="student-loader" class="flex flex-col items-center justify-center min-h-[50vh] animate-fade-in"
-        style="display: block;">
-        <div class="relative w-24 h-24 mb-8 flex items-center justify-center">
-          <div class="absolute inset-0 rounded-full bg-veritas-navy/10 animate-pulse-ring"></div>
-          <div class="absolute inset-0 rounded-full bg-veritas-navy/10 animate-pulse-ring" style="animation-delay: 1s;">
-          </div>
-          <div class="relative w-16 h-16 rounded-full bg-veritas-navy flex items-center justify-center shadow-xl">
-            <span class="material-symbols-outlined text-3xl text-white">psychology</span>
-          </div>
-        </div>
-        <h2 class="text-2xl font-bold text-veritas-navy mb-2 animate-text-shimmer">Initializing Session...</h2>
-        <p class="text-slate-500 font-medium">Establishing secure connection</p>
-      </div>
-
-      <section id="secure-lobby" class="secure-lobby-card animate-fade-in" style="display: none;">
-        <div class="px-8 sm:px-12 py-8 border-b border-slate-100">
-          <p class="text-xs font-semibold tracking-[0.3em] text-veritas-navy/70 uppercase">Secure Assessment</p>
-          <h2 id="secure-lobby-title" class="text-3xl sm:text-4xl font-semibold text-veritas-navy mt-2">Secure
-            Assessment</h2>
-          <p id="secure-lobby-summary" class="text-base text-slate-500 mt-2"></p>
-        </div>
-        <div class="px-8 sm:px-12 py-8 grid gap-8 lg:grid-cols-2">
-          <div class="space-y-6">
-            <div class="flex flex-wrap gap-4">
-              <div class="secure-lobby-chip">
-                <span class="text-xs font-semibold tracking-wide text-slate-500 uppercase">Time Limit</span>
-                <span id="secure-lobby-time" class="text-2xl font-semibold text-veritas-navy mt-1">--</span>
-              </div>
-              <div class="secure-lobby-chip">
-                <span class="text-xs font-semibold tracking-wide text-slate-500 uppercase">Questions</span>
-                <span id="secure-lobby-questions" class="text-2xl font-semibold text-veritas-navy mt-1">--</span>
-              </div>
-            </div>
-            <p id="secure-window-message" class="text-sm text-slate-500"></p>
-          </div>
-          <div id="secure-access-code-group" class="space-y-2" style="display: none;">
-            <label for="secure-access-code" class="text-sm font-semibold text-slate-600">Access Code</label>
-            <input id="secure-access-code" type="text" inputmode="text" autocomplete="off" maxlength="16"
-              class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-lg font-semibold tracking-[0.4em] text-center uppercase focus:border-veritas-navy focus:ring-2 focus:ring-veritas-navy/30"
-              placeholder="ENTER CODE" />
-            <p id="secure-access-code-error" class="text-sm text-red-600 hidden"></p>
-          </div>
-        </div>
-        <div class="px-8 sm:px-12 pb-10 flex flex-col gap-4">
-          <button id="secure-begin-btn" type="button"
-            class="inline-flex items-center justify-center gap-2 rounded-2xl bg-veritas-navy px-8 py-4 text-white text-lg font-semibold shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-veritas-navy/30">
-            <span class="material-symbols-outlined text-xl">fullscreen</span>
-            <span id="secure-begin-label">Begin Assessment</span>
-          </button>
-          <p class="text-xs text-slate-500">Going fullscreen is required. Your teacher is monitoring for tab switches
-            and disconnects.</p>
-          <ul id="secure-rules-list" class="secure-rules-list space-y-3"></ul>
-        </div>
-      </section>
-
-      <!-- Pre-Live Card - Redesigned Waiting Screen -->
-      <section id="pre-live-card" class="student-card student-pre-live-card text-center animate-fade-in"
-        style="display: none; max-width: 900px; background: white; color: #111;">
-        <div class="student-card-body student-pre-live-body" style="padding: 29px 19px;">
-          <!-- Animated Icon -->
-          <div class="student-pre-live-icon mb-6" aria-hidden="true"
-            style="width: 96px; height: 96px; margin: 0 auto; background: rgba(18, 56, 93, 0.08); color: #12385d; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;">
-            <span class="material-symbols-outlined" style="font-size: 3.5rem;">hourglass_top</span>
-          </div>
-
-          <!-- Main Message -->
-          <h2 id="pre-live-primary" class="student-stem text-4xl sm:text-5xl font-bold mb-4" style="color: #12385d;">
-            Waiting for your teacher to start the poll
-            <span class="waiting-dots ml-2">
-              <span class="dot"></span>
-              <span class="dot"></span>
-              <span class="dot"></span>
-            </span>
-          </h2>
-
-          <!-- Subtext -->
-          <p id="pre-live-subline" class="student-subline text-lg max-w-2xl mx-auto mb-6" style="color: #6b7280;">
-            Keep this tab open — the question will appear automatically.
-          </p>
-
-          <!-- Humorous Footer -->
-          <p class="text-sm italic mt-8" style="color: #9ca3af;">
-            Patience is a virtue (and a graded skill).
-          </p>
-
-          <!-- Optional Shimmer Particles -->
-          <div class="shimmer-particle" style="top: 20%; left: 15%; animation-delay: 0s;"></div>
-          <div class="shimmer-particle" style="top: 60%; right: 20%; animation-delay: 2s;"></div>
-          <div class="shimmer-particle" style="bottom: 30%; left: 25%; animation-delay: 4s;"></div>
-        </div>
-
-        <!-- Status Footer -->
-        <div class="student-card-options student-pre-live-footer"
-          style="background: rgba(18, 56, 93, 0.04); padding: 12px 19px; border-top: 1px solid rgba(18, 56, 93, 0.1);">
-          <div class="student-pre-live-status" style="color: #12385d;">
-            <span class="student-pre-live-label font-bold">PRE-LIVE</span>
-            <span class="student-pre-live-pips" aria-hidden="true">
-              <span class="pip" style="animation-delay: 0s; background: #12385d;"></span>
-              <span class="pip" style="animation-delay: 0.2s; background: #12385d;"></span>
-              <span class="pip" style="animation-delay: 0.4s; background: #12385d;"></span>
-            </span>
-          </div>
-          <p id="pre-live-reconnect-line" class="student-pre-live-reconnect hidden" style="color: #12385d;">
-            Reconnecting… syncing you back into place.
-          </p>
-        </div>
-      </section>
-
-      <!-- Status Container -->
-      <div id="status-container" class="text-center py-12 animate-fade-in" style="display: none;">
-        <div class="status-card bg-white rounded-2xl border border-gray-200 p-8 sm:p-12 shadow-2xl max-w-3xl mx-auto">
-          <span class="material-symbols-outlined text-6xl text-veritas-navy mb-4 inline-block">schedule</span>
-          <h2 id="status-message" class="text-gray-900 text-2xl font-semibold">Connecting...</h2>
-          <p id="status-submessage" class="text-gray-700 text-lg mt-4" style="display: none;"></p>
-          <div id="resume-controls" class="mt-8 space-y-3" style="display: none;">
-            <p class="text-gray-800 text-base leading-relaxed">
-              Click below to return to fullscreen and resume.
-            </p>
-            <button id="resume-session-btn" type="button"
-              class="mx-auto flex items-center justify-center gap-2 px-8 py-4 rounded-lg bg-green-500 text-white text-lg font-bold hover:bg-green-600 transition-transform duration-300 hover:scale-105 shadow-lg">
-              <span class="material-symbols-outlined text-xl">fullscreen</span>
-              <span id="resume-session-label">Resume Poll</span>
-            </button>
-          </div>
-          <div id="secure-exit-controls" class="mt-10 space-y-3 hidden">
-            <p id="secure-exit-description" class="text-gray-800 text-base leading-relaxed">
-              When your teacher dismisses you, use the button below to close fullscreen safely.
-            </p>
-            <button id="secure-exit-btn" type="button"
-              class="mx-auto flex items-center justify-center gap-2 px-8 py-3 rounded-lg border border-gray-300 bg-gray-100 text-gray-900 text-base font-semibold hover:bg-gray-200 transition-colors">
-              <span class="material-symbols-outlined text-lg">logout</span>
-              <span id="secure-exit-label">Exit Secure Session</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Question Container -->
-      <section id="question-container" class="student-card prevent-select animate-fade-in" aria-live="polite"
-        style="display: none;">
-        <div id="question-content" class="question-layout no-image">
-          <div id="question-visual" class="question-visual">
-            <img id="question-image" src="" alt="Question" class="student-question-image" referrerpolicy="no-referrer"
-              onerror="this.style.display='none';" style="display: none;" />
-          </div>
-          <div class="question-textual">
-            <h2 id="question-text" class="student-stem whitespace-pre-wrap"></h2>
-            <p id="question-subline" class="student-subline hidden"></p>
-          </div>
-        </div>
-        <div class="answer-area">
-          <p id="no-responses-message" class="student-no-responses hidden"></p>
-          <ul id="options-list" class="student-choices"></ul>
-        </div>
-      </section>
-
-      <!-- Secure Assessment Focus Mode -->
-      <section id="individual-timed-session" class="student-card secure-session-card prevent-select animate-fade-in"
-        style="display: none;" aria-live="polite">
-        <p id="secure-progress-label" class="sr-only">Question 1 of 10</p>
-        <div id="secure-connection-warning" class="secure-connection-warning hidden"></div>
-        <div id="secure-question-content" class="secure-session-body">
-          <div id="secure-question-layout" class="question-layout no-image">
-            <div id="secure-question-visual" class="question-visual">
-              <img id="secure-question-image" src="" alt="Question" class="student-question-image"
-                referrerpolicy="no-referrer" onerror="this.style.display='none';" style="display: none;" />
-            </div>
-            <div class="question-textual">
-              <h2 id="secure-question-text" class="student-stem whitespace-pre-wrap"></h2>
-              <p id="secure-question-subline" class="student-subline hidden"></p>
-            </div>
-          </div>
-          <div class="answer-area">
-            <ul id="secure-options-list" class="student-choices"></ul>
-          </div>
-
-          <!-- Metacognition Confidence Selector -->
-          <div id="secure-confidence-prompt" class="secure-confidence-prompt hidden" style="display: none;">
-            <div class="confidence-wrapper">
-              <h3 class="confidence-title">How confident are you in your answer?</h3>
-              <div class="confidence-buttons">
-                <button type="button" class="confidence-btn confidence-guessing" data-confidence="guessing">
-                  <span class="confidence-emoji">🤔</span>
-                  <span class="confidence-label">Guessing</span>
-                </button>
-                <button type="button" class="confidence-btn confidence-somewhat" data-confidence="somewhat-sure">
-                  <span class="confidence-emoji">🤷</span>
-                  <span class="confidence-label">Somewhat Sure</span>
-                </button>
-                <button type="button" class="confidence-btn confidence-very" data-confidence="very-sure">
-                  <span class="confidence-emoji">✅</span>
-                  <span class="confidence-label">Very Sure</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="secure-session-footer">
-          <button id="secure-submit-btn" class="secure-submit-btn" type="button">
-            <span class="material-symbols-outlined text-xl" aria-hidden="true">arrow_forward</span>
-            <span id="secure-submit-label">Lock Answer &amp; Next</span>
-          </button>
-          <p id="secure-submit-hint" class="secure-submit-hint">Select an answer before locking and moving forward.</p>
-        </div>
-      </section>
-
-      <div id="secure-connection-indicator" class="secure-connection-indicator hidden" aria-live="polite">
-        <span id="secure-connection-dot" class="secure-connection-dot bg-emerald-400" aria-hidden="true"></span>
-        <span id="secure-connection-status" class="sr-only" role="status">Connected</span>
-      </div>
-
-    </div>
-
-    <!-- TI-84 Calculator FAB and Draggable Window -->
-    <button id="calc-fab"
-      class="hidden fixed bottom-6 right-6 z-40 h-14 w-14 rounded-full bg-veritas-navy text-white shadow-xl hover:bg-veritas-navy/90 transition-transform active:scale-95 flex items-center justify-center"
-      aria-label="Open TI-84 Calculator">
-      <span class="material-symbols-outlined text-2xl">functions</span>
-    </button>
-
-    <div id="calc-window"
-      class="hidden fixed bottom-28 right-6 z-50 w-[360px] h-[640px] bg-brand-dark-gray rounded-xl shadow-2xl overflow-hidden border border-white/20 flex flex-col resize-y min-h-[400px] max-h-[90vh]">
-      <div id="calc-header"
-        class="h-10 bg-veritas-navy/90 backdrop-blur cursor-move flex items-center justify-between px-4 select-none flex-shrink-0">
-        <span class="text-white font-bold text-xs tracking-wider uppercase flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm">function</span> TI-84 Plus
-        </span>
-        <button id="calc-close" type="button" class="text-white/60 hover:text-white transition-colors">
-          <span class="material-symbols-outlined text-lg">close</span>
-        </button>
-      </div>
-
-      <!-- Debug Overlay (Hidden by default) -->
-      <div id="debug-overlay"
-        class="fixed top-0 left-0 w-full h-full bg-black/90 z-[9999] hidden p-4 font-mono text-green-400 text-xs overflow-auto pointer-events-none">
-        <div class="pointer-events-auto absolute top-4 right-4">
-          <button onclick="document.getElementById('debug-overlay').classList.add('hidden')"
-            class="bg-red-500/20 text-red-500 px-3 py-1 rounded border border-red-500/50">CLOSE</button>
-        </div>
-        <div id="debug-content" class="whitespace-pre-wrap">Waiting for debug data...</div>
-      </div>
-      <div class="flex-1 bg-black relative overflow-hidden">
-        <div id="calc-loader" class="absolute inset-0 flex items-center justify-center text-white/50 text-sm">Loading...
-        </div>
-        <iframe id="calc-iframe" src="about:blank" data-src="https://mpcalc-aaa91.web.app/"
-          class="w-full h-full border-0" allow="fullscreen" title="TI-84 Calculator"
-          aria-label="Embedded TI-84 calculator" tabindex="-1" data-safe-harbor="calculator"></iframe>
-      </div>
-    </div>
-  </main>
-  <style>
-    /* Login Screen Styles - Premium Light Mode & Glassmorphism */
-    :root {
-        --v-navy: #12385d;
-        --v-gold: #c5a05a;
-        --v-slate-50: #f8fafc;
-        --v-slate-100: #f1f5f9;
-        --v-slate-400: #94a3b8;
-        --v-slate-600: #475569;
-        --v-slate-900: #0f172a;
-    }
-
-    #login-overlay {
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        width: 100vw !important;
-        height: 100vh !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        z-index: 2147483647 !important;
-        /* Dynamic Light Background */
-        background: radial-gradient(circle at 0% 0%, #ffffff 0%, #f1f5f9 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        box-sizing: border-box !important;
-        overflow: hidden;
-    }
-
-    /* Animated background elements */
-    .bg-shape {
-        position: absolute;
-        filter: blur(80px);
-        opacity: 0.6;
-        z-index: -1;
-        animation: floatShape 20s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .bg-shape-1 {
-        top: -10%;
-        left: -10%;
-        width: 600px;
-        height: 600px;
-        background: radial-gradient(#e0e7ff, transparent 70%);
-        animation-delay: 0s;
-    }
-
-    .bg-shape-2 {
-        bottom: -10%;
-        right: -10%;
-        width: 500px;
-        height: 500px;
-        background: radial-gradient(#fef3c7, transparent 70%);
-        animation-delay: -5s;
-    }
-
-    @keyframes floatShape {
-        0% {
-            transform: translate(0, 0) rotate(0deg);
-        }
-
-        100% {
-            transform: translate(50px, 50px) rotate(10deg);
-        }
-    }
-
-    .login-card {
-        background: rgba(255, 255, 255, 0.85);
-        backdrop-filter: blur(20px) saturate(180%);
-        -webkit-backdrop-filter: blur(20px) saturate(180%);
-        border: 1px solid rgba(255, 255, 255, 1);
-        box-shadow:
-            0 20px 25px -5px rgba(0, 0, 0, 0.05),
-            0 8px 10px -6px rgba(0, 0, 0, 0.01),
-            inset 0 0 0 1px rgba(255, 255, 255, 0.5);
-        border-radius: 32px;
-        padding: 64px 56px;
-        width: 100%;
-        max-width: 480px;
-        text-align: center;
-        position: relative;
-        transform: translateY(20px);
-        opacity: 0;
-        animation: cardEntry 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
-
-    @keyframes cardEntry {
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    /* Logo Container */
-    .login-logo {
-        width: 80px;
-        height: 80px;
-        margin: 0 auto 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        /* Subtle float animation */
-        animation: logoFloat 6s ease-in-out infinite;
-    }
-
-    @keyframes logoFloat {
-
-        0%,
-        100% {
-            transform: translateY(0);
-        }
-
-        50% {
-            transform: translateY(-6px);
-        }
-    }
-
-    .logo-svg {
-        width: 100%;
-        height: 100%;
-        filter: drop-shadow(0 10px 15px rgba(18, 56, 93, 0.15));
-    }
-
-    .login-title {
-        color: var(--v-navy);
-        font-size: 32px;
-        font-weight: 800;
-        margin-bottom: 12px;
-        letter-spacing: -0.03em;
-        opacity: 0;
-        animation: fadeInUp 0.6s ease-out 0.2s forwards;
-    }
-
-    .login-subtitle {
-        color: var(--v-slate-600);
-        font-size: 16px;
-        margin-bottom: 48px;
-        line-height: 1.6;
-        font-weight: 500;
-        opacity: 0;
-        animation: fadeInUp 0.6s ease-out 0.3s forwards;
-    }
-
-    /* Input Group */
-    .input-group {
-        margin-bottom: 20px;
-        text-align: left;
-        opacity: 0;
-        animation: fadeInUp 0.6s ease-out 0.4s forwards;
-    }
-
-    .input-label {
-        color: var(--v-slate-600);
-        font-size: 14px;
-        font-weight: 600;
-        margin-bottom: 8px;
-        display: block;
-        transition: color 0.2s;
-    }
-
-    .input-field {
-        width: 100%;
-        padding: 16px;
-        border-radius: 12px;
-        border: 2px solid var(--v-slate-100);
-        background: white;
-        color: var(--v-navy);
-        font-size: 16px;
-        font-weight: 500;
-        transition: all 0.2s ease;
-        outline: none;
-    }
-
-    .input-field:focus {
-        border-color: var(--v-navy);
-        box-shadow: 0 0 0 4px rgba(18, 56, 93, 0.05);
-    }
-
-    .input-field:focus+.input-label,
-    .input-field:not(:placeholder-shown)+.input-label {
-        color: var(--v-navy);
-    }
-
-    .input-field::placeholder {
-        color: var(--v-slate-400);
-    }
-
-    /* Buttons */
-    .login-btn {
-        width: 100%;
-        padding: 16px;
-        border-radius: 14px;
-        font-size: 16px;
-        font-weight: 700;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 12px;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        border: none;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .btn-primary {
-        background: var(--v-navy);
-        color: white;
-        box-shadow: 0 10px 20px -5px rgba(18, 56, 93, 0.3);
-        margin-top: 12px;
-    }
-
-    .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 15px 25px -5px rgba(18, 56, 93, 0.4);
-        background: #1e4570;
-        /* slightly lighter navy */
-    }
-
-    .btn-google {
-        background: white;
-        color: var(--v-slate-900);
-        border: 2px solid var(--v-slate-100);
-        margin-top: 16px;
-    }
-
-    .btn-google:hover {
-        border-color: #cbd5e1;
-        background: #f8fafc;
-        transform: translateY(-1px);
-    }
-
-    /* Divider */
-    .divider {
-        display: flex;
-        align-items: center;
-        margin: 28px 0;
-        color: var(--v-slate-400);
-        font-size: 13px;
-        font-weight: 600;
-        opacity: 0;
-        animation: fadeInUp 0.6s ease-out 0.5s forwards;
-    }
-
-    .divider::before,
-    .divider::after {
-        content: '';
-        flex: 1;
-        height: 1px;
-        background: var(--v-slate-100);
-    }
-
-    .divider span {
-        padding: 0 16px;
-    }
-
-    /* Footer */
-    .login-footer {
-        margin-top: 48px;
-        color: var(--v-slate-400);
-        font-size: 13px;
-        font-weight: 500;
-        opacity: 0;
-        animation: fadeInUp 0.6s ease-out 0.7s forwards;
-    }
-
-    .login-error {
-        margin-top: 24px;
-        padding: 16px;
-        background: #fef2f2;
-        border: 1px solid #fee2e2;
-        border-radius: 12px;
-        color: #ef4444;
-        font-size: 14px;
-        font-weight: 600;
-        display: none;
-        animation: loginShake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-    }
-
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    @keyframes loginShake {
-
-        10%,
-        90% {
-            transform: translate3d(-1px, 0, 0);
-        }
-
-        20%,
-        80% {
-            transform: translate3d(2px, 0, 0);
-        }
-
-        30%,
-        50%,
-        70% {
-            transform: translate3d(-4px, 0, 0);
-        }
-
-        40%,
-        60% {
-            transform: translate3d(4px, 0, 0);
-        }
-    }
-</style>
-
-<div id="login-overlay">
-    <!-- Background Shapes -->
-    <div class="bg-shape bg-shape-1"></div>
-    <div class="bg-shape bg-shape-2"></div>
-
-    <div class="login-card">
-        <div class="login-logo">
-            <!-- Custom SVG Logo: Learning, Growth, & Exams -->
-            <svg class="logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <!-- Open Book Base (Learning) -->
-                <path d="M15 75C15 75 35 68 50 75C65 68 85 75 85 75V35C85 35 65 28 50 35C35 28 15 35 15 35V75Z"
-                    fill="#12385D" />
-
-                <!-- Inner Pages (Knowledge) -->
-                <path d="M15 38C32 30 48 36 50 36V72C48 72 32 66 15 72V38Z" fill="rgba(255,255,255,0.1)" />
-                <path d="M85 38C68 30 52 36 50 36V72C52 72 68 66 85 72V38Z" fill="rgba(255,255,255,0.15)" />
-
-                <!-- Rising Growth/Torch Element (Growth & Searching) -->
-                <path d="M50 55V25" stroke="#C5A05A" stroke-width="6" stroke-linecap="round" />
-
-                <!-- Leaves / Torch Flame (Growth) -->
-                <path d="M50 25C50 25 35 15 35 30" stroke="#C5A05A" stroke-width="6" stroke-linecap="round" />
-                <path d="M50 25C50 25 65 15 65 30" stroke="#C5A05A" stroke-width="6" stroke-linecap="round" />
-
-                <!-- Exam Checkmark Badge (Exams) -->
-                <circle cx="78" cy="22" r="10" fill="#12385D" stroke="#ffffff" stroke-width="2" />
-                <path d="M73 22L76 25L83 18" stroke="#C5A05A" stroke-width="3" stroke-linecap="round"
-                    stroke-linejoin="round" />
-            </svg>
-        </div>
-
-        <h1 class="login-title">Veritas Live</h1>
-        <p class="login-subtitle">Secure Teacher Dashboard Access</p>
-
-        <div class="login-form-container">
-            <div class="input-group">
-                <label class="input-label">Username or Email</label>
-                <input type="text" id="login-username" class="input-field" placeholder="Enter your credentials">
-            </div>
-
-            <div class="input-group">
-                <label class="input-label">Password</label>
-                <input type="password" id="login-password" class="input-field" placeholder="Enter your password">
-            </div>
-
-            <button id="simple-login-btn" class="login-btn btn-primary"
-                style="opacity: 0; animation: fadeInUp 0.6s ease-out 0.5s forwards;">
-                Sign In
-            </button>
-        </div>
-
-        <div class="divider"><span>OR</span></div>
-
-        <button id="google-login-btn" class="login-btn btn-google"
-            style="opacity: 0; animation: fadeInUp 0.6s ease-out 0.6s forwards;">
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20"
-                alt="Google">
-            Sign in with Google
-        </button>
-
-        <div id="login-error" class="login-error"></div>
-
-        <div class="login-footer">
-            &copy; 2026 Veritas Education. Professional Grade.
-        </div>
-    </div>
-</div>
-
-<script>
-    (function () {
-        // Expose LoginManager globally
-        window.LoginManager = {
-            show: function () {
-                var el = document.getElementById('login-overlay');
-
-                if (el) {
-                    // Force Layout Reset for visibility
-                    el.style.display = 'flex';
-                    // Trigger animations by reflowing?
-                    // Actually the CSS animations run on mount, but if it was hidden with display:none, they might re-run or be stalled.
-                    // This manager seems to toggle visibility.
-                }
-            },
-            hide: function () {
-                var el = document.getElementById('login-overlay');
-                if (el) el.style.display = 'none';
-            },
-            setError: function (msg) {
-                var el = document.getElementById('login-error');
-                if (el) {
-                    el.textContent = msg;
-                    el.style.display = 'block';
-                }
-            },
-            init: function (onSuccess) {
-                // Buffer onSuccess to handle multiple triggers
-                var handleSuccess = function (user) {
-                    if (onSuccess) onSuccess(user);
-                };
-
-                // Google Login Logic
-                var btn = document.getElementById('google-login-btn');
-                if (btn) {
-                    btn.addEventListener('click', function () {
-                        // Show loading state on button
-                        var originalHtml = btn.innerHTML;
-                        btn.innerHTML = '<span>Signing in...</span>';
-                        btn.disabled = true;
-
-                        var provider = new firebase.auth.GoogleAuthProvider();
-                        provider.setCustomParameters({
-                            prompt: 'select_account'
-                        });
-
-                        firebase.auth().signInWithPopup(provider)
-                            .then(function (result) {
-                                var user = result.user;
-                                console.log('[Auth] Signed in as:', user.email);
-
-                                // Persist session for teachers
-                                sessionStorage.setItem('veritas_session_token', user.uid);
-                                sessionStorage.setItem('veritas_teacher_email', user.email);
-
-                                // Update Global State
-                                window.SESSION_TOKEN = user.uid;
-                                window.TEACHER_EMAIL = user.email;
-
-                                LoginManager.hide();
-                                handleSuccess(user);
-                            })
-                            .catch(function (error) {
-                                console.error('[Auth] Login failed:', error);
-                                LoginManager.setError(error.message || 'Authentication failed. Please try again.');
-                            })
-                            .finally(function () {
-                                btn.innerHTML = originalHtml;
-                                btn.disabled = false;
-                            });
-                    });
-                }
-
-                // Simple Login Logic (Teacher/1234)
-                var simpleBtn = document.getElementById('simple-login-btn');
-                if (simpleBtn) {
-                    simpleBtn.addEventListener('click', function () {
-                        var usernameInput = document.getElementById('login-username');
-                        var passwordInput = document.getElementById('login-password');
-
-                        var username = usernameInput ? usernameInput.value.trim() : '';
-                        var password = passwordInput ? passwordInput.value.trim() : '';
-
-                        if (!username || !password) {
-                            LoginManager.setError('Please enter username and password.');
-                            return;
-                        }
-
-                        // Override Button State
-                        var originalText = simpleBtn.innerText;
-                        simpleBtn.innerText = 'Verifying...';
-                        simpleBtn.disabled = true;
-
-                        // Magic Credential Mapping
-                        var targetEmail = '';
-                        var targetPwd = '';
-
-                        if (username.toLowerCase() === 'teacher' && password === '1234') {
-                            targetEmail = 'teacher@veritas.app'; // Internal System Account
-                            targetPwd = 'password1234';          // Meets min 6 char requirement
-                        } else if (username.includes('@')) {
-                            // Allow direct email access (e.g. sborish@malvernprep.org)
-                            targetEmail = username;
-                            if (password.length < 6) {
-                                // Firebase enforces 6+ char passwords; transparently pad
-                                targetPwd = 'password' + password;
-                            } else {
-                                targetPwd = password;
-                            }
-                        } else {
-                            LoginManager.setError('Invalid username or password.');
-                            simpleBtn.innerText = originalText;
-                            simpleBtn.disabled = false;
-                            return;
-                        }
-
-                        // Attempt Login
-                        firebase.auth().signInWithEmailAndPassword(targetEmail, targetPwd)
-                            .then(function (result) {
-                                console.log('[Auth] Simple login success:', result.user.email);
-                                LoginManager.hide();
-                                handleSuccess(result.user);
-                            })
-                            .catch(function (error) {
-                                // If user not found, auto-create (Lazy Registration for Demo)
-                                var isAuthError = (
-                                    error.code === 'auth/user-not-found' ||
-                                    error.code === 'auth/invalid-login-credentials' ||
-                                    error.code === 'auth/wrong-password' ||
-                                    error.code === 'auth/invalid-credential'
-                                );
-
-                                if (isAuthError) {
-                                    console.log('[Auth] User or Credential issue, attempting auto-create/recovery for demo...');
-                                    return firebase.auth().createUserWithEmailAndPassword(targetEmail, targetPwd)
-                                        .then(function (result) {
-                                            console.log('[Auth] Demo account created:', result.user.email);
-                                            LoginManager.hide();
-                                            handleSuccess(result.user);
-                                        });
-                                }
-                                throw error;
-                            })
-                            .catch(function (finalError) {
-                                console.error('[Auth] Login failed:', finalError);
-                                if (finalError.code === 'auth/email-already-in-use') {
-                                    LoginManager.setError('Incorrect password for existing demo account.');
-                                } else {
-                                    LoginManager.setError(finalError.message);
-                                }
-                                simpleBtn.innerText = originalText;
-                                simpleBtn.disabled = false;
-                            });
-                    });
-                }
-            }
-        };
-    })();
-</script>
-  <script>
-(function(global) {
-  'use strict';
-
-  // Deterministic Student Key Generation (SHA-256)
-  // This matches the user's requirement for a collision-resistant key.
-  // We use Web Crypto API which is available in modern browsers.
-
-  async function generateStudentHash(email, pollId) {
-    if (!email) return 'unknown_student';
-
-    // Normalize: lowercase, trim
-    const normalized = email.toLowerCase().trim();
-
-    // Namespace with pollId if provided (optional but good for isolation)
-    const data = pollId ? `${pollId}:${normalized}` : normalized;
-
-    const encoder = new TextEncoder();
-    const dataBuffer = encoder.encode(data);
-
-    try {
-      const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      // Convert to hex string
-      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      // Return first 16 chars as key (enough entropy for this context)
-      return hashHex.substring(0, 16);
-    } catch (e) {
-      console.warn('Web Crypto unavailable, falling back to simple hash', e);
-      // Fallback for very old browsers (unlikely in this context but safe)
-      var hash = 0;
-      for (var i = 0; i < data.length; i++) {
-        var char = data.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32bit integer
-      }
-      return 'fb_' + Math.abs(hash).toString(16);
-    }
-  }
-
-  // Export
-  global.VeritasShared = global.VeritasShared || {};
-  global.VeritasShared.generateStudentKey = generateStudentHash;
-
-  // ========================================================================
-  // VERITAS DEBUG HELPER
-  // Accessible from browser console: VeritasDebug.printFirebaseConfig()
-  // Safe no-op if Firebase is not available.
-  // ========================================================================
-  global.VeritasDebug = {
-    /**
-     * Print Firebase configuration details to console.
-     * Call from browser DevTools: VeritasDebug.printFirebaseConfig()
-     */
-    printFirebaseConfig: function() {
-      console.group('🔥 VeritasDebug: Firebase Configuration');
-
-      // Check FIREBASE_CONFIG
-      if (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG) {
-        console.log('✓ FIREBASE_CONFIG exists');
-        console.log('  databaseURL:', FIREBASE_CONFIG.databaseURL || '(not set)');
-        console.log('  projectId:', FIREBASE_CONFIG.projectId || '(not set)');
-        console.log('  Full config:', FIREBASE_CONFIG);
-      } else {
-        console.warn('✗ FIREBASE_CONFIG is NOT defined');
-      }
-
-      // Check firebase SDK
-      if (typeof firebase !== 'undefined') {
-        console.log('✓ firebase SDK is loaded');
-        console.log('  firebase.apps.length:', firebase.apps ? firebase.apps.length : 'n/a');
-        if (firebase.apps && firebase.apps.length > 0) {
-          console.log('  Default app name:', firebase.apps[0].name);
-          console.log('  Database URL:', firebase.apps[0].options.databaseURL || '(not set)');
-        }
-      } else {
-        console.warn('✗ firebase SDK is NOT loaded');
-      }
-
-      // Check firebaseDb reference (if exists in scope)
-      if (typeof firebaseDb !== 'undefined' && firebaseDb) {
-        console.log('✓ firebaseDb reference exists');
-      } else {
-        console.log('○ firebaseDb reference not in scope (normal before init)');
-      }
-
-      console.groupEnd();
-      return {
-        configExists: typeof FIREBASE_CONFIG !== 'undefined',
-        databaseURL: (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG) ? FIREBASE_CONFIG.databaseURL : null,
-        firebaseLoaded: typeof firebase !== 'undefined',
-        appsLength: (typeof firebase !== 'undefined' && firebase.apps) ? firebase.apps.length : 0
-      };
-    },
-
-    /**
-     * Print current page context for debugging
-     */
-    printContext: function() {
-      console.group('📋 VeritasDebug: Page Context');
-      console.log('Location:', window.location.href);
-      console.log('Page type:', document.title);
-
-      // Check for session token (student pages)
-      if (typeof SESSION_TOKEN !== 'undefined') {
-        console.log('SESSION_TOKEN:', SESSION_TOKEN ? '(present, length=' + SESSION_TOKEN.length + ')' : '(empty)');
-      }
-
-      // Check for poll data (teacher pages)
-      if (typeof CURRENT_POLL_DATA !== 'undefined') {
-        console.log('CURRENT_POLL_DATA:', CURRENT_POLL_DATA);
-      }
-
-      console.groupEnd();
-    }
-  };
-
-})(this);
-</script>
-
-  <script>
     (function () {
         console.log('Veritas Student Script IIFE executing...');
         var secureFocusContainer = document.getElementById('individual-timed-session');
@@ -3663,6 +38,186 @@
         var lastQuestionIndex = -1;
         var liveSessionRef = null;
         var connectedRef = null;
+
+        // =============================================================================
+        // STATE REHYDRATION - Prevents "White Flash" or "Lobby Loop" on refresh
+        // Caches poll state to sessionStorage and restores on page load
+        // =============================================================================
+        var STATE_CACHE_KEY = 'vlp_poll_state_cache';
+        var STATE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+        function cachePollState(state) {
+            if (!state || !state.pollId) return;
+            try {
+                var cacheData = {
+                    state: state,
+                    cachedAt: Date.now()
+                };
+                sessionStorage.setItem(STATE_CACHE_KEY, JSON.stringify(cacheData));
+                console.log('[StateCache] Cached poll state for:', state.pollId);
+            } catch (e) {
+                console.warn('[StateCache] Failed to cache state:', e);
+            }
+        }
+
+        function getCachedPollState() {
+            try {
+                var cached = sessionStorage.getItem(STATE_CACHE_KEY);
+                if (!cached) return null;
+
+                var cacheData = JSON.parse(cached);
+                var age = Date.now() - cacheData.cachedAt;
+
+                // Check TTL - only use cache if less than 5 minutes old
+                if (age > STATE_CACHE_TTL_MS) {
+                    console.log('[StateCache] Cache expired (age:', Math.round(age / 1000), 's)');
+                    sessionStorage.removeItem(STATE_CACHE_KEY);
+                    return null;
+                }
+
+                console.log('[StateCache] Found valid cache (age:', Math.round(age / 1000), 's)');
+                return cacheData.state;
+            } catch (e) {
+                console.warn('[StateCache] Failed to read cache:', e);
+                return null;
+            }
+        }
+
+        function clearStateCache() {
+            try {
+                sessionStorage.removeItem(STATE_CACHE_KEY);
+            } catch (e) { }
+        }
+
+        /**
+         * Transform Firebase live_session data to view data format
+         * Used for immediate fetch and listener callbacks
+         */
+        function transformLiveSessionToViewData(sessionData, pollId) {
+            if (!sessionData) return null;
+
+            return {
+                pollId: pollId,
+                status: sessionData.status,
+                questionIndex: typeof sessionData.currentQuestionIndex === 'number' ? sessionData.currentQuestionIndex : null,
+                questionText: sessionData.questionText || null,
+                options: sessionData.options || null,
+                resultsVisibility: sessionData.resultsVisibility || null,
+                studentEmail: window.STUDENT_EMAIL,
+                calculatorEnabled: sessionData.calculatorEnabled === true,
+                liveProctoring: sessionData.liveProctoring === true,
+                sessionType: sessionData.sessionType || 'LIVE_POLL'
+            };
+        }
+
+        /**
+         * EARLY STATE REHYDRATION
+         * Called synchronously on page load BEFORE network requests
+         * Renders cached state immediately to prevent white flash
+         */
+        function attemptEarlyRehydration() {
+            var cachedState = getCachedPollState();
+            if (!cachedState) {
+                console.log('[StateRehydration] No valid cached state found');
+                return false;
+            }
+
+            console.log('[StateRehydration] Rehydrating from cache immediately');
+
+            // Only rehydrate if the session is still active (not ENDED)
+            if (cachedState.status === 'ENDED' || cachedState.status === 'CLOSED') {
+                console.log('[StateRehydration] Cached state is ENDED/CLOSED, clearing cache');
+                clearStateCache();
+                return false;
+            }
+
+            // Render cached state synchronously
+            try {
+                updateStudentView(cachedState);
+                console.log('[StateRehydration] Successfully rendered from cache');
+                return true;
+            } catch (e) {
+                console.error('[StateRehydration] Failed to render cached state:', e);
+                return false;
+            }
+        }
+
+        // =============================================================================
+        // PHASE 2: STRICT LISTENER MANAGER PATTERN
+        // Prevents memory leaks and "ghost" re-renders from zombie listeners
+        // =============================================================================
+        var ListenerManager = (function () {
+            var registeredListeners = {};
+
+            return {
+                /**
+                 * Attach a listener with automatic cleanup tracking
+                 * @param {string} key - Unique identifier for this listener
+                 * @param {object} ref - Firebase reference
+                 * @param {string} eventType - Event type ('value', 'child_added', etc.)
+                 * @param {function} callback - Callback function
+                 */
+                attach: function (key, ref, eventType, callback) {
+                    // CRITICAL: Detach existing listener for this key first
+                    this.detach(key);
+
+                    // Attach new listener
+                    ref.on(eventType, callback);
+
+                    // Track for cleanup
+                    registeredListeners[key] = {
+                        ref: ref,
+                        eventType: eventType,
+                        callback: callback,
+                        attachedAt: Date.now()
+                    };
+
+                    console.log('[ListenerManager] Attached listener: ' + key);
+                },
+
+                /**
+                 * Detach a specific listener by key
+                 * @param {string} key - Unique identifier for the listener
+                 */
+                detach: function (key) {
+                    if (registeredListeners[key]) {
+                        var listener = registeredListeners[key];
+                        try {
+                            listener.ref.off(listener.eventType, listener.callback);
+                            console.log('[ListenerManager] Detached listener: ' + key);
+                        } catch (e) {
+                            console.warn('[ListenerManager] Error detaching ' + key + ':', e);
+                        }
+                        delete registeredListeners[key];
+                    }
+                },
+
+                /**
+                 * Detach all listeners (for cleanup on session change)
+                 */
+                detachAll: function () {
+                    var keys = Object.keys(registeredListeners);
+                    keys.forEach(function (key) {
+                        ListenerManager.detach(key);
+                    });
+                    console.log('[ListenerManager] Detached all listeners (' + keys.length + ' total)');
+                },
+
+                /**
+                 * Get count of active listeners (for debugging)
+                 */
+                getActiveCount: function () {
+                    return Object.keys(registeredListeners).length;
+                },
+
+                /**
+                 * List all active listener keys (for debugging)
+                 */
+                listActive: function () {
+                    return Object.keys(registeredListeners);
+                }
+            };
+        })();
 
         // EAGER INIT: Ensure Firebase handles are ready before any UI interaction
         if (typeof firebase !== 'undefined' && typeof FIREBASE_CONFIG !== 'undefined') {
@@ -3734,41 +289,24 @@
         async function initFirebaseSidecar(pollId, studentEmail) {
             if (!FIREBASE_CONFIG || !pollId || !studentEmail) return;
 
-            // CHECK: If pollId changed, cleanup old listeners
+            // PHASE 2 FIX: Use ListenerManager for strict cleanup of zombie listeners
+            // CHECK: If pollId changed, cleanup ALL old listeners via ListenerManager
             if (currentFirebasePollId && currentFirebasePollId !== pollId) {
-                console.log('[Firebase] PollId changed from ' + currentFirebasePollId + ' to ' + pollId + ' - Validating cleanup...');
+                console.log('[Firebase] PollId changed from ' + currentFirebasePollId + ' to ' + pollId + ' - Cleaning up via ListenerManager...');
 
-                // 1. Detach Student Status Listener
-                if (firebaseRef) {
-                    try {
-                        firebaseRef.off();
-                        console.log('[Firebase] Detached old student status listener');
-                    } catch (e) { console.warn('Error detaching firebaseRef:', e); }
-                    firebaseRef = null;
-                }
+                // Use ListenerManager to detach all listeners for the old poll
+                ListenerManager.detachAll();
 
-                // 2. Detach Live Session Listener
-                if (liveSessionRef) {
-                    try {
-                        liveSessionRef.off();
-                        console.log('[Firebase] Detached old live session listener');
-                    } catch (e) { console.warn('Error detaching liveSessionRef:', e); }
-                    liveSessionRef = null;
-                }
-
-                // 3. Detach Connected Listener (optional, but cleaner)
-                if (connectedRef) {
-                    try {
-                        connectedRef.off();
-                    } catch (e) { }
-                    connectedRef = null;
-                }
-
+                // Clear ref handles
+                firebaseRef = null;
+                liveSessionRef = null;
+                connectedRef = null;
                 currentFirebasePollId = null;
             }
 
             // Prevent double init for same pollId
             if (firebaseRef && currentFirebasePollId === pollId) {
+                console.log('[Firebase] Already initialized for pollId: ' + pollId + ' (Active listeners: ' + ListenerManager.getActiveCount() + ')');
                 return;
             }
 
@@ -3819,21 +357,29 @@
                     }
                 });
 
-                // 2. On Disconnect -> DISCONNECTED
-                firebaseRef.onDisconnect().set('DISCONNECTED');
+                // 2. On Disconnect -> Update status to DISCONNECTED (preserving object structure)
+                // CRITICAL FIX: Use update() instead of set() to preserve student object fields
+                firebaseRef.onDisconnect().update({
+                    status: 'DISCONNECTED',
+                    lastDisconnectedAt: firebase.database.ServerValue.TIMESTAMP
+                });
 
-                // 3. Listen for changes (Remote Lock/Unlock)
-                firebaseRef.on('value', function (snapshot) {
+                // 3. Listen for changes (Remote Lock/Unlock) - VIA LISTENER MANAGER
+                var studentStatusCallback = function (snapshot) {
                     var status = snapshot.val();
                     handleRemoteStatusChange(status);
                     updateDebugHud(status, null, currentFirebasePollId);
-                });
+                };
+                ListenerManager.attach('studentStatus_' + pollId, firebaseRef, 'value', studentStatusCallback);
 
-                // Connection State for HUD & Adaptive Polling
+                // Connection State for HUD, Adaptive Polling & Connectivity Toast - VIA LISTENER MANAGER
                 connectedRef = firebaseDb.ref('.info/connected');
-                connectedRef.on('value', function (snap) {
+                var connectionCallback = function (snap) {
                     var connected = snap.val() === true;
                     updateDebugHud(null, connected, currentFirebasePollId);
+
+                    // PHASE 4: Show/hide connectivity recovery toast
+                    showConnectivityToast(connected);
 
                     // ADAPTIVE POLLING: Reduce server load when Firebase is active
                     // If connected, we receive "signals" for state changes, so we can poll slowly.
@@ -3841,22 +387,58 @@
                     if (connected) {
                         console.log('[Adaptive Polling] Firebase connected - switching to balanced poll (5s)');
                         defaultPollInterval = 5000;
+
+                        // PHASE 4: Auto-recovery - trigger soft poll to check if we missed a slide transition
+                        console.log('[Connectivity Recovery] Reconnected - triggering soft poll to sync state');
+                        if (typeof startPolling === 'function') {
+                            startPolling(true); // Force immediate poll
+                        }
                     } else {
                         console.log('[Adaptive Polling] Firebase disconnected - switching to fast poll (2.5s)');
                         defaultPollInterval = 2500;
                     }
-                });
+                };
+                ListenerManager.attach('connectionState', connectedRef, 'value', connectionCallback);
 
-                // 4. Signal-to-Poll: Listen for public state changes
+                // 4. Signal-to-Poll: Listen for public state changes - VIA LISTENER MANAGER
                 // When teacher advances slide, a signal is written here.
                 // NEW: Listen to 'live_session' for instant updates (Hybrid Architecture)
                 var sessionPath = 'sessions/' + pollId + '/live_session';
                 liveSessionRef = firebaseDb.ref(sessionPath);
 
-                liveSessionRef.on('value', function (snapshot) {
+                // PHASE 4 FIX: IMMEDIATE FETCH - Execute .once('value') immediately on init
+                // This prevents the "white flash" by getting state before the first listener event
+                console.log('[Firebase] Executing immediate fetch on live_session...');
+                liveSessionRef.once('value').then(function (snapshot) {
+                    var sessionData = snapshot.val();
+                    if (sessionData) {
+                        console.log('[Firebase] Immediate fetch received:', sessionData.status);
+                        // Only process if we haven't already received an update from the listener
+                        if (!window._immediateFetchProcessed) {
+                            window._immediateFetchProcessed = true;
+                            var viewData = transformLiveSessionToViewData(sessionData, pollId);
+                            if (viewData) {
+                                updateStudentView(viewData);
+                            }
+                        }
+                    }
+                }).catch(function (err) {
+                    console.warn('[Firebase] Immediate fetch failed:', err);
+                });
+
+                var liveSessionCallback = function (snapshot) {
                     var data = snapshot.val();
                     if (data) {
                         console.log('[Firebase] Live Session update received:', data);
+
+                        // SYNC SPINE: Capture the server's question index and validate local state
+                        if (typeof data.questionIndex === 'number') {
+                            var serverQuestionIndex = data.questionIndex;
+                            // If server says different question than our local lastQuestionIndex, we MUST sync
+                            if (lastQuestionIndex !== serverQuestionIndex) {
+                                console.log('[Sync Spine] Server question index (' + serverQuestionIndex + ') differs from local (' + lastQuestionIndex + ') - forcing sync');
+                            }
+                        }
 
                         // If we have full metadata and a current pollId, update UI directly
                         // We strictly check for question content to ensure it's a 'Fast Path' signal
@@ -3885,7 +467,9 @@
                                 }
                             }
 
+                            // IMMEDIATE MATH RENDER: Call triggerMathRender after view update for fast path
                             updateStudentView(statePayload);
+                            setTimeout(triggerMathRender, 50); // Allow DOM to settle
                         } else {
                             // Fallback to polling for full state if data is incomplete
                             // FIX: If status changed (e.g. CLOSED), we should respect that even without text
@@ -3906,14 +490,61 @@
                             startPolling(true);
                         }
                     }
-                });
+                };
+                ListenerManager.attach('liveSession_' + pollId, liveSessionRef, 'value', liveSessionCallback);
 
-                console.log('[Firebase] Sidecar initialized for', path);
+                console.log('[Firebase] Sidecar initialized for', path, '(Listeners: ' + ListenerManager.getActiveCount() + ')');
+            }
+        }
+
+        // =============================================================================
+        // PHASE 4: CONNECTIVITY RECOVERY TOAST
+        // Visual "Reconnecting..." toast that appears onDisconnect and disappears onConnect
+        // =============================================================================
+        var connectivityToastVisible = false;
+        var connectivityToastEl = null;
+
+        function showConnectivityToast(isConnected) {
+            // Create toast element if it doesn't exist
+            if (!connectivityToastEl) {
+                connectivityToastEl = document.createElement('div');
+                connectivityToastEl.id = 'connectivity-toast';
+                connectivityToastEl.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] px-6 py-3 rounded-full shadow-lg transition-all duration-300 flex items-center gap-3';
+                connectivityToastEl.style.cssText = 'opacity: 0; pointer-events: none;';
+                document.body.appendChild(connectivityToastEl);
+            }
+
+            if (!isConnected && !connectivityToastVisible) {
+                // Show "Reconnecting..." toast
+                connectivityToastEl.innerHTML = '<span class="inline-block w-3 h-3 rounded-full bg-amber-400 animate-pulse"></span><span class="font-semibold text-amber-900">Reconnecting...</span>';
+                connectivityToastEl.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] px-6 py-3 rounded-full shadow-lg transition-all duration-300 flex items-center gap-3 bg-amber-100 border border-amber-300';
+                connectivityToastEl.style.opacity = '1';
+                connectivityToastEl.style.pointerEvents = 'auto';
+                connectivityToastVisible = true;
+                console.log('[Connectivity] Showing reconnecting toast');
+            } else if (isConnected && connectivityToastVisible) {
+                // Show brief "Connected" confirmation then hide
+                connectivityToastEl.innerHTML = '<span class="inline-block w-3 h-3 rounded-full bg-emerald-500"></span><span class="font-semibold text-emerald-900">Connected</span>';
+                connectivityToastEl.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] px-6 py-3 rounded-full shadow-lg transition-all duration-300 flex items-center gap-3 bg-emerald-100 border border-emerald-300';
+
+                // Hide after 2 seconds
+                setTimeout(function () {
+                    connectivityToastEl.style.opacity = '0';
+                    connectivityToastEl.style.pointerEvents = 'none';
+                    connectivityToastVisible = false;
+                    console.log('[Connectivity] Hiding toast - connection restored');
+                }, 2000);
             }
         }
 
         /**
-         * Submit answer directly to Firebase (Fast Path)
+         * Submit answer directly to Firebase (Fast Path) - DUAL-WRITE IMPLEMENTATION
+         *
+         * PHASE 2 FIX: Implements "Dual-Write" submission pattern to eliminate Cloud Function lag.
+         * Write 1: Full answer payload to secure answers/ node (for grading)
+         * Write 2: CONCURRENT status update to public sessions/{pollId}/students/{studentKey} node
+         *
+         * Result: Teacher sees student turn "Green" INSTANTLY while backend grades securely in background.
          */
         async function submitAnswerToFirebase(pollId, questionIndex, answer, answerId, confidence, email, telemetry) {
             if (!firebaseDb) {
@@ -3948,20 +579,36 @@
                     activityStatus: telemetry ? telemetry.status : null
                 };
 
-                // WRITE DIRECTLY TO FIREBASE (Cloud Function Trigger Path)
-                // Path: answers/{pollId}/{studentKey}
-                // The Cloud Function 'onAnswerSubmitted' listens here to grade/process.
+                // Determine student key
                 var key = studentKey || studentEmail.replace(/\./g, ',');
                 if (!key) {
                     console.error('[Firebase] No student key available for submission');
                     return null;
                 }
 
-                var path = 'answers/' + pollId + '/' + key;
+                // DUAL-WRITE IMPLEMENTATION
+                // Write 1: Full answer payload to secure answers/ node (for grading via Cloud Function)
+                var answerPath = 'answers/' + pollId + '/' + key;
+                var answerWritePromise = firebaseDb.ref(answerPath).set(payload);
 
-                await firebaseDb.ref(path).set(payload);
+                // Write 2: CONCURRENT status update to public student node (for instant Teacher visibility)
+                // This allows the Teacher to see "Submitted" status IMMEDIATELY without waiting for Cloud Function
+                var studentStatusPath = 'sessions/' + pollId + '/students/' + key;
+                var statusPayload = {
+                    status: 'Submitted',
+                    lastActive: firebase.database.ServerValue.TIMESTAMP,
+                    lastSubmissionQuestionIndex: questionIndex,
+                    lastSubmissionTimestamp: firebase.database.ServerValue.TIMESTAMP
+                };
+                var statusWritePromise = firebaseDb.ref(studentStatusPath).update(statusPayload);
 
-                console.log('[Firebase] Write to ' + path + ' successful:', payload);
+                // Execute both writes concurrently for minimum latency
+                await Promise.all([answerWritePromise, statusWritePromise]);
+
+                console.log('[Firebase] DUAL-WRITE successful:');
+                console.log('  - Answer path: ' + answerPath);
+                console.log('  - Status path: ' + studentStatusPath);
+
                 return { success: true, responseId: responseId, timestamp: timestamp };
             } catch (e) {
                 console.error('[Firebase] Fast Answer Failed:', e);
@@ -4204,14 +851,28 @@
             hud.innerHTML = html;
         }
 
-        function handleRemoteStatusChange(status) {
-            console.log('[Firebase] Remote status update:', status);
-            if (status === 'LOCKED') {
+        function handleRemoteStatusChange(statusData) {
+            console.log('[Firebase] Remote status update:', statusData);
+
+            // SYNC SPINE FIX: Handle both legacy string status and proper object status
+            // The status can be either a string 'LOCKED'/'ACTIVE' (legacy) or an object {status: 'LOCKED', ...}
+            var statusValue;
+            if (typeof statusData === 'string') {
+                statusValue = statusData;
+            } else if (statusData && typeof statusData === 'object') {
+                statusValue = statusData.status;
+            } else {
+                console.warn('[Firebase] Invalid status data received:', statusData);
+                return;
+            }
+
+            if (statusValue === 'LOCKED') {
                 // Server commanded lock
                 if (!LockManager.isLocked()) {
-                    LockManager.lock('Teacher Remote Lock');
+                    var lockReason = (statusData && statusData.lastViolationReason) || 'Teacher Remote Lock';
+                    LockManager.lock(lockReason);
                 }
-            } else if (status === 'ACTIVE') {
+            } else if (statusValue === 'ACTIVE' || statusValue === 'AWAITING_FULLSCREEN') {
                 // Teacher signalled unlock
                 // IMPLEMENTATION FIX: Check both LockManager and Poison Pill state
                 var isLocked = LockManager.isLocked() || isPoisonPillActive();
@@ -4224,6 +885,9 @@
                 } else {
                     console.log('[Firebase] Unlock signal received but not locally locked - ignoring');
                 }
+            } else if (statusValue === 'DISCONNECTED') {
+                // Student was disconnected - this should trigger reconnection logic
+                console.log('[Firebase] Detected DISCONNECTED state - will recover on reconnect');
             }
         }
 
@@ -5436,14 +2100,7 @@
             } catch (err) {
                 console.warn('Unable to exit fullscreen', err);
             }
-            try {
-                if (google && google.script && google.script.host && typeof google.script.host.close === 'function') {
-                    google.script.host.close();
-                    return;
-                }
-            } catch (err) {
-                console.warn('Unable to close Apps Script host', err);
-            }
+
             if (typeof window !== 'undefined' && typeof window.close === 'function') {
                 window.close();
             }
@@ -5550,7 +2207,7 @@
                 secureFocusContainer.style.display = 'block';
             }
             disableSecureOptions(true);
-            showSecureOverlay('LOCKED', message || 'Assessment Paused', subtext || 'Fullscreen exit detected. Your teacher will re-admit you shortly.');
+            showSecureOverlay('LOCKED', message || 'Assessment Paused', subtext || 'Fullscreen exit detected. Please wait for your instructor to re-admit you.');
             // Hide calculator when locked
             if (typeof hideCalculatorOnSessionEnd === 'function') {
                 hideCalculatorOnSessionEnd();
@@ -5766,6 +2423,10 @@
             console.log('Attaching onclick handler to start session button (Early Bind)');
             startSessionBtn.onclick = function () {
                 console.log('!!! BEGIN SESSION BUTTON CLICKED !!!');
+
+                // FIX: Mark session as started - this gate prevents auto-bypass of entry screen
+                studentSessionStarted = true;
+
                 if (entryScreen) entryScreen.style.display = 'none';
                 if (studentContainer) studentContainer.style.display = 'block';
                 isInteractionBlocked = false;
@@ -5862,6 +2523,10 @@
         var secureSessionActive = false; // Must be TRUE for lock logic to engage
         var isEnteringFullscreen = false; // Grace period flag
         // -----------------------------
+
+        // --- ENTRY GATE: Prevent auto-bypass of entry screen ---
+        // Student must explicitly click "Begin Poll" to enter the session
+        var studentSessionStarted = false;
 
         var optionBaseClass = 'answer-option relative w-full text-left';
         var optionSelectedClass = optionBaseClass + ' answer-option-selected';
@@ -6929,10 +3594,10 @@
 
             var online = typeof navigator !== 'undefined' ? navigator.onLine : true;
             showConnectivityState(online ? 'connecting' : 'offline', {
-                message: online ? 'Reconnecting... your poll data is catching up.' : 'Offline detected - we will hold your spot and resync when you are back.',
+                message: online ? 'Syncing with teacher...' : 'Connection lost. Don\'t panic - we are saving your work locally and will reconnect automatically.',
                 icon: online ? 'sync_problem' : 'signal_wifi_off',
                 submessage: online ? ('Retrying in ' + seconds + 's...') : '',
-                preLiveMessage: online ? 'Reconnecting… syncing you back into place.' : 'Offline detected — we will hold your spot and sync when you are back.'
+                preLiveMessage: online ? 'Syncing with teacher...' : 'Connection lost. We are saving your work locally and will reconnect automatically.'
             });
 
             scheduleNextPoll(retryDelay);
@@ -6975,11 +3640,11 @@
                 }
             }
             if (statusMessage) {
-                statusMessage.textContent = message || 'Response Captured';
+                statusMessage.textContent = message || 'Answer Saved';
                 statusMessage.className = 'text-veritas-navy text-3xl font-bold tracking-tight animate-fade-in';
             }
             if (statusSubMessage) {
-                statusSubMessage.textContent = "Data transmitted. Awaiting next phase...";
+                statusSubMessage.textContent = "Response Recorded. Eyes on the board for results.";
                 statusSubMessage.style.display = 'block';
                 statusSubMessage.className = 'text-slate-500 font-medium mt-2 animate-fade-in';
             }
@@ -7045,7 +3710,7 @@
             if (!isSessionActive()) return;
             recoveringFromOutage = true;
             showConnectivityState('offline', {
-                message: 'Offline detected - we will hold your spot and resync when you are back.',
+                message: 'Connection lost. Don\'t panic - we are saving your work locally and will reconnect automatically.',
                 icon: 'signal_wifi_off'
             });
         });
@@ -7053,7 +3718,7 @@
         window.addEventListener('online', function () {
             if (!isSessionActive()) return;
             showConnectivityState('connecting', {
-                message: 'Reconnecting... your poll data is catching up.',
+                message: 'Reconnected. Syncing with teacher...',
                 icon: 'sync',
                 submessage: 'Syncing now...'
             });
@@ -7223,6 +3888,11 @@
                 sessionStorage.setItem('veritas_active_poll_id', data.pollId);
             }
 
+            // STATE REHYDRATION: Cache poll state for refresh immunity
+            if (data.pollId && data.status) {
+                cachePollState(data);
+            }
+
             console.log('[ViewManager] Update View State:', data);
 
             // --- EARLY CHECKS BEFORE HIDING VIEWS (prevents white screen) ---
@@ -7271,7 +3941,27 @@
                 return;
             }
 
-            // 3. SUBMISSION GUARD - If already submitted, show waiting screen immediately (no flash)
+            // 3. PAUSED STATE CHECK - Show "Eyes on Teacher" overlay
+            var pausedOverlay = document.getElementById('paused-overlay');
+            if (data.status === 'PAUSED') {
+                console.log('[ViewManager] Session PAUSED - showing Eyes on Teacher overlay');
+                if (pausedOverlay) {
+                    pausedOverlay.classList.remove('hidden');
+                    pausedOverlay.style.display = 'flex';
+                }
+                isInteractionBlocked = true;
+                // Keep connection alive but block inputs - do not return, let views stay rendered behind overlay
+            } else {
+                // Auto-hide paused overlay when status changes back
+                if (pausedOverlay && pausedOverlay.style.display !== 'none') {
+                    console.log('[ViewManager] Session resumed - hiding PAUSED overlay');
+                    pausedOverlay.classList.add('hidden');
+                    pausedOverlay.style.display = 'none';
+                    isInteractionBlocked = false;
+                }
+            }
+
+            // 4. SUBMISSION GUARD - If already submitted, show waiting screen immediately (no flash)
             // Maintain submission guardrails so polling cannot rewind UI
             if (data.hasSubmitted === true && currentIndex !== null) {
                 lastSubmittedQuestionIndex = currentIndex;
@@ -7281,7 +3971,7 @@
             if (currentIndex !== null && lastSubmittedQuestionIndex === currentIndex && data.status === 'LIVE' && resultsVisibility !== 'REVEALED') {
                 // Don't hide views - just ensure status container is visible
                 if (questionContainer) questionContainer.style.display = 'none';
-                showWaitingForNextPhase('Response Captured');
+                showWaitingForNextPhase('Answer Saved. Waiting for next question...');
                 return;
             }
 
@@ -7375,6 +4065,20 @@
                 }
             } else {
                 // Live Poll Logic (Legacy)
+
+                // FIX: ENTRY GATE - Require student to click "Begin Poll" before showing content
+                // This prevents Firebase listener from auto-bypassing the entry screen
+                if (!studentSessionStarted) {
+                    console.log('[ViewManager] Blocking Live Poll render - student has not clicked Begin Poll');
+                    // Show entry screen and wait for user interaction
+                    if (entryScreen) {
+                        entryScreen.style.display = 'block';
+                        entryScreen.classList.remove('hidden');
+                    }
+                    ViewManager.show('entry-screen');
+                    return; // Stop here until student clicks Begin Poll
+                }
+
                 if (data.sessionPhase === 'LOBBY') {
                     ViewManager.show('pre-live-card');
                     updatePreLiveCard(data);
@@ -7397,7 +4101,7 @@
                         }
 
                         if (data.hasSubmitted === true && currentIndex !== null) {
-                            showWaitingForNextPhase('Response Captured');
+                            showWaitingForNextPhase('Answer Saved. Waiting for next question...');
                             return;
                         }
                         renderQuestion(data);
@@ -7475,10 +4179,12 @@
                 if (!qText && data.options && data.options.length > 0) {
                     // Fallback: If options exist but text is missing, show loading
                     qText = '<span class="animate-pulse text-gray-500 italic">Loading question...</span>';
-                    console.warn('[renderQuestion] Question text is missing, showing loader', data);
+                    console.error('[renderQuestion] Missing question text. Full data:', JSON.stringify(data, null, 2));
+                    console.warn('[renderQuestion] Question text is missing, showing loader');
                     // Force immediate full poll to resolve this
                     if (typeof startPolling === 'function') startPolling(true);
                 } else if (!qText) {
+                    console.error('[renderQuestion] No question text and no options. Full data:', JSON.stringify(data, null, 2));
                     qText = "[Question Text Missing]";
                 }
 
@@ -7540,7 +4246,7 @@
                         id: (typeof option === 'object') ? (option.id || null) : null
                     };
                     var letter = letters[index] || (index + 1).toString();
-                    var btn = createOptionButton(normalized, letter, data.pollId, data.questionIndex);
+                    var btn = createOptionButton(normalized, letter, data.pollId, data.questionIndex, index);
 
                     // Disable if already answered
                     if (hasAnsweredCurrent) {
@@ -7557,9 +4263,12 @@
                         imageURL: normalized.imageURL
                     });
                 });
+
+                // Restore cross-out state from sessionStorage after options rendered
+                restoreCrossOutState(data.pollId, data.questionIndex);
             } else if (hasAnsweredCurrent) {
                 // Student has already answered - show waiting screen instead of question
-                showWaitingForNextPhase('Response Captured');
+                showWaitingForNextPhase('Answer Saved. Waiting for next question...');
                 return;
             }
 
@@ -7606,12 +4315,8 @@
                 statusContainer.style.display = 'block';
                 questionContainer.style.display = 'none';
                 if (statusMessage) {
-                    var waitPhrases = [
-                        "Locking in your genius...", "Securing your brilliance...",
-                        "Beaming answer to HQ...", "Writing to the digital ledger..."
-                    ];
-                    statusMessage.textContent = waitPhrases[Math.floor(Math.random() * waitPhrases.length)];
-                    statusMessage.className = 'text-veritas-navy text-2xl font-bold animate-text-shimmer';
+                    statusMessage.textContent = "Submitting answer...";
+                    statusMessage.className = 'text-veritas-navy text-2xl font-bold';
                 }
                 if (statusSubMessage) {
                     statusSubMessage.textContent = 'Please wait while we confirm your submission.';
@@ -7689,23 +4394,29 @@
         }
 
         function submitAnswerToServer(pollId, questionIndex, answerText, answerId, confidence) {
-            // Live Poll - FAST PATH: Firebase First
+            // =================================================================
+            // OPTIMISTIC UI: Show success state IMMEDIATELY before writes complete
+            // This follows the "Zero-Latency" dual-write pattern for instant feedback
+            // =================================================================
+
+            // INSTANT UI TRANSITION: Don't wait for promise
+            pendingAnswerText = null;
+            showWaitingForNextPhase('Answer Saved. Waiting for next question...');
+            console.log('[Optimistic UI] Showing success state immediately');
+
+            // DUAL-WRITE (Fire and forget with error handling)
             submitAnswerToFirebase(pollId, questionIndex, answerText, answerId, confidence)
                 .then(function (firebaseResult) {
                     if (firebaseResult && firebaseResult.success) {
-                        console.log('[Firebase] Fast write successful (Live Poll)');
-                        pendingAnswerText = null;
-                        statusMessage.textContent = 'Response Received';
-                        statusMessage.className = 'text-green-700 text-2xl font-semibold';
-                        if (statusSubMessage) {
-                            statusSubMessage.textContent = 'Recorded via Firebase.';
-                            statusSubMessage.style.display = 'block';
-                            statusSubMessage.className = 'text-gray-700 text-lg mt-4';
-                        }
+                        console.log('[Firebase] Dual-write confirmed successful');
                     } else {
-                        console.warn('[Firebase] Fast write failed.');
-                        handleLivePollError('Firebase submission failed. Please check your connection.');
+                        // Silent retry or log - UI is already in success state
+                        console.warn('[Firebase] Dual-write may have failed, but UI already transitioned');
                     }
+                })
+                .catch(function (error) {
+                    // Log error but don't revert UI - the answer may still be saved
+                    console.error('[Firebase] Dual-write error:', error);
                 });
         } function handleLivePollError(error) {
             hasAnsweredCurrent = false;
@@ -7741,11 +4452,12 @@
             return arr;
         }
 
-        function createOptionButton(option, letter, pollId, questionIndex) {
+        function createOptionButton(option, letter, pollId, questionIndex, optionIndex) {
             var btn = document.createElement('button');
             btn.type = 'button';
             btn.className = optionBaseClass;
             btn.dataset.answerText = option.text || '';
+            btn.dataset.optionIndex = optionIndex;
 
             var displayText = (option.text || '').trim();
 
@@ -7777,8 +4489,41 @@
             content += '</div>';
             content += '<div class="result-badges"></div>';
 
+            // Cross-Out Toggle Button
+            content += '<button type="button" class="cross-out-toggle" aria-label="Cross out this answer" title="Click to eliminate this option">';
+            content += '<span class="material-symbols-outlined">visibility_off</span>';
+            content += '</button>';
+
             btn.innerHTML = content;
+
+            // Cross-Out Toggle Handler
+            var crossOutToggle = btn.querySelector('.cross-out-toggle');
+            if (crossOutToggle) {
+                crossOutToggle.addEventListener('click', function (event) {
+                    event.stopPropagation(); // CRITICAL: Don't trigger answer submission
+                    event.preventDefault();
+
+                    var isCrossedOut = btn.classList.toggle('crossed-out');
+
+                    // Update icon
+                    var icon = crossOutToggle.querySelector('.material-symbols-outlined');
+                    if (icon) {
+                        icon.textContent = isCrossedOut ? 'visibility' : 'visibility_off';
+                    }
+                    crossOutToggle.setAttribute('aria-label', isCrossedOut ? 'Restore this answer' : 'Cross out this answer');
+                    crossOutToggle.setAttribute('title', isCrossedOut ? 'Click to restore this option' : 'Click to eliminate this option');
+
+                    // Persist to sessionStorage
+                    saveCrossOutState(pollId, questionIndex);
+                });
+            }
+
             btn.addEventListener('click', function (event) {
+                // Prevent submission if clicking cross-out toggle
+                if (event && event.target && event.target.closest('.cross-out-toggle')) {
+                    return;
+                }
+
                 // Prevent submission if clicking an image (e.g. for zoom)
                 // Robust check for any image element within the click target chain
                 if (event && event.target && (event.target.closest('.option-image') || event.target.closest('img'))) {
@@ -7786,14 +4531,73 @@
                     return;
                 }
 
+                // Prevent submission if option is crossed out
+                if (btn.classList.contains('crossed-out')) {
+                    console.log('[Interaction] Crossed-out option clicked - ignoring');
+                    return;
+                }
+
                 // Track option click
-                var optionIndex = Array.from(btn.parentElement.parentElement.children).indexOf(btn.parentElement);
-                activityTracker.recordOptionClick(optionIndex, option.text);
+                var idx = Array.from(btn.parentElement.parentElement.children).indexOf(btn.parentElement);
+                activityTracker.recordOptionClick(idx, option.text);
 
                 submitAnswer(pollId, questionIndex, option.text, option.id);
             });
 
             return btn;
+        }
+
+        // =============================================================================
+        // CROSS-OUT PERSISTENCE HELPERS
+        // =============================================================================
+
+        function getCrossOutStorageKey(pollId, questionIndex) {
+            return 'vlp_crossout_' + pollId + '_' + questionIndex;
+        }
+
+        function saveCrossOutState(pollId, questionIndex) {
+            try {
+                var crossedOutIndices = [];
+                var buttons = optionsList ? optionsList.querySelectorAll('button.answer-option') : [];
+                buttons.forEach(function (btn, index) {
+                    if (btn.classList.contains('crossed-out')) {
+                        crossedOutIndices.push(index);
+                    }
+                });
+                var key = getCrossOutStorageKey(pollId, questionIndex);
+                sessionStorage.setItem(key, JSON.stringify(crossedOutIndices));
+                console.log('[CrossOut] Saved state:', crossedOutIndices, 'for key:', key);
+            } catch (e) {
+                console.warn('[CrossOut] Failed to save state:', e);
+            }
+        }
+
+        function restoreCrossOutState(pollId, questionIndex) {
+            try {
+                var key = getCrossOutStorageKey(pollId, questionIndex);
+                var stored = sessionStorage.getItem(key);
+                if (!stored) return;
+
+                var crossedOutIndices = JSON.parse(stored);
+                if (!Array.isArray(crossedOutIndices)) return;
+
+                var buttons = optionsList ? optionsList.querySelectorAll('button.answer-option') : [];
+                crossedOutIndices.forEach(function (index) {
+                    if (buttons[index]) {
+                        buttons[index].classList.add('crossed-out');
+                        var toggle = buttons[index].querySelector('.cross-out-toggle');
+                        if (toggle) {
+                            var icon = toggle.querySelector('.material-symbols-outlined');
+                            if (icon) icon.textContent = 'visibility';
+                            toggle.setAttribute('aria-label', 'Restore this answer');
+                            toggle.setAttribute('title', 'Click to restore this option');
+                        }
+                    }
+                });
+                console.log('[CrossOut] Restored state:', crossedOutIndices, 'for key:', key);
+            } catch (e) {
+                console.warn('[CrossOut] Failed to restore state:', e);
+            }
         }
 
         function resetResultDecorations() {
@@ -7854,7 +4658,7 @@
                     imageURL: option.imageURL || option.imageUrl || ''
                 };
                 var letter = letters[index] || (index + 1).toString();
-                var btn = createOptionButton(normalized, letter, data.pollId, data.questionIndex);
+                var btn = createOptionButton(normalized, letter, data.pollId, data.questionIndex, index);
                 btn.disabled = true;
                 btn.classList.add('result-readonly');
                 var listItem = document.createElement('li');
@@ -8196,36 +5000,42 @@
         const UX_COPY = {
             // VIOLATION
             LOCKED: {
-                title: "You Stepped Out",
-                icon: "door_open",
-                body: "The session detected activity outside this window.",
-                footer: "This was flagged automatically. Your instructor can bring you back in.",
-                badge: "OUTSIDE THE ROOM",
-                statusLight: "LINK ACTIVE"
+                title: "Assessment Paused",
+                icon: "fullscreen_exit",
+                body: "Fullscreen exit detected. Please wait for your instructor to re-admit you.",
+                footer: "Your work has been saved. Stay on this screen.",
+                badge: "PAUSED",
+                statusLight: "CONNECTION ACTIVE"
             },
             // LOBBY
             PRE_LIVE: {
                 title: "Checked In",
                 icon: "how_to_reg",
-                body: "You're in the room. Waiting for the green light."
+                body: "Connected. Waiting for your teacher to start the session."
             },
             // SUBMITTED
             RESPONSE_SUBMITTED: {
-                title: "Answer Sent",
-                icon: "outgoing_mail",
-                body: "Recorded. Sit back while the class catches up."
+                title: "Answer Saved",
+                icon: "check_circle",
+                body: "Response recorded. Waiting for next question..."
             },
             // REVEAL
             WAITING_FOR_REVEAL: {
-                title: "Time's Up",
-                icon: "timer_off",
-                body: "Answers are sealed. Reveal is in your instructor's hands."
+                title: "Answers Locked",
+                icon: "lock",
+                body: "Responses are sealed. Your teacher will reveal results shortly."
             },
             // TRANSITION
             BETWEEN_QUESTIONS: {
-                title: "Switching Gears",
-                icon: "swap_horiz",
-                body: "Next question on deck."
+                title: "Next Question Loading",
+                icon: "hourglass_top",
+                body: "Preparing the next question..."
+            },
+            // PAUSED (Teacher paused session)
+            PAUSED: {
+                title: "Eyes on Teacher",
+                icon: "visibility",
+                body: "The session is paused. Please look up and wait for instructions."
             }
         };
 
@@ -8387,8 +5197,8 @@
             }
             if (msgEl) {
                 var loadPhrases = [
-                    "Synapsing...", "Calibrating Neural Net...", "Crunching Data...",
-                    "Fetching Brilliance...", "Aligning Quarks...", "Beaming to Cloud..."
+                    "Connecting to Session...", "Syncing with Teacher...", "Loading Question...",
+                    "Establishing Connection...", "Preparing Content..."
                 ];
                 msgEl.textContent = message || loadPhrases[Math.floor(Math.random() * loadPhrases.length)];
             }
@@ -8708,9 +5518,92 @@
             }
         }
 
+        // FIX: Helper function to find an active poll for the student's class
+        // Uses polls-first approach since anonymous users can read polls but not sessions root
+        function findActivePollForClass(className) {
+            return new Promise(function (resolve, reject) {
+                if (!className) {
+                    console.warn('[findActivePollForClass] No className provided');
+                    resolve(null);
+                    return;
+                }
+
+                var db = firebase.database();
+                console.log('[findActivePollForClass] Searching for active polls in class:', className);
+
+                // Step 1: Query polls for this class (anonymous users can read polls)
+                db.ref('polls').orderByChild('className').equalTo(className).once('value')
+                    .then(function (pollsSnap) {
+                        var polls = pollsSnap.val() || {};
+                        var pollIds = Object.keys(polls);
+                        console.log('[findActivePollForClass] Found', pollIds.length, 'polls for class');
+
+                        if (pollIds.length === 0) {
+                            resolve(null);
+                            return;
+                        }
+
+                        // Step 2: Check each poll's live_session status
+                        var checkPromises = pollIds.map(function (pollId) {
+                            return db.ref('sessions/' + pollId + '/live_session').once('value')
+                                .then(function (sessionSnap) {
+                                    var session = sessionSnap.val();
+                                    if (session && session.status && session.status !== 'ENDED' && session.status !== 'PRE_LIVE') {
+                                        console.log('[findActivePollForClass] Active session found:', pollId, 'status:', session.status);
+                                        return pollId;
+                                    }
+                                    return null;
+                                })
+                                .catch(function (err) {
+                                    console.warn('[findActivePollForClass] Could not check session for poll', pollId, err.message);
+                                    return null;
+                                });
+                        });
+
+                        return Promise.all(checkPromises);
+                    })
+                    .then(function (results) {
+                        if (!results) {
+                            resolve(null);
+                            return;
+                        }
+                        // Find first non-null result (active poll)
+                        var activeId = results.find(function (id) { return id !== null; });
+                        if (activeId) {
+                            console.log('[findActivePollForClass] Returning active poll:', activeId);
+                        } else {
+                            console.log('[findActivePollForClass] No active polls found for class:', className);
+                        }
+                        resolve(activeId || null);
+                    })
+                    .catch(function (err) {
+                        console.error('[findActivePollForClass] Query error:', err);
+                        reject(err);
+                    });
+            });
+        }
+
         function startApp() {
+            // PHASE 4: EARLY STATE REHYDRATION
+            // Attempt to render cached state immediately to prevent white flash
+            var rehydrated = attemptEarlyRehydration();
+            if (rehydrated) {
+                console.log('[App] State rehydrated from cache - continuing with fresh fetch');
+            }
+
             initCalculatorDrag();
             initVisuals();
+
+            // FIX: Start Firebase Connection
+            var pollId = window.currentPollId || sessionStorage.getItem('veritas_active_poll_id');
+            var email = window.STUDENT_EMAIL || sessionStorage.getItem('veritas_student_email');
+
+            if (pollId && email) {
+                console.log('[App] Starting Firebase Sidecar for poll:', pollId);
+                initFirebaseSidecar(pollId, email);
+            } else {
+                console.warn('[App] Cannot start sidecar - missing pollId or email');
+            }
         }
 
         function initAuth() {
@@ -8718,6 +5611,12 @@
             // 1. Check for Token in URL
             var urlParams = new URLSearchParams(window.location.search);
             var token = urlParams.get('token');
+            var pollId = urlParams.get('pollId');
+
+            if (pollId) {
+                window.currentPollId = pollId;
+                sessionStorage.setItem('veritas_active_poll_id', pollId);
+            }
 
             if (token) {
                 console.log('[Auth] Token found in URL:', token);
@@ -8745,17 +5644,19 @@
                     .then(function (snapshot) {
                         var data = snapshot.val();
                         if (data && data.email) {
-                            console.log('[Auth] Token verified. Student:', data.email);
+                            console.log('[Auth] Token verified. Student:', data.email, 'Class:', data.className);
                             window.STUDENT_EMAIL = data.email;
-                            window.SESSION_TOKEN = token; // Treat URL token as session token
+                            window.SESSION_TOKEN = token;
+                            window.STUDENT_CLASS = data.className;
 
                             // Persist
                             try {
                                 sessionStorage.setItem('veritas_student_email', data.email);
                                 sessionStorage.setItem('veritas_session_token', token);
+                                if (data.className) sessionStorage.setItem('veritas_student_class', data.className);
                             } catch (e) { }
 
-                            // Ensure overlay is hidden (double check)
+                            // Ensure overlay is hidden
                             if (window.LoginManager) LoginManager.hide();
                             var loginOverlay = document.getElementById('login-overlay');
                             if (loginOverlay) loginOverlay.style.display = 'none';
@@ -8764,14 +5665,36 @@
                             var appContainer = document.getElementById('student-container');
                             if (appContainer) appContainer.style.display = 'block';
 
-                            startApp();
+                            // FIX: If no pollId in URL, find active poll for this class
+                            if (!window.currentPollId) {
+                                console.log('[Auth] No pollId in URL, searching for active session...');
+                                findActivePollForClass(data.className).then(function (foundPollId) {
+                                    if (foundPollId) {
+                                        console.log('[Auth] Found active poll:', foundPollId);
+                                        window.currentPollId = foundPollId;
+                                        sessionStorage.setItem('veritas_active_poll_id', foundPollId);
+                                    } else {
+                                        console.warn('[Auth] No active poll found for class:', data.className);
+                                    }
+                                    startApp();
+                                }).catch(function (err) {
+                                    console.error('[Auth] Error finding active poll:', err);
+                                    startApp(); // Start anyway, will show waiting screen
+                                });
+                            } else {
+                                startApp();
+                            }
                         } else {
                             throw new Error('Invalid or expired link.');
                         }
                     })
                     .catch(function (error) {
                         console.error('[Auth] Token validation failed:', error);
-                        alert('Invalid link: ' + error.message);
+                        if (error.code === 'auth/admin-restricted-operation') {
+                            alert('Configuration Error: Anonymous Authentication is disabled in Firebase Console. Please enable it in Authentication > Sign-in method.');
+                        } else {
+                            alert('Invalid link: ' + error.message);
+                        }
                         // Fallback to login screen
                         showLoginScreen();
                     });
@@ -8864,63 +5787,3 @@
         window.ViewManager = ViewManager;
 
     })();
-</script>
-  <script>
-    /**
-     * Veritas Theme Manager
-     * Handles Dark Mode persistence, system preference detection, and UI toggling.
-     */
-    (function () {
-        // Enforce Light Mode strictly
-        var ThemeEnforcer = {
-            init: function () {
-                // Force removal of dark class if present
-                document.documentElement.classList.remove('dark');
-                // Ensure light class is present (optional but safe)
-                document.documentElement.classList.add('light');
-
-                // Clear any stored preference to avoid confusion if we ever re-enable
-                try {
-                    localStorage.removeItem('veritas_theme');
-                } catch (e) { }
-            }
-        };
-
-        // Initialize on load
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => ThemeEnforcer.init());
-        } else {
-            ThemeEnforcer.init();
-        }
-
-        window.ThemeManager = ThemeEnforcer;
-    })();
-</script>
-
-<style>
-    /* Extra transition for smooth theme switching */
-    html.dark body {
-        background-color: #0f172a;
-        /* slate-900 */
-        color: #f8fafc;
-        /* slate-50 */
-    }
-
-    html.dark .glass-card {
-        background: rgba(15, 23, 42, 0.6);
-        border-color: rgba(255, 255, 255, 0.1);
-    }
-
-    /* Transition properties */
-    body,
-    .glass-card,
-    .btn,
-    .card {
-        transition-property: background-color, border-color, color, fill, stroke;
-        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-        transition-duration: 300ms;
-    }
-</style>
-</body>
-
-</html>

@@ -1,8900 +1,3 @@
-<!DOCTYPE html>
-<html class="light" lang="en">
-
-<head>
-  <!-- =============================================================================
-     VERITAS LIVE POLL - SHARED HEAD ELEMENTS
-     =============================================================================
-     Purpose: Common <head> elements for all pages
-     Used by: TeacherView.html, StudentView.html
-     Phase: 3A - Shared Components
-     ============================================================================= -->
-
-<base target="_top">
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<!-- Google Fonts -->
-<link href="https://fonts.googleapis.com" rel="preconnect" />
-<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap"
-     rel="stylesheet" />
-
-<!-- Material Symbols -->
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
-
-<!-- Quill.js (Rich Text Editor) -->
-<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
-<!-- Image Resize Module -->
-<script src="https://cdn.jsdelivr.net/npm/quill-image-resize-module@3.0.0/image-resize.min.js"></script>
-
-<!-- KaTeX (Formula Rendering) -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
-
-<!-- MathLive (Visual Formula Editor) -->
-<script src="https://unpkg.com/mathlive"></script>
-
-<!-- DOMPurify (Security) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.5/purify.min.js"></script>
-
-<!-- Clarity Tracking -->
-<script type="text/javascript">
-     (function (c, l, a, r, i, t, y) {
-          c[a] = c[a] || function () { (c[a].q = c[a].q || []).push(arguments) };
-          t = l.createElement(r); t.async = 1; t.src = "https://www.clarity.ms/tag/" + i;
-          y = l.getElementsByTagName(r)[0]; y.parentNode.insertBefore(t, y);
-     })(window, document, "clarity", "script", "unrh0cofey");
-</script>
-  <title>Veritas Live Poll - Teacher Dashboard</title>
-
-  <!-- =============================================================================
-     VERITAS LIVE POLL - SHARED TAILWIND CONFIGURATION
-     =============================================================================
-     Purpose: Centralized Tailwind CSS configuration for design system consistency
-     Used by: TeacherView.html, StudentView.html
-     Phase: 3A - Shared Components
-     ============================================================================= -->
-
-<!-- Tailwind CSS CDN with Plugins -->
-<script src="https://cdn.tailwindcss.com/3.3.5"></script>
-
-<!-- Tailwind Configuration -->
-<script>
-  tailwind.config = {
-    darkMode: "class",
-    theme: {
-      extend: {
-        colors: {
-          // Veritas Brand Colors (Primary Design System)
-          "veritas-navy": "#12385d",
-          "veritas-gold": "#c5a05a",
-          primary: "#12385d",
-
-          // Supporting Brand Colors
-          "brand-white": "#ffffff",
-          "brand-light-gray": "#d9e0e7",
-          "brand-dark-gray": "#242424",
-          "background-light": "#f7f8fa",
-          "background-dark": "#0f1723",
-
-          // Semantic Colors
-          "success-green": "#1b5e20",
-          "success-bg": "#e8f5ec",
-          "error-red": "#c62828",
-          "text-primary": "#111111",
-          "text-secondary": "#4b5563",
-          "text-muted": "#6b7280"
-        },
-        fontFamily: {
-          display: ["Inter", "sans-serif"],
-          serif: ["Noto Serif", "serif"]
-        },
-        borderRadius: {
-          DEFAULT: "0.25rem",
-          lg: "0.5rem",
-          xl: "0.75rem",
-          "2xl": "1rem",
-          full: "9999px"
-        },
-        spacing: {
-          '18': '4.5rem',
-          '88': '22rem',
-          '128': '32rem'
-        },
-        animation: {
-          // Teacher animations
-          'fade-up': 'fadeUp 0.4s ease-out forwards',
-          'pulse-glow': 'pulseGlow 3s ease-in-out infinite',
-
-          // Student animations
-          'fade-in': 'fadeIn 0.6s ease-out forwards',
-          'spin-slow': 'spin 3s linear infinite',
-          'pulse-dot': 'pulseDot 1.2s ease-in-out infinite'
-        },
-        keyframes: {
-          fadeUp: {
-            '0%': { opacity: '0', transform: 'translateY(20px)' },
-            '100%': { opacity: '1', transform: 'translateY(0)' }
-          },
-          pulseGlow: {
-            '0%, 100%': { boxShadow: '0 0 0 0 rgba(197, 160, 90, 0.4)' },
-            '50%': { boxShadow: '0 0 20px 4px rgba(197, 160, 90, 0.4)' }
-          },
-          fadeIn: {
-            'from': { opacity: '0', transform: 'translateY(10px)' },
-            'to': { opacity: '1', transform: 'translateY(0)' }
-          },
-          'pulseDot': {
-            '0%, 80%, 100%': { opacity: '0.25', transform: 'scale(0.85)' },
-            '40%': { opacity: '1', transform: 'scale(1)' }
-          }
-        }
-      }
-    }
-  };
-</script>
-  <script>
-(function (global) {
-  'use strict';
-
-  function clampSeconds(value) {
-    var seconds = Number(value);
-    if (!isFinite(seconds)) {
-      seconds = 0;
-    }
-    return Math.max(0, Math.floor(seconds));
-  }
-
-  function formatClock(seconds) {
-    var total = clampSeconds(seconds);
-    var minutes = Math.floor(total / 60);
-    var remaining = total % 60;
-    var m = minutes < 10 ? '0' + minutes : String(minutes);
-    var s = remaining < 10 ? '0' + remaining : String(remaining);
-    return m + ':' + s;
-  }
-
-  function createCountdown(options) {
-    options = options || {};
-    var onTick = typeof options.onTick === 'function' ? options.onTick : function () {};
-    var onExpire = typeof options.onExpire === 'function' ? options.onExpire : function () {};
-    var intervalId = null;
-    var remaining = 0;
-    var running = false;
-
-    function clearTimer() {
-      if (intervalId) {
-        clearInterval(intervalId);
-        intervalId = null;
-      }
-      running = false;
-    }
-
-    function notifyTick() {
-      onTick(remaining);
-    }
-
-    function tickOnce() {
-      if (!running) return;
-      remaining = Math.max(0, remaining - 1);
-      notifyTick();
-      if (remaining <= 0) {
-        clearTimer();
-        onExpire();
-      }
-    }
-
-    return {
-      start: function (seconds) {
-        remaining = clampSeconds(seconds);
-        clearTimer();
-        if (remaining === 0) {
-          notifyTick();
-          onExpire();
-          return;
-        }
-        running = true;
-        notifyTick();
-        intervalId = setInterval(tickOnce, 1000);
-      },
-      pause: function () {
-        if (!running) return;
-        clearTimer();
-      },
-      stop: function () {
-        clearTimer();
-      },
-      add: function (deltaSeconds) {
-        var next = clampSeconds(remaining + Number(deltaSeconds));
-        remaining = next;
-        notifyTick();
-        if (remaining === 0 && running) {
-          clearTimer();
-          onExpire();
-        }
-      },
-      set: function (seconds) {
-        remaining = clampSeconds(seconds);
-        notifyTick();
-        if (remaining === 0 && running) {
-          clearTimer();
-          onExpire();
-        }
-      },
-      getRemaining: function () {
-        return remaining;
-      },
-      isRunning: function () {
-        return running;
-      }
-    };
-  }
-
-  function createHeartbeat(options) {
-    options = options || {};
-    var onBeat = typeof options.onBeat === 'function' ? options.onBeat : function () {};
-    var intervalMs = Math.max(500, Number(options.intervalMs) || 3000);
-    var timerId = null;
-
-    function scheduleNext() {
-      timerId = setTimeout(function () {
-        timerId = null;
-        onBeat();
-        scheduleNext();
-      }, intervalMs);
-    }
-
-    return {
-      start: function (fireImmediately) {
-        if (timerId) return;
-        if (fireImmediately) {
-          onBeat();
-        }
-        scheduleNext();
-      },
-      stop: function () {
-        if (timerId) {
-          clearTimeout(timerId);
-          timerId = null;
-        }
-      },
-      isRunning: function () {
-        return timerId !== null;
-      },
-      pulse: function () {
-        onBeat();
-      },
-      updateInterval: function (nextInterval) {
-        intervalMs = Math.max(500, Number(nextInterval) || intervalMs);
-        if (timerId) {
-          clearTimeout(timerId);
-          timerId = null;
-          scheduleNext();
-        }
-      }
-    };
-  }
-
-  function createFullscreenManager(doc, options) {
-    var documentRef = doc || document;
-    options = options || {};
-    var onChange = typeof options.onChange === 'function' ? options.onChange : function () {};
-    var targetElement = options.element || documentRef.documentElement;
-
-    function isFullscreen() {
-      return !!(documentRef.fullscreenElement || documentRef.webkitFullscreenElement || documentRef.msFullscreenElement);
-    }
-
-    function request() {
-      if (!targetElement) {
-        return Promise.reject(new Error('No element available for fullscreen'));
-      }
-      var req = targetElement.requestFullscreen || targetElement.webkitRequestFullscreen || targetElement.msRequestFullscreen;
-      if (!req) {
-        return Promise.reject(new Error('Fullscreen API unavailable'));
-      }
-      return req.call(targetElement);
-    }
-
-    function exit() {
-      var exitFn = documentRef.exitFullscreen || documentRef.webkitExitFullscreen || documentRef.msExitFullscreen;
-      if (exitFn) {
-        return exitFn.call(documentRef);
-      }
-      return Promise.resolve();
-    }
-
-    function handleChange() {
-      onChange({
-        isFullscreen: isFullscreen(),
-        hidden: documentRef.hidden
-      });
-    }
-
-    documentRef.addEventListener('fullscreenchange', handleChange);
-    documentRef.addEventListener('webkitfullscreenchange', handleChange);
-    documentRef.addEventListener('visibilitychange', handleChange);
-
-    return {
-      request: request,
-      exit: exit,
-      isFullscreen: isFullscreen,
-      dispose: function () {
-        documentRef.removeEventListener('fullscreenchange', handleChange);
-        documentRef.removeEventListener('webkitfullscreenchange', handleChange);
-        documentRef.removeEventListener('visibilitychange', handleChange);
-      }
-    };
-  }
-
-  global.SecureAssessmentShared = {
-    formatClock: formatClock,
-    createCountdown: createCountdown,
-    createHeartbeat: createHeartbeat,
-    createFullscreenManager: createFullscreenManager
-  };
-})(this);
-</script>
-
-
-  <!-- Firebase SDKs (compat) -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-functions-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
-
-  <script>
-    var FIREBASE_CONFIG = null;
-    if (!FIREBASE_CONFIG) {
-      console.warn('FIREBASE_CONFIG missing, using default fallback.');
-      FIREBASE_CONFIG = {
-        apiKey: "AIzaSyAv0bCe5KIuQx_sou8toBy5DG2PYaB_pBM",
-        authDomain: "classroomproctor.firebaseapp.com",
-        databaseURL: "https://classroomproctor-default-rtdb.firebaseio.com",
-        projectId: "classroomproctor",
-        storageBucket: "classroomproctor.firebasestorage.app",
-        messagingSenderId: "600627073908",
-        appId: "1:600627073908:web:935970f5849b28f6ad5221"
-      };
-      window.USING_FALLBACK_CONFIG = true;
-    }
-    var Veritas = Veritas || {};
-    Veritas.Config = Veritas.Config || {};
-    Veritas.Config.DEBUG_FIREBASE = true;
-  </script>
-
-  <!-- Google Charts -->
-  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-
-  <!-- =============================================================================
-     VERITAS LIVE POLL - SHARED CSS CUSTOM PROPERTIES
-     =============================================================================
-     Purpose: Centralized CSS variables for design system consistency
-     Used by: TeacherView.html, StudentView.html
-     Phase: 3A - Shared Components
-     ============================================================================= -->
-
-<style>
-  /* Veritas Design System - CSS Custom Properties */
-  :root {
-    /* Brand Colors */
-    --veritas-navy: #12385d;
-    --veritas-gold: #c5a05a;
-    --brand-white: #ffffff;
-    --brand-light-gray: #d9e0e7;
-    --brand-dark-gray: #242424;
-
-    /* Background Colors */
-    --bg-light: #f7f8fa;
-    --bg-dark: #0f1723;
-    --bg-card: #ffffff;
-    --bg-elevated: #f8fafc;
-    --bg-glass: rgba(255, 255, 255, 0.7);
-    --bg-glass-dark: rgba(15, 23, 42, 0.7);
-
-    /* Text Colors */
-    --text-primary: #111111;
-    --text-secondary: #4b5563;
-    --text-muted: #6b7280;
-    --text-on-navy: #ffffff;
-
-    /* Semantic Colors */
-    --success-green: #1b5e20;
-    --success-light: #2e7d32;
-    --success-bg: #e8f5ec;
-    --success-bg-light: #ecfdf5;
-    --error-red: #c62828;
-
-    /* Opacity Modifiers */
-    --navy-06: rgba(18, 56, 93, 0.06);
-    --navy-10: rgba(18, 56, 93, 0.1);
-    --navy-12: rgba(18, 56, 93, 0.12);
-    --navy-14: rgba(18, 56, 93, 0.14);
-    --gold-08: rgba(197, 160, 90, 0.08);
-
-    /* Spacing Scale (following 8px baseline) */
-    --space-xs: 4px;
-    --space-sm: 8px;
-    --space-md: 16px;
-    --space-lg: 24px;
-    --space-xl: 32px;
-    --space-2xl: 48px;
-
-    /* Border Radius */
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 14px;
-    --radius-xl: 16px;
-    --radius-2xl: 24px;
-    --radius-full: 9999px;
-
-    /* Depth & Glassmorphism */
-    --glass-blur: blur(12px);
-    --glass-border: rgba(255, 255, 255, 0.2);
-    --glass-border-dark: rgba(255, 255, 255, 0.1);
-    --shadow-glass: 0 8px 32px 0 rgba(18, 56, 93, 0.1);
-    --shadow-premium: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-
-    /* Interactive Glows */
-    --glow-navy: 0 0 15px rgba(18, 56, 93, 0.3);
-    --glow-gold: 0 0 15px rgba(197, 160, 90, 0.3);
-
-    /* Enhanced Semantic Colors (WCAG AA Compliant) */
-    --primary: #12385d;
-    --primary-hover: #0f2d4a;
-    --primary-light: #1a4a7a;
-    --secondary: #c5a05a;
-    --secondary-hover: #b08f4d;
-
-    /* Status Colors with Better Contrast */
-    --success: #16a34a;
-    --success-bg: #dcfce7;
-    --success-border: #86efac;
-    --warning: #f59e0b;
-    --warning-bg: #fef3c7;
-    --warning-border: #fcd34d;
-    --error: #dc2626;
-    --error-bg: #fee2e2;
-    --error-border: #fca5a5;
-    --info: #3b82f6;
-    --info-bg: #dbeafe;
-    --info-border: #93c5fd;
-
-    /* Interactive States */
-    --focus-ring: 0 0 0 3px rgba(18, 56, 93, 0.2);
-    --hover-lift: 0 4px 12px rgba(0, 0, 0, 0.1);
-    --active-press: 0 2px 4px rgba(0, 0, 0, 0.1);
-
-    /* Typography Scale */
-    --text-xs: 0.75rem;
-    /* 12px */
-    --text-sm: 0.875rem;
-    /* 14px */
-    --text-base: 1rem;
-    /* 16px */
-    --text-lg: 1.125rem;
-    /* 18px */
-    --text-xl: 1.25rem;
-    /* 20px */
-    --text-2xl: 1.5rem;
-    /* 24px */
-    --text-3xl: 1.875rem;
-    /* 30px */
-    --text-4xl: 2.25rem;
-    /* 36px */
-
-    /* Line Heights */
-    --leading-tight: 1.25;
-    --leading-normal: 1.5;
-    --leading-relaxed: 1.75;
-
-    /* Animation Timings */
-    --duration-fast: 150ms;
-    --duration-normal: 200ms;
-    --duration-slow: 300ms;
-    --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
-    --ease-in-out: cubic-bezier(0.4, 0, 0.6, 1);
-  }
-</style>
-  <style type="text/tailwindcss">
-  @layer utilities {
-      .correct-answer-bg {
-        background-image: repeating-linear-gradient(
-          45deg,
-          rgba(217, 224, 231, 0.7),
-          rgba(217, 224, 231, 0.7) 10px,
-          rgba(217, 224, 231, 1) 10px,
-          rgba(217, 224, 231, 1) 20px
-        );
-      }
-      .dark .correct-answer-bg {
-        background-image: repeating-linear-gradient(
-          45deg,
-          rgba(0, 46, 109, 0.2),
-          rgba(0, 46, 109, 0.2) 10px,
-          rgba(0, 46, 109, 0.3) 10px,
-          rgba(0, 46, 109, 0.3) 20px
-        );
-      }
-      
-      /* Premium Scrollbar */
-      .custom-scrollbar::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-      .custom-scrollbar::-webkit-scrollbar-track {
-        background: transparent;
-      }
-      .custom-scrollbar::-webkit-scrollbar-thumb {
-        background-color: rgba(156, 163, 175, 0.5);
-        border-radius: 9999px;
-      }
-      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background-color: rgba(156, 163, 175, 0.7);
-      }
-      .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-        background-color: rgba(75, 85, 99, 0.5);
-      }
-      .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background-color: rgba(75, 85, 99, 0.7);
-      }
-      
-      /* Glassmorphism Utilities */
-      .glass-panel {
-        background: rgba(255, 255, 255, 0.7);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.5);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      }
-      .dark .glass-panel {
-        background: rgba(30, 41, 59, 0.7);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-      }
-    }
-  </style>
-<style>
-  /* Veritas Design System - CSS Custom Properties */
-  :root {
-    /* Brand Colors */
-    --veritas-navy: #12385d;
-    --veritas-gold: #c5a05a;
-    --brand-white: #ffffff;
-    --brand-light-gray: #d9e0e7;
-    --brand-dark-gray: #242424;
-
-    /* Background Colors */
-    --bg-light: #f7f8fa;
-    --bg-dark: #0f1723;
-    --bg-card: #ffffff;
-    --bg-elevated: #f8fafc;
-
-    /* Text Colors */
-    --text-primary: #111111;
-    --text-secondary: #4b5563;
-    --text-muted: #6b7280;
-    --text-on-navy: #ffffff;
-
-    /* Semantic Colors */
-    --success-green: #1b5e20;
-    --success-light: #2e7d32;
-    --success-bg: #e8f5ec;
-    --success-bg-light: #ecfdf5;
-    --error-red: #c62828;
-
-    /* Opacity Modifiers */
-    --navy-06: rgba(18, 56, 93, 0.06);
-    --navy-10: rgba(18, 56, 93, 0.1);
-    --navy-12: rgba(18, 56, 93, 0.12);
-    --navy-14: rgba(18, 56, 93, 0.14);
-    --gold-08: rgba(197, 160, 90, 0.08);
-
-    /* Spacing Scale (following 8px baseline) */
-    --space-xs: 4px;
-    --space-sm: 8px;
-    --space-md: 16px;
-    --space-lg: 24px;
-    --space-xl: 32px;
-    --space-2xl: 48px;
-
-    /* Border Radius */
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 14px;
-    --radius-xl: 16px;
-    --radius-full: 9999px;
-
-    /* View Transitions Names */
-    --vt-header: header-main;
-    --vt-sidebar: sidebar-main;
-    --vt-content: content-main;
-
-    /* Animation Timing */
-    --transition-smooth: 400ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-fast: 200ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-bounce: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-
-  body {
-    /* MathLive Keyboard Z-Index Fix */
-    --keyboard-zindex: 20000 !important;
-    --ml-keyboard-zindex: 20000 !important;
-  }
-
-  .motion-safe-transition {
-    transition: all var(--transition-smooth);
-  }
-
-  .motion-pulse {
-    animation: motion-pulse 2s infinite ease-in-out;
-  }
-
-  .motion-slide-up {
-    animation: motion-slide-up var(--transition-smooth) forwards;
-  }
-
-  .motion-slide-in-right {
-    animation: motion-slide-in-right var(--transition-smooth) forwards;
-  }
-
-  /* Quill Toolbar Normalization */
-  /* Quill Toolbar Normalization */
-  .ql-toolbar.ql-snow {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    align-items: center !important;
-    gap: 8px !important;
-    padding: 8px !important;
-  }
-
-  .ql-toolbar.ql-snow .ql-formats {
-    margin-right: 0 !important;
-    display: flex !important;
-    align-items: center !important;
-  }
-
-  /* Unified height and alignment for all toolbar items */
-  .ql-toolbar.ql-snow button,
-  .ql-toolbar.ql-snow .ql-picker {
-    height: 28px !important;
-    vertical-align: middle !important;
-    display: inline-flex !important;
-    align-items: center !important;
-  }
-
-  /* Button specific centering */
-  .ql-toolbar.ql-snow button {
-    width: 28px !important;
-    padding: 3px !important;
-    justify-content: center !important;
-  }
-
-  /* Picker specific */
-  .ql-toolbar.ql-snow .ql-picker-label {
-    padding-left: 4px !important;
-    padding-right: 4px !important;
-    display: flex !important;
-    align-items: center !important;
-    height: 100% !important;
-  }
-
-  /* Specific fix for alignment options to prevent layout shifts */
-  .ql-snow .ql-picker.ql-align {
-    width: 32px !important;
-  }
-
-  /* Ensure icons are centered and sized consistently */
-  .ql-snow .ql-stroke {
-    stroke-width: 1.5 !important;
-  }
-
-  /* Modal Z-Index fix to ensure it sits above everything */
-  #formula-modal {
-    z-index: 9999 !important;
-  }
-
-  .motion-fade-in {
-    animation: motion-fade-in var(--transition-fast) forwards;
-  }
-
-  @keyframes motion-pulse {
-
-    0%,
-    100% {
-      transform: scale(1);
-      opacity: 0.8;
-    }
-
-    50% {
-      transform: scale(1.15);
-      opacity: 1;
-    }
-  }
-
-  @keyframes motion-slide-up {
-    from {
-      transform: translateY(12px);
-      opacity: 0;
-    }
-
-    to {
-      transform: translateY(0);
-      opacity: 1;
-    }
-  }
-
-  @keyframes motion-slide-in-right {
-    from {
-      transform: translateX(20px);
-      opacity: 0;
-    }
-
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-
-  @keyframes motion-fade-in {
-    from {
-      opacity: 0;
-    }
-
-    to {
-      opacity: 1;
-    }
-  }
-
-  /* View Transition Assignments */
-  #header-default,
-  #header-live {
-    view-transition-name: var(--vt-header);
-  }
-
-  #dashboard-sidebar {
-    view-transition-name: var(--vt-sidebar);
-  }
-
-  main {
-    view-transition-name: var(--vt-content);
-  }
-
-  /* Glassmorphism Utilities */
-  .glass-card {
-    background: var(--bg-glass);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--glass-border);
-    box-shadow: var(--shadow-glass);
-  }
-
-  .dark .glass-card {
-    background: var(--bg-glass-dark);
-    border-color: var(--glass-border-dark);
-  }
-
-  .premium-shadow {
-    box-shadow: var(--shadow-premium);
-  }
-
-  .premium-glow-navy:hover {
-    box-shadow: var(--glow-navy);
-  }
-
-  .premium-glow-gold:hover {
-    box-shadow: var(--glow-gold);
-  }
-
-  .teacher-question-image {
-    position: relative;
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    background: var(--navy-06);
-    border: 1px solid var(--navy-12);
-  }
-
-  /* ========================================
-     PREMIUM BUTTON INTERACTIONS
-     ======================================== */
-  .btn-primary,
-  .btn-secondary,
-  .btn-success {
-    position: relative;
-    overflow: hidden;
-    transition: all var(--duration-normal) var(--ease-out);
-  }
-
-  .btn-primary::before,
-  .btn-secondary::before,
-  .btn-success::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.3);
-    transform: translate(-50%, -50%);
-    transition: width 0.6s, height 0.6s;
-    pointer-events: none;
-  }
-
-  .btn-primary:active::before,
-  .btn-secondary:active::before,
-  .btn-success:active::before {
-    width: 300px;
-    height: 300px;
-  }
-
-  .btn-primary:hover:not(:disabled),
-  .btn-secondary:hover:not(:disabled),
-  .btn-success:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: var(--hover-lift);
-  }
-
-  .btn-primary:active:not(:disabled),
-  .btn-secondary:active:not(:disabled),
-  .btn-success:active:not(:disabled) {
-    transform: translateY(0);
-    box-shadow: var(--active-press);
-  }
-
-  .btn-primary:focus-visible,
-  .btn-secondary:focus-visible,
-  .btn-success:focus-visible {
-    outline: none;
-    box-shadow: var(--focus-ring);
-  }
-
-  /* ========================================
-     LOADING SKELETONS
-     ======================================== */
-  .skeleton {
-    background: linear-gradient(90deg,
-        #f0f0f0 25%,
-        #e0e0e0 50%,
-        #f0f0f0 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
-    border-radius: var(--radius-sm);
-  }
-
-  .dark .skeleton {
-    background: linear-gradient(90deg,
-        #2a2a2a 25%,
-        #1a1a1a 50%,
-        #2a2a2a 75%);
-    background-size: 200% 100%;
-  }
-
-  @keyframes shimmer {
-    0% {
-      background-position: 200% 0;
-    }
-
-    100% {
-      background-position: -200% 0;
-    }
-  }
-
-  .skeleton-card {
-    padding: 1.5rem;
-    border: 1px solid var(--brand-light-gray);
-    border-radius: var(--radius-lg);
-  }
-
-  .skeleton-header {
-    height: 24px;
-    width: 60%;
-    margin-bottom: 1rem;
-  }
-
-  .skeleton-line {
-    height: 16px;
-    width: 100%;
-    margin-bottom: 0.75rem;
-  }
-
-  .skeleton-line.short {
-    width: 70%;
-  }
-
-  /* ========================================
-     ENHANCED TOAST NOTIFICATIONS
-     ======================================== */
-  .toast-container {
-    position: fixed;
-    top: 1rem;
-    right: 1rem;
-    z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    max-width: 400px;
-  }
-
-  .toast {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
-    padding: 1rem;
-    border-radius: var(--radius-lg);
-    background: white;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    border-left: 4px solid;
-    min-width: 300px;
-  }
-
-  .toast-success {
-    border-left-color: var(--success);
-    background: var(--success-bg);
-  }
-
-  .toast-error {
-    border-left-color: var(--error);
-    background: var(--error-bg);
-  }
-
-  .toast-warning {
-    border-left-color: var(--warning);
-    background: var(--warning-bg);
-  }
-
-  .toast-info {
-    border-left-color: var(--info);
-    background: var(--info-bg);
-  }
-
-  .toast-icon {
-    font-size: 24px;
-    flex-shrink: 0;
-  }
-
-  .toast-success .toast-icon {
-    color: var(--success);
-  }
-
-  .toast-error .toast-icon {
-    color: var(--error);
-  }
-
-  .toast-warning .toast-icon {
-    color: var(--warning);
-  }
-
-  .toast-info .toast-icon {
-    color: var(--info);
-  }
-
-  .toast-content {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .toast-title {
-    font-weight: 600;
-    font-size: var(--text-sm);
-    margin-bottom: 0.25rem;
-    color: var(--text-primary);
-  }
-
-  .toast-message {
-    font-size: var(--text-sm);
-    color: var(--text-secondary);
-    line-height: var(--leading-normal);
-  }
-
-  .toast-close {
-    flex-shrink: 0;
-    padding: 0.25rem;
-    border-radius: var(--radius-sm);
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    color: var(--text-muted);
-    transition: all var(--duration-fast) var(--ease-out);
-  }
-
-  .toast-close:hover {
-    background: rgba(0, 0, 0, 0.05);
-    color: var(--text-primary);
-  }
-
-  @keyframes slide-in {
-    from {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-
-  @keyframes slide-out {
-    from {
-      transform: translateX(0);
-      opacity: 1;
-    }
-
-    to {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-  }
-
-  .animate-slide-in {
-    animation: slide-in var(--duration-normal) var(--ease-out);
-  }
-
-  .animate-slide-out {
-    animation: slide-out var(--duration-normal) var(--ease-out);
-  }
-
-  /* ========================================
-     EMPTY STATES
-     ======================================== */
-  .empty-state {
-    text-align: center;
-    padding: 4rem 2rem;
-    max-width: 400px;
-    margin: 0 auto;
-  }
-
-  .empty-state-icon {
-    width: 80px;
-    height: 80px;
-    margin: 0 auto 1.5rem;
-    border-radius: 50%;
-    background: var(--navy-06);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .empty-state-icon .material-symbols-outlined {
-    font-size: 40px;
-    color: var(--primary);
-  }
-
-  .empty-state h3 {
-    font-size: var(--text-2xl);
-    font-weight: 700;
-    color: var(--text-primary);
-    margin-bottom: 0.5rem;
-  }
-
-  .empty-state p {
-    font-size: var(--text-base);
-    color: var(--text-secondary);
-    line-height: var(--leading-relaxed);
-    margin-bottom: 1.5rem;
-  }
-
-  /* ========================================
-     PROGRESS INDICATORS
-     ======================================== */
-  .progress-tracker {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 1rem;
-  }
-
-  .progress-step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    flex: 1;
-  }
-
-  .step-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    font-size: var(--text-sm);
-    background: var(--brand-light-gray);
-    color: var(--text-muted);
-    transition: all var(--duration-normal) var(--ease-out);
-  }
-
-  .progress-step.completed .step-icon {
-    background: var(--success);
-    color: white;
-  }
-
-  .progress-step.active .step-icon {
-    background: var(--primary);
-    color: white;
-    box-shadow: 0 0 0 4px rgba(18, 56, 93, 0.1);
-  }
-
-  .step-icon.spinner {
-    border: 2px solid var(--brand-light-gray);
-    border-top-color: var(--primary);
-    animation: spin 0.8s linear infinite;
-  }
-
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
-  .progress-step span {
-    font-size: var(--text-xs);
-    color: var(--text-muted);
-    font-weight: 500;
-  }
-
-  .progress-step.active span {
-    color: var(--primary);
-    font-weight: 600;
-  }
-
-  .progress-step.completed span {
-    color: var(--success);
-  }
-
-  /* ========================================
-     MOBILE TOUCH TARGET OPTIMIZATION
-     ======================================== */
-  /* Ensure minimum 44x44px touch targets for accessibility */
-  button:not(.ql-toolbar button),
-  .btn,
-  .icon-btn,
-  a.clickable,
-  [role="button"] {
-    min-width: 44px;
-    min-height: 44px;
-  }
-
-  /* Larger tap areas for mobile devices */
-  @media (max-width: 768px) {
-
-    .btn,
-    button {
-      padding: 12px 24px;
-      font-size: 16px;
-      /* Prevents iOS zoom on focus */
-    }
-
-    input,
-    select,
-    textarea {
-      font-size: 16px;
-      /* Prevents iOS zoom */
-    }
-
-    /* Increase spacing for easier tapping */
-    .btn+.btn {
-      margin-left: 12px;
-    }
-
-    /* Mobile-friendly navigation */
-    .mobile-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: white;
-      border-top: 1px solid var(--brand-light-gray);
-      display: flex;
-      justify-content: space-around;
-      padding: 8px 0;
-      z-index: 1000;
-      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-    }
-
-    .nav-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      padding: 8px 16px;
-      border: none;
-      background: transparent;
-      color: var(--text-muted);
-      cursor: pointer;
-      transition: color var(--duration-fast) var(--ease-out);
-      min-width: 64px;
-    }
-
-    .nav-item.active {
-      color: var(--primary);
-    }
-
-    .nav-item .material-symbols-outlined {
-      font-size: 24px;
-    }
-
-    .nav-item span:last-child {
-      font-size: 11px;
-      font-weight: 500;
-    }
-
-    /* Add padding to main content to account for bottom nav */
-    body.has-mobile-nav main {
-      padding-bottom: 80px;
-    }
-  }
-
-  /* ========================================
-     IMPROVED ERROR HANDLING
-     ======================================== */
-  .error-message {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 16px;
-    border-radius: var(--radius-lg);
-    background: var(--error-bg);
-    border-left: 4px solid var(--error);
-    margin: 16px 0;
-  }
-
-  .error-message .material-symbols-outlined {
-    color: var(--error);
-    font-size: 24px;
-    flex-shrink: 0;
-  }
-
-  .error-content {
-    flex: 1;
-  }
-
-  .error-title {
-    font-weight: 600;
-    color: var(--error);
-    margin-bottom: 4px;
-  }
-
-  .error-description {
-    font-size: var(--text-sm);
-    color: var(--text-secondary);
-    line-height: var(--leading-normal);
-  }
-
-  .error-actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 12px;
-  }
-
-  .error-action-btn {
-    padding: 8px 16px;
-    border-radius: var(--radius-sm);
-    font-size: var(--text-sm);
-    font-weight: 500;
-    cursor: pointer;
-    transition: all var(--duration-fast) var(--ease-out);
-  }
-
-  .error-action-primary {
-    background: var(--error);
-    color: white;
-    border: none;
-  }
-
-  .error-action-primary:hover {
-    background: var(--error-red);
-  }
-
-  .error-action-secondary {
-    background: transparent;
-    color: var(--error);
-    border: 1px solid var(--error);
-  }
-
-  .error-action-secondary:hover {
-    background: var(--error-bg);
-  }
-
-  /* Warning variant */
-  .warning-message {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 16px;
-    border-radius: var(--radius-lg);
-    background: var(--warning-bg);
-    border-left: 4px solid var(--warning);
-    margin: 16px 0;
-  }
-
-  .warning-message .material-symbols-outlined {
-    color: var(--warning);
-    font-size: 24px;
-    flex-shrink: 0;
-  }
-
-  .warning-title {
-    font-weight: 600;
-    color: var(--warning);
-    margin-bottom: 4px;
-  }
-
-  /* Info variant */
-  .info-message {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 16px;
-    border-radius: var(--radius-lg);
-    background: var(--info-bg);
-    border-left: 4px solid var(--info);
-    margin: 16px 0;
-  }
-
-  .info-message .material-symbols-outlined {
-    color: var(--info);
-    font-size: 24px;
-    flex-shrink: 0;
-  }
-
-  .info-title {
-    font-weight: 600;
-    color: var(--info);
-    margin-bottom: 4px;
-  }
-
-  .teacher-question-image-el {
-    width: 100%;
-    max-height: 360px;
-    object-fit: contain;
-    display: block;
-    background: var(--bg-card);
-  }
-
-  .teacher-question-image-zoom {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(18, 24, 40, 0.45);
-    color: var(--brand-white);
-    opacity: 0;
-    transition: opacity 180ms ease;
-    border: none;
-    cursor: pointer;
-  }
-
-  .teacher-question-image:hover .teacher-question-image-zoom,
-  .teacher-question-image-zoom:focus-visible {
-    opacity: 1;
-  }
-
-  .teacher-question-image-zoom:focus-visible {
-    outline: 3px solid rgba(18, 56, 93, 0.45);
-    outline-offset: 2px;
-  }
-
-  /* Student-view-style question layout */
-  .question-layout-grid {
-    display: block;
-    /* Change from grid to block for float wrapping */
-    width: 100%;
-    position: relative;
-    overflow: hidden;
-    /* Clearfix behavior */
-  }
-
-  .question-layout-grid.no-image {
-    display: block;
-  }
-
-  .question-text-area {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .question-stem-text {
-    font-family: "Noto Serif", serif;
-    font-size: 1.125rem;
-    /* Standardized to 18px */
-    line-height: 1.6;
-    font-weight: 400;
-    color: #000000;
-    margin: 0;
-    text-align: left;
-    word-wrap: break-word;
-  }
-
-  .dark .question-stem-text {
-    color: #ffffff;
-  }
-
-  .question-image-area {
-    float: right;
-    /* Standard wrap behavior */
-    margin-left: 24px;
-    margin-bottom: 12px;
-    max-width: min(320px, 40%);
-    /* Capped width for wrap */
-    display: flex;
-    justify-content: flex-end;
-  }
-
-  .question-image-frame {
-    width: 100%;
-    max-height: min(420px, 50vh);
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 10px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-  }
-
-  .question-image-clickable {
-    max-height: 100%;
-    width: 100%;
-    object-fit: contain;
-    border-radius: 8px;
-    cursor: zoom-in;
-    transition: transform 0.2s ease;
-  }
-
-  .question-image-clickable:hover {
-    transform: scale(1.02);
-  }
-
-  .dark .question-image-frame {
-    background: rgba(36, 36, 36, 0.55);
-    border-color: rgba(255, 255, 255, 0.18);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-  }
-
-  .teacher-result-card {
-    position: relative;
-    overflow: hidden;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--navy-14);
-    background: var(--bg-card);
-    box-shadow: 0 1px 4px rgba(18, 56, 93, 0.06);
-    margin-bottom: 10px;
-  }
-
-  .teacher-result-card:last-child {
-    margin-bottom: 0;
-  }
-
-  .teacher-result-progress {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 0%;
-    background: rgba(18, 56, 93, 0.12);
-    transition: width 220ms ease;
-  }
-
-  .teacher-result-progress.is-correct {
-    background: rgba(46, 125, 50, 0.2);
-  }
-
-  .teacher-result-content-row {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    align-items: stretch;
-    gap: 12px;
-    padding: 12px 16px;
-  }
-
-  .teacher-result-leading {
-    display: flex;
-    align-items: center;
-  }
-
-  .teacher-result-letter {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    background: var(--navy-12);
-    color: var(--veritas-navy);
-    font-weight: 700;
-    font-size: 0.95rem;
-  }
-
-  .teacher-result-body {
-    flex: 1;
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-    min-width: 0;
-  }
-
-  .teacher-result-image-wrap {
-    width: 80px;
-    max-width: 80px;
-    flex-shrink: 0;
-  }
-
-  .teacher-result-image {
-    width: 100%;
-    max-height: 80px;
-    object-fit: contain;
-    border-radius: 6px;
-    border: 1px solid rgba(18, 56, 93, 0.18);
-    background: var(--bg-elevated);
-  }
-
-  .teacher-result-text {
-    color: var(--veritas-navy);
-    font-size: 0.9rem;
-    line-height: 1.5;
-  }
-
-  .teacher-result-text--empty {
-    font-style: italic;
-    color: var(--text-muted);
-  }
-
-  .teacher-result-percentage {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    justify-content: center;
-    gap: 2px;
-    min-width: 70px;
-    color: var(--veritas-navy);
-    font-weight: 700;
-  }
-
-  .teacher-result-percentage span:first-child {
-    font-size: 0.95rem;
-  }
-
-  .teacher-result-count {
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-  }
-
-  .teacher-result-students {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 8px 16px 10px;
-    border-top: 1px solid var(--navy-12);
-    background: var(--navy-06);
-  }
-
-  .teacher-result-student {
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 3px 8px;
-    border-radius: var(--radius-full);
-    background: rgba(18, 56, 93, 0.15);
-    color: var(--veritas-navy);
-  }
-
-  .teacher-result-card.is-correct {
-    border-color: rgba(46, 125, 50, 0.4);
-    background: var(--success-bg);
-  }
-
-  .teacher-result-card.is-correct .teacher-result-letter {
-    background: rgba(46, 125, 50, 0.22);
-    color: var(--success-green);
-  }
-
-  .teacher-result-card.is-correct .teacher-result-text {
-    color: var(--success-green);
-  }
-
-  .teacher-result-card.is-correct .teacher-result-count {
-    color: var(--success-light);
-  }
-
-  .teacher-result-card.is-correct .teacher-result-students {
-    border-color: rgba(46, 125, 50, 0.28);
-    background: rgba(46, 125, 50, 0.16);
-  }
-
-  .teacher-result-card.is-correct .teacher-result-student {
-    background: rgba(46, 125, 50, 0.2);
-    color: var(--success-green);
-  }
-
-  /* Live view layout guards to prevent clipping at the bottom of the dashboard */
-  #live-view,
-  .live-view-shell,
-  .live-view-grid {
-    min-height: 0;
-  }
-
-  .live-view-grid>* {
-    min-height: 0;
-  }
-
-  .dark .teacher-question-image {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.18);
-  }
-
-  .dark .teacher-question-image-el {
-    background: transparent;
-  }
-
-  .dark .teacher-question-image-zoom {
-    background: rgba(15, 23, 42, 0.65);
-  }
-
-  .dark .teacher-result-card {
-    background: rgba(15, 23, 35, 0.78);
-    border-color: rgba(148, 163, 184, 0.28);
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.4);
-  }
-
-  .dark .teacher-result-progress {
-    background: rgba(59, 130, 246, 0.28);
-  }
-
-  .dark .teacher-result-letter {
-    background: rgba(148, 163, 184, 0.25);
-    color: #e2e8f0;
-  }
-
-  .dark .teacher-result-text {
-    color: #f8fafc;
-  }
-
-  .dark .teacher-result-count {
-    color: #cbd5f5;
-  }
-
-  .dark .teacher-result-students {
-    border-color: rgba(148, 163, 184, 0.25);
-    background: rgba(148, 163, 184, 0.16);
-  }
-
-  .dark .teacher-result-student {
-    background: rgba(148, 163, 184, 0.3);
-    color: #f8fafc;
-  }
-
-  .dark .teacher-result-card.is-correct {
-    background: rgba(34, 197, 94, 0.22);
-    border-color: rgba(34, 197, 94, 0.45);
-  }
-
-  .dark .teacher-result-card.is-correct .teacher-result-letter {
-    background: rgba(34, 197, 94, 0.32);
-    color: #ecfdf5;
-  }
-
-  .dark .teacher-result-card.is-correct .teacher-result-text {
-    color: #ecfdf5;
-  }
-
-  .dark .teacher-result-card.is-correct .teacher-result-count {
-    color: #bbf7d0;
-  }
-
-  .dark .teacher-result-card.is-correct .teacher-result-students {
-    border-color: rgba(34, 197, 94, 0.45);
-    background: rgba(34, 197, 94, 0.3);
-  }
-
-  .dark .teacher-result-card.is-correct .teacher-result-student {
-    background: rgba(34, 197, 94, 0.4);
-    color: #052e16;
-  }
-
-  @media (max-width: 768px) {
-    .teacher-result-content-row {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-
-    .teacher-result-percentage {
-      flex-direction: row;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .teacher-result-image-wrap {
-      width: 100%;
-      max-width: 100%;
-    }
-
-    .teacher-result-image {
-      max-height: 220px;
-    }
-  }
-
-  .veritas-modal-root {
-    position: fixed;
-    inset: 0;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-  }
-
-  .veritas-modal-root.is-active {
-    display: flex;
-  }
-
-  .veritas-modal-backdrop {
-    position: absolute;
-    inset: 0;
-    background: rgba(9, 17, 34, 0.55);
-    backdrop-filter: blur(3px);
-  }
-
-  .veritas-modal-dialog {
-    position: relative;
-    z-index: 1;
-    width: min(520px, 92vw);
-    border-radius: 16px;
-    background: #ffffff;
-    border-top: 4px solid #c5a05a;
-    box-shadow: 0 24px 48px rgba(9, 17, 34, 0.25);
-    padding: 28px;
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-    animation: veritas-modal-in 220ms ease;
-  }
-
-  .veritas-modal-header h2 {
-    margin: 0;
-    font-size: 1.25rem;
-    color: #12385d;
-    font-weight: 700;
-  }
-
-  .veritas-modal-body {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    color: #1c1c1c;
-    font-size: 0.98rem;
-    line-height: 1.55;
-  }
-
-  .veritas-modal-subtext {
-    color: #4b5563;
-    font-size: 0.85rem;
-  }
-
-  .veritas-modal-input {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .veritas-modal-input input {
-    border-radius: 10px;
-    border: 1px solid rgba(18, 56, 93, 0.28);
-    padding: 10px 12px;
-    font-size: 0.95rem;
-    transition: border-color 160ms ease, box-shadow 160ms ease;
-  }
-
-  .veritas-modal-input input:focus-visible {
-    outline: none;
-    border-color: #12385d;
-    box-shadow: 0 0 0 3px rgba(18, 56, 93, 0.2);
-  }
-
-  .veritas-modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-
-  .veritas-modal-button {
-    border: none;
-    border-radius: 999px;
-    padding: 10px 22px;
-    font-weight: 600;
-    font-size: 0.95rem;
-    cursor: pointer;
-    transition: transform 140ms ease, box-shadow 140ms ease, background-color 140ms ease, color 140ms ease;
-  }
-
-  .veritas-modal-button.primary {
-    background: #12385d;
-    color: #ffffff;
-    box-shadow: 0 8px 20px rgba(18, 56, 93, 0.25);
-  }
-
-  .veritas-modal-button.primary:hover:not([disabled]) {
-    background: #0f2d4a;
-    transform: translateY(-1px);
-  }
-
-  .veritas-modal-button.secondary {
-    background: transparent;
-    color: #12385d;
-    border: 1px solid rgba(18, 56, 93, 0.3);
-  }
-
-  .veritas-modal-button.secondary:hover:not([disabled]) {
-    background: rgba(18, 56, 93, 0.08);
-  }
-
-  .veritas-modal-button.destructive {
-    background: #c62828;
-    color: #ffffff;
-    box-shadow: 0 8px 18px rgba(198, 40, 40, 0.25);
-  }
-
-  .veritas-modal-button.destructive:hover:not([disabled]) {
-    background: #a61b1b;
-  }
-
-  .veritas-modal-button[disabled] {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-  }
-
-  .veritas-modal-spinner {
-    width: 18px;
-    height: 18px;
-    border-radius: 999px;
-    border: 2px solid rgba(255, 255, 255, 0.6);
-    border-top-color: transparent;
-    animation: veritas-spin 0.7s linear infinite;
-    display: none;
-    margin-left: 10px;
-  }
-
-  .veritas-modal-button.loading .veritas-modal-spinner {
-    display: inline-block;
-  }
-
-  .veritas-modal-button.loading span {
-    opacity: 0.75;
-  }
-
-  .dark .veritas-modal-dialog {
-    background: rgba(15, 23, 35, 0.96);
-    color: #e2e8f0;
-    border-top-color: #c5a05a;
-    box-shadow: 0 24px 48px rgba(2, 6, 23, 0.55);
-  }
-
-  .dark .veritas-modal-header h2 {
-    color: #f8fafc;
-  }
-
-  .dark .veritas-modal-body {
-    color: #f1f5f9;
-  }
-
-  .dark .veritas-modal-subtext {
-    color: #cbd5f5;
-  }
-
-  .dark .veritas-modal-input input {
-    background: rgba(15, 23, 42, 0.7);
-    border-color: rgba(148, 163, 184, 0.4);
-    color: #f8fafc;
-  }
-
-  .dark .veritas-modal-input input:focus-visible {
-    border-color: #93c5fd;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35);
-  }
-
-  .dark .veritas-modal-button.secondary {
-    color: #e2e8f0;
-    border-color: rgba(148, 163, 184, 0.4);
-  }
-
-  .dark .veritas-modal-button.secondary:hover:not([disabled]) {
-    background: rgba(148, 163, 184, 0.16);
-  }
-
-  .dark .veritas-modal-button.primary {
-    background: #234776;
-  }
-
-  .dark .veritas-modal-button.primary:hover:not([disabled]) {
-    background: #1a3456;
-  }
-
-  .dark .veritas-modal-backdrop {
-    background: rgba(2, 6, 23, 0.7);
-    backdrop-filter: blur(4px);
-  }
-
-  body.veritas-modal-open {
-    overflow: hidden;
-  }
-
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
-  @keyframes veritas-modal-in {
-    from {
-      opacity: 0;
-      transform: translateY(16px) scale(0.98);
-    }
-
-    to {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-  }
-
-  @keyframes veritas-spin {
-    from {
-      transform: rotate(0deg);
-    }
-
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
-  @media (max-width: 480px) {
-    .veritas-modal-dialog {
-      width: min(92vw, 360px);
-      padding: 22px;
-      gap: 16px;
-    }
-
-    .veritas-modal-actions {
-      width: 100%;
-      justify-content: stretch;
-    }
-
-    .veritas-modal-button {
-      flex: 1;
-    }
-  }
-
-  /* New Dashboard Styles */
-  .sidebar-nav-btn {
-    background: transparent;
-    color: rgba(255, 255, 255, 0.72);
-    transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
-  }
-
-  .sidebar-nav-btn .material-symbols-outlined {
-    transition: transform 160ms ease, color 160ms ease;
-  }
-
-  .sidebar-nav-btn:hover {
-    background: rgba(255, 255, 255, 0.12);
-    color: #ffffff;
-  }
-
-  .sidebar-nav-btn:hover .material-symbols-outlined {
-    transform: translateX(2px);
-  }
-
-  .sidebar-nav-btn.is-active,
-  .sidebar-nav-btn[aria-current="page"] {
-    background: rgba(255, 255, 255, 0.18);
-    color: #ffffff;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
-  }
-
-  .sidebar-nav-btn.is-active .material-symbols-outlined,
-  .sidebar-nav-btn[aria-current="page"] .material-symbols-outlined {
-    color: #ffffff;
-    transform: translateX(2px);
-  }
-
-  .question-nav-item.dragging {
-    opacity: 0.55;
-  }
-
-  .question-nav-item.drop-before::before,
-  .question-nav-item.drop-after::after {
-    content: '';
-    position: absolute;
-    left: 12px;
-    right: 12px;
-    height: 2px;
-    background: var(--veritas-gold);
-    border-radius: 9999px;
-  }
-
-  .question-nav-item.drop-before::before {
-    top: -4px;
-  }
-
-  .question-nav-item.drop-after::after {
-    bottom: -4px;
-  }
-
-  .dashboard-card {
-    background: white;
-    border-radius: 16px;
-    padding: 28px;
-    box-shadow: 0 2px 8px rgba(18, 56, 93, 0.08);
-    transition: all 200ms ease;
-    animation: fadeUp 0.4s ease-out forwards;
-    opacity: 0;
-  }
-
-  .dashboard-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(18, 56, 93, 0.12);
-  }
-
-  /* Enhanced Poll Card Design */
-  .poll-card {
-    position: relative;
-    background-color: white;
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 2px 8px rgba(18, 56, 93, 0.08);
-    transition: all 200ms ease;
-    overflow: hidden;
-    /* To contain the gradient border */
-  }
-
-  .poll-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(to right, var(--veritas-navy), var(--veritas-gold));
-    opacity: 0.8;
-    transition: opacity 200ms ease;
-  }
-
-  .poll-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 28px rgba(18, 56, 93, 0.15);
-  }
-
-  .poll-card:hover::before {
-    opacity: 1;
-  }
-
-  .dark .poll-card {
-    background-color: rgba(15, 23, 35, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  }
-
-  .dark .poll-card:hover {
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
-  }
-
-  .dashboard-card.primary-cta {
-    background: linear-gradient(135deg, #12385d 0%, #0f2d4a 100%);
-    color: white;
-    border-top: 4px solid #c5a05a;
-  }
-
-  .dashboard-card-title {
-    font-size: 20px;
-    font-weight: 600;
-    color: #12385d;
-    margin-bottom: 8px;
-  }
-
-  .dashboard-card.primary-cta .dashboard-card-title {
-    color: white;
-  }
-
-  .dashboard-card-subtitle {
-    font-size: 14px;
-    color: #6b7280;
-    margin-bottom: 20px;
-  }
-
-  .dashboard-card.primary-cta .dashboard-card-subtitle {
-    color: rgba(255, 255, 255, 0.8);
-  }
-
-  .dashboard-cta-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 24px;
-    border-radius: 9999px;
-    font-weight: 600;
-    font-size: 15px;
-    transition: all 140ms ease;
-    cursor: pointer;
-    border: none;
-  }
-
-  .dashboard-cta-button:hover {
-    transform: translateY(-1px);
-  }
-
-  .dashboard-cta-button.primary {
-    background: #c5a05a;
-    color: white;
-    box-shadow: 0 4px 12px rgba(197, 160, 90, 0.3);
-  }
-
-  .dashboard-cta-button.primary:hover {
-    background: #b8954f;
-    box-shadow: 0 6px 16px rgba(197, 160, 90, 0.4);
-  }
-
-  .dashboard-cta-button.secondary {
-    background: rgba(255, 255, 255, 0.15);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-  }
-
-  .dashboard-cta-button.secondary:hover {
-    background: rgba(255, 255, 255, 0.25);
-  }
-
-  .dashboard-list-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 0;
-    border-bottom: 1px solid rgba(18, 56, 93, 0.08);
-    transition: all 140ms ease;
-  }
-
-  .dashboard-list-item:last-child {
-    border-bottom: none;
-  }
-
-  .dashboard-list-item:hover {
-    padding-left: 8px;
-  }
-
-  .dashboard-stat-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 12px;
-    border-radius: 9999px;
-    font-size: 13px;
-    font-weight: 600;
-  }
-
-  .dashboard-stat-badge.success {
-    background: rgba(34, 197, 94, 0.15);
-    color: #16a34a;
-  }
-
-  .dashboard-stat-badge.warning {
-    background: rgba(245, 158, 11, 0.15);
-    color: #d97706;
-  }
-
-  .dashboard-stat-badge.neutral {
-    background: rgba(18, 56, 93, 0.1);
-    color: #12385d;
-  }
-
-  .dashboard-quick-tool {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    padding: 20px;
-    background: rgba(18, 56, 93, 0.04);
-    border-radius: 12px;
-    transition: all 180ms ease;
-    cursor: pointer;
-    text-decoration: none;
-    color: #12385d;
-  }
-
-  .dashboard-quick-tool:hover {
-    background: rgba(18, 56, 93, 0.08);
-    transform: translateY(-2px);
-  }
-
-  .dashboard-quick-tool .icon {
-    font-size: 32px;
-    transition: transform 180ms ease;
-  }
-
-  .dashboard-quick-tool:hover .icon {
-    transform: rotate(15deg);
-  }
-
-  .dashboard-icon-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    background: rgba(18, 56, 93, 0.06);
-    color: #12385d;
-    transition: all 160ms ease;
-    cursor: pointer;
-    border: none;
-  }
-
-  .dashboard-icon-btn:hover {
-    background: rgba(18, 56, 93, 0.12);
-    transform: scale(1.05);
-  }
-
-  .dashboard-status-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    border-radius: 9999px;
-    font-size: 13px;
-    font-weight: 600;
-    background: rgba(148, 163, 184, 0.15);
-    color: #475569;
-  }
-
-  .dashboard-status-chip.active {
-    background: rgba(34, 197, 94, 0.15);
-    color: #16a34a;
-  }
-
-  .dashboard-status-chip .dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: currentColor;
-  }
-
-  .dashboard-status-chip.active .dot {
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-
-  @keyframes pulse {
-
-    0%,
-    100% {
-      opacity: 1;
-    }
-
-    50% {
-      opacity: 0.5;
-    }
-  }
-
-  .activity-chart-placeholder {
-    width: 100%;
-    height: 180px;
-    background: linear-gradient(to top, rgba(197, 160, 90, 0.1), rgba(18, 56, 93, 0.05));
-    border-radius: 8px;
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-around;
-    padding: 20px;
-    gap: 8px;
-  }
-
-  .activity-bar {
-    flex: 1;
-    background: linear-gradient(to top, #c5a05a, #12385d);
-    border-radius: 4px 4px 0 0;
-    min-height: 20px;
-    transition: all 300ms ease;
-  }
-
-  .activity-bar:hover {
-    filter: brightness(1.2);
-    transform: scaleY(1.05);
-  }
-
-  @keyframes fadeUp {
-    from {
-      opacity: 0;
-      transform: translateY(18px);
-    }
-
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  @keyframes pulseGlow {
-
-    0%,
-    100% {
-      box-shadow: 0 0 0 0 rgba(197, 160, 90, 0.35);
-    }
-
-    50% {
-      box-shadow: 0 0 18px 3px rgba(197, 160, 90, 0.45);
-    }
-  }
-
-
-  /* Stagger animation delays */
-  .dashboard-card:nth-child(1) {
-    animation-delay: 0ms;
-  }
-
-  .dashboard-card:nth-child(2) {
-    animation-delay: 100ms;
-  }
-
-  .dashboard-card:nth-child(3) {
-    animation-delay: 200ms;
-  }
-
-  .dashboard-card:nth-child(4) {
-    animation-delay: 300ms;
-  }
-
-  @media (max-width: 768px) {
-    .dashboard-card {
-      padding: 20px;
-    }
-  }
-
-  /* Timer animations */
-  @keyframes timer-flash {
-
-    0%,
-    100% {
-      color: inherit;
-    }
-
-    50% {
-      color: #0ea5e9;
-    }
-
-    /* sky-500 */
-  }
-
-  .timer-finished {
-    animation: timer-flash 0.5s 2;
-  }
-
-  /* Ensure tabular numbers for timer display */
-  #timer-display {
-    font-feature-settings: 'tnum';
-    font-variant-numeric: tabular-nums;
-  }
-
-  /* Slow pulse animation for violations */
-  @keyframes pulse-slow {
-
-    0%,
-    100% {
-      opacity: 1;
-    }
-
-    50% {
-      opacity: 0.95;
-    }
-  }
-
-  .animate-pulse-slow {
-    animation: pulse-slow 2s ease-in-out infinite;
-  }
-
-  /* ENHANCED TIMER VISUAL FEEDBACK SYSTEM */
-  /* Timer state classes - applied dynamically based on time remaining */
-  .timer-warning {
-    background: rgba(245, 158, 11, 0.25) !important;
-    border-color: rgba(245, 158, 11, 0.4) !important;
-  }
-
-  .timer-warning #timer-display,
-  .timer-warning #timer-display-compact {
-    color: #fbbf24 !important;
-    /* amber-400 */
-  }
-
-  .timer-critical {
-    background: rgba(239, 68, 68, 0.25) !important;
-    border-color: rgba(239, 68, 68, 0.5) !important;
-    animation: timer-pulse-critical 1s ease-in-out infinite;
-  }
-
-  .timer-critical #timer-display,
-  .timer-critical #timer-display-compact {
-    color: #f87171 !important;
-    /* red-400 */
-  }
-
-  @keyframes timer-pulse-critical {
-
-    0%,
-    100% {
-      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
-    }
-
-    50% {
-      box-shadow: 0 0 20px 4px rgba(239, 68, 68, 0.6);
-    }
-  }
-
-  /* Next Question button pulse when ready */
-  .pulse-ready {
-    animation: pulse-glow-gold 2s ease-in-out infinite;
-  }
-
-  /* Green state for timer */
-  .timer-safe {
-    background: rgba(16, 185, 129, 0.15) !important;
-    border-color: rgba(16, 185, 129, 0.3) !important;
-  }
-
-  .timer-safe #timer-display,
-  .timer-safe #timer-display-compact {
-    color: #6ee7b7 !important;
-    /* emerald-300 */
-  }
-
-  @keyframes pulse-glow-gold {
-
-    0%,
-    100% {
-      box-shadow: 0 4px 12px rgba(197, 160, 90, 0.4);
-    }
-
-    50% {
-      box-shadow: 0 8px 24px rgba(197, 160, 90, 0.7), 0 0 40px rgba(197, 160, 90, 0.3);
-    }
-  }
-
-  /* Student tile animations for attention */
-  .student-needs-attention {
-    animation: border-pulse 2s ease-in-out infinite;
-  }
-
-  @keyframes border-pulse {
-
-    0%,
-    100% {
-      border-color: rgba(239, 68, 68, 0.5);
-    }
-
-    50% {
-      border-color: rgba(239, 68, 68, 1);
-      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
-    }
-  }
-
-  /* Celebration animation for all-responded */
-  @keyframes celebrate-bounce {
-
-    0%,
-    100% {
-      transform: scale(1);
-    }
-
-    25% {
-      transform: scale(1.05);
-    }
-
-    50% {
-      transform: scale(0.95);
-    }
-
-    75% {
-      transform: scale(1.02);
-    }
-  }
-
-  .celebrate {
-    animation: celebrate-bounce 0.6s ease-out;
-  }
-
-  /* ========================================
-       🎨 ENHANCED DESIGN SYSTEM v2.0
-       Optimized for Live Classroom Scenarios
-       ======================================== */
-
-  /* === FLOATING ACTION BUTTON (FAB) SYSTEM === */
-  .fab-container {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    z-index: 1000;
-    display: flex;
-    flex-direction: column-reverse;
-    align-items: flex-end;
-    gap: 12px;
-  }
-
-  .fab-main {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--veritas-navy), #0f2d4a);
-    color: white;
-    border: none;
-    box-shadow: 0 8px 24px rgba(18, 56, 93, 0.35),
-      0 0 0 0 rgba(197, 160, 90, 0.4);
-    cursor: pointer;
-    transition: all 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-  }
-
-  .fab-main:hover {
-    transform: scale(1.08) rotate(5deg);
-    box-shadow: 0 12px 32px rgba(18, 56, 93, 0.45),
-      0 0 40px rgba(197, 160, 90, 0.3);
-  }
-
-  .fab-main:active {
-    transform: scale(0.95);
-  }
-
-  .fab-main .material-symbols-outlined {
-    font-size: 28px;
-    transition: transform 280ms ease;
-  }
-
-  .fab-main.is-open .material-symbols-outlined {
-    transform: rotate(45deg);
-  }
-
-  .fab-menu {
-    display: flex;
-    flex-direction: column-reverse;
-    gap: 12px;
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(20px);
-    transition: all 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-
-  .fab-menu.is-open {
-    opacity: 1;
-    pointer-events: all;
-    transform: translateY(0);
-  }
-
-  .fab-action {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    animation: fab-slide-in 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
-  }
-
-  .fab-action:nth-child(1) {
-    animation-delay: 50ms;
-  }
-
-  .fab-action:nth-child(2) {
-    animation-delay: 100ms;
-  }
-
-  .fab-action:nth-child(3) {
-    animation-delay: 150ms;
-  }
-
-  .fab-action:nth-child(4) {
-    animation-delay: 200ms;
-  }
-
-  @keyframes fab-slide-in {
-    from {
-      opacity: 0;
-      transform: translateX(20px) scale(0.8);
-    }
-
-    to {
-      opacity: 1;
-      transform: translateX(0) scale(1);
-    }
-  }
-
-  .fab-label {
-    background: rgba(18, 56, 93, 0.95);
-    color: white;
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    white-space: nowrap;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    opacity: 0;
-    transition: opacity 200ms ease;
-  }
-
-  .fab-action:hover .fab-label {
-    opacity: 1;
-  }
-
-  .fab-button {
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    border: none;
-    cursor: pointer;
-    transition: all 200ms ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-  }
-
-  .fab-button:hover {
-    transform: scale(1.1);
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
-  }
-
-  .fab-button.fab-primary {
-    background: linear-gradient(135deg, #c5a05a, #b8954f);
-    color: white;
-  }
-
-  .fab-button.fab-success {
-    background: linear-gradient(135deg, #10b981, #059669);
-    color: white;
-  }
-
-  .fab-button.fab-info {
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
-    color: white;
-  }
-
-  .fab-button.fab-danger {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    color: white;
-  }
-
-  /* === TOAST NOTIFICATION SYSTEM === */
-  .toast-container {
-    position: fixed;
-    top: 80px;
-    right: 24px;
-    z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    max-width: 420px;
-  }
-
-  .toast {
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    padding: 16px 20px;
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15),
-      0 2px 8px rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(10px);
-    animation: toast-slide-in 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
-    border-left: 4px solid currentColor;
-    position: relative;
-    overflow: hidden;
-  }
-
-  @keyframes toast-slide-in {
-    from {
-      opacity: 0;
-      transform: translateX(100%) scale(0.9);
-    }
-
-    to {
-      opacity: 1;
-      transform: translateX(0) scale(1);
-    }
-  }
-
-  .toast.toast-out {
-    animation: toast-slide-out 280ms ease-out both;
-  }
-
-  @keyframes toast-slide-out {
-    to {
-      opacity: 0;
-      transform: translateX(100%) scale(0.9);
-    }
-  }
-
-  .toast-success {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(5, 150, 105, 0.95));
-    color: white;
-  }
-
-  .toast-error {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(220, 38, 38, 0.95));
-    color: white;
-  }
-
-  .toast-warning {
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(217, 119, 6, 0.95));
-    color: white;
-  }
-
-  .toast-info {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.95), rgba(37, 99, 235, 0.95));
-    color: white;
-  }
-
-  .toast-icon {
-    flex-shrink: 0;
-    font-size: 24px;
-    animation: toast-icon-pop 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-
-  @keyframes toast-icon-pop {
-    0% {
-      transform: scale(0);
-    }
-
-    50% {
-      transform: scale(1.2);
-    }
-
-    100% {
-      transform: scale(1);
-    }
-  }
-
-  .toast-content {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .toast-title {
-    font-weight: 700;
-    font-size: 0.95rem;
-    margin-bottom: 4px;
-  }
-
-  .toast-message {
-    font-size: 0.85rem;
-    opacity: 0.95;
-    line-height: 1.4;
-  }
-
-  .toast-close {
-    flex-shrink: 0;
-    background: none;
-    border: none;
-    color: currentColor;
-    cursor: pointer;
-    padding: 4px;
-    opacity: 0.7;
-    transition: opacity 150ms ease;
-    border-radius: 4px;
-  }
-
-  .toast-close:hover {
-    opacity: 1;
-    background: rgba(255, 255, 255, 0.1);
-  }
-
-  .toast-progress {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: rgba(255, 255, 255, 0.3);
-    transform-origin: left;
-    animation: toast-progress 5s linear;
-  }
-
-  @keyframes toast-progress {
-    from {
-      transform: scaleX(1);
-    }
-
-    to {
-      transform: scaleX(0);
-    }
-  }
-
-  /* === PROGRESS RING ANIMATIONS === */
-  .progress-ring-container {
-    position: relative;
-    width: 52px;
-    height: 52px;
-  }
-
-  .progress-ring {
-    transform: rotate(-90deg);
-    width: 100%;
-    height: 100%;
-  }
-
-  .progress-ring-circle-bg {
-    fill: none;
-    stroke: rgba(18, 56, 93, 0.1);
-    stroke-width: 4;
-  }
-
-  .dark .progress-ring-circle-bg {
-    stroke: rgba(255, 255, 255, 0.08);
-  }
-
-  .progress-ring-circle {
-    fill: none;
-    stroke: var(--veritas-navy);
-    stroke-width: 4;
-    stroke-linecap: round;
-    transition: stroke-dashoffset 500ms cubic-bezier(0.4, 0, 0.2, 1),
-      stroke 300ms ease;
-  }
-
-  .dark .progress-ring-circle {
-    stroke: rgba(59, 130, 246, 0.85);
-  }
-
-  .progress-ring-circle.ring-success {
-    stroke: #10b981;
-  }
-
-  .progress-ring-circle.ring-warning {
-    stroke: #f59e0b;
-  }
-
-  .progress-ring-circle.ring-danger {
-    stroke: #ef4444;
-  }
-
-  .progress-ring-text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 0.875rem;
-    font-weight: 700;
-    color: var(--veritas-navy);
-  }
-
-  .dark .progress-ring-text {
-    color: white;
-  }
-
-  /* === SPARKLINE TREND VISUALIZATION === */
-  .sparkline-container {
-    width: 100%;
-    height: 28px;
-    margin-top: 8px;
-  }
-
-  .sparkline {
-    width: 100%;
-    height: 100%;
-  }
-
-  .sparkline-line {
-    fill: none;
-    stroke: var(--veritas-gold);
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    opacity: 0.7;
-  }
-
-  .sparkline-area {
-    fill: url(#sparkline-gradient);
-    opacity: 0.3;
-  }
-
-  .sparkline-dot {
-    fill: var(--veritas-gold);
-    r: 3;
-    opacity: 0;
-    transition: opacity 200ms ease;
-  }
-
-  .sparkline-container:hover .sparkline-dot {
-    opacity: 1;
-  }
-
-  /* === ENHANCED HUD CARDS WITH PROGRESS === */
-  .hud-card-enhanced {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-
-  .hud-card-progress {
-    flex-shrink: 0;
-  }
-
-  .hud-card-info {
-    flex: 1;
-    min-width: 0;
-  }
-
-  /* === AMBIENT STATE INDICATORS === */
-  .ambient-state-overlay {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 5;
-    transition: background-color 600ms ease;
-  }
-
-  .ambient-state-overlay.state-normal {
-    background: transparent;
-  }
-
-  .ambient-state-overlay.state-all-responded {
-    background: radial-gradient(circle at top,
-        rgba(16, 185, 129, 0.08) 0%,
-        transparent 60%);
-    animation: ambient-pulse-success 3s ease-in-out infinite;
-  }
-
-  .ambient-state-overlay.state-time-critical {
-    background: radial-gradient(circle at top,
-        rgba(245, 158, 11, 0.08) 0%,
-        transparent 60%);
-    animation: ambient-pulse-warning 2s ease-in-out infinite;
-  }
-
-  .ambient-state-overlay.state-lockouts {
-    background: radial-gradient(circle at top,
-        rgba(239, 68, 68, 0.08) 0%,
-        transparent 60%);
-    animation: ambient-pulse-danger 1.5s ease-in-out infinite;
-  }
-
-  @keyframes ambient-pulse-success {
-
-    0%,
-    100% {
-      opacity: 0.5;
-    }
-
-    50% {
-      opacity: 1;
-    }
-  }
-
-  @keyframes ambient-pulse-warning {
-
-    0%,
-    100% {
-      opacity: 0.6;
-    }
-
-    50% {
-      opacity: 1;
-    }
-  }
-
-  @keyframes ambient-pulse-danger {
-
-    0%,
-    100% {
-      opacity: 0.7;
-    }
-
-    50% {
-      opacity: 1;
-    }
-  }
-
-  /* === KEYBOARD SHORTCUT HINTS === */
-  .kbd-hint {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2px 6px;
-    border-radius: 4px;
-    background: rgba(18, 56, 93, 0.1);
-    border: 1px solid rgba(18, 56, 93, 0.2);
-    font-size: 0.7rem;
-    font-weight: 600;
-    font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
-    color: var(--veritas-navy);
-    margin-left: 6px;
-    opacity: 0;
-    transition: opacity 200ms ease;
-  }
-
-  .dark .kbd-hint {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
-    color: white;
-  }
-
-  button:hover .kbd-hint,
-  button:focus .kbd-hint {
-    opacity: 0.7;
-  }
-
-  /* === GESTURE HINT SYSTEM === */
-  .gesture-hint {
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    margin-bottom: 8px;
-    padding: 6px 12px;
-    background: rgba(18, 56, 93, 0.95);
-    color: white;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    white-space: nowrap;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 200ms ease, transform 200ms ease;
-    z-index: 1000;
-  }
-
-  .gesture-hint::after {
-    content: '';
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    border: 5px solid transparent;
-    border-top-color: rgba(18, 56, 93, 0.95);
-  }
-
-  *:hover>.gesture-hint,
-  *:focus>.gesture-hint {
-    opacity: 1;
-    transform: translateX(-50%) translateY(-4px);
-  }
-
-  /* === LIVE DASHBOARD: MOBILE LAYOUT === */
-  .live-mobile-nav {
-    display: flex;
-    gap: 8px;
-    padding: 10px 16px;
-    background: linear-gradient(180deg, rgba(18, 56, 93, 0.12), rgba(18, 56, 93, 0));
-    border-bottom: 1px solid rgba(18, 56, 93, 0.12);
-    position: sticky;
-    top: 0;
-    z-index: 15;
-  }
-
-  .dark .live-mobile-nav {
-    background: linear-gradient(180deg, rgba(15, 23, 35, 0.92), rgba(15, 23, 35, 0.7));
-    border-color: rgba(255, 255, 255, 0.1);
-  }
-
-  .live-mobile-tab {
-    flex: 1;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 12px;
-    border-radius: 12px;
-    background: rgba(18, 56, 93, 0.05);
-    color: var(--veritas-navy);
-    font-weight: 700;
-    font-size: 0.9rem;
-    border: 1px solid transparent;
-    transition: all 180ms ease;
-  }
-
-  .dark .live-mobile-tab {
-    background: rgba(255, 255, 255, 0.05);
-    color: white;
-  }
-
-  .live-mobile-tab.is-active {
-    background: white;
-    color: var(--veritas-navy);
-    border-color: rgba(18, 56, 93, 0.12);
-    box-shadow: 0 10px 24px rgba(18, 56, 93, 0.08);
-  }
-
-  .dark .live-mobile-tab.is-active {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.2);
-  }
-
-  .live-mobile-tab-chip {
-    margin-left: auto;
-    padding: 4px 8px;
-    border-radius: 999px;
-    background: rgba(18, 56, 93, 0.08);
-    font-size: 0.8rem;
-    font-weight: 800;
-    color: var(--veritas-navy);
-  }
-
-  .dark .live-mobile-tab-chip {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-  }
-
-  .live-mobile-panel {
-    min-height: 0;
-  }
-
-  @media (max-width: 1024px) {
-    .live-mobile-panel {
-      display: none;
-    }
-
-    .live-mobile-panel.is-active {
-      display: flex;
-    }
-  }
-
-  @media (min-width: 1025px) {
-    .live-mobile-panel {
-      display: flex !important;
-    }
-
-    .live-mobile-nav {
-      display: none;
-    }
-  }
-
-  .live-mobile-actions {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    padding: 12px 16px 14px;
-    background: rgba(255, 255, 255, 0.96);
-    backdrop-filter: blur(12px);
-    box-shadow: 0 -8px 28px rgba(18, 56, 93, 0.15);
-    border-top: 1px solid rgba(18, 56, 93, 0.08);
-    z-index: 50;
-    display: none;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .dark .live-mobile-actions {
-    background: rgba(15, 23, 35, 0.94);
-    border-color: rgba(255, 255, 255, 0.08);
-  }
-
-  .live-mobile-actions__row {
-    display: flex;
-    gap: 12px;
-    align-items: stretch;
-    flex-wrap: wrap;
-  }
-
-  .live-mobile-timer {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    flex: 1;
-  }
-
-  .live-mobile-metrics {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    min-width: 160px;
-  }
-
-  .live-mobile-metric {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 12px;
-    border-radius: 12px;
-    background: rgba(18, 56, 93, 0.05);
-    color: var(--veritas-navy);
-    border: 1px solid rgba(18, 56, 93, 0.08);
-  }
-
-  .dark .live-mobile-metric {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.1);
-    color: white;
-  }
-
-  .live-mobile-metric-label {
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-weight: 700;
-  }
-
-  .live-mobile-metric-value {
-    font-weight: 900;
-    font-size: 1rem;
-  }
-
-  .live-mobile-timebox {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
-    align-items: center;
-  }
-
-  .live-mobile-timebox input {
-    text-align: center;
-    border-radius: 10px;
-    border: 1px solid rgba(18, 56, 93, 0.12);
-    padding: 10px 8px;
-    font-weight: 800;
-    color: var(--veritas-navy);
-    background: white;
-  }
-
-  .dark .live-mobile-timebox input {
-    border-color: rgba(255, 255, 255, 0.14);
-    background: rgba(255, 255, 255, 0.05);
-    color: white;
-  }
-
-  .live-mobile-timebox button {
-    border-radius: 10px;
-    border: 1px solid rgba(18, 56, 93, 0.12);
-    padding: 10px 6px;
-    font-weight: 800;
-    color: var(--veritas-navy);
-    background: rgba(18, 56, 93, 0.04);
-    transition: all 150ms ease;
-  }
-
-  .live-mobile-timebox button:active {
-    transform: translateY(1px);
-  }
-
-  .dark .live-mobile-timebox button {
-    color: white;
-    border-color: rgba(255, 255, 255, 0.12);
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  .live-mobile-pill {
-    width: 100%;
-    border-radius: 12px;
-    padding: 10px 12px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    font-weight: 800;
-    border: 1px solid transparent;
-  }
-
-  .live-mobile-pill-primary {
-    background: linear-gradient(135deg, #0f2d4a, var(--veritas-navy));
-    color: white;
-    box-shadow: 0 8px 18px rgba(18, 56, 93, 0.3);
-  }
-
-  .live-mobile-pill-muted {
-    background: rgba(18, 56, 93, 0.06);
-    color: var(--veritas-navy);
-    border-color: rgba(18, 56, 93, 0.16);
-  }
-
-  .live-mobile-pill-warning {
-    background: rgba(245, 158, 11, 0.12);
-    border-color: rgba(245, 158, 11, 0.28);
-    color: #b45309;
-    font-weight: 800;
-  }
-
-  .dark .live-mobile-pill-muted {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.12);
-    color: white;
-  }
-
-  .dark .live-mobile-pill-warning {
-    background: rgba(245, 158, 11, 0.2);
-    border-color: rgba(245, 158, 11, 0.28);
-    color: #fcd34d;
-  }
-
-  .live-mobile-actions__buttons {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .live-mobile-action {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 12px 10px;
-    border-radius: 12px;
-    font-weight: 800;
-    font-size: 0.95rem;
-    border: 1px solid transparent;
-    transition: all 160ms ease;
-  }
-
-  .live-mobile-action-primary {
-    background: linear-gradient(135deg, var(--veritas-gold), #b58a42);
-    color: white;
-    box-shadow: 0 8px 18px rgba(197, 160, 90, 0.3);
-  }
-
-  .live-mobile-action-info {
-    background: rgba(59, 130, 246, 0.12);
-    border-color: rgba(59, 130, 246, 0.28);
-    color: #1d4ed8;
-  }
-
-  .live-mobile-action-danger {
-    background: rgba(239, 68, 68, 0.12);
-    border-color: rgba(239, 68, 68, 0.28);
-    color: #b91c1c;
-  }
-
-  .live-mobile-action-ghost {
-    background: rgba(18, 56, 93, 0.05);
-    border-color: rgba(18, 56, 93, 0.12);
-    color: var(--veritas-navy);
-  }
-
-  .dark .live-mobile-action-ghost {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.12);
-    color: white;
-  }
-
-  .live-mobile-action:disabled,
-  .live-mobile-pill:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-  }
-
-  @media (max-width: 640px) {
-    .live-mobile-actions__buttons {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .live-mobile-actions__buttons button:nth-child(3) {
-      grid-column: span 2 / span 2;
-    }
-  }
-
-
-  /* === RESPONSIVE ENHANCEMENTS === */
-  @media (max-width: 1024px) {
-    .fab-container {
-      bottom: 16px;
-      right: 16px;
-    }
-
-    .fab-main {
-      width: 56px;
-      height: 56px;
-    }
-
-    .fab-button {
-      width: 48px;
-      height: 48px;
-    }
-
-    .toast-container {
-      right: 16px;
-      left: 16px;
-      max-width: none;
-    }
-  }
-
-  @media (max-width: 768px) {
-    .fab-container {
-      bottom: 12px;
-      right: 12px;
-    }
-
-    .fab-label {
-      display: none;
-    }
-
-    .toast-container {
-      top: 72px;
-    }
-
-    .progress-ring-container {
-      width: 44px;
-      height: 44px;
-    }
-  }
-
-  /* === UTILITY ANIMATIONS === */
-  @keyframes shimmer {
-    0% {
-      background-position: -200% 0;
-    }
-
-    100% {
-      background-position: 200% 0;
-    }
-  }
-
-  .shimmer {
-    background: linear-gradient(90deg,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.3) 50%,
-        rgba(255, 255, 255, 0) 100%);
-    background-size: 200% 100%;
-    animation: shimmer 2s infinite;
-  }
-
-  @keyframes bounce-subtle {
-
-    0%,
-    100% {
-      transform: translateY(0);
-    }
-
-    50% {
-      transform: translateY(-4px);
-    }
-  }
-
-  .bounce-subtle {
-    animation: bounce-subtle 2s ease-in-out infinite;
-  }
-
-  /* ========================================
-       🎨 PHASE 3: ACTIVITY FEED & ENHANCEMENTS
-       ======================================== */
-
-  /* === ACTIVITY FEED SYSTEM === */
-  .activity-feed {
-    position: fixed;
-    bottom: 100px;
-    right: 24px;
-    width: 320px;
-    max-height: 400px;
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(18, 56, 93, 0.2);
-    border: 1px solid rgba(18, 56, 93, 0.1);
-    display: flex;
-    flex-direction: column;
-    z-index: 999;
-    opacity: 0;
-    transform: translateY(20px);
-    pointer-events: none;
-    transition: all 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-
-  .dark .activity-feed {
-    background: rgba(15, 23, 35, 0.95);
-    border-color: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-  }
-
-  .activity-feed.is-open {
-    opacity: 1;
-    transform: translateY(0);
-    pointer-events: all;
-  }
-
-  .activity-feed-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 20px;
-    border-bottom: 1px solid rgba(18, 56, 93, 0.1);
-  }
-
-  .dark .activity-feed-header {
-    border-color: rgba(255, 255, 255, 0.1);
-  }
-
-  .activity-feed-title {
-    font-weight: 700;
-    font-size: 0.95rem;
-    color: var(--veritas-navy);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .dark .activity-feed-title {
-    color: white;
-  }
-
-  .activity-feed-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 20px;
-    height: 20px;
-    padding: 0 6px;
-    border-radius: 10px;
-    background: var(--veritas-gold);
-    color: white;
-    font-size: 0.7rem;
-    font-weight: 700;
-  }
-
-  .activity-feed-close {
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 6px;
-    transition: all 150ms ease;
-  }
-
-  .activity-feed-close:hover {
-    background: rgba(18, 56, 93, 0.1);
-    color: var(--veritas-navy);
-  }
-
-  .dark .activity-feed-close:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-  }
-
-  .activity-feed-list {
-    flex: 1;
-    overflow-y: auto;
-    padding: 12px 0;
-  }
-
-  .activity-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 12px 20px;
-    border-left: 3px solid transparent;
-    transition: all 150ms ease;
-    animation: activity-slide-in 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-
-  @keyframes activity-slide-in {
-    from {
-      opacity: 0;
-      transform: translateX(20px);
-    }
-
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-
-  .activity-item:hover {
-    background: rgba(18, 56, 93, 0.04);
-    border-left-color: var(--veritas-gold);
-  }
-
-  .dark .activity-item:hover {
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  .activity-icon {
-    flex-shrink: 0;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-  }
-
-  .activity-icon.success {
-    background: rgba(16, 185, 129, 0.15);
-    color: #10b981;
-  }
-
-  .activity-icon.warning {
-    background: rgba(245, 158, 11, 0.15);
-    color: #f59e0b;
-  }
-
-  .activity-icon.error {
-    background: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
-  }
-
-  .activity-icon.info {
-    background: rgba(59, 130, 246, 0.15);
-    color: #3b82f6;
-  }
-
-  .activity-content {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .activity-message {
-    font-size: 0.875rem;
-    color: var(--text-primary);
-    line-height: 1.4;
-    margin-bottom: 2px;
-  }
-
-  .dark .activity-message {
-    color: rgba(255, 255, 255, 0.9);
-  }
-
-  .activity-time {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-  }
-
-  .activity-feed-empty {
-    padding: 40px 20px;
-    text-align: center;
-    color: var(--text-secondary);
-  }
-
-  .activity-feed-empty .material-symbols-outlined {
-    font-size: 48px;
-    opacity: 0.3;
-    margin-bottom: 8px;
-  }
-
-  /* === ENHANCED STUDENT STATUS TILES === */
-  .student-tile {
-    position: relative;
-    padding: 12px 16px;
-    border-radius: 12px;
-    border: 2px solid transparent;
-    background: white;
-    transition: all 200ms ease;
-    cursor: pointer;
-  }
-
-  .dark .student-tile {
-    background: rgba(15, 23, 35, 0.5);
-  }
-
-  .student-tile:hover {
-    border-color: var(--veritas-gold);
-    transform: translateX(4px);
-    box-shadow: 0 4px 12px rgba(18, 56, 93, 0.15);
-  }
-
-  .student-tile.status-correct {
-    border-left: 4px solid #10b981;
-    background: linear-gradient(to right, rgba(16, 185, 129, 0.08), transparent);
-  }
-
-  .student-tile.status-incorrect {
-    border-left: 4px solid #ef4444;
-    background: linear-gradient(to right, rgba(239, 68, 68, 0.08), transparent);
-  }
-
-  .student-tile.status-locked {
-    border-left: 4px solid #f59e0b;
-    background: linear-gradient(to right, rgba(245, 158, 11, 0.08), transparent);
-    animation: pulse-gentle 2s ease-in-out infinite;
-  }
-
-  @keyframes pulse-gentle {
-
-    0%,
-    100% {
-      opacity: 1;
-    }
-
-    50% {
-      opacity: 0.85;
-    }
-  }
-
-  .student-tile.status-waiting {
-    border-left: 4px solid #94a3b8;
-    background: linear-gradient(to right, rgba(148, 163, 184, 0.08), transparent);
-  }
-
-  .student-tile-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 6px;
-  }
-
-  .student-name {
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: var(--text-primary);
-  }
-
-  .dark .student-name {
-    color: rgba(255, 255, 255, 0.95);
-  }
-
-  .student-status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.7rem;
-    font-weight: 600;
-  }
-
-  .student-status-badge.correct {
-    background: rgba(16, 185, 129, 0.15);
-    color: #10b981;
-  }
-
-  .student-status-badge.incorrect {
-    background: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
-  }
-
-  .student-status-badge.locked {
-    background: rgba(245, 158, 11, 0.15);
-    color: #f59e0b;
-  }
-
-  .student-status-badge.waiting {
-    background: rgba(148, 163, 184, 0.15);
-    color: #64748b;
-  }
-
-  .student-details {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-  }
-
-  .student-answer {
-    font-weight: 600;
-  }
-
-  .student-tile-actions {
-    display: flex;
-    gap: 6px;
-    margin-top: 8px;
-    opacity: 0;
-    transition: opacity 200ms ease;
-  }
-
-  .student-tile:hover .student-tile-actions {
-    opacity: 1;
-  }
-
-  .student-action-btn {
-    flex: 1;
-    padding: 6px 12px;
-    border-radius: 6px;
-    border: 1px solid rgba(18, 56, 93, 0.2);
-    background: white;
-    color: var(--veritas-navy);
-    font-size: 0.75rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 150ms ease;
-  }
-
-  .dark .student-action-btn {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.1);
-    color: white;
-  }
-
-  .student-action-btn:hover {
-    background: var(--veritas-navy);
-    color: white;
-    border-color: var(--veritas-navy);
-  }
-
-  .dark .student-action-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-  }
-
-  /* === ENHANCED MODAL DESIGNS === */
-  .modal-section {
-    margin-bottom: 24px;
-  }
-
-  .modal-section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 0;
-    cursor: pointer;
-    user-select: none;
-    transition: all 150ms ease;
-  }
-
-  .modal-section-header:hover {
-    color: var(--veritas-gold);
-  }
-
-  .modal-section-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: 600;
-    font-size: 0.95rem;
-  }
-
-  .modal-section-toggle {
-    transition: transform 200ms ease;
-  }
-
-  .modal-section.is-collapsed .modal-section-toggle {
-    transform: rotate(-90deg);
-  }
-
-  .modal-section-content {
-    max-height: 1000px;
-    overflow: hidden;
-    transition: max-height 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .modal-section.is-collapsed .modal-section-content {
-    max-height: 0;
-  }
-
-  /* === RESPONSIVE ADJUSTMENTS === */
-  @media (max-width: 1024px) {
-    .activity-feed {
-      width: 280px;
-      bottom: 80px;
-      right: 16px;
-    }
-  }
-
-  @media (max-width: 768px) {
-    .activity-feed {
-      width: calc(100vw - 32px);
-      right: 16px;
-      left: 16px;
-      bottom: 70px;
-    }
-  }
-
-  /* Session HUD cards for quick-glance metrics */
-  .session-hud-surface {
-    background: linear-gradient(135deg, rgba(18, 56, 93, 0.04), rgba(197, 160, 90, 0.08));
-  }
-
-  .dark .session-hud-surface {
-    background: linear-gradient(135deg, rgba(15, 23, 42, 0.7), rgba(56, 189, 248, 0.12));
-  }
-
-  .session-hud-grid {
-    display: grid;
-    gap: 16px;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  }
-
-  .hud-card {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 8px;
-    padding: 18px;
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.85);
-    border: 1px solid rgba(18, 56, 93, 0.08);
-    box-shadow: 0 10px 30px -18px rgba(18, 56, 93, 0.45);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .dark .hud-card {
-    background: rgba(15, 23, 35, 0.85);
-    border-color: rgba(255, 255, 255, 0.05);
-    box-shadow: 0 10px 35px -22px rgba(15, 23, 35, 0.9);
-  }
-
-  .hud-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 18px 40px -18px rgba(18, 56, 93, 0.4);
-  }
-
-  .hud-card-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: rgba(17, 24, 39, 0.55);
-  }
-
-  .dark .hud-card-label {
-    color: rgba(255, 255, 255, 0.55);
-  }
-
-  .hud-card-value {
-    font-size: 1.85rem;
-    font-weight: 800;
-    color: var(--veritas-navy);
-    letter-spacing: -0.02em;
-  }
-
-  .dark .hud-card-value {
-    color: rgba(255, 255, 255, 0.92);
-  }
-
-  .hud-card-caption {
-    font-size: 0.85rem;
-    color: rgba(55, 65, 81, 0.75);
-  }
-
-  .dark .hud-card-caption {
-    color: rgba(226, 232, 240, 0.65);
-  }
-
-  .hud-trend {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-
-  .hud-trend-up {
-    color: #15803d;
-  }
-
-  .hud-trend-down {
-    color: #b91c1c;
-  }
-
-  .hud-trend-steady {
-    color: rgba(55, 65, 81, 0.75);
-  }
-
-  .dark .hud-trend-steady {
-    color: rgba(226, 232, 240, 0.7);
-  }
-
-  .hud-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    border-radius: 999px;
-    font-size: 0.7rem;
-    padding: 4px 10px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-
-  .hud-chip[data-variant="ready"] {
-    background: rgba(59, 130, 246, 0.12);
-    color: #2563eb;
-  }
-
-  .hud-chip[data-variant="running"] {
-    background: rgba(16, 185, 129, 0.12);
-    color: #059669;
-  }
-
-  .hud-chip[data-variant="critical"] {
-    background: rgba(248, 113, 113, 0.18);
-    color: #dc2626;
-    animation: timer-pulse-critical 1s ease-in-out infinite;
-  }
-
-  .hud-chip[data-variant="paused"] {
-    background: rgba(148, 163, 184, 0.16);
-    color: rgba(30, 41, 59, 0.8);
-  }
-
-  .hud-chip[data-variant="complete"] {
-    background: rgba(34, 197, 94, 0.18);
-    color: #15803d;
-  }
-
-  @media (max-width: 768px) {
-    .session-hud-grid {
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    }
-
-    .hud-card {
-      padding: 16px;
-    }
-
-    .hud-card-value {
-      font-size: 1.55rem;
-    }
-  }
-
-
-  /* View Toggle Button States */
-  #view-cards-btn.active {
-    background: #12385d !important;
-    color: white !important;
-  }
-
-  #view-table-btn.active {
-    background: #12385d !important;
-    color: white !important;
-  }
-
-  /* Toast Action Button */
-  .toast-action-btn {
-    margin-top: 8px;
-    display: inline-block;
-    padding: 6px 12px;
-    background-color: rgba(255, 255, 255, 0.9);
-    color: #12385d;
-    /* Veritas Navy */
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    border-radius: 6px;
-    border: none;
-    cursor: pointer;
-    transition: background-color 0.2s, transform 0.1s;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  .toast-action-btn:hover {
-    background-color: #ffffff;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
-  }
-
-  .toast-action-btn:active {
-    transform: translateY(0);
-  }
-
-  /* Live view spacing adjustments */
-  .live-view-shell {
-    padding-top: 0;
-    min-height: calc(100vh - 4rem);
-    height: auto;
-  }
-
-  .live-view-grid {
-    gap: 1rem !important;
-    height: 100%;
-    align-items: flex-start;
-  }
-
-  /* P0-6 & P0-7 FIX: Consistent question card layout */
-  .live-question-card {
-    margin-top: 0;
-    margin-bottom: 0;
-    padding-top: 16px;
-    padding-bottom: 16px;
-    /* Prevent margin collapse and ensure consistent position */
-  }
-
-  .live-question-card .question-stem-text {
-    margin-top: 0;
-    margin-bottom: 0;
-    white-space: pre-wrap;
-    /* P0-5: Preserve newlines like student view */
-  }
-
-  /* P0-6 FIX: Prevent flex growth in left column that causes variable gap */
-  .live-view-grid>div:first-child {
-    /* Left column should not use flex-1 growth on the answer section */
-    /* This ensures question card always appears at consistent distance from header */
-    flex: 0 0 auto;
-    width: 100%;
-    /* Fallback/Base width if needed, or let content dictate */
-  }
-
-  .live-student-panel {
-    box-shadow: 0 8px 20px rgba(18, 56, 93, 0.06);
-  }
-
-  /* Student Grid Layout - Compact Mode */
-  #student-status-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-    gap: 0.5rem;
-    padding-top: 2px;
-  }
-
-  .student-tile {
-    min-height: 48px;
-    border: 1px solid #e2e8f0;
-    background: #ffffff;
-    border-radius: 10px;
-    padding: 8px 10px;
-    box-shadow: 0 4px 12px rgba(18, 56, 93, 0.04);
-    transition: all 150ms ease;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: default;
-  }
-
-  .student-tile:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 16px rgba(18, 56, 93, 0.08);
-    border-color: #cbd5e1;
-  }
-
-  .dark .student-tile {
-    background: rgba(18, 56, 93, 0.35);
-    border-color: rgba(255, 255, 255, 0.08);
-    box-shadow: none;
-  }
-
-  .student-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 8px;
-    border-radius: 999px;
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.01em;
-  }
-
-  .student-name {
-    font-size: 13px;
-    font-weight: 700;
-    line-height: 1.25;
-    color: #0f172a;
-  }
-
-  .dark .student-name {
-    color: #f8fafc;
-  }
-
-  .student-sub {
-    font-size: 12px;
-    color: #475569;
-    line-height: 1.2;
-  }
-
-  .dark .student-sub {
-    color: #e2e8f0;
-    opacity: 0.75;
-  }
-
-  .student-badges {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .student-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 4px 8px;
-    border-radius: 10px;
-    font-size: 11px;
-    font-weight: 600;
-    border: 1px solid #e2e8f0;
-    color: #0f172a;
-    background: #f8fafc;
-  }
-
-  .dark .student-badge {
-    border-color: rgba(255, 255, 255, 0.08);
-    color: #e2e8f0;
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  .student-actions {
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-  }
-
-  .student-action-btn {
-    height: 26px;
-    width: 26px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    background: #fff;
-    color: #0f172a;
-    transition: background-color 120ms ease, border-color 120ms ease;
-  }
-
-  .student-action-btn:hover {
-    background: #eef2ff;
-    border-color: #c7d2fe;
-  }
-
-  .dark .student-action-btn {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.1);
-    color: #e2e8f0;
-  }
-
-  .student-tile.locked {
-    border-color: #f87171;
-    background: #fef2f2;
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
-  }
-
-  .student-tile.submitted.correct {
-    border-color: #34d399;
-    background: #ecfdf5;
-  }
-
-  .student-tile.submitted.incorrect {
-    border-color: #fb7185;
-    background: #fff1f2;
-  }
-
-  /* Popover Enhancement */
-  #locked-students-popover {
-    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
-    transform-origin: top center;
-  }
-
-  #locked-students-popover:not(.hidden) {
-    animation: popover-entrance 200ms ease-out;
-  }
-
-  @keyframes popover-entrance {
-    from {
-      opacity: 0;
-      transform: translate(-50%, -10px) scale(0.95);
-    }
-
-    to {
-      opacity: 1;
-      transform: translate(-50%, 0) scale(1);
-    }
-  }
-
-  .student-top {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .student-status-icon {
-    height: 34px;
-    width: 34px;
-    border-radius: 10px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    font-weight: 700;
-  }
-
-  .student-status-icon .material-symbols-outlined {
-    font-size: 20px;
-    font-variation-settings: 'FILL' 0, 'wght' 600, 'GRAD' 0, 'opsz' 20;
-    line-height: 1;
-  }
-
-  .student-status-icon.waiting {
-    background: #eef2ff;
-    color: #334155;
-    border: 1px solid #e2e8f0;
-  }
-
-  .student-status-icon.correct {
-    background: #ecfdf3;
-    color: #059669;
-    border: 1px solid #bbf7d0;
-  }
-
-  .student-status-icon.incorrect {
-    background: #fef3c7;
-    color: #b45309;
-    border: 1px solid #fde68a;
-  }
-
-  .student-status-icon.locked {
-    background: #fee2e2;
-    color: #b91c1c;
-    border: 1px solid #fecaca;
-  }
-
-  .student-status-icon.blocked {
-    background: #fff1f2;
-    color: #be123c;
-    border: 1px solid #fecdd3;
-  }
-
-  .student-status-icon.fullscreen {
-    background: #e0f2fe;
-    color: #0369a1;
-    border: 1px solid #bae6fd;
-  }
-
-  .badge-violation {
-    background: #fef2f2;
-    border-color: #fecdd3;
-    color: #b91c1c;
-  }
-
-  .dark .badge-violation {
-    background: rgba(248, 113, 113, 0.12);
-    border-color: rgba(248, 113, 113, 0.3);
-    color: #fecdd3;
-  }
-
-  .student-name {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .student-top {
-    align-items: center;
-  }
-
-  /* Confidence pulse card */
-  #live-metacognition-card {
-    box-shadow: 0 8px 20px rgba(18, 56, 93, 0.06);
-  }
-
-  .confidence-row {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 10px;
-    border-radius: 12px;
-    border: 1px solid rgba(15, 23, 42, 0.06);
-    background: #f8fafc;
-  }
-
-  .dark .confidence-row {
-    border-color: rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.03);
-  }
-
-  .confidence-bar-track {
-    height: 8px;
-    border-radius: 999px;
-    background: rgba(15, 23, 42, 0.06);
-    overflow: hidden;
-  }
-
-  .confidence-bar-fill {
-    height: 100%;
-    border-radius: 999px;
-    transition: width 180ms ease;
-  }
-
-  /* Gentle pulse animation for locked students */
-  @keyframes pulse-gentle {
-
-    0%,
-    100% {
-      opacity: 1;
-    }
-
-    50% {
-      opacity: 0.85;
-    }
-  }
-
-  .animate-pulse-gentle {
-    animation: pulse-gentle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-
-  /* ===========================
-       POLL WIZARD STYLES
-       =========================== */
-
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
-  }
-
-  .modal-overlay.hidden {
-    display: none;
-  }
-
-  .modal-content-wizard {
-    width: 90%;
-    max-width: 900px;
-    max-height: 90vh;
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  .wizard-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem 2rem;
-    border-bottom: 1px solid #e5e7eb;
-    background: linear-gradient(135deg, #12385d 0%, #1e4976 100%);
-  }
-
-  .wizard-main-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: white;
-    margin: 0;
-  }
-
-  .modal-close-btn {
-    background: transparent;
-    border: none;
-    color: white;
-    cursor: pointer;
-    padding: 0.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: background 0.2s;
-  }
-
-  .modal-close-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-  }
-
-  /* Progress Indicator */
-  .wizard-progress {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1.5rem 2rem;
-    background: #f9fafb;
-    border-bottom: 1px solid #e5e7eb;
-  }
-
-  .progress-step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    flex: 1;
-    opacity: 0.5;
-    transition: opacity 0.3s;
-  }
-
-  .progress-step.active {
-    opacity: 1;
-  }
-
-  .progress-step.completed .progress-circle {
-    background: #10b981;
-    border-color: #10b981;
-    color: white;
-  }
-
-  .progress-circle {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: 2px solid #d1d5db;
-    background: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 1rem;
-    color: #6b7280;
-    transition: all 0.3s;
-  }
-
-  .progress-step.active .progress-circle {
-    border-color: #12385d;
-    color: #12385d;
-    background: #dbeafe;
-    box-shadow: 0 0 0 4px rgba(18, 56, 93, 0.1);
-  }
-
-  /* Progress labels in the wizard modal (light background) */
-  .wizard-progress .progress-label {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #6b7280;
-  }
-
-  .wizard-progress .progress-step.active .progress-label {
-    color: #12385d;
-    font-weight: 600;
-  }
-
-  /* Header progress labels use Tailwind classes (text-white/80 etc.) - no override needed */
-
-  .progress-connector {
-    flex: 1;
-    height: 2px;
-    background: #d1d5db;
-    margin: 0 0.5rem;
-    position: relative;
-    top: -12px;
-  }
-
-  /* Wizard Body */
-  .wizard-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 2rem;
-  }
-
-  .wizard-step {
-    display: none;
-    animation: slideIn 0.3s ease-out;
-  }
-
-  .wizard-step.active {
-    display: block;
-  }
-
-  @keyframes slideIn {
-    from {
-      opacity: 0;
-      transform: translateX(20px);
-    }
-
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-
-  .step-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #1f2937;
-    margin: 0 0 0.5rem 0;
-  }
-
-  .step-description {
-    font-size: 1rem;
-    color: #6b7280;
-    margin: 0 0 2rem 0;
-  }
-
-  /* Mode Selection Cards */
-  .mode-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1.5rem;
-  }
-
-  .mode-card {
-    background: white;
-    border: 2px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 2rem;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.3s;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-  }
-
-  .mode-card:hover {
-    border-color: #12385d;
-    box-shadow: 0 8px 24px rgba(18, 56, 93, 0.15);
-    transform: translateY(-4px);
-  }
-
-  .mode-card.selected {
-    border-color: #12385d;
-    background: linear-gradient(135deg, #dbeafe 0%, #e0f2fe 100%);
-    box-shadow: 0 0 0 4px rgba(18, 56, 93, 0.1);
-  }
-
-  .mode-icon {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #12385d 0%, #1e4976 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 1rem;
-  }
-
-  .mode-icon .material-symbols-outlined {
-    font-size: 3rem;
-    color: white;
-  }
-
-  .mode-title {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #1f2937;
-    margin: 0;
-  }
-
-  .mode-description {
-    font-size: 0.95rem;
-    color: #6b7280;
-    line-height: 1.6;
-    margin: 0;
-  }
-
-  .mode-features {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    justify-content: center;
-    margin-top: 1rem;
-  }
-
-  .mode-badge {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    background: #f3f4f6;
-    color: #4b5563;
-    font-size: 0.75rem;
-    font-weight: 600;
-    border-radius: 9999px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .mode-card.selected .mode-badge {
-    background: #12385d;
-    color: white;
-  }
-
-  /* Form Styles */
-  .config-section {
-    margin-top: 2rem;
-    padding-top: 2rem;
-    border-top: 1px solid #e5e7eb;
-  }
-
-  .form-group {
-    margin-bottom: 1.5rem;
-  }
-
-  .form-label {
-    display: block;
-    font-weight: 600;
-    color: #374151;
-    margin-bottom: 0.5rem;
-    font-size: 0.95rem;
-  }
-
-  .form-label.required::after {
-    content: ' *';
-    color: #ef4444;
-  }
-
-  .form-sublabel {
-    display: block;
-    font-weight: 500;
-    color: #6b7280;
-    margin-bottom: 0.4rem;
-    font-size: 0.875rem;
-  }
-
-  .form-input,
-  .form-select,
-  .form-textarea {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 1rem;
-    color: #1f2937;
-    background: white;
-    transition: border-color 0.2s, box-shadow 0.2s;
-  }
-
-  .form-input:focus,
-  .form-select:focus,
-  .form-textarea:focus {
-    outline: none;
-    border-color: #12385d;
-    box-shadow: 0 0 0 3px rgba(18, 56, 93, 0.1);
-  }
-
-  .form-textarea {
-    resize: vertical;
-    min-height: 80px;
-    font-family: inherit;
-  }
-
-  .form-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-  }
-
-  .field-hint {
-    display: block;
-    font-size: 0.875rem;
-    color: #6b7280;
-    margin-top: 0.4rem;
-  }
-
-  .field-error {
-    display: block;
-    font-size: 0.875rem;
-    color: #ef4444;
-    margin-top: 0.4rem;
-    font-weight: 500;
-  }
-
-  .form-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    cursor: pointer;
-    padding: 0.5rem 0;
-  }
-
-  .form-checkbox input[type="checkbox"],
-  .form-checkbox input[type="radio"] {
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-  }
-
-  .checkbox-label {
-    font-size: 0.95rem;
-    color: #374151;
-    cursor: pointer;
-  }
-
-  .checkbox-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    padding: 1rem;
-    background: #f9fafb;
-    border-radius: 8px;
-  }
-
-  /* Questions Builder */
-  .questions-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .question-card {
-    background: white;
-    border: 2px solid #e5e7eb;
-    border-radius: 12px;
-    overflow: hidden;
-    transition: box-shadow 0.2s;
-  }
-
-  .question-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  }
-
-  .question-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.5rem;
-    background: #f9fafb;
-    border-bottom: 1px solid #e5e7eb;
-  }
-
-  .question-number {
-    font-weight: 700;
-    color: #12385d;
-    font-size: 1rem;
-  }
-
-  .question-card-body {
-    padding: 1.5rem;
-  }
-
-  .btn-add-question {
-    width: 100%;
-    padding: 1rem;
-    background: #f3f4f6;
-    border: 2px dashed #d1d5db;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-    font-weight: 600;
-    color: #6b7280;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .btn-add-question:hover {
-    background: #e5e7eb;
-    border-color: #12385d;
-    color: #12385d;
-  }
-
-  .btn-icon,
-  .btn-icon-danger {
-    background: transparent;
-    border: none;
-    padding: 0.5rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 6px;
-    transition: background 0.2s;
-  }
-
-  .btn-icon:hover {
-    background: #f3f4f6;
-  }
-
-  .btn-icon-danger {
-    color: #ef4444;
-  }
-
-  .btn-icon-danger:hover {
-    background: #fee2e2;
-  }
-
-  /* Review Section */
-  .review-section {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-  }
-
-  .review-card {
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 1.5rem;
-  }
-
-  .review-heading {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: #1f2937;
-    margin: 0 0 1rem 0;
-  }
-
-  .review-details {
-    display: grid;
-    grid-template-columns: 140px 1fr;
-    gap: 0.75rem 1rem;
-    margin: 0;
-  }
-
-  .review-details dt {
-    font-weight: 600;
-    color: #6b7280;
-  }
-
-  .review-details dd {
-    margin: 0;
-    color: #1f2937;
-  }
-
-  .review-questions {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .review-question-item {
-    padding: 0.75rem 1rem;
-    background: white;
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
-  }
-
-  .review-question-title {
-    font-weight: 600;
-    color: #1f2937;
-    margin-bottom: 0.5rem;
-  }
-
-  .review-question-meta {
-    font-size: 0.875rem;
-    color: #6b7280;
-  }
-
-  .review-actions {
-    display: flex;
-    gap: 1rem;
-    margin-top: 2rem;
-    padding-top: 2rem;
-    border-top: 1px solid #e5e7eb;
-  }
-
-  /* Wizard Footer */
-  .wizard-footer {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1.5rem 2rem;
-    border-top: 1px solid #e5e7eb;
-    background: #f9fafb;
-  }
-
-  .footer-spacer {
-    flex: 1;
-  }
-
-  .btn-primary,
-  .btn-secondary {
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    transition: all 0.2s;
-    border: none;
-  }
-
-  .btn-primary {
-    background: #12385d;
-    color: white;
-  }
-
-  .btn-primary:hover:not(:disabled) {
-    background: #0f2d4a;
-    box-shadow: 0 4px 12px rgba(18, 56, 93, 0.3);
-  }
-
-  .btn-primary:disabled {
-    background: #d1d5db;
-    color: #9ca3af;
-    cursor: not-allowed;
-  }
-
-  .btn-secondary {
-    background: white;
-    color: #374151;
-    border: 1px solid #d1d5db;
-  }
-
-  .btn-secondary:hover:not(:disabled) {
-    background: #f9fafb;
-    border-color: #9ca3af;
-  }
-
-  .btn-secondary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  /* Responsive Adjustments */
-  @media (max-width: 768px) {
-    .modal-content-wizard {
-      width: 95%;
-      max-height: 95vh;
-    }
-
-    .wizard-progress {
-      padding: 1rem;
-    }
-
-    /* Only hide wizard modal progress labels on small screens */
-    .wizard-progress .progress-label {
-      display: none;
-    }
-
-    .wizard-body {
-      padding: 1.5rem;
-    }
-
-    .mode-cards {
-      grid-template-columns: 1fr;
-    }
-
-    .form-row {
-      grid-template-columns: 1fr;
-    }
-
-    .wizard-footer {
-      flex-wrap: wrap;
-    }
-  }
-
-  /* =============================================================================
-     MOBILE LIVE SESSION LAYOUT FIXES
-     ============================================================================= */
-
-  /* Mobile: Make live session header more compact */
-  @media (max-width: 640px) {
-
-    /* Reduce header height and make it single-line */
-    #header-live {
-      height: auto;
-      min-height: 48px;
-      padding: 8px 12px;
-    }
-
-    #header-live .flex.w-full {
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    /* Compact poll context */
-    #header-live .min-w-0.flex.flex-col {
-      flex: 0 1 auto;
-      min-width: 0;
-    }
-
-    #header-poll-name {
-      font-size: 12px !important;
-      max-width: 120px;
-    }
-
-    /* Make timer controls more compact on mobile */
-    #timer-main-container {
-      padding: 4px !important;
-      gap: 4px !important;
-    }
-
-    #timer-display {
-      width: 50px !important;
-      font-size: 14px !important;
-      padding: 0 !important;
-    }
-
-    #timer-main-container button {
-      width: 28px !important;
-      height: 28px !important;
-    }
-
-    #timer-main-container .material-symbols-outlined {
-      font-size: 18px !important;
-    }
-
-    /* Hide less essential buttons on very small screens */
-    #reset-btn,
-    #header-next-btn {
-      display: none !important;
-    }
-
-    /* Compact reveal button */
-    #header-end-show-btn {
-      padding: 6px 10px !important;
-      font-size: 12px !important;
-      height: auto !important;
-    }
-
-    #header-end-show-btn .material-symbols-outlined {
-      font-size: 16px !important;
-    }
-
-    /* More actions button */
-    #live-more-actions-btn {
-      width: 32px !important;
-      height: 32px !important;
-    }
-  }
-
-  /* Mobile: Live status bar compactness */
-  @media (max-width: 640px) {
-    #live-status-bar {
-      padding: 6px 12px !important;
-      gap: 8px !important;
-      height: auto !important;
-      min-height: 36px;
-      flex-wrap: wrap;
-    }
-
-    #live-status-bar .material-symbols-outlined {
-      font-size: 14px !important;
-    }
-
-    #live-status-bar .font-bold {
-      font-size: 13px !important;
-    }
-
-    #live-status-bar .text-sm {
-      font-size: 11px !important;
-    }
-
-    /* Hide sparklines on mobile */
-    #live-status-bar [id*="sparkline"],
-    #live-status-bar .sparkline-container {
-      display: none !important;
-    }
-  }
-
-  /* Mobile: Main content area adjustments */
-  @media (max-width: 768px) {
-    .live-view-shell {
-      padding: 8px !important;
-      padding-bottom: 80px !important;
-      /* Space for FAB */
-    }
-
-    .live-view-grid {
-      gap: 8px !important;
-    }
-
-    /* Question card compact mode */
-    .live-question-card {
-      padding: 12px !important;
-    }
-
-    .live-question-card .question-stem-text {
-      font-size: 15px !important;
-      line-height: 1.4 !important;
-    }
-
-    /* Answer choices on mobile */
-    #results-bars {
-      gap: 6px !important;
-    }
-
-    #results-bars .answer-choice-btn,
-    #results-bars button {
-      padding: 10px 12px !important;
-      font-size: 14px !important;
-      min-height: 44px !important;
-    }
-
-    /* Student panel - collapse by default on very small screens */
-    #live-sidebar {
-      max-height: 200px;
-      overflow-y: auto;
-    }
-
-    .live-student-panel {
-      max-height: 180px;
-    }
-
-    #student-status-grid {
-      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
-      gap: 4px !important;
-    }
-
-    .student-tile {
-      padding: 6px 8px !important;
-      min-height: 40px !important;
-    }
-
-    .student-name {
-      font-size: 11px !important;
-    }
-
-    .student-sub {
-      font-size: 10px !important;
-    }
-  }
-
-  /* Very small screens (iPhone SE etc) */
-  @media (max-width: 375px) {
-    #header-live {
-      padding: 6px 8px;
-    }
-
-    #header-poll-name {
-      max-width: 80px;
-      font-size: 11px !important;
-    }
-
-    #timer-display {
-      width: 44px !important;
-      font-size: 12px !important;
-    }
-
-    .live-question-card .question-stem-text {
-      font-size: 14px !important;
-    }
-
-    #results-bars button {
-      padding: 8px 10px !important;
-      font-size: 13px !important;
-    }
-
-    /* Collapse sidebar completely on very small screens */
-    #live-sidebar {
-      max-height: 150px;
-    }
-  }
-
-  /* Fix for answer bars overflow on mobile */
-  @media (max-width: 640px) {
-
-    .answer-choice-container,
-    .answer-bar-wrapper {
-      overflow-x: hidden;
-    }
-
-    .answer-bar-wrapper .answer-text,
-    #results-bars .answer-text {
-      white-space: normal !important;
-      word-break: break-word;
-    }
-  }
-
-  /* Ensure FAB doesn't overlap content on mobile */
-  @media (max-width: 640px) {
-    .fab-container {
-      bottom: 12px !important;
-      right: 12px !important;
-    }
-
-    .fab-button {
-      width: 48px !important;
-      height: 48px !important;
-    }
-
-    .fab-action {
-      margin-bottom: 8px !important;
-    }
-  }
-
-  /* Timer & Animation Feedback */
-  .timer-safe {
-    border-color: #10b981 !important;
-    box-shadow: 0 0 0 1px #10b981 !important;
-  }
-
-  .timer-warning {
-    border-color: #f59e0b !important;
-    box-shadow: 0 0 0 1px #f59e0b !important;
-  }
-
-  .timer-critical {
-    border-color: #ef4444 !important;
-    box-shadow: 0 0 0 1px #ef4444 !important;
-    animation: pulse-border 1.5s infinite;
-  }
-
-  @keyframes pulse-border {
-
-    0%,
-    100% {
-      box-shadow: 0 0 0 1px #ef4444;
-    }
-
-    50% {
-      box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.4);
-    }
-  }
-
-  .animate-pulse-gentle {
-    animation: pulse-gentle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-
-  @keyframes pulse-gentle {
-
-    0%,
-    100% {
-      opacity: 1;
-    }
-
-    50% {
-      opacity: .6;
-    }
-  }
-
-  /* ========================================
-     POLL WIZARD EDITOR STYLES
-     ======================================== */
-  .math-symbol-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
-    background: white;
-    border: 1px solid var(--brand-light-gray);
-    color: var(--text-secondary);
-    font-family: "Times New Roman", serif;
-    /* Classic math font look */
-    font-size: 18px;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .math-symbol-btn:hover {
-    background: var(--bg-light);
-    border-color: var(--veritas-navy);
-    color: var(--veritas-navy);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  }
-
-  .math-symbol-btn:active {
-    transform: translateY(0);
-  }
-
-  .cursor-grab {
-    cursor: grab;
-  }
-
-  .cursor-grabbing {
-    cursor: grabbing;
-  }
-
-  .smart-paste-area {
-    width: 100%;
-    min-height: 80px;
-    padding: 12px;
-    border: 2px dashed var(--brand-light-gray);
-    border-radius: var(--radius-md);
-    background: var(--bg-light);
-    color: var(--text-secondary);
-    font-size: 13px;
-    line-height: 1.5;
-    transition: all 0.2s;
-    resize: vertical;
-  }
-
-  .smart-paste-area:focus {
-    outline: none;
-    border-color: var(--veritas-gold);
-    background: white;
-    color: var(--text-primary);
-  }
-
-  .smart-paste-area::placeholder {
-    color: var(--text-muted);
-    font-style: italic;
-  }
-
-  /* Question Progress Stepper */
-  .question-step {
-    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .question-step.active {
-    animation: question-pulse 2s infinite;
-  }
-
-  @keyframes question-pulse {
-    0% {
-      box-shadow: 0 0 0 0 rgba(197, 160, 90, 0.6);
-    }
-
-    70% {
-      box-shadow: 0 0 0 10px rgba(197, 160, 90, 0);
-    }
-
-    100% {
-      box-shadow: 0 0 0 0 rgba(197, 160, 90, 0);
-    }
-  }
-</style>
-</head>
-
-<body class="font-display bg-background-light dark:bg-background-dark text-brand-dark-gray dark:text-brand-white">
-</head>
-
-<body class="light">
-  <!-- 🎯 Ambient State Overlay - Provides visual feedback for system states -->
-<div id="ambient-state-overlay" class="ambient-state-overlay state-normal"></div>
-
-<!-- 🔔 Toast Notification Container - For elegant, non-intrusive alerts -->
-<div id="toast-container" class="toast-container"></div>
-
-<div id="dashboard-root" style="display: none;" class="flex h-screen w-full flex-col">
-  <!-- Header - Default State -->
-  <header id="header-default"
-    class="flex flex-wrap items-center gap-4 border-b border-solid border-veritas-navy/80 bg-veritas-navy px-6 py-4 shadow-md">
-    <div class="flex items-center gap-3">
-      <button id="dashboard-sidebar-toggle" type="button"
-        class="flex h-10 w-10 items-center justify-center rounded-full bg-brand-white/10 text-brand-white transition-colors hover:bg-brand-white/20 focus:outline-none focus:ring-2 focus:ring-brand-white/60"
-        aria-label="Hide navigation" aria-expanded="true">
-        <span class="material-symbols-outlined text-2xl">menu_open</span>
-      </button>
-      <div class="flex items-center gap-4 cursor-pointer hover:opacity-80 transition-opacity" onclick="showDashboard()"
-        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showDashboard();}" role="button"
-        tabindex="0">
-        <img alt="Veritas Logo" class="h-12 w-auto"
-          src="https://raw.githubusercontent.com/stephenborish/veritasassets/f0a824864d7d66637a13b822bff99fa6830e6123/mplogo.png" />
-        <div class="flex flex-col">
-          <h1 class="text-brand-white text-xl font-bold tracking-wide uppercase" style="letter-spacing: 0.15em;">Veritas
-          </h1>
-          <p class="text-brand-white/70 text-xs tracking-wide">Teacher Dashboard</p>
-        </div>
-      </div>
-    </div>
-
-    <div id="header-session-controls" class="flex flex-1 flex-wrap items-center justify-center gap-3 text-sm">
-      <div class="min-w-[220px]">
-        <label for="poll-select" class="sr-only">Select Poll to Start Session</label>
-        <select id="poll-select"
-          class="w-full rounded-lg border border-brand-white/30 bg-brand-white/10 px-3 py-2 text-sm text-brand-white placeholder-brand-white/70 focus:border-brand-white focus:outline-none focus:ring-2 focus:ring-veritas-gold/60">
-          <option value="">-- Choose a poll --</option>
-        </select>
-      </div>
-      <div class="flex flex-col gap-2">
-        <div class="flex flex-wrap items-center gap-2">
-          <button id="start-session-main-btn" type="button"
-            class="flex items-center gap-2 h-10 px-5 rounded-lg bg-veritas-gold text-white text-sm font-semibold hover:bg-veritas-gold/90 transition-colors shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
-            disabled>
-            <span class="material-symbols-outlined text-lg">play_circle</span>
-            <span>Start Session</span>
-          </button>
-          <button id="send-link-btn" type="button"
-            class="flex items-center gap-2 h-10 px-5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled>
-            <span class="material-symbols-outlined text-lg">mail</span>
-            <span>Send Links</span>
-          </button>
-          <button id="view-links-btn" type="button"
-            class="flex items-center gap-2 h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled>
-            <span class="material-symbols-outlined text-lg">visibility</span>
-            <span>View Links</span>
-          </button>
-        </div>
-        <div id="secure-session-meta"
-          class="hidden flex flex-row items-center gap-6 text-xs text-brand-white/90 bg-white/10 rounded-lg px-3 py-1.5 border border-white/20"
-          aria-live="polite" aria-hidden="true">
-          <!-- Content dynamically populated by updateSecureSessionMeta() -->
-        </div>
-        <!-- Student Emulator Controls (Dev/Testing) -->
-        <div id="emulator-controls"
-          class="hidden flex flex-row items-center gap-3 text-xs text-brand-white/90 bg-amber-600/20 rounded-lg px-3 py-1.5 border border-amber-500/30">
-          <span class="material-symbols-outlined text-amber-400 text-base">science</span>
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" id="emulator-enabled"
-              class="w-4 h-4 rounded border-white/30 bg-white/10 text-amber-500 focus:ring-amber-500/50">
-            <span class="text-amber-200 font-medium">Emulate Students</span>
-          </label>
-          <div id="emulator-options" class="hidden flex items-center gap-2 ml-2 pl-2 border-l border-amber-500/30">
-            <label class="flex items-center gap-1">
-              <span class="text-white/70">Count:</span>
-              <input type="number" id="emulator-student-count" value="5" min="1" max="50"
-                class="w-14 h-6 rounded border border-white/30 bg-white/10 px-2 text-xs text-white focus:ring-amber-500/50">
-            </label>
-            <label class="flex items-center gap-1">
-              <input type="checkbox" id="emulator-concurrent"
-                class="w-3.5 h-3.5 rounded border-white/30 bg-white/10 text-amber-500">
-              <span class="text-white/70">Concurrent</span>
-            </label>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="header-right ml-auto flex items-center gap-3">
-      <div id="loader" class="loader" style="display: block;">
-        <div class="h-6 w-6 animate-spin rounded-full border-2 border-brand-white/80 border-t-transparent"></div>
-      </div>
-    </div>
-  </header>
-
-  <!-- Header - Live Poll State (COMPACT REDESIGN - Mobile Optimized) -->
-  <header id="header-live" class="shrink-0 bg-veritas-navy shadow-md border-b border-veritas-gold/30 z-20"
-    style="display: none;">
-    <div class="flex w-full items-center justify-between px-2 sm:px-4 py-2 gap-2 sm:gap-4 min-h-[48px] sm:h-16">
-
-      <!-- Left: Poll Context (More compact on mobile) -->
-      <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink">
-        <button id="dashboard-sidebar-toggle-live" type="button"
-          class="flex-shrink-0 h-7 w-7 sm:h-8 sm:w-8 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
-          aria-label="Toggle navigation">
-          <span class="material-symbols-outlined text-lg sm:text-xl">menu</span>
-        </button>
-        <div class="min-w-0 flex flex-col justify-center">
-          <h1 id="header-poll-name"
-            class="text-white font-bold text-xs sm:text-sm md:text-base truncate leading-tight max-w-[100px] sm:max-w-none">
-            Poll Name
-          </h1>
-          <div class="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs text-white/70">
-            <span id="live-question-info"
-              class="font-mono tracking-wider uppercase bg-white/10 px-2 py-0.5 rounded-md border border-white/5">Q1 /
-              10</span>
-            <div id="question-progress-container" class="hidden md:flex items-center gap-1.5 ml-1"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Right: Timer & Primary Actions (Compact on mobile) -->
-      <div class="flex items-center gap-1 sm:gap-3 flex-shrink-0">
-        <!-- Timer Control (Compact on mobile) -->
-        <div id="timer-main-container"
-          class="flex items-center gap-0.5 sm:gap-2 bg-black/20 rounded-lg p-0.5 sm:p-1 border border-white/10 transition-colors">
-          <button id="subtract-10s-btn" type="button"
-            class="hidden md:flex w-7 h-7 sm:w-8 sm:h-8 items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-            title="-10s">
-            <span class="material-symbols-outlined text-base sm:text-lg">remove</span>
-          </button>
-          <input type="text" id="timer-display"
-            class="w-12 sm:w-16 md:w-20 bg-transparent text-center text-sm sm:text-lg md:text-xl font-bold text-white tabular-nums focus:outline-none focus:ring-1 focus:ring-veritas-gold rounded px-0.5 sm:px-1 cursor-pointer hover:bg-white/5"
-            value="00:00" title="Click to edit time">
-          <button id="add-10s-btn" type="button"
-            class="hidden md:flex w-7 h-7 sm:w-8 sm:h-8 items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-            title="+10s">
-            <span class="material-symbols-outlined text-base sm:text-lg">add</span>
-          </button>
-
-          <div class="w-px h-4 sm:h-5 bg-white/20 mx-0.5 sm:mx-1"></div>
-
-          <button id="start-btn" type="button"
-            class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm transition-colors"
-            title="Start (Space)">
-            <span class="material-symbols-outlined text-lg sm:text-xl">play_arrow</span>
-          </button>
-          <button id="pause-btn" type="button"
-            class="hidden w-7 h-7 sm:w-8 sm:h-8 items-center justify-center rounded bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition-colors"
-            title="Pause (Space)">
-            <span class="material-symbols-outlined text-lg sm:text-xl">pause</span>
-          </button>
-          <button id="reset-btn" type="button"
-            class="hidden sm:flex w-7 h-7 sm:w-8 sm:h-8 items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-            title="Reset (R)">
-            <span class="material-symbols-outlined text-base sm:text-lg">refresh</span>
-          </button>
-        </div>
-
-        <div class="hidden sm:block w-px h-6 bg-white/10 mx-1"></div>
-        <button id="header-prev-btn" type="button"
-          class="hidden md:flex items-center gap-2 h-8 sm:h-9 px-3 sm:px-4 rounded bg-white/10 text-white font-bold text-xs sm:text-sm hover:bg-white/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Previous Question (←)">
-          <span class="material-symbols-outlined text-sm sm:text-base">arrow_back</span>
-          <span>Prev</span>
-        </button>
-        <button id="header-next-btn" type="button"
-          class="hidden md:flex items-center gap-2 h-8 sm:h-9 px-3 sm:px-4 rounded bg-white text-veritas-navy font-bold text-xs sm:text-sm shadow hover:bg-gray-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Next Question (→)">
-          <span>Next</span>
-          <span class="material-symbols-outlined text-sm sm:text-base">arrow_forward</span>
-        </button>
-        <button id="header-end-show-btn" type="button"
-          class="flex items-center gap-1 sm:gap-2 h-7 sm:h-9 px-2 sm:px-4 rounded bg-veritas-gold text-white font-bold text-xs sm:text-sm shadow hover:bg-veritas-gold/90 transition-all"
-          title="End & Reveal (E)">
-          <span class="material-symbols-outlined text-sm sm:text-base">visibility</span>
-          <span class="hidden sm:inline">Reveal</span>
-        </button>
-
-        <!-- More Actions Dropdown Trigger -->
-        <div class="relative">
-          <button id="live-more-actions-btn"
-            class="h-7 w-7 sm:h-9 sm:w-9 flex items-center justify-center rounded text-white hover:bg-white/10 transition-colors"
-            aria-label="More actions" aria-haspopup="true">
-            <span class="material-symbols-outlined text-lg sm:text-xl">more_vert</span>
-          </button>
-          <!-- Dropdown Menu -->
-          <div id="live-more-menu"
-            class="hidden absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-50 origin-top-right ring-1 ring-black ring-opacity-5 focus:outline-none"
-            role="menu">
-            <button id="header-edit-poll-btn"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">edit</span> Edit Poll
-            </button>
-            <div class="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
-            <button id="header-back-btn"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">arrow_back</span> Previous Question
-            </button>
-            <button id="header-reset-question-btn"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">replay</span> Reset Question
-            </button>
-            <div class="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
-            <button id="add-30s-btn-preset"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">av_timer</span> Add 30 Seconds
-            </button>
-            <button id="add-60s-btn-preset"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">av_timer</span> Add 1 Minute
-            </button>
-            <div class="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
-            <button id="header-send-link-btn"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">mail</span> Send Links
-            </button>
-            <button id="header-view-links-btn"
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">link</span> View Links
-            </button>
-            <div class="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
-            <button id="header-stop-btn"
-              class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
-              role="menuitem">
-              <span class="material-symbols-outlined text-base">stop_circle</span> End Session
-            </button>
-          </div>
-        </div>
-
-        <div class="w-px h-6 bg-white/10 mx-1"></div>
-        <button id="header-calc-toggle" type="button"
-          class="flex items-center gap-2 h-9 px-3 rounded bg-white/10 text-white text-sm font-semibold hover:bg-white/15 transition-colors"
-          aria-pressed="false" aria-live="polite" data-role="calculator-toggle">
-          <span class="material-symbols-outlined text-base">calculate</span>
-          <span class="hidden sm:inline">Calculator</span>
-          <span id="header-calc-state" class="text-xs uppercase tracking-wide opacity-80">Off</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Hidden legacy buttons to prevent JS errors -->
-    <button id="header-start-btn" class="hidden"></button>
-  </header>
-
-  <div class="flex flex-grow overflow-hidden min-h-0">
-    <!-- Left Navigation Sidebar -->
-    <aside id="dashboard-sidebar"
-      class="h-full w-64 flex flex-shrink-0 flex-col border-r border-veritas-navy/25 bg-veritas-navy p-4 text-brand-white shadow-lg transition-all duration-300 ease-in-out overflow-hidden">
-      <div class="mb-4 px-1">
-        <p class="text-xs font-semibold uppercase tracking-[0.32em] text-brand-white/60">Navigation</p>
-      </div>
-      <nav class="flex flex-1 flex-col gap-2">
-        <button id="nav-polls-list" data-section-target="dashboard"
-          class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg font-semibold transition-colors text-left"
-          aria-current="page">
-          <span class="material-symbols-outlined">monitoring</span>
-          <span>Live Dashboard</span>
-        </button>
-        <button id="nav-create-poll"
-          class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors font-semibold">
-          <span class="material-symbols-outlined">add_circle</span>
-          <span>Create New Poll</span>
-        </button>
-        <button id="nav-question-bank" onclick="window.location.href='/teacher/question_bank.html'"
-          class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left text-brand-white/70 hover:text-brand-white hover:bg-white/10">
-          <span class="material-symbols-outlined">library_books</span>
-          <span>Question Bank</span>
-        </button>
-        <button id="nav-rosters" data-section-target="roster"
-          class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left">
-          <span class="material-symbols-outlined">group</span>
-          <span>Classes &amp; Rosters</span>
-        </button>
-        <button id="nav-archived" data-section-target="archived"
-          class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left">
-          <span class="material-symbols-outlined">inventory_2</span>
-          <span>Archived Polls</span>
-        </button>
-        <button id="nav-analytics" data-section-target="analytics"
-          class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left">
-          <span class="material-symbols-outlined">analytics</span>
-          <span>Analytics Hub</span>
-        </button>
-        <button id="nav-migration" onclick="openMigrationModal()"
-          class="sidebar-nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left mt-auto text-brand-white/70 hover:text-brand-white hover:bg-white/10">
-          <span class="material-symbols-outlined">cloud_upload</span>
-          <span>Import Data</span>
-        </button>
-      </nav>
-      <div class="mt-6 rounded-lg border border-brand-white/10 bg-brand-white/5 px-3 py-3 text-xs text-brand-white/70">
-        <p class="font-semibold uppercase tracking-[0.18em] text-brand-white/60">Tip</p>
-        <p class="mt-1 leading-relaxed">Use the controls in the top bar to quickly start a live session from any poll.
-        </p>
-      </div>
-    </aside>
-
-    <!-- Main Content Area -->
-    <main class="flex-1 min-h-0 overflow-y-auto bg-gray-50 dark:bg-brand-dark-gray/10 flex flex-col">
-      <!-- Dashboard View (Default) - Redesigned -->
-      <div id="dashboard" class="p-8 max-w-7xl mx-auto">
-        <!-- Poll Library & Session Management (Combined) -->
-        <div class="dashboard-card glass-card premium-shadow p-8 rounded-2xl">
-          <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
-            <div>
-              <h2 class="text-2xl font-bold text-veritas-navy mb-1">Poll Library & Session Management</h2>
-              <p class="text-gray-600 text-sm">Use the session controls in the header to start a live session, or
-                create, edit, and manage your polls below.</p>
-            </div>
-          </div>
-
-          <!-- Poll Library Controls -->
-          <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
-            <h3 class="text-lg font-semibold text-veritas-navy">Your Polls</h3>
-            <div class="flex flex-wrap items-center gap-3">
-              <label class="flex items-center gap-2 text-sm text-gray-600">
-                <span class="hidden sm:inline">Sort by</span>
-                <select id="poll-sort-select"
-                  class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-veritas-gold">
-                  <option value="updated_desc">Latest activity</option>
-                  <option value="updated_asc">Oldest activity</option>
-                  <option value="name_asc">Name A → Z</option>
-                  <option value="class_asc">Class A → Z</option>
-                </select>
-              </label>
-              <label class="flex items-center gap-2 text-sm text-gray-600">
-                <span class="hidden sm:inline">Class</span>
-                <select id="poll-filter-select"
-                  class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-veritas-gold">
-                  <option value="all">All classes</option>
-                </select>
-              </label>
-              <div id="poll-search-container" class="relative w-full sm:w-64">
-                <span
-                  class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-gray-400 z-10">search</span>
-                <input id="poll-search-input" type="text" placeholder="Search polls, questions..."
-                  class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-8 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-veritas-gold shadow-sm"
-                  aria-label="Search polls" autocomplete="off" />
-                <button type="button"
-                  class="absolute inset-y-0 right-0 flex items-center px-2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                  data-combobox-toggle>
-                  <span class="material-symbols-outlined text-lg">unfold_more</span>
-                </button>
-                <button id="poll-search-clear-btn" type="button"
-                  class="hidden absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                  aria-label="Clear search">
-                  <span class="material-symbols-outlined text-base leading-none">close</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- ENHANCED: Toggle between Table and Card View -->
-          <div class="mb-4 flex items-center justify-end gap-2">
-            <span class="text-xs text-gray-500 font-medium">View:</span>
-            <button id="view-cards-btn"
-              class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-veritas-navy/10 text-veritas-navy transition-colors"
-              title="Card view">
-              <span class="material-symbols-outlined text-base align-middle">grid_view</span>
-            </button>
-            <button id="view-table-btn"
-              class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
-              title="Table view">
-              <span class="material-symbols-outlined text-base align-middle">table_rows</span>
-            </button>
-          </div>
-
-          <!-- Card View (Default, More Visual) -->
-          <div id="polls-card-view" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            <!-- Poll cards will be dynamically inserted here -->
-          </div>
-
-          <!-- Table View (Optional, More Compact) -->
-          <div id="polls-table-view" class="overflow-hidden rounded-lg border border-gray-200 hidden">
-            <table class="min-w-full divide-y divide-gray-200 text-sm">
-              <thead class="bg-gray-50 text-gray-600">
-                <tr>
-                  <th class="px-4 py-3 text-left font-semibold">Poll</th>
-                  <th class="px-4 py-3 text-left font-semibold">Class</th>
-                  <th class="px-4 py-3 text-left font-semibold">Questions</th>
-                  <th class="px-4 py-3 text-left font-semibold">Mode</th>
-                  <th class="px-4 py-3 text-left font-semibold">Last Edited</th>
-                  <th class="px-4 py-3 text-right font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="polls-table-body" class="divide-y divide-gray-100 bg-white"></tbody>
-            </table>
-          </div>
-
-          <!-- Enhanced Empty State -->
-          <div id="polls-empty-state"
-            class="hidden text-center p-12 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-2xl">
-            <div class="max-w-lg mx-auto">
-              <div class="inline-block p-4 bg-veritas-navy/10 rounded-full mb-4">
-                <span class="material-symbols-outlined text-5xl text-veritas-navy dark:text-veritas-gold">school</span>
-              </div>
-              <h3 class="text-2xl font-bold text-veritas-navy dark:text-white mb-2">Poll Library</h3>
-              <p class="text-gray-600 dark:text-gray-400 mb-6">Create and manage your interactive polls and secure
-                assessments here.</p>
-              <button onclick="Wizard.init()" class="dashboard-cta-button primary">
-                <span class="material-symbols-outlined">add_circle</span>
-                <span>Create New Poll</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Individual Timed Session Monitoring View -->
-      <div id="individual-timed-view" class="p-6" style="display: none;">
-        <div
-          class="bg-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm">
-          <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
-            <div>
-              <h2 id="individual-session-poll-name"
-                class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">Individual Timed Session</h2>
-              <p id="individual-session-meta" class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm">
-                Monitoring student progress in real-time.</p>
-            </div>
-            <div class="flex items-center gap-2">
-              <button id="secure-view-links-btn"
-                class="h-10 px-5 rounded-lg bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors flex items-center gap-2">
-                <span class="material-symbols-outlined text-lg">link</span>
-                <span>View Links</span>
-              </button>
-              <button id="view-book-report-btn"
-                class="h-10 px-5 rounded-lg bg-veritas-gold text-white text-sm font-bold hover:bg-veritas-gold/90 transition-colors flex items-center gap-2">
-                <span class="material-symbols-outlined text-lg">menu_book</span>
-                <span>Book View</span>
-              </button>
-              <button id="end-individual-session-btn"
-                class="h-10 px-5 rounded-lg bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors">End
-                Session</button>
-            </div>
-          </div>
-          <div id="mission-control-summary" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-            <div class="p-4 rounded-xl border border-brand-light-gray/70 bg-slate-50 dark:bg-brand-dark-gray/20">
-              <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Not Started</p>
-              <p id="summary-not-started" class="text-3xl font-bold text-slate-900 dark:text-white">0</p>
-            </div>
-            <div class="p-4 rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/30">
-              <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">In
-                Progress</p>
-              <p id="summary-in-progress" class="text-3xl font-bold text-emerald-800 dark:text-emerald-100">0</p>
-            </div>
-            <div class="p-4 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20">
-              <p class="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-200">Locked /
-                Paused</p>
-              <p id="summary-locked" class="text-3xl font-bold text-amber-800 dark:text-amber-100">0</p>
-            </div>
-            <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800/40">
-              <p class="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Submitted</p>
-              <p id="summary-completed" class="text-3xl font-bold text-slate-900 dark:text-white">0</p>
-            </div>
-          </div>
-          <div class="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] mb-6">
-            <div class="p-4 rounded-xl border border-brand-light-gray/70 bg-white dark:bg-brand-dark-gray/20 shadow-sm">
-              <div class="flex flex-col gap-3">
-                <div class="flex flex-wrap items-center gap-3">
-                  <span
-                    class="text-sm font-semibold text-brand-dark-gray dark:text-white uppercase tracking-wide">Extend
-                    time</span>
-                  <div class="flex items-center gap-2">
-                    <input id="bulk-time-input" type="number" min="1" step="1" value="5"
-                      class="w-20 rounded-lg border border-slate-200 bg-white/90 px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-veritas-gold"
-                      aria-label="Minutes to extend" />
-                    <span class="text-xs text-slate-500">minutes</span>
-                  </div>
-                </div>
-                <div class="flex flex-wrap items-center gap-3">
-                  <button id="bulk-time-all-btn" type="button"
-                    class="inline-flex items-center gap-2 rounded-full bg-veritas-navy text-white px-4 py-2 text-sm font-semibold shadow hover:bg-veritas-navy/90 transition-colors">
-                    <span class="material-symbols-outlined text-base">schedule_add</span>
-                    <span>Add to entire class</span>
-                  </button>
-                  <button id="bulk-time-selected-btn" type="button"
-                    class="inline-flex items-center gap-2 rounded-full bg-emerald-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-emerald-700 transition-colors disabled:opacity-60"
-                    disabled>
-                    <span class="material-symbols-outlined text-base">group_add</span>
-                    <span id="bulk-selected-label">Add to selected</span>
-                  </button>
-                  <button id="bulk-selection-clear" type="button"
-                    class="text-xs font-semibold text-slate-500 underline hidden">Clear selection</button>
-                </div>
-                <p class="text-xs text-slate-500">Selecting student cards enables targeted adjustments. <span
-                    id="bulk-selection-count">0</span> students selected.</p>
-              </div>
-            </div>
-            <div
-              class="p-4 rounded-xl border border-brand-light-gray/70 bg-slate-50 dark:bg-brand-dark-gray/20 shadow-sm">
-              <h4 class="text-sm font-semibold text-brand-dark-gray dark:text-white mb-2 flex items-center gap-2">
-                <span class="material-symbols-outlined text-base text-veritas-navy">visibility_lock</span>
-                Re-entry monitoring
-              </h4>
-              <p class="text-xs text-slate-500 leading-relaxed">Locked students will surface an "Approve re-entry"
-                action on their tile so you can clear violations without leaving Mission Control.</p>
-            </div>
-          </div>
-          <div id="individual-session-students-grid"
-            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            <!-- Student cards will be dynamically inserted here -->
-          </div>
-        </div>
-      </div>
-
-      <!-- Live Poll View (REDESIGNED FOR MISSION CONTROL) -->
-      <div id="live-view" class="flex flex-col h-full min-h-0 overflow-hidden bg-gray-50 dark:bg-gray-900"
-        style="display: none;">
-
-        <!-- 1. Top Control Bar (HIDDEN - Removed to prevent duplicate controls with header-live) -->
-        <div id="live-control-bar"
-          class="hidden shrink-0 h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center px-6 shadow-sm z-20 justify-between">
-
-          <!-- Context Group -->
-          <div class="flex items-center gap-4">
-            <div class="flex flex-col">
-              <h1 id="lcb-poll-name"
-                class="text-gray-900 dark:text-white font-bold text-lg leading-tight truncate max-w-xs">Poll Name</h1>
-              <div class="flex items-center gap-2 text-xs text-gray-500 font-medium">
-                <span id="lcb-question-info"
-                  class="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-gray-700 dark:text-gray-300">Q1 /
-                  10</span>
-                <span class="w-1 h-1 rounded-full bg-gray-300"></span>
-                <span id="lcb-timer-status-message">Ready</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Central Hub: Timer & Main Actions -->
-          <div class="flex items-center gap-4 absolute left-1/2 transform -translate-x-1/2">
-            <!-- Time Controls -->
-            <div id="lcb-timer-main-container"
-              class="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 gap-1 shadow-inner">
-              <button id="lcb-subtract-10s-btn"
-                class="w-8 h-8 flex items-center justify-center rounded hover:bg-white dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors"
-                title="-10s">
-                <span class="material-symbols-outlined text-lg">remove</span>
-              </button>
-              <input type="text" id="lcb-timer-display"
-                class="w-16 bg-transparent text-center font-mono text-xl font-bold text-gray-800 dark:text-white border-none focus:ring-0 p-0"
-                value="00:00" readonly>
-              <button id="lcb-add-10s-btn"
-                class="w-8 h-8 flex items-center justify-center rounded hover:bg-white dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors"
-                title="+10s">
-                <span class="material-symbols-outlined text-lg">add</span>
-              </button>
-            </div>
-
-            <!-- Playback Controls -->
-            <div class="flex items-center gap-2">
-              <button id="lcb-start-btn"
-                class="w-10 h-10 flex items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-600 active:scale-95 transition-all">
-                <span class="material-symbols-outlined filled text-2xl">play_arrow</span>
-              </button>
-              <button id="lcb-pause-btn"
-                class="hidden w-10 h-10 flex items-center justify-center rounded-full bg-amber-500 text-white shadow-lg shadow-amber-500/30 hover:bg-amber-600 active:scale-95 transition-all">
-                <span class="material-symbols-outlined filled text-2xl">pause</span>
-              </button>
-              <button id="lcb-reset-btn"
-                class="w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 active:scale-95 transition-all"
-                title="Reset Question">
-                <span class="material-symbols-outlined text-xl">restart_alt</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Right Actions: Navigation, Reveal, Tools -->
-          <div class="flex items-center gap-3">
-            <!-- Tool Toggles -->
-            <div class="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
-              <button id="lcb-calc-toggle"
-                class="w-9 h-9 flex items-center justify-center rounded hover:bg-white dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors"
-                title="Toggle TI-84 Calculator">
-                <span class="material-symbols-outlined text-xl">calculate</span>
-              </button>
-              <button id="lcb-whiteboard-toggle"
-                class="w-9 h-9 flex items-center justify-center rounded hover:bg-white dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors"
-                title="Toggle Whiteboard (Coming Soon)">
-                <span class="material-symbols-outlined text-xl">draw</span>
-              </button>
-            </div>
-
-            <div class="h-8 w-px bg-gray-300 dark:bg-gray-700"></div>
-
-            <button id="lcb-end-show-btn"
-              class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow-md shadow-indigo-500/20 transition-all">
-              <span class="material-symbols-outlined text-lg">visibility</span>
-              <span>Reveal</span>
-            </button>
-
-            <button id="lcb-next-btn"
-              class="flex items-center gap-2 px-4 py-2 bg-gray-800 dark:bg-gray-700 hover:bg-gray-900 dark:hover:bg-gray-600 text-white rounded-lg font-semibold shadow-md transition-all">
-              <span>Next</span>
-              <span class="material-symbols-outlined text-lg">arrow_forward</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- 2. Main High-Density Grid -->
-        <main class="flex-1 flex flex-col lg:flex-row overflow-hidden">
-
-          <!-- LEFT PANEL: Question & Content (45% on large screens) -->
-          <div id="live-question-panel"
-            class="w-full lg:w-[45%] h-1/3 lg:h-full flex flex-col border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10">
-            <div class="flex-1 overflow-y-auto p-6 space-y-6">
-              <!-- Question Card -->
-              <div class="space-y-4">
-                <span class="text-xs font-bold tracking-widest text-indigo-500 uppercase">Current Question</span>
-                <h2 id="live-question-text"
-                  class="text-2xl font-serif font-medium text-gray-900 dark:text-white leading-relaxed">
-                  Loading question...
-                </h2>
-              </div>
-
-              <!-- Dynamic Media Container -->
-              <div id="question-image-container"
-                class="relative group rounded-xl overflow-hidden border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 hidden">
-                <img id="live-question-image" src=""
-                  class="w-full h-auto max-h-[400px] object-contain transition-transform group-hover:scale-[1.02]"
-                  alt="Question Media">
-                <button
-                  class="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-lg backdrop-blur-sm transition-opacity opacity-0 group-hover:opacity-100"
-                  title="Expand Image">
-                  <span class="material-symbols-outlined">zoom_in</span>
-                </button>
-              </div>
-
-              <!-- Answer Choices (Interactive Stats) -->
-              <div class="space-y-3 pt-4">
-                <div class="flex items-center justify-between">
-                  <span class="text-xs font-bold tracking-widest text-gray-400 uppercase">Responses</span>
-                  <span id="response-count-header" class="text-xs font-medium text-gray-500">0 answered</span>
-                </div>
-                <div id="results-bars" class="space-y-3">
-                  <!-- Populated dynamically: Bars with percentages -->
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- RIGHT PANEL: Proctoring Mission Control (55% on large screens) -->
-          <div id="live-student-panel"
-            class="w-full lg:w-[55%] h-2/3 lg:h-full flex flex-col bg-gray-50/50 dark:bg-gray-900/50">
-
-            <!-- Metrics Heads-Up Display -->
-            <div
-              class="h-16 px-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-white/50 dark:bg-gray-800/50 backdrop-blur-md">
-              <div class="flex gap-6">
-                <!-- Metric: Response Rate -->
-                <div class="flex items-baseline gap-2">
-                  <span class="text-2xl font-bold text-gray-900 dark:text-white" id="hud-response-count">0/0</span>
-                  <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Responses</span>
-                </div>
-                <!-- Metric: Accuracy -->
-                <div class="flex items-baseline gap-2 pl-6 border-l border-gray-200 dark:border-gray-700">
-                  <span class="text-2xl font-bold text-emerald-600" id="hud-accuracy-value">--%</span>
-                  <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Accuracy</span>
-                </div>
-                <!-- Metric: Metacognition Index (New) -->
-                <div class="flex items-baseline gap-2 pl-6 border-l border-gray-200 dark:border-gray-700"
-                  title="Class Confidence Index">
-                  <div class="flex items-center gap-1 text-indigo-600">
-                    <span class="material-symbols-outlined text-lg">psychology</span>
-                    <span class="text-xl font-bold" id="hud-metacognition-value">--</span>
-                  </div>
-                  <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Confidence</span>
-                </div>
-              </div>
-
-              <!-- Filter Controls -->
-              <div class="flex items-center gap-2 bg-gray-200 dark:bg-gray-700 p-1 rounded-lg">
-                <button id="filter-all-btn"
-                  class="px-3 py-1 text-xs font-bold rounded-md bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm transition-all">ALL</button>
-                <button id="filter-locked-only-btn"
-                  class="px-3 py-1 text-xs font-bold rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600 transition-all flex items-center gap-1">
-                  <span>LOCKED</span>
-                  <span id="locked-count" class="bg-red-500 text-white text-[10px] px-1.5 rounded-full hidden">0</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Student Grid (Scrollable) -->
-            <div id="student-status-grid"
-              class="flex-1 overflow-y-auto custom-scrollbar p-6 grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start">
-              <!-- Cards injected here -->
-              <!-- Example Card Structure for reference (created by JS):
-                    <div class="student-card p-3 rounded-xl bg-white border border-gray-200 shadow-sm relative group hover:shadow-md transition-all">
-                        <div class="flex justify-between items-start mb-2">
-                            <span class="font-bold text-sm text-gray-800 truncate">Student Name</span>
-                            <span class="status-indicator w-2 h-2 rounded-full bg-gray-300"></span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs font-mono text-gray-500">Thinking...</span>
-                            <span class="metacognition-dot w-3 h-3 rounded-full bg-indigo-100"></span>
-                        </div>
-                    </div>
-                    -->
-            </div>
-          </div>
-        </main>
-
-        <!-- TI-84 Iframe Container (Draggable) -->
-        <!-- Hidden by default, toggled via #header-calc-toggle -->
-        <div id="calculator-draggable"
-          class="hidden absolute top-20 right-20 w-[300px] h-[580px] bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden flex flex-col shadow-indigo-500/20">
-          <!-- Drag Handle -->
-          <div id="calculator-drag-handle"
-            class="h-8 bg-gray-100 dark:bg-gray-700 cursor-move flex items-center justify-between px-3 border-b border-gray-200 dark:border-gray-600">
-            <div class="flex items-center gap-1">
-              <span class="w-2 h-2 rounded-full bg-red-400"></span>
-              <span class="w-2 h-2 rounded-full bg-yellow-400"></span>
-              <span class="w-2 h-2 rounded-full bg-green-400"></span>
-            </div>
-            <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">TI-84 Plus</span>
-            <span class="material-symbols-outlined text-sm text-gray-400">drag_indicator</span>
-          </div>
-          <!-- Iframe -->
-          <iframe src="https://mpcalc-aaa91.web.app/" class="w-full h-full border-0 bg-gray-100"
-            title="TI-84 Calculator"></iframe>
-        </div>
-
-        <!-- Student Inspector Panel (Slide-over) -->
-        <div id="student-inspector-panel"
-          class="hidden fixed top-16 bottom-0 right-0 w-96 bg-white dark:bg-gray-800 shadow-2xl border-l border-gray-200 dark:border-gray-700 z-[60] transform transition-transform duration-300 flex flex-col">
-          <!-- Content injected dynamically by openStudentInspector() -->
-        </div>
-
-        <!-- Whiteboard Overlay -->
-        <div id="whiteboard-overlay" class="hidden fixed inset-0 z-[70] bg-white/95 dark:bg-gray-900/95 flex flex-col">
-          <div class="h-14 flex items-center justify-between px-6 border-b border-gray-200 dark:border-gray-700">
-            <h2 class="font-bold text-gray-800 dark:text-white">Whiteboard</h2>
-            <div class="flex items-center gap-2">
-              <button id="wb-clear-btn"
-                class="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-sm font-bold">Clear</button>
-              <button id="wb-close-btn"
-                class="p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
-                <span class="material-symbols-outlined">close</span>
-              </button>
-            </div>
-          </div>
-          <div class="flex-1 relative cursor-crosshair">
-            <canvas id="wb-canvas" class="absolute inset-0 w-full h-full"></canvas>
-            <div id="wb-controls"
-              class="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-white dark:bg-gray-800 shadow-lg rounded-full px-4 py-2 flex items-center gap-4 border border-gray-200 dark:border-gray-700">
-              <button class="wb-tool active p-2 rounded-full hover:bg-gray-100 text-emerald-600" data-color="#059669"
-                data-size="4">
-                <span class="material-symbols-outlined">edit</span>
-              </button>
-              <button class="wb-tool p-2 rounded-full hover:bg-gray-100 text-blue-600" data-color="#2563eb"
-                data-size="4">
-                <span class="material-symbols-outlined">edit</span>
-              </button>
-              <button class="wb-tool p-2 rounded-full hover:bg-gray-100 text-red-600" data-color="#dc2626"
-                data-size="4">
-                <span class="material-symbols-outlined">edit</span>
-              </button>
-              <div class="w-px h-6 bg-gray-300"></div>
-              <button class="wb-tool p-2 rounded-full hover:bg-gray-100 text-gray-500" data-mode="eraser">
-                <span class="material-symbols-outlined">ink_eraser</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-
-      <!-- Hidden elements for compatibility -->
-      <div class="hidden">
-        <div id="live-session-overview">
-          <p id="live-overview-responses">0 / 0</p>
-          <div id="live-overview-response-progress" style="width: 0%;"></div>
-          <p id="live-overview-response-caption">0%</p>
-          <p id="live-overview-accuracy">0%</p>
-          <p id="live-overview-accuracy-caption"></p>
-          <p id="live-overview-lockouts">0</p>
-          <p id="live-overview-lockouts-caption"></p>
-          <p id="live-overview-waiting">0</p>
-          <p id="live-overview-waiting-caption"></p>
-          <button id="focus-lockouts-btn" type="button" disabled></button>
-        </div>
-        <div id="response-count">0 / 0</div>
-        <div id="violations-alert-panel"></div>
-        <div id="violations-summary"></div>
-        <div id="violations-quick-list"></div>
-        <button id="dismiss-violations-alert"></button>
-        <button id="toggle-exited-panel-btn"></button>
-        <div id="exited-students-list"></div>
-        <button id="toggle-sidebar-btn"></button>
-        <span id="sidebar-toggle-icon"></span>
-        <span id="sidebar-toggle-label"></span>
-      </div>
-
-  </div>
-
-  <!-- ⚡ Floating Action Button (FAB) Cluster - Primary Actions for Live Session -->
-  <div id="fab-container" class="fab-container" style="display: none;">
-    <!-- FAB Menu Items -->
-    <div id="fab-menu" class="fab-menu">
-      <!-- Activity Feed Toggle -->
-      <div class="fab-action">
-        <span class="fab-label">Activity Feed</span>
-        <button id="fab-activity-btn" class="fab-button fab-info" title="View recent activity"
-          aria-label="Toggle activity feed">
-          <span class="material-symbols-outlined">notifications</span>
-        </button>
-      </div>
-
-      <!-- Next Question Action -->
-      <div class="fab-action">
-        <span class="fab-label">Next Question →</span>
-        <button id="fab-next-btn" class="fab-button fab-primary" title="Advance to next question"
-          aria-label="Next question">
-          <span class="material-symbols-outlined">arrow_forward</span>
-        </button>
-      </div>
-
-      <!-- Show Results Action -->
-      <div class="fab-action">
-        <span class="fab-label">Show Results</span>
-        <button id="fab-show-results-btn" class="fab-button fab-success" title="Reveal answer to students"
-          aria-label="Show results">
-          <span class="material-symbols-outlined">visibility</span>
-        </button>
-      </div>
-
-      <!-- Reset Question Action -->
-      <div class="fab-action">
-        <span class="fab-label">Reset Question</span>
-        <button id="fab-reset-btn" class="fab-button fab-info" title="Reset current question"
-          aria-label="Reset question">
-          <span class="material-symbols-outlined">replay</span>
-        </button>
-      </div>
-
-      <!-- Stop Session Action -->
-      <div class="fab-action">
-        <span class="fab-label">End Session</span>
-        <button id="fab-stop-btn" class="fab-button fab-danger" title="End the entire session"
-          aria-label="Stop session">
-          <span class="material-symbols-outlined">stop</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- FAB Main Toggle Button -->
-    <button id="fab-main-toggle" class="fab-main" aria-label="Quick actions menu" aria-expanded="false">
-      <span class="material-symbols-outlined">bolt</span>
-    </button>
-  </div>
-
-  <!-- 📊 Real-Time Activity Feed - Shows recent student actions -->
-  <div id="activity-feed" class="activity-feed">
-    <div class="activity-feed-header">
-      <div class="activity-feed-title">
-        <span class="material-symbols-outlined">notifications</span>
-        <span>Recent Activity</span>
-        <span id="activity-feed-count" class="activity-feed-badge">0</span>
-      </div>
-      <button id="activity-feed-close" class="activity-feed-close" aria-label="Close activity feed">
-        <span class="material-symbols-outlined">close</span>
-      </button>
-    </div>
-    <div id="activity-feed-list" class="activity-feed-list">
-      <!-- Activity items will be dynamically inserted here -->
-      <div class="activity-feed-empty">
-        <span class="material-symbols-outlined">inbox</span>
-        <p>No recent activity</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- End of Live Poll View Redesign -->
-  <!-- Roster Manager View -->
-  <div id="roster-manager"
-    class="p-6 grid grid-cols-1 lg:grid-cols-4 gap-6 bg-gray-50 dark:bg-brand-dark-gray/10 min-h-full"
-    style="display: none;">
-    <div
-      class="lg:col-span-1 bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-5 shadow-sm flex flex-col">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-bold text-brand-dark-gray dark:text-brand-white">Classes</h2>
-        <button id="add-class-btn"
-          class="flex items-center justify-center h-9 w-9 rounded-full bg-primary text-brand-white hover:bg-primary/90 transition-colors"
-          title="Add class">
-          <span class="material-symbols-outlined text-base">add</span>
-        </button>
-      </div>
-      <div id="roster-class-list" class="flex-1 overflow-y-auto space-y-2">
-        <!-- Classes will render here -->
-      </div>
-    </div>
-    <div
-      class="lg:col-span-3 bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm">
-      <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div>
-          <h2 id="roster-class-title" class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white">Select a
-            class</h2>
-          <p class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm">Manage student names and emails for
-            rostered classes.</p>
-        </div>
-        <div class="flex items-center gap-2">
-          <button id="rename-class-btn"
-            class="hidden h-9 px-4 rounded-lg bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-sm font-semibold hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors">Rename</button>
-          <button id="delete-class-btn"
-            class="hidden h-9 px-4 rounded-lg bg-red-600/10 text-red-600 dark:text-red-300 dark:bg-red-500/20 text-sm font-semibold hover:bg-red-600/20 dark:hover:bg-red-500/30 transition-colors">Delete</button>
-        </div>
-      </div>
-      <div id="roster-empty-state"
-        class="border border-dashed border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg p-10 text-center text-brand-dark-gray/60 dark:text-brand-white/60">
-        <p>Choose a class on the left to view its roster.</p>
-      </div>
-      <div id="roster-table-wrapper" class="hidden flex flex-col gap-4">
-        <div class="overflow-x-auto border border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg">
-          <table class="min-w-full divide-y divide-brand-light-gray dark:divide-brand-dark-gray text-sm">
-            <thead class="bg-brand-light-gray/50 dark:bg-brand-dark-gray/40 text-brand-dark-gray dark:text-brand-white">
-              <tr>
-                <th class="px-4 py-2 text-left font-semibold w-1/2">Student Name</th>
-                <th class="px-4 py-2 text-left font-semibold w-1/2">Email</th>
-                <th class="px-4 py-2 text-center font-semibold w-16">Remove</th>
-              </tr>
-            </thead>
-            <tbody id="roster-table-body" class="divide-y divide-brand-light-gray/70 dark:divide-brand-dark-gray/50">
-            </tbody>
-          </table>
-        </div>
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div class="flex items-center gap-3">
-            <button id="add-student-row-btn"
-              class="h-10 px-4 rounded-lg bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-sm font-semibold hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors">+
-              Add Student</button>
-            <button id="bulk-add-students-btn"
-              class="h-10 px-4 rounded-lg bg-primary/10 text-primary dark:text-brand-white dark:bg-brand-white/10 text-sm font-semibold hover:bg-primary/20 dark:hover:bg-brand-white/20 transition-colors">Bulk
-              Add Students</button>
-            <span id="roster-status" class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60"></span>
-          </div>
-          <button id="save-roster-btn"
-            class="h-10 px-5 rounded-lg bg-primary text-brand-white text-sm font-bold hover:bg-primary/90 transition-colors">Save
-            Roster</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Student Detail Inspector Modal (New for Phase 4) -->
-  <div id="student-inspector-modal" class="fixed inset-0 z-[60] hidden">
-    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-close-inspector="true"></div>
-    <div
-      class="relative w-full max-w-4xl mx-auto my-12 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh]">
-
-      <!-- 1. Header -->
-      <div
-        class="flex items-start justify-between p-6 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
-        <div class="flex items-center gap-4">
-          <div
-            class="h-16 w-16 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-            <span id="inspector-initials">--</span>
-          </div>
-          <div>
-            <h2 id="inspector-name" class="text-2xl font-bold text-gray-900 dark:text-white leading-tight">Student Name
-            </h2>
-            <div class="flex items-center gap-3 mt-1 text-sm">
-              <span id="inspector-email" class="text-gray-500 font-medium">student@example.com</span>
-              <span id="inspector-status-badge"
-                class="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-wide">Offline</span>
-            </div>
-          </div>
-        </div>
-        <button
-          class="h-10 w-10 flex items-center justify-center rounded-full bg-white dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shadow-sm border border-gray-200 dark:border-gray-700"
-          data-close-inspector="true">
-          <span class="material-symbols-outlined">close</span>
-        </button>
-      </div>
-
-      <!-- 2. Integrated Analytics Grid -->
-      <div class="grid grid-cols-3 gap-6 p-6 pb-2">
-        <!-- Accuracy Card -->
-        <div
-          class="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800 relative overflow-hidden group">
-          <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <span class="material-symbols-outlined text-6xl text-indigo-600">check_circle</span>
-          </div>
-          <p class="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-1">Accuracy</p>
-          <div class="flex items-baseline gap-2">
-            <span id="inspector-accuracy" class="text-3xl font-black text-indigo-800 dark:text-indigo-300">--%</span>
-            <span id="inspector-correct-count" class="text-sm font-semibold text-indigo-600/70">0/0 correct</span>
-          </div>
-        </div>
-
-        <!-- Violations Card -->
-        <div
-          class="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800 relative overflow-hidden group">
-          <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <span class="material-symbols-outlined text-6xl text-amber-600">warning</span>
-          </div>
-          <p class="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-1">Violations</p>
-          <div class="flex items-baseline gap-2">
-            <span id="inspector-violations" class="text-3xl font-black text-amber-800 dark:text-amber-300">0</span>
-            <span class="text-sm font-semibold text-amber-600/70">tab switches</span>
-          </div>
-        </div>
-
-        <!-- Speed Card -->
-        <div
-          class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800 relative overflow-hidden group">
-          <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <span class="material-symbols-outlined text-6xl text-emerald-600">timer</span>
-          </div>
-          <p class="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-1">Avg. Speed
-          </p>
-          <div class="flex items-baseline gap-2">
-            <span id="inspector-speed" class="text-3xl font-black text-emerald-800 dark:text-emerald-300">--s</span>
-            <span class="text-sm font-semibold text-emerald-600/70">per question</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 3. Session History Label -->
-      <div class="px-6 py-2">
-        <h3 class="text-sm font-bold uppercase tracking-wider text-gray-500">Session History</h3>
-      </div>
-
-      <!-- 4. Scrollable History Table -->
-      <div class="flex-1 overflow-y-auto custom-scrollbar px-6 pb-6">
-        <table class="w-full text-left text-sm">
-          <thead class="sticky top-0 bg-white dark:bg-gray-900 z-10 box-decoration-clone">
-            <tr class="text-xs text-gray-400 uppercase tracking-wide border-b border-gray-100 dark:border-gray-800">
-              <th class="py-3 font-semibold">Q#</th>
-              <th class="py-3 font-semibold">Question</th>
-              <th class="py-3 font-semibold">Response</th>
-              <th class="py-3 font-semibold text-center">Result</th>
-              <th class="py-3 font-semibold text-right">Time</th>
-            </tr>
-          </thead>
-          <tbody id="inspector-history-body" class="divide-y divide-gray-50 dark:divide-gray-800">
-            <!-- Populated by JS -->
-          </tbody>
-        </table>
-
-        <!-- Empty State -->
-        <div id="inspector-empty-state" class="hidden py-12 text-center text-gray-400">
-          <p>No activity recorded yet.</p>
-        </div>
-      </div>
-
-      <!-- 5. Footer Actions -->
-      <div
-        class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-3">
-        <button class="px-4 py-2 rounded-lg font-bold text-gray-600 hover:bg-gray-200 transition-colors text-sm"
-          data-close-inspector="true">Close</button>
-      </div>
-    </div>
-  </div>
-  <!-- Archived Polls View -->
-  <div id="archived-view"
-    class="p-6 grid grid-cols-1 lg:grid-cols-4 gap-6 bg-gray-50 dark:bg-brand-dark-gray/10 min-h-full"
-    style="display: none;">
-    <div
-      class="lg:col-span-1 bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-5 shadow-sm flex flex-col">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-bold text-brand-dark-gray dark:text-brand-white">Archived Polls</h2>
-        <button id="refresh-archived-btn"
-          class="flex items-center justify-center h-9 w-9 rounded-full bg-primary text-brand-white hover:bg-primary/90 transition-colors"
-          title="Refresh">
-          <span class="material-symbols-outlined text-base">refresh</span>
-        </button>
-      </div>
-      <label
-        class="block text-xs font-semibold uppercase tracking-wide text-brand-dark-gray/60 dark:text-brand-white/60 mb-2">Class
-        Filter</label>
-      <select id="archived-class-filter"
-        class="mb-4 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
-        <option value="all">All classes</option>
-      </select>
-      <div id="archived-list" class="flex-1 overflow-y-auto space-y-2">
-        <!-- Archived polls list -->
-      </div>
-    </div>
-    <div
-      class="lg:col-span-3 bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-6 shadow-sm">
-      <div id="archived-empty-state"
-        class="border border-dashed border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg p-10 text-center text-brand-dark-gray/60 dark:text-brand-white/60">
-        <p>Select an archived poll to review student performance.</p>
-      </div>
-      <div id="archived-detail" class="hidden flex flex-col gap-6">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 id="archived-poll-title" class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white"></h2>
-            <p id="archived-poll-meta" class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm"></p>
-          </div>
-          <div class="flex items-center gap-4">
-            <div class="text-right text-sm text-brand-dark-gray/60 dark:text-brand-white/60">
-              <p><span class="font-semibold text-brand-dark-gray dark:text-brand-white">Questions:</span> <span
-                  id="archived-question-count"></span></p>
-              <p><span class="font-semibold text-brand-dark-gray dark:text-brand-white">Responses:</span> <span
-                  id="archived-response-count"></span></p>
-            </div>
-            <button id="view-analytics-btn"
-              class="h-12 px-6 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-brand-white text-sm font-semibold hover:from-blue-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2">
-              <span class="material-symbols-outlined text-lg">analytics</span>
-              <span>View Analytics</span>
-            </button>
-          </div>
-        </div>
-        <div id="archived-questions-container" class="space-y-4">
-          <!-- Question breakdowns will render here -->
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Analytics Hub View -->
-  <div id="analytics-view" class="p-6 flex flex-col gap-6 bg-gray-50 dark:bg-brand-dark-gray/10 min-h-full"
-    style="display: none;">
-    <!-- Filter Bar -->
-    <div
-      class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 p-4 shadow-sm">
-      <div class="flex flex-wrap items-center gap-3 mb-3">
-        <select id="analytics-class-filter"
-          class="rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
-          <option value="all">All Classes</option>
-        </select>
-        <div class="flex items-center gap-2">
-          <label class="text-xs font-semibold text-brand-dark-gray/60 dark:text-brand-white/60">From:</label>
-          <input type="date" id="analytics-date-from"
-            class="rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
-        </div>
-        <div class="flex items-center gap-2">
-          <label class="text-xs font-semibold text-brand-dark-gray/60 dark:text-brand-white/60">To:</label>
-          <input type="date" id="analytics-date-to"
-            class="rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
-        </div>
-        <button id="analytics-apply-filters-btn"
-          class="px-4 py-2 rounded-lg bg-primary text-brand-white hover:bg-primary/90 transition-colors text-sm font-semibold">
-          Apply Filters
-        </button>
-        <button id="analytics-clear-filters-btn"
-          class="px-4 py-2 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/50 transition-colors text-sm">
-          Clear
-        </button>
-        <button id="analytics-refresh-btn"
-          class="flex items-center justify-center h-9 w-9 rounded-full bg-primary text-brand-white hover:bg-primary/90 transition-colors"
-          title="Refresh">
-          <span class="material-symbols-outlined text-base">refresh</span>
-        </button>
-        <button id="analytics-export-btn"
-          class="ml-auto flex items-center gap-2 px-4 py-2 rounded-lg bg-veritas-gold text-brand-white hover:bg-veritas-gold/90 transition-colors text-sm font-semibold"
-          title="Export Data">
-          <span class="material-symbols-outlined text-base">download</span>
-          <span>Export</span>
-        </button>
-      </div>
-      <div class="flex flex-wrap items-center gap-2">
-        <span class="text-xs font-semibold text-brand-dark-gray/60 dark:text-brand-white/60">Quick Filters:</span>
-        <button
-          class="analytics-date-preset px-3 py-1 rounded-md bg-brand-light-gray/30 dark:bg-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray dark:hover:bg-brand-dark-gray transition-colors text-xs font-semibold"
-          data-days="7">
-          Last 7 Days
-        </button>
-        <button
-          class="analytics-date-preset px-3 py-1 rounded-md bg-brand-light-gray/30 dark:bg-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray dark:hover:bg-brand-dark-gray transition-colors text-xs font-semibold"
-          data-days="30">
-          Last 30 Days
-        </button>
-        <button
-          class="analytics-date-preset px-3 py-1 rounded-md bg-brand-light-gray/30 dark:bg-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray dark:hover:bg-brand-dark-gray transition-colors text-xs font-semibold"
-          data-days="90">
-          Last 90 Days
-        </button>
-        <button
-          class="analytics-date-preset px-3 py-1 rounded-md bg-brand-light-gray/30 dark:bg-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray dark:hover:bg-brand-dark-gray transition-colors text-xs font-semibold"
-          data-preset="thisMonth">
-          This Month
-        </button>
-        <button
-          class="analytics-date-preset px-3 py-1 rounded-md bg-brand-light-gray/30 dark:bg-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray dark:hover:bg-brand-dark-gray transition-colors text-xs font-semibold"
-          data-preset="lastMonth">
-          Last Month
-        </button>
-        <button
-          class="analytics-date-preset px-3 py-1 rounded-md bg-brand-light-gray/30 dark:bg-brand-dark-gray/50 text-brand-dark-gray dark:text-brand-white hover:bg-brand-light-gray dark:hover:bg-brand-dark-gray transition-colors text-xs font-semibold"
-          data-preset="all">
-          All Time
-        </button>
-      </div>
-    </div>
-
-    <!-- Tab Navigation -->
-    <div
-      class="bg-brand-white dark:bg-brand-dark-gray/30 rounded-xl border border-brand-light-gray dark:border-brand-dark-gray/40 shadow-sm overflow-hidden">
-      <div class="flex border-b border-brand-light-gray dark:border-brand-dark-gray/40">
-        <button id="analytics-tab-overview"
-          class="flex-1 px-6 py-3 font-semibold text-sm transition-colors analytics-tab bg-primary text-brand-white">
-          Overview
-        </button>
-        <button id="analytics-tab-items"
-          class="flex-1 px-6 py-3 font-semibold text-sm transition-colors analytics-tab text-brand-dark-gray/70 dark:text-brand-white/70 hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/30">
-          Item Analysis
-        </button>
-        <button id="analytics-tab-students"
-          class="flex-1 px-6 py-3 font-semibold text-sm transition-colors analytics-tab text-brand-dark-gray/70 dark:text-brand-white/70 hover:bg-brand-light-gray/20 dark:hover:bg-brand-dark-gray/30">
-          Student Trends
-        </button>
-      </div>
-
-      <!-- Overview Tab Content -->
-      <div id="analytics-content-overview" class="p-6 analytics-tab-content">
-        <div id="analytics-overview-loading" class="text-center py-12">
-          <div class="flex flex-row gap-2 justify-center mb-4">
-            <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce"></div>
-            <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.3s]"></div>
-            <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.5s]"></div>
-          </div>
-          <p class="text-brand-dark-gray/60 dark:text-brand-white/60">Loading analytics...</p>
-        </div>
-        <div id="analytics-overview-content" class="hidden">
-          <!-- KPI Cards -->
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div id="analytics-kpi-container"></div>
-          </div>
-
-          <!-- Topic Heat Strip -->
-          <div class="bg-background-light dark:bg-brand-dark-gray/40 rounded-xl p-5 mb-6">
-            <h3 class="text-lg font-bold text-brand-dark-gray dark:text-brand-white mb-4">Topic Mastery Over Time
-            </h3>
-            <div id="analytics-topic-heat" class="overflow-x-auto">
-              <p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No topic data available</p>
-            </div>
-          </div>
-
-          <!-- Item Quality Scatter -->
-          <div class="bg-background-light dark:bg-brand-dark-gray/40 rounded-xl p-5">
-            <h3 class="text-lg font-bold text-brand-dark-gray dark:text-brand-white mb-4">Item Quality Map</h3>
-            <div id="analytics-item-scatter" style="height: 300px;">
-              <p class="text-sm text-brand-dark-gray/60 dark:text-brand-white/60">No item data available</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Item Analysis Tab Content -->
-      <div id="analytics-content-items" class="p-6 analytics-tab-content hidden">
-        <div id="analytics-items-loading" class="text-center py-12">
-          <div class="flex flex-row gap-2 justify-center mb-4">
-            <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce"></div>
-            <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.3s]"></div>
-            <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.5s]"></div>
-          </div>
-          <p class="text-brand-dark-gray/60 dark:text-brand-white/60">Loading item analysis...</p>
-        </div>
-        <div id="analytics-items-content" class="hidden">
-          <!-- Item Table -->
-          <div class="overflow-x-auto">
-            <table id="analytics-items-table" class="min-w-full text-sm">
-              <thead
-                class="sticky top-0 bg-brand-light-gray dark:bg-brand-dark-gray text-xs uppercase tracking-wide text-brand-dark-gray/80 dark:text-brand-white/70">
-                <tr>
-                  <th
-                    class="py-3 px-4 text-left cursor-pointer hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/80"
-                    data-sort="qNum">Q#</th>
-                  <th
-                    class="py-3 px-4 text-left cursor-pointer hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/80"
-                    data-sort="topic">Topic</th>
-                  <th
-                    class="py-3 px-4 text-left cursor-pointer hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/80"
-                    data-sort="correctPct">Correct%</th>
-                  <th
-                    class="py-3 px-4 text-left cursor-pointer hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/80"
-                    data-sort="rbis">Disc</th>
-                  <th class="py-3 px-4 text-left">Choices</th>
-                  <th
-                    class="py-3 px-4 text-left cursor-pointer hover:bg-brand-light-gray/80 dark:hover:bg-brand-dark-gray/80"
-                    data-sort="medianTimeSec">Time(s)</th>
-                  <th class="py-3 px-4 text-left">Flags</th>
-                </tr>
-              </thead>
-              <tbody id="analytics-items-tbody"
-                class="divide-y divide-brand-light-gray/70 dark:divide-brand-dark-gray/40">
-                <!-- Items will be rendered here -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Student Trends Tab Content -->
-      <div id="analytics-content-students" class="p-6 analytics-tab-content hidden">
-        <div id="analytics-students-loading" class="text-center py-12">
-          <div class="flex flex-row gap-2 justify-center mb-4">
-            <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce"></div>
-            <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.3s]"></div>
-            <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.5s]"></div>
-          </div>
-          <p class="text-brand-dark-gray/60 dark:text-brand-white/60">Loading student data...</p>
-        </div>
-        <div id="analytics-students-content" class="hidden">
-          <!-- STUDENT INSIGHTS PANEL (2025) -->
-          <div id="student-insights-panel" class="mb-6">
-            <h2 class="text-2xl font-bold text-brand-dark-gray dark:text-brand-white mb-4">Student Insights</h2>
-
-            <!-- Insight Cards Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <!-- Struggling Students -->
-              <div
-                class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/50 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
-                onclick="filterStudentsByFlag('struggling')">
-                <div class="flex items-center gap-3 mb-2">
-                  <span class="material-symbols-outlined text-red-600 dark:text-red-400 text-2xl">trending_down</span>
-                  <h3 class="font-bold text-red-800 dark:text-red-300 text-sm">Struggling</h3>
-                </div>
-                <p class="text-3xl font-black text-red-700 dark:text-red-400" id="struggling-count">0</p>
-                <p class="text-xs text-red-600/70 dark:text-red-400/70 mt-1">Accuracy < 50%</p>
-              </div>
-
-              <!-- Non-Responders -->
-              <div
-                class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700/50 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
-                onclick="filterStudentsByFlag('non-responder')">
-                <div class="flex items-center gap-3 mb-2">
-                  <span
-                    class="material-symbols-outlined text-orange-600 dark:text-orange-400 text-2xl">person_off</span>
-                  <h3 class="font-bold text-orange-800 dark:text-orange-300 text-sm">Non-Responders</h3>
-                </div>
-                <p class="text-3xl font-black text-orange-700 dark:text-orange-400" id="non-responder-count">0</p>
-                <p class="text-xs text-orange-600/70 dark:text-orange-400/70 mt-1">Participation < 50%</p>
-              </div>
-
-              <!-- Rule Violators -->
-              <div
-                class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700/50 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
-                onclick="filterStudentsByFlag('rule-violator')">
-                <div class="flex items-center gap-3 mb-2">
-                  <span class="material-symbols-outlined text-yellow-600 dark:text-yellow-400 text-2xl">warning</span>
-                  <h3 class="font-bold text-yellow-800 dark:text-yellow-300 text-sm">Rule Violators</h3>
-                </div>
-                <p class="text-3xl font-black text-yellow-700 dark:text-yellow-400" id="rule-violator-count">0</p>
-                <p class="text-xs text-yellow-600/70 dark:text-yellow-400/70 mt-1">2+ violations</p>
-              </div>
-
-              <!-- High Performers -->
-              <div
-                class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/50 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
-                onclick="filterStudentsByFlag('high-performer')">
-                <div class="flex items-center gap-3 mb-2">
-                  <span class="material-symbols-outlined text-green-600 dark:text-green-400 text-2xl">trending_up</span>
-                  <h3 class="font-bold text-green-800 dark:text-green-300 text-sm">High Performers</h3>
-                </div>
-                <p class="text-3xl font-black text-green-700 dark:text-green-400" id="high-performer-count">0</p>
-                <p class="text-xs text-green-600/70 dark:text-green-400/70 mt-1">Accuracy ≥ 85%</p>
-              </div>
-            </div>
-
-            <!-- Student List with Filtering -->
-            <div
-              class="bg-white dark:bg-brand-dark-gray/30 border border-brand-light-gray dark:border-brand-dark-gray/40 rounded-lg overflow-hidden">
-              <div
-                class="bg-brand-light-gray/50 dark:bg-brand-dark-gray/50 px-4 py-3 flex items-center justify-between">
-                <h3 class="font-bold text-brand-dark-gray dark:text-brand-white">All Students</h3>
-                <div class="flex items-center gap-2">
-                  <button id="clear-student-filter-btn"
-                    class="hidden px-3 py-1 bg-brand-dark-gray/10 hover:bg-brand-dark-gray/20 dark:bg-brand-white/10 dark:hover:bg-brand-white/20 rounded text-xs font-semibold transition-colors"
-                    onclick="clearStudentFilter()">
-                    Clear Filter
-                  </button>
-                  <span id="student-insights-filter-badge"
-                    class="hidden px-2 py-1 bg-primary/20 text-primary text-xs font-bold rounded"></span>
-                </div>
-              </div>
-              <div id="student-insights-table-container" class="overflow-x-auto max-h-96 overflow-y-auto">
-                <table class="w-full">
-                  <thead class="bg-brand-light-gray/30 dark:bg-brand-dark-gray/30 sticky top-0">
-                    <tr>
-                      <th
-                        class="px-4 py-2 text-left text-xs font-bold text-brand-dark-gray/70 dark:text-brand-white/70 cursor-pointer hover:bg-brand-light-gray/50 dark:hover:bg-brand-dark-gray/50"
-                        onclick="sortStudentsBy('name')">
-                        Student <span class="material-symbols-outlined text-xs">unfold_more</span>
-                      </th>
-                      <th
-                        class="px-4 py-2 text-center text-xs font-bold text-brand-dark-gray/70 dark:text-brand-white/70 cursor-pointer hover:bg-brand-light-gray/50 dark:hover:bg-brand-dark-gray/50"
-                        onclick="sortStudentsBy('accuracy')">
-                        Accuracy <span class="material-symbols-outlined text-xs">unfold_more</span>
-                      </th>
-                      <th
-                        class="px-4 py-2 text-center text-xs font-bold text-brand-dark-gray/70 dark:text-brand-white/70 cursor-pointer hover:bg-brand-light-gray/50 dark:hover:bg-brand-dark-gray/50"
-                        onclick="sortStudentsBy('participation')">
-                        Participation <span class="material-symbols-outlined text-xs">unfold_more</span>
-                      </th>
-                      <th
-                        class="px-4 py-2 text-center text-xs font-bold text-brand-dark-gray/70 dark:text-brand-white/70 cursor-pointer hover:bg-brand-light-gray/50 dark:hover:bg-brand-dark-gray/50"
-                        onclick="sortStudentsBy('violations')">
-                        Violations <span class="material-symbols-outlined text-xs">unfold_more</span>
-                      </th>
-                      <th
-                        class="px-4 py-2 text-left text-xs font-bold text-brand-dark-gray/70 dark:text-brand-white/70">
-                        Flags
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody id="student-insights-table-body">
-                    <!-- Populated by JS -->
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <!-- Student Search -->
-          <div id="analytics-student-search-container" class="relative mb-6">
-            <input type="text" id="analytics-student-search" placeholder="Search for a student..."
-              class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 pl-4 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-sm"
-              autocomplete="off" />
-            <button type="button"
-              class="absolute inset-y-0 right-0 flex items-center px-2 text-gray-400 hover:text-gray-600 focus:outline-none"
-              data-combobox-toggle>
-              <span class="material-symbols-outlined text-lg">unfold_more</span>
-            </button>
-          </div>
-
-          <!-- Student Detail -->
-          <div id="analytics-student-detail" class="hidden">
-            <div id="analytics-student-summary"
-              class="bg-background-light dark:bg-brand-dark-gray/40 rounded-xl p-5 mb-6">
-              <!-- Student summary card -->
-            </div>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div class="bg-background-light dark:bg-brand-dark-gray/40 rounded-xl p-5">
-                <h3 class="text-lg font-bold text-brand-dark-gray dark:text-brand-white mb-4">Consistency Trend</h3>
-                <div id="analytics-student-sparkline"></div>
-              </div>
-              <div class="bg-background-light dark:bg-brand-dark-gray/40 rounded-xl p-5">
-                <h3 class="text-lg font-bold text-brand-dark-gray dark:text-brand-white mb-4">Topic Mastery</h3>
-                <div id="analytics-student-topics"></div>
-              </div>
-            </div>
-          </div>
-
-          <div id="analytics-student-empty" class="text-center py-12 text-brand-dark-gray/60 dark:text-brand-white/60">
-            <p>Search for a student to view their analytics</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Poll Creation Wizard View - Compact Design -->
-  </main>
-</div> <!-- End dashboard-root -->
-
-<!-- Poll Creation Wizard View - Compact Design -->
-<div id="create-poll-view" class="hidden min-h-screen w-full flex flex-col bg-white dark:bg-brand-dark-gray">
-
-  <!-- Compact Header with Inline Progress -->
-  <div
-    class="wizard-header bg-gradient-to-r from-primary to-primary/90 px-4 py-3 flex items-center justify-between gap-4">
-    <div class="flex items-center gap-3 shrink-0">
-      <h2 id="wizard-title" class="text-lg font-bold text-white">Create Poll</h2>
-    </div>
-
-    <!-- Inline Progress Steps (hidden - now in main header) -->
-    <div class="wizard-progress hidden"></div>
-
-    <button type="button" onclick="closePollWizard()"
-      class="shrink-0 h-8 w-8 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-      title="Close">
-      <span class="material-symbols-outlined text-xl">close</span>
-    </button>
-  </div>
-
-  <!-- Wizard Body - More Compact -->
-  <div class="wizard-body flex-1 overflow-y-auto px-4 py-4 bg-slate-50 dark:bg-black/10">
-
-    <!-- STEP 1: MODE SELECTION -->
-    <div id="wizard-step-1" class="wizard-step active max-w-4xl mx-auto">
-      <div class="text-center mb-10">
-        <h3 class="text-3xl font-bold text-brand-dark-gray dark:text-white mb-3">Choose Your Poll Mode</h3>
-        <p class="text-lg text-brand-dark-gray/60 dark:text-brand-white/60">Select the type of assessment
-          experience for your students</p>
-      </div>
-
-      <div class="mode-cards grid grid-cols-1 md:grid-cols-2 gap-8">
-        <button type="button"
-          class="mode-card group relative overflow-hidden text-left p-8 rounded-2xl border-2 border-brand-light-gray hover:border-blue-500 hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
-          data-mode="live" onclick="selectPollMode('live')">
-          <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <span class="material-symbols-outlined text-9xl text-blue-500">groups</span>
-          </div>
-          <div class="relative z-10">
-            <div
-              class="h-14 w-14 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 transition-transform">
-              <span class="material-symbols-outlined text-3xl">groups</span>
-            </div>
-            <h4 class="text-xl font-bold text-brand-dark-gray dark:text-white mb-2">Live Poll</h4>
-            <p class="text-brand-dark-gray/70 dark:text-brand-white/70 mb-6 leading-relaxed">Synchronous,
-              teacher-paced questions for real-time class engagement and instant feedback.</p>
-            <div class="flex flex-wrap gap-2">
-              <span
-                class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider">Real-time</span>
-              <span
-                class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider">Interactive</span>
-            </div>
-          </div>
-        </button>
-
-        <button type="button"
-          class="mode-card group relative overflow-hidden text-left p-8 rounded-2xl border-2 border-brand-light-gray hover:border-amber-500 hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
-          data-mode="secure" onclick="selectPollMode('secure')">
-          <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <span class="material-symbols-outlined text-9xl text-amber-500">lock</span>
-          </div>
-          <div class="relative z-10">
-            <div
-              class="h-14 w-14 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 transition-transform">
-              <span class="material-symbols-outlined text-3xl">lock</span>
-            </div>
-            <h4 class="text-xl font-bold text-brand-dark-gray dark:text-white mb-2">Secure Assessment</h4>
-            <p class="text-brand-dark-gray/70 dark:text-brand-white/70 mb-6 leading-relaxed">Asynchronous, timed
-              exam with secure proctoring features and mission control monitoring.</p>
-            <div class="flex flex-wrap gap-2">
-              <span
-                class="px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-bold uppercase tracking-wider">Timed</span>
-              <span
-                class="px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-bold uppercase tracking-wider">Proctored</span>
-            </div>
-          </div>
-        </button>
-      </div>
-    </div>
-
-    <!-- STEP 2: CONFIGURATION -->
-    <div id="wizard-step-2" class="wizard-step hidden max-w-3xl mx-auto">
-      <h3 class="text-2xl font-bold text-brand-dark-gray dark:text-white mb-6">Configure Your <span
-          id="config-mode-label" class="text-blue-600">Poll</span></h3>
-
-      <div
-        class="bg-slate-50 dark:bg-white/5 rounded-xl p-6 border border-brand-light-gray dark:border-brand-dark-gray/40 space-y-6">
-        <!-- Poll Name -->
-        <div class="form-group">
-          <label for="wizard-poll-name" class="block text-sm font-bold text-brand-dark-gray dark:text-white mb-2">Poll
-            Name <span class="text-red-500">*</span></label>
-          <input type="text" id="wizard-poll-name"
-            class="w-full rounded-lg border border-brand-light-gray bg-white px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-shadow"
-            placeholder="e.g., Chapter 5 Review" maxlength="100">
-        </div>
-
-        <!-- Class Selection -->
-        <div class="form-group">
-          <label for="wizard-class-select"
-            class="block text-sm font-bold text-brand-dark-gray dark:text-white mb-2">Class <span
-              class="text-red-500">*</span></label>
-          <div class="relative">
-            <select id="wizard-class-select"
-              class="w-full rounded-lg border border-brand-light-gray bg-white px-4 py-3 text-base appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-shadow">
-              <option value="">-- Select a class --</option>
-            </select>
-            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-brand-dark-gray/50">
-              <span class="material-symbols-outlined">expand_more</span>
-            </div>
-          </div>
-          <p class="text-xs text-brand-dark-gray/50 mt-2 flex items-center gap-1">
-            <span class="material-symbols-outlined text-sm">info</span>
-            Classes populate from your dashboard rosters.
-          </p>
-        </div>
-
-        <!-- Secure Config -->
-        <div id="secure-config-section"
-          class="config-section hidden pt-6 mt-6 border-t border-brand-light-gray dark:border-brand-dark-gray/20">
-          <h4 class="text-sm font-bold uppercase tracking-wider text-amber-600 mb-4 flex items-center gap-2">
-            <span class="material-symbols-outlined text-lg">shield_lock</span> Secure Settings
-          </h4>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="form-group">
-              <label for="wizard-time-limit"
-                class="block text-sm font-bold text-brand-dark-gray dark:text-white mb-2">Time Limit (minutes)
-                <span class="text-red-500">*</span></label>
-              <input type="number" id="wizard-time-limit"
-                class="w-full rounded-lg border border-brand-light-gray bg-white px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-shadow"
-                min="1" placeholder="45">
-            </div>
-            <!-- Add Access Code Field (missing in original) -->
-            <div class="form-group">
-              <label for="wizard-access-code"
-                class="block text-sm font-bold text-brand-dark-gray dark:text-white mb-2">Access Code
-                (Optional)</label>
-              <input type="text" id="wizard-access-code"
-                class="w-full rounded-lg border border-brand-light-gray bg-white px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-shadow"
-                placeholder="e.g. EXAM2025">
-            </div>
-            <div class="form-group md:col-span-2">
-              <div
-                class="flex items-start justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm">
-                <div>
-                  <div class="flex items-center gap-2 font-semibold">
-                    <span class="material-symbols-outlined text-base">calculate</span>
-                    TI-84 Calculator
-                  </div>
-                  <p class="mt-1 text-amber-800/80">Allow students to use a secure, embedded calculator during
-                    this assessment.</p>
-                </div>
-                <label class="inline-flex items-center cursor-pointer select-none">
-                  <input id="wizard-calculator-toggle" type="checkbox" class="peer sr-only">
-                  <span class="h-6 w-11 rounded-full bg-amber-200 peer-checked:bg-amber-500 transition-colors relative">
-                    <span
-                      class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-all peer-checked:translate-x-5"></span>
-                  </span>
-                  <span class="ml-3 text-sm font-semibold text-amber-900 peer-checked:text-amber-800">Enable</span>
-                </label>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- STEP 3: QUESTIONS - Full Editor -->
-    <div id="wizard-step-3" class="wizard-step hidden">
-      <div class="max-w-6xl mx-auto flex gap-6">
-        <!-- Timeline Navigation Sidebar -->
-        <div id="wizard-timeline-sidebar" class="hidden lg:block shrink-0 w-16">
-          <div class="sticky top-4">
-            <div class="bg-white border border-brand-light-gray rounded-xl shadow-sm p-2 space-y-1">
-              <p class="text-[10px] font-bold text-slate-400 uppercase text-center mb-2 tracking-wider">Jump to</p>
-              <div id="wizard-timeline-items" class="space-y-1">
-                <!-- Timeline items populated by JS -->
-              </div>
-              <button type="button"
-                class="w-full h-8 rounded-lg border-2 border-dashed border-brand-light-gray/70 flex items-center justify-center text-slate-400 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
-                onclick="addWizardQuestion()" title="Add Question">
-                <span class="material-symbols-outlined text-sm">add</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Main Content -->
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center justify-between mb-6">
-            <div>
-              <h3 class="text-2xl font-bold text-brand-dark-gray dark:text-white">Build Your Questions</h3>
-              <p class="text-brand-dark-gray/60 dark:text-brand-white/60 text-sm mt-1">Add questions with multiple
-                choice answers</p>
-            </div>
-            <span
-              class="px-3 py-1.5 bg-green-50 text-green-700 text-xs font-bold rounded-full uppercase border border-green-200">
-              Full Editor
-            </span>
-          </div>
-
-          <!-- Questions Container - Populated by JS -->
-          <div id="wizard-questions-list" class="questions-list space-y-6"></div>
-
-          <button type="button"
-            class="btn-add-question w-full mt-6 py-5 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-brand-light-gray rounded-xl hover:border-primary hover:bg-primary/5 transition-all group bg-white"
-            onclick="addWizardQuestion()">
-            <div
-              class="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 group-hover:bg-primary/20 transition-all">
-              <span class="material-symbols-outlined text-2xl">add</span>
-            </div>
-            <span class="font-bold text-brand-dark-gray group-hover:text-primary transition-colors">Add New
-              Question</span>
-            <span class="text-xs text-brand-dark-gray/50">Click to add a multiple choice question</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- STEP 4: REVIEW -->
-    <div id="wizard-step-4" class="wizard-step hidden max-w-3xl mx-auto">
-      <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Review & Publish</h3>
-
-      <div class="review-section space-y-6">
-        <div class="review-card bg-white border border-brand-light-gray rounded-xl p-6 shadow-sm">
-          <h4 class="review-heading text-lg font-bold text-gray-900 mb-4 border-b border-brand-light-gray pb-2">
-            Basic Information</h4>
-          <dl class="review-details grid grid-cols-[140px_1fr] gap-4 text-sm">
-            <dt class="font-semibold text-brand-dark-gray/60">Mode:</dt>
-            <dd id="review-mode" class="font-medium text-brand-dark-gray">-</dd>
-            <dt class="font-semibold text-brand-dark-gray/60">Name:</dt>
-            <dd id="review-name" class="font-medium text-brand-dark-gray">-</dd>
-            <dt class="font-semibold text-brand-dark-gray/60">Class:</dt>
-            <dd id="review-class" class="font-medium text-brand-dark-gray">-</dd>
-          </dl>
-        </div>
-
-        <div class="review-card bg-white border border-brand-light-gray rounded-xl p-6 shadow-sm">
-          <h4 class="review-heading text-lg font-bold text-gray-900 mb-4 border-b border-brand-light-gray pb-2">
-            Questions</h4>
-          <div id="review-questions-summary" class="text-sm text-brand-dark-gray/80">
-            <!-- Populated via JS -->
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div
-    class="wizard-footer bg-white dark:bg-brand-dark-gray border-t border-brand-light-gray dark:border-brand-dark-gray/40 px-8 py-4 flex items-center justify-between">
-    <button type="button"
-      class="btn-secondary h-12 px-6 rounded-lg font-bold text-red-600 hover:bg-red-50 transition-colors"
-      onclick="closePollWizard()">Cancel</button>
-    <div class="flex items-center gap-3">
-      <button type="button"
-        class="btn-secondary h-12 px-6 rounded-lg font-bold text-brand-dark-gray hover:bg-brand-light-gray/50 transition-colors disabled:opacity-50"
-        id="wizard-back-btn" onclick="wizardGoBack()" disabled>Back</button>
-      <button type="button"
-        class="btn-primary h-12 px-8 rounded-lg bg-primary text-white font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
-        id="wizard-next-btn" onclick="wizardGoNext()">Next</button>
-      <button type="button"
-        class="btn-primary hidden h-12 px-8 rounded-lg bg-green-600 text-white font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 hover:bg-green-700 transition-all flex items-center gap-2"
-        id="wizard-publish-btn" onclick="publishWizardPoll()">
-        <span class="material-symbols-outlined">rocket_launch</span>
-        Publish Poll
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- Student Manager Modal -->
-<div id="student-manager-modal" class="fixed inset-0 z-50 hidden">
-  <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-close-manager="true"></div>
-  <div
-    class="relative w-full max-w-md mx-auto my-12 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh]">
-    <!-- Header -->
-    <div
-      class="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
-      <div class="flex items-center gap-4">
-        <div
-          class="h-12 w-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-xl font-bold text-indigo-600 dark:text-indigo-400">
-          <span id="student-manager-initials">--</span>
-        </div>
-        <div>
-          <h2 id="student-manager-name" class="text-xl font-bold text-gray-900 dark:text-white leading-tight">Student
-            Name</h2>
-          <div class="flex items-center gap-2 mt-1 text-sm">
-            <span id="student-manager-email" class="text-gray-500 font-medium">student@example.com</span>
-            <span id="student-manager-status-badge"
-              class="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-wide">Offline</span>
-          </div>
-        </div>
-      </div>
-      <button
-        class="h-10 w-10 flex items-center justify-center rounded-full bg-white dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shadow-sm border border-gray-200 dark:border-gray-700"
-        data-close-manager="true">
-        <span class="material-symbols-outlined">close</span>
-      </button>
-    </div>
-
-    <!-- Content -->
-    <div class="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
-      <!-- Current Status -->
-      <div class="rounded-2xl border border-slate-200 dark:border-brand-dark-gray/60 p-4">
-        <p class="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-3">Current Status</p>
-        <div class="flex items-center gap-3">
-          <span id="student-manager-current-status"
-            class="px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-sm font-bold uppercase tracking-wide">Thinking...</span>
-          <span id="student-manager-current-time" class="text-sm text-slate-500">0:00</span>
-        </div>
-      </div>
-
-      <!-- Time Controls (Restored) -->
-      <div class="rounded-2xl border border-slate-200 dark:border-brand-dark-gray/60 p-4">
-        <p class="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-3">Time Controls</p>
-        <div class="flex flex-wrap items-center gap-2">
-          <button id="student-manager-add-5"
-            class="inline-flex items-center gap-2 rounded-full bg-emerald-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-emerald-700 transition-colors">
-            <span class="material-symbols-outlined text-base">add</span>
-            +5 min
-          </button>
-          <button id="student-manager-add-10"
-            class="inline-flex items-center gap-2 rounded-full bg-emerald-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-emerald-700 transition-colors">
-            <span class="material-symbols-outlined text-base">add</span>
-            +10 min
-          </button>
-          <button id="student-manager-pause"
-            class="inline-flex items-center gap-2 rounded-full bg-amber-500 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-amber-600 transition-colors">
-            <span class="material-symbols-outlined text-base">pause_circle</span>
-            Pause Timer
-          </button>
-        </div>
-      </div>
-
-      <div>
-        <p class="text-xs font-semibold uppercase text-slate-500 mb-2">Actions</p>
-        <div class="flex flex-wrap items-center gap-3">
-          <button id="student-manager-unlock"
-            class="inline-flex items-center gap-2 rounded-full bg-blue-600 text-white px-5 py-2 text-sm font-semibold shadow hover:bg-blue-700 transition-colors">
-            <span class="material-symbols-outlined text-base">lock_open</span>
-            Approve Unlock
-          </button>
-          <button id="student-manager-force-submit"
-            class="inline-flex items-center gap-2 rounded-full bg-red-600 text-white px-5 py-2 text-sm font-semibold shadow hover:bg-red-700 transition-colors">
-            <span class="material-symbols-outlined text-base">task</span>
-            Force Submit
-          </button>
-          <p id="student-manager-message" class="text-sm text-slate-500"></p>
-        </div>
-      </div>
-      <div id="student-manager-loading" class="hidden text-sm text-slate-500">Working...</div>
-    </div>
-  </div>
-</div>
-
-<!-- Student Detail Inspector Modal (New for Phase 4) -->
-<div id="student-inspector-modal" class="fixed inset-0 z-[60] hidden">
-  <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-close-inspector="true"></div>
-  <div
-    class="relative w-full max-w-4xl mx-auto my-12 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh]">
-
-    <!-- 1. Header -->
-    <div
-      class="flex items-start justify-between p-6 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
-      <div class="flex items-center gap-4">
-        <div
-          class="h-16 w-16 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-          <span id="inspector-initials">--</span>
-        </div>
-        <div>
-          <h2 id="inspector-name" class="text-2xl font-bold text-gray-900 dark:text-white leading-tight">Student Name
-          </h2>
-          <div class="flex items-center gap-3 mt-1 text-sm">
-            <span id="inspector-email" class="text-gray-500 font-medium">student@example.com</span>
-            <span id="inspector-status-badge"
-              class="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-wide">Offline</span>
-          </div>
-        </div>
-      </div>
-      <button
-        class="h-10 w-10 flex items-center justify-center rounded-full bg-white dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shadow-sm border border-gray-200 dark:border-gray-700"
-        data-close-inspector="true">
-        <span class="material-symbols-outlined">close</span>
-      </button>
-    </div>
-
-    <!-- 2. Integrated Analytics Grid -->
-    <div class="grid grid-cols-3 gap-6 p-6 pb-2">
-      <!-- Accuracy Card -->
-      <div
-        class="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800 relative overflow-hidden group">
-        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-          <span class="material-symbols-outlined text-6xl text-indigo-600">check_circle</span>
-        </div>
-        <p class="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-1">Accuracy</p>
-        <div class="flex items-baseline gap-2">
-          <span id="inspector-accuracy" class="text-3xl font-black text-indigo-800 dark:text-indigo-300">--%</span>
-          <span id="inspector-correct-count" class="text-sm font-semibold text-indigo-600/70">0/0 correct</span>
-        </div>
-      </div>
-
-      <!-- Violations Card -->
-      <div
-        class="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800 relative overflow-hidden group">
-        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-          <span class="material-symbols-outlined text-6xl text-amber-600">warning</span>
-        </div>
-        <p class="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-1">Violations</p>
-        <div class="flex items-baseline gap-2">
-          <span id="inspector-violations" class="text-3xl font-black text-amber-800 dark:text-amber-300">0</span>
-          <span class="text-sm font-semibold text-amber-600/70">tab switches</span>
-        </div>
-      </div>
-
-      <!-- Speed Card -->
-      <div
-        class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800 relative overflow-hidden group">
-        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-          <span class="material-symbols-outlined text-6xl text-emerald-600">timer</span>
-        </div>
-        <p class="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-1">Avg. Speed</p>
-        <div class="flex items-baseline gap-2">
-          <span id="inspector-speed" class="text-3xl font-black text-emerald-800 dark:text-emerald-300">--s</span>
-          <span class="text-sm font-semibold text-emerald-600/70">per question</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- 3. Session History Label -->
-    <div class="px-6 py-2">
-      <h3 class="text-sm font-bold uppercase tracking-wider text-gray-500">Session History</h3>
-    </div>
-
-    <!-- 4. Scrollable History Table -->
-    <div class="flex-1 overflow-y-auto px-6 pb-6">
-      <table class="w-full text-left text-sm">
-        <thead class="sticky top-0 bg-white dark:bg-gray-900 z-10 box-decoration-clone">
-          <tr class="text-xs text-gray-400 uppercase tracking-wide border-b border-gray-100 dark:border-gray-800">
-            <th class="py-3 font-semibold">Q#</th>
-            <th class="py-3 font-semibold">Question</th>
-            <th class="py-3 font-semibold">Response</th>
-            <th class="py-3 font-semibold text-center">Result</th>
-            <th class="py-3 font-semibold text-right">Time</th>
-          </tr>
-        </thead>
-        <tbody id="inspector-history-body" class="divide-y divide-gray-50 dark:divide-gray-800">
-          <!-- Populated by JS -->
-        </tbody>
-      </table>
-
-      <!-- Empty State -->
-      <div id="inspector-empty-state" class="hidden py-12 text-center text-gray-400">
-        <p>No activity recorded yet.</p>
-      </div>
-    </div>
-
-    <!-- 5. Footer Actions -->
-    <div
-      class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-3">
-      <button class="px-4 py-2 rounded-lg font-bold text-gray-600 hover:bg-gray-200 transition-colors text-sm"
-        data-close-inspector="true">Close</button>
-    </div>
-  </div>
-</div>
-
-<!-- Book View Modal -->
-<div id="book-view-modal" class="fixed inset-0 z-50 hidden overflow-y-auto custom-scrollbar">
-  <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onclick="closeBookView()"></div>
-  <div
-    class="relative w-full max-w-[95vw] mx-auto my-8 bg-white dark:bg-brand-dark-gray rounded-2xl shadow-2xl border border-brand-light-gray dark:border-brand-dark-gray/40">
-    <!-- Header -->
-    <div
-      class="sticky top-0 z-10 flex items-start justify-between gap-4 p-6 border-b border-slate-200 dark:border-brand-dark-gray/60 bg-white dark:bg-brand-dark-gray">
-      <div>
-        <div class="flex items-center gap-3 mb-2">
-          <span class="material-symbols-outlined text-3xl text-veritas-gold">menu_book</span>
-          <h2 id="book-view-title" class="text-3xl font-bold text-brand-dark-gray dark:text-white">Assessment Book View
-          </h2>
-        </div>
-        <p id="book-view-subtitle" class="text-sm text-slate-500">Comprehensive student performance analysis</p>
-      </div>
-      <button onclick="closeBookView()"
-        class="h-10 w-10 inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-brand-dark-gray/70 text-slate-600 dark:text-white hover:bg-slate-200 transition-colors">
-        <span class="material-symbols-outlined">close</span>
-      </button>
-    </div>
-
-    <div id="book-view-loading" class="p-12 text-center">
-      <div class="flex flex-row gap-2 justify-center mb-4">
-        <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce"></div>
-        <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.3s]"></div>
-        <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.5s]"></div>
-      </div>
-      <p class="mt-4 text-slate-600 dark:text-slate-400">Loading book view data...</p>
-    </div>
-
-    <div id="book-view-content" class="hidden p-6 space-y-6">
-      <!-- Class Overview Section -->
-      <div class="bg-gradient-to-r from-veritas-navy to-veritas-navy/80 rounded-xl p-6 text-white shadow-lg">
-        <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined">analytics</span>
-          Class Overview
-        </h3>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-            <p class="text-sm opacity-80">Total Students</p>
-            <p id="book-class-total-students" class="text-3xl font-bold">0</p>
-          </div>
-          <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-            <p class="text-sm opacity-80">Class Average</p>
-            <p id="book-class-average" class="text-3xl font-bold">0%</p>
-          </div>
-          <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-            <p class="text-sm opacity-80">Median Score</p>
-            <p id="book-class-median" class="text-3xl font-bold">0</p>
-          </div>
-          <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-            <p class="text-sm opacity-80">Std. Deviation</p>
-            <p id="book-class-stddev" class="text-3xl font-bold">0.0</p>
-          </div>
-        </div>
-        <div id="book-class-interpretation" class="mt-4 p-3 bg-white/10 backdrop-blur-sm rounded-lg text-sm">
-          <!-- Interpretation messages will be inserted here -->
-        </div>
-      </div>
-
-      <!-- View Toggle -->
-      <div class="flex gap-3 border-b border-slate-200 dark:border-brand-dark-gray/40">
-        <button id="book-tab-students"
-          class="px-6 py-3 font-semibold text-sm transition-colors border-b-2 border-veritas-gold text-veritas-gold">
-          Student Roster
-        </button>
-        <button id="book-tab-questions"
-          class="px-6 py-3 font-semibold text-sm transition-colors border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-veritas-gold hover:border-veritas-gold/30">
-          Question Analysis
-        </button>
-        <button id="book-tab-matrix"
-          class="px-6 py-3 font-semibold text-sm transition-colors border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-veritas-gold hover:border-veritas-gold/30">
-          Response Matrix
-        </button>
-      </div>
-
-      <!-- Student Roster Tab -->
-      <div id="book-content-students" class="book-tab-content">
-        <div
-          class="bg-white dark:bg-brand-dark-gray/30 rounded-xl border border-slate-200 dark:border-brand-dark-gray/40 overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-slate-100 dark:bg-brand-dark-gray/50">
-                <tr>
-                  <th
-                    class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">
-                    Rank</th>
-                  <th
-                    class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">
-                    Student Name</th>
-                  <th
-                    class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">
-                    Score</th>
-                  <th
-                    class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">
-                    Percentage</th>
-                  <th
-                    class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">
-                    Percentile</th>
-                  <th
-                    class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">
-                    Actions</th>
-                </tr>
-              </thead>
-              <tbody id="book-students-table-body" class="divide-y divide-slate-200 dark:divide-brand-dark-gray/40">
-                <!-- Student rows will be inserted here -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Question Analysis Tab -->
-      <div id="book-content-questions" class="book-tab-content hidden">
-        <div class="space-y-4" id="book-questions-container">
-          <!-- Question analysis cards will be inserted here -->
-        </div>
-      </div>
-
-      <!-- Response Matrix Tab -->
-      <div id="book-content-matrix" class="book-tab-content hidden">
-        <div
-          class="bg-white dark:bg-brand-dark-gray/30 rounded-xl border border-slate-200 dark:border-brand-dark-gray/40 overflow-hidden">
-          <div class="p-4 bg-slate-100 dark:bg-brand-dark-gray/50">
-            <h3 class="text-lg font-bold text-brand-dark-gray dark:text-white">Complete Response Matrix</h3>
-            <p class="text-sm text-slate-600 dark:text-slate-400">Each cell shows student's answer with
-              correct/incorrect indicator</p>
-          </div>
-          <div class="overflow-x-auto p-4">
-            <table class="w-full text-xs">
-              <thead>
-                <tr id="book-matrix-header-row">
-                  <th
-                    class="sticky left-0 bg-slate-100 dark:bg-brand-dark-gray/50 px-3 py-2 text-left font-semibold border-r border-slate-300 dark:border-brand-dark-gray/60">
-                    Student</th>
-                  <!-- Question headers will be injected here -->
-                  <th class="bg-slate-100 dark:bg-brand-dark-gray/50 px-3 py-2 text-center font-semibold">Total</th>
-                </tr>
-              </thead>
-              <tbody id="book-matrix-table-body">
-                <!-- Matrix rows will be inserted here -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Individual Student Detail View (expandable) -->
-      <div id="book-student-detail" class="hidden fixed inset-0 z-50 overflow-y-auto">
-        <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onclick="closeStudentDetail()"></div>
-        <div
-          class="relative w-full max-w-5xl mx-auto my-8 bg-white dark:bg-brand-dark-gray rounded-2xl shadow-2xl border border-brand-light-gray dark:border-brand-dark-gray/40">
-          <div
-            class="sticky top-0 z-10 flex items-start justify-between gap-4 p-6 border-b border-slate-200 dark:border-brand-dark-gray/60 bg-white dark:bg-brand-dark-gray">
-            <div>
-              <h3 id="student-detail-name" class="text-2xl font-bold text-brand-dark-gray dark:text-white">Student Name
-              </h3>
-              <div class="flex items-center gap-4 mt-2 text-sm text-slate-600 dark:text-slate-400">
-                <span>Score: <strong id="student-detail-score">0/0</strong></span>
-                <span>Percentage: <strong id="student-detail-percentage">0%</strong></span>
-                <span>Rank: <strong id="student-detail-rank">0</strong></span>
-                <span>Percentile: <strong id="student-detail-percentile">0th</strong></span>
-              </div>
-            </div>
-            <button onclick="closeStudentDetail()"
-              class="h-10 w-10 inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-brand-dark-gray/70 text-slate-600 dark:text-white hover:bg-red-500 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-red-500"
-              title="Close" aria-label="Close student detail view">
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-          <div class="p-6 max-h-[70vh] overflow-y-auto">
-            <div id="student-detail-responses" class="space-y-4">
-              <!-- Question-by-question responses will be inserted here -->
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div id="book-view-error" class="hidden p-12 text-center">
-      <span class="material-symbols-outlined text-6xl text-red-500">error</span>
-      <p class="mt-4 text-lg font-semibold text-slate-800 dark:text-slate-200">Error Loading Data</p>
-      <p id="book-view-error-message" class="text-slate-600 dark:text-slate-400"></p>
-    </div>
-  </div>
-</div>
-
-
-
-
-
-<!-- NEW FEATURE: Question Bank Import Modal -->
-<div id="question-bank-modal"
-  class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-  <div
-    class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-    <div class="sticky top-0 bg-amber-600 px-6 py-4 border-b border-amber-700 z-10 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <span class="material-symbols-outlined text-white text-2xl">inventory_2</span>
-        <div>
-          <h2 class="text-white text-xl font-bold">Question Bank</h2>
-          <p class="text-white/80 text-sm">Import questions from previous polls</p>
-        </div>
-      </div>
-      <button id="close-question-bank-btn"
-        class="h-10 px-4 rounded-lg bg-white/20 text-white text-sm font-bold hover:bg-white/30 transition-colors">
-        Close
-      </button>
-    </div>
-    <div class="p-6 flex-1 overflow-y-auto">
-      <div class="mb-4">
-        <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white">Filter by
-          Poll</label>
-        <select id="bank-poll-filter"
-          class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-white dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50">
-          <option value="">All Polls</option>
-        </select>
-      </div>
-      <div id="bank-questions-container" class="space-y-3 max-h-[50vh] overflow-y-auto">
-        <p class="text-center text-brand-dark-gray/60 dark:text-brand-white/60 py-8">Loading questions...</p>
-      </div>
-    </div>
-    <div
-      class="sticky bottom-0 bg-brand-white dark:bg-brand-dark-gray px-6 py-4 border-t border-brand-light-gray dark:border-brand-dark-gray/40 flex justify-between items-center">
-      <span id="bank-selected-count" class="text-sm text-brand-dark-gray/70 dark:text-brand-white/70">0 questions
-        selected</span>
-      <button id="import-selected-btn"
-        class="h-10 px-6 rounded-lg bg-amber-600 text-white text-sm font-bold hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        disabled>
-        Import Selected
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- AP BIOLOGY 2025 TOPIC TAGGER -->
-<div id="ai-suggestions-modal"
-  class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-  <div
-    class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-    <div
-      class="sticky top-0 bg-gradient-to-r from-green-700 to-emerald-600 px-6 py-4 border-b border-green-800 z-10 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <span class="material-symbols-outlined text-white text-2xl">science</span>
-        <div>
-          <h2 class="text-white text-xl font-bold">AP Biology 2025 Topic Tagger</h2>
-          <p class="text-white/80 text-sm">Align questions with the official AP Bio curriculum</p>
-        </div>
-      </div>
-      <button id="close-ai-modal-btn"
-        class="h-10 px-4 rounded-lg bg-white/20 text-white text-sm font-bold hover:bg-white/30 transition-colors">
-        Close
-      </button>
-    </div>
-    <div class="p-6 flex-1 overflow-y-auto">
-      <div
-        class="mb-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700/30">
-        <p class="text-sm font-medium text-green-900 dark:text-green-200 mb-2">Current Question:</p>
-        <p id="ai-current-question" class="text-sm text-green-800 dark:text-green-300 italic">"No question text
-          entered"</p>
-      </div>
-
-      <div class="mb-4">
-        <label class="block text-sm font-semibold mb-2 text-brand-dark-gray dark:text-brand-white">Select AP Bio
-          Unit</label>
-        <select id="apbio-unit-select"
-          class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-white dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/50">
-          <option value="">-- Select Unit --</option>
-          <option value="Unit 1">Unit 1: Chemistry of Life (8-11%)</option>
-          <option value="Unit 2">Unit 2: Cell Structure and Function (10-13%)</option>
-          <option value="Unit 3">Unit 3: Cellular Energetics (12-16%)</option>
-          <option value="Unit 4">Unit 4: Cell Communication and Cell Cycle (10-15%)</option>
-          <option value="Unit 5">Unit 5: Heredity (8-11%)</option>
-          <option value="Unit 6">Unit 6: Gene Expression and Regulation (12-16%)</option>
-          <option value="Unit 7">Unit 7: Natural Selection (13-20%)</option>
-          <option value="Unit 8">Unit 8: Ecology (10-15%)</option>
-        </select>
-      </div>
-
-      <div class="mb-4">
-        <label class="block text-sm font-semibold mb-2 text-brand-dark-gray dark:text-brand-white">Select
-          Topic</label>
-        <select id="apbio-topic-select"
-          class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-white dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/50"
-          disabled>
-          <option value="">-- Select Unit First --</option>
-        </select>
-      </div>
-
-      <div class="mb-4">
-        <label class="block text-sm font-semibold mb-2 text-brand-dark-gray dark:text-brand-white">Big Idea
-          Connection</label>
-        <div class="grid grid-cols-2 gap-2">
-          <label
-            class="flex items-center gap-2 p-3 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors">
-            <input type="checkbox" id="bigidea-evo"
-              class="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500">
-            <span class="text-sm text-brand-dark-gray dark:text-brand-white"><strong>EVO</strong> - Evolution</span>
-          </label>
-          <label
-            class="flex items-center gap-2 p-3 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors">
-            <input type="checkbox" id="bigidea-ene"
-              class="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500">
-            <span class="text-sm text-brand-dark-gray dark:text-brand-white"><strong>ENE</strong> - Energetics</span>
-          </label>
-          <label
-            class="flex items-center gap-2 p-3 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors">
-            <input type="checkbox" id="bigidea-ist"
-              class="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500">
-            <span class="text-sm text-brand-dark-gray dark:text-brand-white"><strong>IST</strong> - Information
-              Storage</span>
-          </label>
-          <label
-            class="flex items-center gap-2 p-3 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors">
-            <input type="checkbox" id="bigidea-syi"
-              class="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500">
-            <span class="text-sm text-brand-dark-gray dark:text-brand-white"><strong>SYI</strong> - Systems
-              Interactions</span>
-          </label>
-        </div>
-      </div>
-
-      <div id="apbio-preview"
-        class="p-4 bg-slate-50 dark:bg-slate-800/30 rounded-lg border border-slate-200 dark:border-slate-700/30 hidden">
-        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Tag Preview
-        </p>
-        <p id="apbio-tag-preview" class="text-sm font-medium text-brand-dark-gray dark:text-brand-white"></p>
-      </div>
-    </div>
-    <div
-      class="sticky bottom-0 bg-brand-white dark:bg-brand-dark-gray px-6 py-4 border-t border-brand-light-gray dark:border-brand-dark-gray/40 flex justify-end gap-3">
-      <button id="cancel-apbio-btn"
-        class="h-10 px-6 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 text-brand-dark-gray dark:text-brand-white text-sm font-bold hover:bg-brand-light-gray/30 transition-colors">
-        Cancel
-      </button>
-      <button id="generate-ai-btn"
-        class="h-10 px-6 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 text-white text-sm font-bold hover:from-green-700 hover:to-emerald-700 transition-colors flex items-center gap-2">
-        <span class="material-symbols-outlined text-base">label</span>
-        Apply Topic Tag
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- NEW FEATURE: Stimulus/Passage Modal -->
-<div id="stimulus-modal"
-  class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-  <div
-    class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-    <div
-      class="sticky top-0 bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-4 border-b border-emerald-700 z-10 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <span class="material-symbols-outlined text-white text-2xl">article</span>
-        <div>
-          <h2 class="text-white text-xl font-bold">Add Stimulus/Passage</h2>
-          <p class="text-white/80 text-sm">Create a shared passage for multiple questions</p>
-        </div>
-      </div>
-      <button id="close-stimulus-modal-btn"
-        class="h-10 px-4 rounded-lg bg-white/20 text-white text-sm font-bold hover:bg-white/30 transition-colors">
-        Close
-      </button>
-    </div>
-    <div class="p-6 flex-1 overflow-y-auto">
-      <div class="mb-4">
-        <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white">Stimulus
-          Title</label>
-        <input type="text" id="stimulus-title-input"
-          class="w-full rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-white dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-          placeholder="e.g., Reading Passage 1, Experiment Data Table">
-      </div>
-      <div class="mb-4">
-        <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white">Passage
-          Content</label>
-        <div id="stimulus-content-editor" class="bg-white text-black h-64 rounded-lg overflow-hidden"></div>
-      </div>
-      <div
-        class="mb-4 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-700/30">
-        <p class="text-xs text-emerald-800 dark:text-emerald-200"><span class="font-semibold">Tip:</span> After
-          creating a stimulus, add questions that reference it. The stimulus will be displayed above those questions
-          during the assessment.</p>
-      </div>
-      <div class="mb-4">
-        <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white">Number of Questions
-          to Create</label>
-        <input type="number" id="stimulus-question-count" min="1" max="10" value="2"
-          class="w-32 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-white dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
-      </div>
-    </div>
-    <div
-      class="sticky bottom-0 bg-brand-white dark:bg-brand-dark-gray px-6 py-4 border-t border-brand-light-gray dark:border-brand-dark-gray/40 flex justify-end gap-3">
-      <button id="cancel-stimulus-btn"
-        class="h-10 px-6 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/40 text-brand-dark-gray dark:text-brand-white text-sm font-bold hover:bg-brand-light-gray/30 transition-colors">
-        Cancel
-      </button>
-      <button id="create-stimulus-btn"
-        class="h-10 px-6 rounded-lg bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition-colors">
-        Create Stimulus & Questions
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- Student Links Modal -->
-<div id="student-links-modal"
-  class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-  <div
-    class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
-    <div class="sticky top-0 bg-primary px-6 py-4 border-b border-primary/70">
-      <h2 class="text-brand-white text-2xl font-bold">Student Personalized Links</h2>
-      <p class="text-brand-white/80 text-sm mt-1">Each student has a unique tracking link.</p>
-    </div>
-    <div class="p-6">
-      <div id="links-container" class="max-h-[60vh] overflow-y-auto"></div>
-      <div class="mt-6 pt-4 border-t border-primary/20">
-        <button id="close-links-modal-btn"
-          class="flex items-center justify-center gap-2 rounded-lg h-10 px-6 bg-primary text-brand-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90 transition-colors">
-          <span>Close</span>
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Bulk Add Students Modal -->
-<div id="bulk-add-students-modal"
-  class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-  <div
-    class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-    <div class="sticky top-0 bg-primary px-6 py-4 border-b border-primary/70">
-      <h2 class="text-brand-white text-2xl font-bold">Bulk Add Students</h2>
-      <p class="text-brand-white/80 text-sm mt-1">Add multiple students at once. Enter one student per line in format:
-        Name, Email</p>
-    </div>
-    <div class="p-6 flex-1 overflow-y-auto">
-      <div class="mb-4">
-        <label class="block text-sm font-medium mb-2 text-brand-dark-gray dark:text-brand-white">Student Data</label>
-        <textarea id="bulk-student-input"
-          class="w-full h-64 rounded-lg border border-brand-light-gray dark:border-brand-dark-gray/50 bg-background-light dark:bg-brand-dark-gray/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono"
-          placeholder="John Smith, jsmith@school.edu&#10;Jane Doe, jdoe@school.edu&#10;Bob Johnson, bjohnson@school.edu"></textarea>
-        <p class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60 mt-2">Format: Name, Email (one per line).
-          Duplicates will be skipped automatically.</p>
-      </div>
-    </div>
-    <div
-      class="sticky bottom-0 bg-brand-white dark:bg-brand-dark-gray px-6 py-4 border-t border-primary/20 flex justify-end gap-3">
-      <button id="cancel-bulk-add-btn"
-        class="h-10 px-5 rounded-lg bg-brand-dark-gray/10 dark:bg-brand-white/10 text-brand-dark-gray dark:text-brand-white text-sm font-semibold hover:bg-brand-dark-gray/20 dark:hover:bg-brand-white/20 transition-colors">Cancel</button>
-      <button id="confirm-bulk-add-btn"
-        class="h-10 px-5 rounded-lg bg-primary text-brand-white text-sm font-bold hover:bg-primary/90 transition-colors">Add
-        Students</button>
-    </div>
-  </div>
-</div>
-
-<!-- Poll Preview Modal -->
-<!-- REDESIGNED: Unified Poll Editor & Preview Modal -->
-<div id="poll-preview-modal"
-  class="modal fixed inset-0 z-[100] hidden bg-gray-100 dark:bg-gray-900 flex-col overflow-hidden font-sans">
-
-  <!-- 1. Header Area -->
-  <header
-    class="bg-white dark:bg-brand-dark-gray border-b border-gray-200 dark:border-gray-700 h-16 flex items-center justify-between px-6 shadow-sm z-20 flex-shrink-0">
-    <div class="flex items-center gap-4">
-      <div
-        class="h-10 w-10 rounded-xl bg-veritas-navy text-white flex items-center justify-center shadow-lg shadow-veritas-navy/20">
-        <span class="material-symbols-outlined text-2xl">edit_note</span>
-      </div>
-      <div>
-        <h2 id="preview-poll-name" class="text-lg font-bold text-gray-900 dark:text-white leading-tight">Poll Name</h2>
-        <div class="flex items-center gap-2 text-xs text-gray-500 font-medium">
-          <span id="preview-poll-meta">Class • 0 Questions</span>
-          <span class="mx-1">•</span>
-          <span class="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            Auto-saving
-          </span>
-        </div>
-      </div>
-    </div>
-
-    <div class="flex items-center gap-3">
-      <button id="preview-view-links-btn"
-        class="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors text-sm font-semibold">
-        <span class="material-symbols-outlined text-lg">link</span>
-        Student Links
-      </button>
-      <div class="h-8 w-px bg-gray-200 dark:bg-gray-700 mx-1"></div>
-      <button onclick="closePollPreview()"
-        class="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm font-semibold">
-        Close
-      </button>
-      <button id="preview-save-btn" onclick="saveAndClosePreview()"
-        class="flex items-center gap-2 px-6 py-2 rounded-lg bg-veritas-navy text-white hover:bg-veritas-navy/90 transition-all shadow-lg shadow-veritas-navy/20 text-sm font-bold">
-        <span class="material-symbols-outlined text-lg">save</span>
-        Save & Close
-      </button>
-    </div>
-  </header>
-
-  <!-- 2. Main Workspace -->
-  <div class="flex-1 flex overflow-hidden">
-
-    <!-- A. Left Sidebar: Question Navigator -->
-    <aside
-      class="w-72 bg-white dark:bg-brand-dark-gray border-r border-gray-200 dark:border-gray-700 flex flex-col flex-shrink-0 z-10 transition-all duration-300"
-      id="editor-sidebar">
-      <div class="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/10 backdrop-blur-sm">
-        <div class="flex items-center justify-between mb-2">
-          <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Questions</h3>
-          <span id="preview-question-count-badge"
-            class="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[10px] font-bold px-1.5 py-0.5 rounded">0</span>
-        </div>
-        <button id="editor-add-question-btn" onclick="addNewQuestionToPoll()"
-          class="w-full py-2.5 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-veritas-gold hover:text-veritas-gold dark:hover:border-veritas-gold dark:hover:text-veritas-gold hover:bg-veritas-gold/5 transition-all text-sm font-bold flex items-center justify-center gap-2 group">
-          <span class="material-symbols-outlined group-hover:scale-110 transition-transform">add_circle</span>
-          Add Question
-        </button>
-      </div>
-
-      <div id="preview-questions-nav" class="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-thin">
-        <!-- Questions injected here -->
-      </div>
-    </aside>
-
-    <!-- B. Middle Panel: Editor Form -->
-    <main class="flex-1 flex flex-col min-w-0 bg-gray-50 dark:bg-gray-900 relative">
-      <div class="flex-1 overflow-y-auto p-6 md:p-8 xl:p-12 scrollbar-hide">
-        <div class="max-w-3xl mx-auto space-y-8 pb-20">
-
-          <!-- Editor Header -->
-          <div class="flex items-center justify-between">
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-white font-display">Edit Question <span
-                id="editor-current-num">1</span></h1>
-            <div class="flex items-center gap-2">
-              <button id="editor-delete-btn" onclick="deleteCurrentQuestion()"
-                class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                title="Delete Question">
-                <span class="material-symbols-outlined">delete</span>
-              </button>
-              <button id="editor-duplicate-btn" onclick="duplicateCurrentQuestion()"
-                class="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                title="Duplicate Question">
-                <span class="material-symbols-outlined">content_copy</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Question Input -->
-          <div
-            class="bg-white dark:bg-brand-dark-gray p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 space-y-4">
-            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Question
-              Text</label>
-            <div id="editor-question-input" class="bg-gray-50 dark:bg-gray-800 rounded-lg min-h-[100px]"></div>
-
-            <!-- Media & Timer Row -->
-            <div class="flex flex-wrap gap-4 pt-2">
-              <div class="flex-1 min-w-[200px]">
-                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Attached Media</label>
-                <div class="flex items-center gap-3">
-                  <button id="editor-upload-img-btn"
-                    onclick="document.getElementById('editor-hidden-file-input').click()"
-                    class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold transition-colors">
-                    <span class="material-symbols-outlined text-lg">image</span>
-                    Upload Image
-                  </button>
-                  <div id="editor-img-preview-container" class="hidden relative group h-10 w-10">
-                    <img id="editor-img-thumbnail" src=""
-                      class="h-10 w-10 object-cover rounded-lg border border-gray-300">
-                    <button id="editor-remove-img-btn" onclick="removeQuestionImage()"
-                      class="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span class="material-symbols-outlined text-[10px]">close</span>
-                    </button>
-                  </div>
-                </div>
-                <input type="file" id="editor-hidden-file-input" class="hidden" accept="image/*"
-                  onchange="handleQuestionImageUpload(this)">
-              </div>
-
-              <div class="w-32">
-                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Timer (sec)</label>
-                <div class="relative">
-                  <span
-                    class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-sm">timer</span>
-                  <input type="number" id="editor-timer-input" value="60" min="10" step="10"
-                    class="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-brand-dark-gray/50 focus:ring-2 focus:ring-veritas-gold focus:border-veritas-gold text-sm font-semibold">
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Answers Input -->
-          <div class="space-y-4">
-            <div class="flex items-center justify-between">
-              <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Answer
-                Options</label>
-              <div class="flex items-center gap-2">
-                <span class="text-xs text-gray-500">Correct Answer</span>
-              </div>
-            </div>
-
-            <div id="editor-options-list" class="space-y-3">
-              <!-- Options injected here -->
-            </div>
-
-            <div class="flex justify-center pt-2">
-              <button id="editor-add-option-btn" onclick="addOptionToQuestion()"
-                class="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm font-bold transition-colors">
-                <span class="material-symbols-outlined text-lg">add</span>
-                Add Option
-              </button>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </main>
-
-    <!-- C. Right Panel: True Preview (Hidden on small screens) -->
-    <aside
-      class="hidden xl:flex w-[500px] bg-gray-100 dark:bg-black/20 border-l border-gray-200 dark:border-gray-700 flex-col flex-shrink-0 relative">
-      <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-veritas-gold/40 to-transparent">
-      </div>
-
-      <div
-        class="p-4 flex items-center justify-between bg-white dark:bg-brand-dark-gray border-b border-gray-200 dark:border-gray-700">
-        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm">smartphone</span>
-          Student View (Preview)
-        </h3>
-        <span class="text-[10px] text-gray-400">Live Updates</span>
-      </div>
-
-      <div class="flex-1 overflow-y-auto p-6 flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-900">
-        <!-- Simulated Device Frame -->
-        <div
-          class="w-full max-w-[400px] h-[750px] bg-white border-8 border-gray-900 rounded-[3rem] shadow-2xl flex flex-col overflow-hidden relative">
-          <!-- Status Bar Mockup -->
-          <div class="h-6 bg-gray-900 w-full flex items-center justify-between px-6">
-            <div class="text-[10px] text-white font-medium">9:41</div>
-            <div class="flex items-center gap-1.5">
-              <span class="material-symbols-outlined text-[10px] text-white">signal_cellular_alt</span>
-              <span class="material-symbols-outlined text-[10px] text-white">wifi</span>
-              <span class="material-symbols-outlined text-[10px] text-white">battery_full</span>
-            </div>
-          </div>
-
-          <!-- Student Interface Mockup -->
-          <div class="flex-1 bg-white overflow-y-auto relative scrollbar-hide">
-
-            <!-- Header -->
-            <div
-              class="h-14 bg-veritas-navy text-white flex items-center px-4 justify-between sticky top-0 z-10 shadow-md">
-              <span class="font-bold tracking-widest text-sm">VERITAS</span>
-              <div class="flex items-center gap-2">
-                <span
-                  class="bg-black/20 rounded-full w-8 h-8 flex items-center justify-center text-xs font-mono">0:45</span>
-              </div>
-            </div>
-
-            <!-- Question Content (The True Preview) -->
-            <div class="p-5 font-sans">
-              <div id="true-preview-container">
-                <!-- Injected formatted question goes here -->
-                <div class="question-visual float-right ml-3 mb-3 max-w-[120px] hidden" id="preview-student-visual">
-                  <img src="" class="rounded-lg border border-gray-200 w-full object-contain bg-white">
-                </div>
-                <h2 class="text-[#12385d] font-serif text-lg leading-relaxed mb-4" id="preview-student-stem">Question
-                  text...</h2>
-
-                <div class="clear-both space-y-3 mt-6" id="preview-student-options">
-                  <!-- Options -->
-                </div>
-              </div>
-            </div>
-
-            <!-- Footer -->
-            <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100 bg-white">
-              <div
-                class="w-full h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 font-bold text-sm">
-                Submit Answer
-              </div>
-            </div>
-          </div>
-
-          <!-- Home Indicator -->
-          <div class="absolute bottom-1 left-1/2 -translate-x-1/2 w-32 h-1 bg-white/20 rounded-full"></div>
-        </div>
-      </div>
-    </aside>
-
-  </div>
-
-  <!-- Scoped Styles for True Preview (inline to ensure they are available) -->
-  <style>
-    /* Mimic Student Styles within the preview container */
-    #true-preview-container .student-option {
-      border: 1px solid #d1d5db;
-      border-radius: 12px;
-      padding: 10px 12px;
-      background: white;
-      color: black;
-      transition: all 0.2s;
-    }
-
-    #true-preview-container .student-option.correct-preview {
-      border-color: #22c55e;
-      background-color: #f0fdf4;
-    }
-
-    #true-preview-container .student-badge {
-      width: 28px;
-      height: 28px;
-      border-radius: 8px;
-      background: #f8fafc;
-      border: 1px solid #cbd5e1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      color: #12385d;
-      flex-shrink: 0;
-    }
-
-    #true-preview-container .student-option.correct-preview .student-badge {
-      background: #22c55e;
-      border-color: #22c55e;
-      color: white;
-    }
-  </style>
-</div>
-
-<!-- Post-Poll Analytics Modal -->
-<div id="post-poll-analytics-modal"
-  class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-  <div
-    class="modal-content bg-brand-white dark:bg-brand-dark-gray rounded-xl shadow-2xl w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col">
-    <!-- Header -->
-    <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 border-b border-white/20">
-      <div class="flex items-center justify-between">
-        <div class="flex-1">
-          <h2 id="analytics-poll-name" class="text-brand-white text-2xl font-bold">Psychometric Analysis</h2>
-          <p id="analytics-poll-meta" class="text-brand-white/90 text-sm mt-1">Professional Assessment Quality Report
-          </p>
-        </div>
-        <button id="close-analytics-modal-btn"
-          class="flex items-center justify-center h-10 w-10 rounded-lg bg-brand-white/20 text-brand-white hover:bg-brand-white/30 transition-colors">
-          <span class="material-symbols-outlined">close</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Body -->
-    <div class="flex-1 overflow-y-auto p-6">
-      <div id="analytics-content">
-        <!-- Loading state -->
-        <div id="analytics-loading" class="flex items-center justify-center py-12">
-          <div class="flex flex-col items-center gap-3">
-            <div class="flex flex-row gap-2 justify-center mb-1">
-              <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce"></div>
-              <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.3s]"></div>
-              <div class="w-4 h-4 rounded-full bg-veritas-navy animate-bounce [animation-delay:-.5s]"></div>
-            </div>
-            <p class="text-brand-dark-gray/60 dark:text-brand-white/60">Computing analytics...</p>
-          </div>
-        </div>
-
-        <!-- Content will be rendered here -->
-        <div id="analytics-report" class="hidden">
-          <!-- Action Items / Insights Section -->
-          <div id="analytics-actions-container" class="mb-6 empty:hidden"></div>
-
-          <!-- Class Overview Section -->
-          <div class="mb-6">
-            <h3 class="text-xl font-bold text-brand-dark-gray dark:text-brand-white mb-4 flex items-center gap-2">
-              <span class="material-symbols-outlined text-primary">bar_chart</span>
-              Class Overview
-            </h3>
-            <div id="class-overview-content"></div>
-          </div>
-
-          <!-- Metacognition Section -->
-          <div id="metacognition-section" class="mb-6 hidden">
-            <h3 class="text-xl font-bold text-brand-dark-gray dark:text-brand-white mb-4 flex items-center gap-2">
-              <span class="material-symbols-outlined text-purple-600">psychology</span>
-              Metacognition Analysis
-            </h3>
-            <div id="metacognition-content"></div>
-          </div>
-
-          <!-- Item Analysis Section -->
-          <div class="mb-6">
-            <h3 class="text-xl font-bold text-brand-dark-gray dark:text-brand-white mb-4 flex items-center gap-2">
-              <span class="material-symbols-outlined text-blue-600">assignment</span>
-              Item-by-Item Analysis
-            </h3>
-            <div id="item-analysis-content"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Footer -->
-    <div
-      class="sticky bottom-0 bg-brand-white dark:bg-brand-dark-gray px-6 py-4 border-t border-brand-light-gray dark:border-brand-dark-gray/40 flex items-center justify-between">
-      <div class="text-xs text-brand-dark-gray/60 dark:text-brand-white/60">
-        <p>📊 Powered by professional psychometric analysis</p>
-      </div>
-      <button id="export-analytics-btn"
-        class="h-10 px-5 rounded-lg bg-veritas-gold text-brand-white text-sm font-semibold hover:bg-veritas-gold/90 transition-colors">
-        <span class="material-symbols-outlined text-sm align-middle mr-1">download</span>
-        Export Report
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- Data Migration Modal -->
-<div id="migration-modal"
-  class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-  <div
-    class="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-xl border border-gray-200 dark:border-gray-700">
-    <div class="mb-6 flex items-start justify-between">
-      <div>
-        <h3 class="text-xl font-bold text-gray-900 dark:text-white">Import Data from Sheets</h3>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Upload the JSON export file from your legacy Google
-          Sheet.</p>
-      </div>
-      <button onclick="document.getElementById('migration-modal').classList.add('hidden')"
-        class="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-gray-700">
-        <span class="material-symbols-outlined">close</span>
-      </button>
-    </div>
-
-    <div class="space-y-4">
-      <div class="flex items-center justify-center w-full">
-        <label for="migration-file-input"
-          class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-gray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500">
-          <div class="flex flex-col items-center justify-center pt-5 pb-6">
-            <span class="material-symbols-outlined text-3xl text-gray-400 mb-2">upload_file</span>
-            <p class="mb-2 text-sm text-gray-500 dark:text-gray-400"><span class="font-semibold">Click to
-                upload</span> veritas_full_export.json</p>
-          </div>
-          <input id="migration-file-input" type="file" class="hidden" accept=".json"
-            onchange="handleMigrationFileSelect(this)" />
-        </label>
-      </div>
-
-      <div id="migration-file-info"
-        class="hidden p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-sm flex items-center gap-2">
-        <span class="material-symbols-outlined text-base">description</span>
-        <span id="migration-filename" class="font-mono">filename.json</span>
-      </div>
-
-      <div id="migration-progress-container" class="hidden space-y-2">
-        <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400">
-          <span id="migration-status-text">Processing...</span>
-          <span id="migration-percent">0%</span>
-        </div>
-        <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-          <div id="migration-progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
-        </div>
-        <div id="migration-log"
-          class="h-24 overflow-y-auto bg-gray-900 text-green-400 font-mono text-xs p-2 rounded-lg">
-          <!-- Log output -->
-        </div>
-      </div>
-    </div>
-
-    <div class="mt-6 flex justify-end gap-3">
-      <button onclick="document.getElementById('migration-modal').classList.add('hidden')"
-        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600 transition-colors">
-        Cancel
-      </button>
-      <button id="start-migration-btn" onclick="startMigration()" disabled
-        class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2">
-        <span class="material-symbols-outlined text-base">rocket_launch</span>
-        Start Import
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- Poll Creation Wizard View -->
-
-<!-- Global Math Formula Modal -->
-<div id="formula-modal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/50 backdrop-blur-sm">
-  <div class="w-full max-w-2xl transform rounded-xl bg-white p-6 shadow-2xl transition-all dark:bg-brand-dark-gray">
-    <div class="mb-4 flex items-center justify-between">
-      <h3 class="text-xl font-bold text-brand-dark-gray dark:text-white">Insert Math Formula</h3>
-      <button id="close-formula-modal" class="text-slate-400 hover:text-slate-600">
-        <span class="material-symbols-outlined">close</span>
-      </button>
-    </div>
-
-    <!-- The MathLive Visual Editor -->
-    <div class="mb-6 rounded-lg border border-brand-light-gray bg-slate-50 p-4 dark:border-slate-600 dark:bg-slate-800">
-      <math-field id="math-editor-field" class="w-full bg-transparent text-2xl" style="outline: none; border: none;">
-        f(x) = \sqrt{x^2 + 1}
-      </math-field>
-    </div>
-
-    <div class="flex justify-end gap-3">
-      <button id="cancel-formula-btn"
-        class="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100">Cancel</button>
-      <button id="insert-formula-btn"
-        class="rounded-lg bg-primary px-6 py-2 text-sm font-bold text-white hover:bg-primary/90">Insert
-        Formula</button>
-    </div>
-  </div>
-</div>
-  <style>
-    /* Login Screen Styles - Premium Light Mode & Glassmorphism */
-    :root {
-        --v-navy: #12385d;
-        --v-gold: #c5a05a;
-        --v-slate-50: #f8fafc;
-        --v-slate-100: #f1f5f9;
-        --v-slate-400: #94a3b8;
-        --v-slate-600: #475569;
-        --v-slate-900: #0f172a;
-    }
-
-    #login-overlay {
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        width: 100vw !important;
-        height: 100vh !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        z-index: 2147483647 !important;
-        /* Dynamic Light Background */
-        background: radial-gradient(circle at 0% 0%, #ffffff 0%, #f1f5f9 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        box-sizing: border-box !important;
-        overflow: hidden;
-    }
-
-    /* Animated background elements */
-    .bg-shape {
-        position: absolute;
-        filter: blur(80px);
-        opacity: 0.6;
-        z-index: -1;
-        animation: floatShape 20s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .bg-shape-1 {
-        top: -10%;
-        left: -10%;
-        width: 600px;
-        height: 600px;
-        background: radial-gradient(#e0e7ff, transparent 70%);
-        animation-delay: 0s;
-    }
-
-    .bg-shape-2 {
-        bottom: -10%;
-        right: -10%;
-        width: 500px;
-        height: 500px;
-        background: radial-gradient(#fef3c7, transparent 70%);
-        animation-delay: -5s;
-    }
-
-    @keyframes floatShape {
-        0% {
-            transform: translate(0, 0) rotate(0deg);
-        }
-
-        100% {
-            transform: translate(50px, 50px) rotate(10deg);
-        }
-    }
-
-    .login-card {
-        background: rgba(255, 255, 255, 0.85);
-        backdrop-filter: blur(20px) saturate(180%);
-        -webkit-backdrop-filter: blur(20px) saturate(180%);
-        border: 1px solid rgba(255, 255, 255, 1);
-        box-shadow:
-            0 20px 25px -5px rgba(0, 0, 0, 0.05),
-            0 8px 10px -6px rgba(0, 0, 0, 0.01),
-            inset 0 0 0 1px rgba(255, 255, 255, 0.5);
-        border-radius: 32px;
-        padding: 64px 56px;
-        width: 100%;
-        max-width: 480px;
-        text-align: center;
-        position: relative;
-        transform: translateY(20px);
-        opacity: 0;
-        animation: cardEntry 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
-
-    @keyframes cardEntry {
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    /* Logo Container */
-    .login-logo {
-        width: 80px;
-        height: 80px;
-        margin: 0 auto 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        /* Subtle float animation */
-        animation: logoFloat 6s ease-in-out infinite;
-    }
-
-    @keyframes logoFloat {
-
-        0%,
-        100% {
-            transform: translateY(0);
-        }
-
-        50% {
-            transform: translateY(-6px);
-        }
-    }
-
-    .logo-svg {
-        width: 100%;
-        height: 100%;
-        filter: drop-shadow(0 10px 15px rgba(18, 56, 93, 0.15));
-    }
-
-    .login-title {
-        color: var(--v-navy);
-        font-size: 32px;
-        font-weight: 800;
-        margin-bottom: 12px;
-        letter-spacing: -0.03em;
-        opacity: 0;
-        animation: fadeInUp 0.6s ease-out 0.2s forwards;
-    }
-
-    .login-subtitle {
-        color: var(--v-slate-600);
-        font-size: 16px;
-        margin-bottom: 48px;
-        line-height: 1.6;
-        font-weight: 500;
-        opacity: 0;
-        animation: fadeInUp 0.6s ease-out 0.3s forwards;
-    }
-
-    /* Input Group */
-    .input-group {
-        margin-bottom: 20px;
-        text-align: left;
-        opacity: 0;
-        animation: fadeInUp 0.6s ease-out 0.4s forwards;
-    }
-
-    .input-label {
-        color: var(--v-slate-600);
-        font-size: 14px;
-        font-weight: 600;
-        margin-bottom: 8px;
-        display: block;
-        transition: color 0.2s;
-    }
-
-    .input-field {
-        width: 100%;
-        padding: 16px;
-        border-radius: 12px;
-        border: 2px solid var(--v-slate-100);
-        background: white;
-        color: var(--v-navy);
-        font-size: 16px;
-        font-weight: 500;
-        transition: all 0.2s ease;
-        outline: none;
-    }
-
-    .input-field:focus {
-        border-color: var(--v-navy);
-        box-shadow: 0 0 0 4px rgba(18, 56, 93, 0.05);
-    }
-
-    .input-field:focus+.input-label,
-    .input-field:not(:placeholder-shown)+.input-label {
-        color: var(--v-navy);
-    }
-
-    .input-field::placeholder {
-        color: var(--v-slate-400);
-    }
-
-    /* Buttons */
-    .login-btn {
-        width: 100%;
-        padding: 16px;
-        border-radius: 14px;
-        font-size: 16px;
-        font-weight: 700;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 12px;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        border: none;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .btn-primary {
-        background: var(--v-navy);
-        color: white;
-        box-shadow: 0 10px 20px -5px rgba(18, 56, 93, 0.3);
-        margin-top: 12px;
-    }
-
-    .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 15px 25px -5px rgba(18, 56, 93, 0.4);
-        background: #1e4570;
-        /* slightly lighter navy */
-    }
-
-    .btn-google {
-        background: white;
-        color: var(--v-slate-900);
-        border: 2px solid var(--v-slate-100);
-        margin-top: 16px;
-    }
-
-    .btn-google:hover {
-        border-color: #cbd5e1;
-        background: #f8fafc;
-        transform: translateY(-1px);
-    }
-
-    /* Divider */
-    .divider {
-        display: flex;
-        align-items: center;
-        margin: 28px 0;
-        color: var(--v-slate-400);
-        font-size: 13px;
-        font-weight: 600;
-        opacity: 0;
-        animation: fadeInUp 0.6s ease-out 0.5s forwards;
-    }
-
-    .divider::before,
-    .divider::after {
-        content: '';
-        flex: 1;
-        height: 1px;
-        background: var(--v-slate-100);
-    }
-
-    .divider span {
-        padding: 0 16px;
-    }
-
-    /* Footer */
-    .login-footer {
-        margin-top: 48px;
-        color: var(--v-slate-400);
-        font-size: 13px;
-        font-weight: 500;
-        opacity: 0;
-        animation: fadeInUp 0.6s ease-out 0.7s forwards;
-    }
-
-    .login-error {
-        margin-top: 24px;
-        padding: 16px;
-        background: #fef2f2;
-        border: 1px solid #fee2e2;
-        border-radius: 12px;
-        color: #ef4444;
-        font-size: 14px;
-        font-weight: 600;
-        display: none;
-        animation: loginShake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-    }
-
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    @keyframes loginShake {
-
-        10%,
-        90% {
-            transform: translate3d(-1px, 0, 0);
-        }
-
-        20%,
-        80% {
-            transform: translate3d(2px, 0, 0);
-        }
-
-        30%,
-        50%,
-        70% {
-            transform: translate3d(-4px, 0, 0);
-        }
-
-        40%,
-        60% {
-            transform: translate3d(4px, 0, 0);
-        }
-    }
-</style>
-
-<div id="login-overlay">
-    <!-- Background Shapes -->
-    <div class="bg-shape bg-shape-1"></div>
-    <div class="bg-shape bg-shape-2"></div>
-
-    <div class="login-card">
-        <div class="login-logo">
-            <!-- Custom SVG Logo: Learning, Growth, & Exams -->
-            <svg class="logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <!-- Open Book Base (Learning) -->
-                <path d="M15 75C15 75 35 68 50 75C65 68 85 75 85 75V35C85 35 65 28 50 35C35 28 15 35 15 35V75Z"
-                    fill="#12385D" />
-
-                <!-- Inner Pages (Knowledge) -->
-                <path d="M15 38C32 30 48 36 50 36V72C48 72 32 66 15 72V38Z" fill="rgba(255,255,255,0.1)" />
-                <path d="M85 38C68 30 52 36 50 36V72C52 72 68 66 85 72V38Z" fill="rgba(255,255,255,0.15)" />
-
-                <!-- Rising Growth/Torch Element (Growth & Searching) -->
-                <path d="M50 55V25" stroke="#C5A05A" stroke-width="6" stroke-linecap="round" />
-
-                <!-- Leaves / Torch Flame (Growth) -->
-                <path d="M50 25C50 25 35 15 35 30" stroke="#C5A05A" stroke-width="6" stroke-linecap="round" />
-                <path d="M50 25C50 25 65 15 65 30" stroke="#C5A05A" stroke-width="6" stroke-linecap="round" />
-
-                <!-- Exam Checkmark Badge (Exams) -->
-                <circle cx="78" cy="22" r="10" fill="#12385D" stroke="#ffffff" stroke-width="2" />
-                <path d="M73 22L76 25L83 18" stroke="#C5A05A" stroke-width="3" stroke-linecap="round"
-                    stroke-linejoin="round" />
-            </svg>
-        </div>
-
-        <h1 class="login-title">Veritas Live</h1>
-        <p class="login-subtitle">Secure Teacher Dashboard Access</p>
-
-        <div class="login-form-container">
-            <div class="input-group">
-                <label class="input-label">Username or Email</label>
-                <input type="text" id="login-username" class="input-field" placeholder="Enter your credentials">
-            </div>
-
-            <div class="input-group">
-                <label class="input-label">Password</label>
-                <input type="password" id="login-password" class="input-field" placeholder="Enter your password">
-            </div>
-
-            <button id="simple-login-btn" class="login-btn btn-primary"
-                style="opacity: 0; animation: fadeInUp 0.6s ease-out 0.5s forwards;">
-                Sign In
-            </button>
-        </div>
-
-        <div class="divider"><span>OR</span></div>
-
-        <button id="google-login-btn" class="login-btn btn-google"
-            style="opacity: 0; animation: fadeInUp 0.6s ease-out 0.6s forwards;">
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20"
-                alt="Google">
-            Sign in with Google
-        </button>
-
-        <div id="login-error" class="login-error"></div>
-
-        <div class="login-footer">
-            &copy; 2026 Veritas Education. Professional Grade.
-        </div>
-    </div>
-</div>
-
-<script>
-    (function () {
-        // Expose LoginManager globally
-        window.LoginManager = {
-            show: function () {
-                var el = document.getElementById('login-overlay');
-
-                if (el) {
-                    // Force Layout Reset for visibility
-                    el.style.display = 'flex';
-                    // Trigger animations by reflowing?
-                    // Actually the CSS animations run on mount, but if it was hidden with display:none, they might re-run or be stalled.
-                    // This manager seems to toggle visibility.
-                }
-            },
-            hide: function () {
-                var el = document.getElementById('login-overlay');
-                if (el) el.style.display = 'none';
-            },
-            setError: function (msg) {
-                var el = document.getElementById('login-error');
-                if (el) {
-                    el.textContent = msg;
-                    el.style.display = 'block';
-                }
-            },
-            init: function (onSuccess) {
-                // Buffer onSuccess to handle multiple triggers
-                var handleSuccess = function (user) {
-                    if (onSuccess) onSuccess(user);
-                };
-
-                // Google Login Logic
-                var btn = document.getElementById('google-login-btn');
-                if (btn) {
-                    btn.addEventListener('click', function () {
-                        // Show loading state on button
-                        var originalHtml = btn.innerHTML;
-                        btn.innerHTML = '<span>Signing in...</span>';
-                        btn.disabled = true;
-
-                        var provider = new firebase.auth.GoogleAuthProvider();
-                        provider.setCustomParameters({
-                            prompt: 'select_account'
-                        });
-
-                        firebase.auth().signInWithPopup(provider)
-                            .then(function (result) {
-                                var user = result.user;
-                                console.log('[Auth] Signed in as:', user.email);
-
-                                // Persist session for teachers
-                                sessionStorage.setItem('veritas_session_token', user.uid);
-                                sessionStorage.setItem('veritas_teacher_email', user.email);
-
-                                // Update Global State
-                                window.SESSION_TOKEN = user.uid;
-                                window.TEACHER_EMAIL = user.email;
-
-                                LoginManager.hide();
-                                handleSuccess(user);
-                            })
-                            .catch(function (error) {
-                                console.error('[Auth] Login failed:', error);
-                                LoginManager.setError(error.message || 'Authentication failed. Please try again.');
-                            })
-                            .finally(function () {
-                                btn.innerHTML = originalHtml;
-                                btn.disabled = false;
-                            });
-                    });
-                }
-
-                // Simple Login Logic (Teacher/1234)
-                var simpleBtn = document.getElementById('simple-login-btn');
-                if (simpleBtn) {
-                    simpleBtn.addEventListener('click', function () {
-                        var usernameInput = document.getElementById('login-username');
-                        var passwordInput = document.getElementById('login-password');
-
-                        var username = usernameInput ? usernameInput.value.trim() : '';
-                        var password = passwordInput ? passwordInput.value.trim() : '';
-
-                        if (!username || !password) {
-                            LoginManager.setError('Please enter username and password.');
-                            return;
-                        }
-
-                        // Override Button State
-                        var originalText = simpleBtn.innerText;
-                        simpleBtn.innerText = 'Verifying...';
-                        simpleBtn.disabled = true;
-
-                        // Magic Credential Mapping
-                        var targetEmail = '';
-                        var targetPwd = '';
-
-                        if (username.toLowerCase() === 'teacher' && password === '1234') {
-                            targetEmail = 'teacher@veritas.app'; // Internal System Account
-                            targetPwd = 'password1234';          // Meets min 6 char requirement
-                        } else if (username.includes('@')) {
-                            // Allow direct email access (e.g. sborish@malvernprep.org)
-                            targetEmail = username;
-                            if (password.length < 6) {
-                                // Firebase enforces 6+ char passwords; transparently pad
-                                targetPwd = 'password' + password;
-                            } else {
-                                targetPwd = password;
-                            }
-                        } else {
-                            LoginManager.setError('Invalid username or password.');
-                            simpleBtn.innerText = originalText;
-                            simpleBtn.disabled = false;
-                            return;
-                        }
-
-                        // Attempt Login
-                        firebase.auth().signInWithEmailAndPassword(targetEmail, targetPwd)
-                            .then(function (result) {
-                                console.log('[Auth] Simple login success:', result.user.email);
-                                LoginManager.hide();
-                                handleSuccess(result.user);
-                            })
-                            .catch(function (error) {
-                                // If user not found, auto-create (Lazy Registration for Demo)
-                                var isAuthError = (
-                                    error.code === 'auth/user-not-found' ||
-                                    error.code === 'auth/invalid-login-credentials' ||
-                                    error.code === 'auth/wrong-password' ||
-                                    error.code === 'auth/invalid-credential'
-                                );
-
-                                if (isAuthError) {
-                                    console.log('[Auth] User or Credential issue, attempting auto-create/recovery for demo...');
-                                    return firebase.auth().createUserWithEmailAndPassword(targetEmail, targetPwd)
-                                        .then(function (result) {
-                                            console.log('[Auth] Demo account created:', result.user.email);
-                                            LoginManager.hide();
-                                            handleSuccess(result.user);
-                                        });
-                                }
-                                throw error;
-                            })
-                            .catch(function (finalError) {
-                                console.error('[Auth] Login failed:', finalError);
-                                if (finalError.code === 'auth/email-already-in-use') {
-                                    LoginManager.setError('Incorrect password for existing demo account.');
-                                } else {
-                                    LoginManager.setError(finalError.message);
-                                }
-                                simpleBtn.innerText = originalText;
-                                simpleBtn.disabled = false;
-                            });
-                    });
-                }
-            }
-        };
-    })();
-</script>
-  <script>
-(function(global) {
-  'use strict';
-
-  // Deterministic Student Key Generation (SHA-256)
-  // This matches the user's requirement for a collision-resistant key.
-  // We use Web Crypto API which is available in modern browsers.
-
-  async function generateStudentHash(email, pollId) {
-    if (!email) return 'unknown_student';
-
-    // Normalize: lowercase, trim
-    const normalized = email.toLowerCase().trim();
-
-    // Namespace with pollId if provided (optional but good for isolation)
-    const data = pollId ? `${pollId}:${normalized}` : normalized;
-
-    const encoder = new TextEncoder();
-    const dataBuffer = encoder.encode(data);
-
-    try {
-      const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      // Convert to hex string
-      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      // Return first 16 chars as key (enough entropy for this context)
-      return hashHex.substring(0, 16);
-    } catch (e) {
-      console.warn('Web Crypto unavailable, falling back to simple hash', e);
-      // Fallback for very old browsers (unlikely in this context but safe)
-      var hash = 0;
-      for (var i = 0; i < data.length; i++) {
-        var char = data.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32bit integer
-      }
-      return 'fb_' + Math.abs(hash).toString(16);
-    }
-  }
-
-  // Export
-  global.VeritasShared = global.VeritasShared || {};
-  global.VeritasShared.generateStudentKey = generateStudentHash;
-
-  // ========================================================================
-  // VERITAS DEBUG HELPER
-  // Accessible from browser console: VeritasDebug.printFirebaseConfig()
-  // Safe no-op if Firebase is not available.
-  // ========================================================================
-  global.VeritasDebug = {
-    /**
-     * Print Firebase configuration details to console.
-     * Call from browser DevTools: VeritasDebug.printFirebaseConfig()
-     */
-    printFirebaseConfig: function() {
-      console.group('🔥 VeritasDebug: Firebase Configuration');
-
-      // Check FIREBASE_CONFIG
-      if (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG) {
-        console.log('✓ FIREBASE_CONFIG exists');
-        console.log('  databaseURL:', FIREBASE_CONFIG.databaseURL || '(not set)');
-        console.log('  projectId:', FIREBASE_CONFIG.projectId || '(not set)');
-        console.log('  Full config:', FIREBASE_CONFIG);
-      } else {
-        console.warn('✗ FIREBASE_CONFIG is NOT defined');
-      }
-
-      // Check firebase SDK
-      if (typeof firebase !== 'undefined') {
-        console.log('✓ firebase SDK is loaded');
-        console.log('  firebase.apps.length:', firebase.apps ? firebase.apps.length : 'n/a');
-        if (firebase.apps && firebase.apps.length > 0) {
-          console.log('  Default app name:', firebase.apps[0].name);
-          console.log('  Database URL:', firebase.apps[0].options.databaseURL || '(not set)');
-        }
-      } else {
-        console.warn('✗ firebase SDK is NOT loaded');
-      }
-
-      // Check firebaseDb reference (if exists in scope)
-      if (typeof firebaseDb !== 'undefined' && firebaseDb) {
-        console.log('✓ firebaseDb reference exists');
-      } else {
-        console.log('○ firebaseDb reference not in scope (normal before init)');
-      }
-
-      console.groupEnd();
-      return {
-        configExists: typeof FIREBASE_CONFIG !== 'undefined',
-        databaseURL: (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG) ? FIREBASE_CONFIG.databaseURL : null,
-        firebaseLoaded: typeof firebase !== 'undefined',
-        appsLength: (typeof firebase !== 'undefined' && firebase.apps) ? firebase.apps.length : 0
-      };
-    },
-
-    /**
-     * Print current page context for debugging
-     */
-    printContext: function() {
-      console.group('📋 VeritasDebug: Page Context');
-      console.log('Location:', window.location.href);
-      console.log('Page type:', document.title);
-
-      // Check for session token (student pages)
-      if (typeof SESSION_TOKEN !== 'undefined') {
-        console.log('SESSION_TOKEN:', SESSION_TOKEN ? '(present, length=' + SESSION_TOKEN.length + ')' : '(empty)');
-      }
-
-      // Check for poll data (teacher pages)
-      if (typeof CURRENT_POLL_DATA !== 'undefined') {
-        console.log('CURRENT_POLL_DATA:', CURRENT_POLL_DATA);
-      }
-
-      console.groupEnd();
-    }
-  };
-
-})(this);
-</script>
-
-  <script>
   (function () {
     // Top-Level Error Handler
     try {
@@ -8914,6 +17,8 @@
     var ALL_POLLS = [];
     var ALL_CLASSES = [];
     var CURRENT_POLL_DATA = {};
+    var localTeacherViewIndex = null; // Decoupled view state. Null means synced with live.
+
     var currentStudentStatusData = [];
     var studentSearchQuery = '';
     var studentTableSort = { column: 'lastName', direction: 'asc' };
@@ -9313,6 +418,46 @@
     }
     window.showToast = showToast;
 
+    // =============================================================================
+    // PHASE 4: TEACHER CONNECTIVITY RECOVERY TOAST
+    // Visual "Reconnecting..." toast that appears onDisconnect and disappears onConnect
+    // =============================================================================
+    var teacherConnectivityToastVisible = false;
+    var teacherConnectivityToastEl = null;
+
+    function showTeacherConnectivityToast(isConnected) {
+      // Create toast element if it doesn't exist
+      if (!teacherConnectivityToastEl) {
+        teacherConnectivityToastEl = document.createElement('div');
+        teacherConnectivityToastEl.id = 'teacher-connectivity-toast';
+        teacherConnectivityToastEl.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] px-6 py-3 rounded-full shadow-lg transition-all duration-300 flex items-center gap-3';
+        teacherConnectivityToastEl.style.cssText = 'opacity: 0; pointer-events: none;';
+        document.body.appendChild(teacherConnectivityToastEl);
+      }
+
+      if (!isConnected && !teacherConnectivityToastVisible) {
+        // Show "Reconnecting..." toast
+        teacherConnectivityToastEl.innerHTML = '<span class="inline-block w-3 h-3 rounded-full bg-amber-400 animate-pulse"></span><span class="font-semibold text-amber-900">Reconnecting to Server...</span>';
+        teacherConnectivityToastEl.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] px-6 py-3 rounded-full shadow-lg transition-all duration-300 flex items-center gap-3 bg-amber-100 border border-amber-300';
+        teacherConnectivityToastEl.style.opacity = '1';
+        teacherConnectivityToastEl.style.pointerEvents = 'auto';
+        teacherConnectivityToastVisible = true;
+        console.log('[Connectivity] Teacher - showing reconnecting toast');
+      } else if (isConnected && teacherConnectivityToastVisible) {
+        // Show brief "Connected" confirmation then hide
+        teacherConnectivityToastEl.innerHTML = '<span class="inline-block w-3 h-3 rounded-full bg-emerald-500"></span><span class="font-semibold text-emerald-900">Connected - Syncing Data</span>';
+        teacherConnectivityToastEl.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] px-6 py-3 rounded-full shadow-lg transition-all duration-300 flex items-center gap-3 bg-emerald-100 border border-emerald-300';
+
+        // Hide after 2 seconds
+        setTimeout(function () {
+          teacherConnectivityToastEl.style.opacity = '0';
+          teacherConnectivityToastEl.style.pointerEvents = 'none';
+          teacherConnectivityToastVisible = false;
+          console.log('[Connectivity] Teacher - hiding toast - connection restored');
+        }, 2000);
+      }
+    }
+
     // === Floating Action Button (FAB) System ===
     let fabMenuOpen = false;
 
@@ -9345,7 +490,7 @@
 
       if (fabNextBtn) {
         fabNextBtn.addEventListener('click', function () {
-          nextQuestion();
+          if (typeof onNextQuestion === 'function') onNextQuestion();
           closeFABMenu();
         });
       }
@@ -9353,8 +498,10 @@
       if (fabShowResultsBtn) {
         fabShowResultsBtn.addEventListener('click', function () {
           const endShowBtn = document.getElementById('header-end-show-btn');
-          if (endShowBtn && endShowBtn.style.display !== 'none') {
-            endShowBtn.click();
+          if (endShowBtn) {
+            // Simulate click or call function directly if known
+            if (typeof onEndQuestionAndShowAnswer === 'function') onEndQuestionAndShowAnswer();
+            else endShowBtn.click();
           }
           closeFABMenu();
         });
@@ -9362,14 +509,14 @@
 
       if (fabResetBtn) {
         fabResetBtn.addEventListener('click', function () {
-          resetLiveQuestion();
+          if (typeof onResetQuestion === 'function') onResetQuestion();
           closeFABMenu();
         });
       }
 
       if (fabStopBtn) {
         fabStopBtn.addEventListener('click', function () {
-          stopPoll();
+          if (typeof onStopPoll === 'function') onStopPoll();
           closeFABMenu();
         });
       }
@@ -10182,14 +1329,177 @@
       // Initialize Comboboxes (logic below...)
       initializeComboboxes();
 
-      // Load Initial Data
-      loadInitialData();
+      // Load Initial Data is handled by initializeBackend()
+      // loadInitialData();
 
       // Initialize Legacy Listeners (Zoom, etc)
       initializeLegacyListeners();
 
       // Initialize Main Dashboard Bindings (The new gated init)
       initializeDashboardBindings();
+
+      // PHASE 3: STATE REHYDRATION - Check for active session on page refresh
+      // The "Refresh Trap" fix: Restore live control panel if poll is active
+      rehydrateActiveSession();
+    }
+
+    // =============================================================================
+    // PHASE 1: STATE REHYDRATION (THE "REFRESH IMMUNITY" FIX)
+    // Scenario: Teacher accidentally refreshes the page mid-poll
+    // Solution: Read the existing live_session state first. If poll is live,
+    //           restore the active question view instantly instead of showing "Setup"
+    // ENHANCEMENTS:
+    //   - Restore timer state with server time sync
+    //   - Restore proctoring state
+    //   - Restore student progress
+    // =============================================================================
+    async function rehydrateActiveSession() {
+      try {
+        // Check sessionStorage for active poll state
+        var activePollId = sessionStorage.getItem('veritas_active_poll_id');
+
+        if (!activePollId) {
+          console.log('[Rehydration] No active poll in sessionStorage - showing dashboard');
+          return;
+        }
+
+        console.log('[Rehydration] Found active poll:', activePollId, '- checking Firebase...');
+
+        // Query Firebase for the live_session state
+        if (typeof firebase === 'undefined' || !firebase.database) {
+          console.warn('[Rehydration] Firebase not available - showing dashboard');
+          return;
+        }
+
+        var db = firebase.database();
+        var liveSessionRef = db.ref('sessions/' + activePollId + '/live_session');
+
+        var snapshot = await liveSessionRef.once('value');
+        var liveSessionData = snapshot.val();
+
+        if (!liveSessionData) {
+          console.log('[Rehydration] No live_session data found - poll may have ended');
+          sessionStorage.removeItem('veritas_active_poll_id');
+          return;
+        }
+
+        // Check if the session is still active (not CLOSED or ENDED)
+        var status = liveSessionData.status || '';
+        var sessionPhase = liveSessionData.sessionPhase || (liveSessionData.metadata && liveSessionData.metadata.sessionPhase) || '';
+
+        if (status === 'CLOSED' || status === 'ENDED' || sessionPhase === 'ENDED') {
+          console.log('[Rehydration] Poll is closed/ended - cleaning up and showing dashboard');
+          sessionStorage.removeItem('veritas_active_poll_id');
+          return;
+        }
+
+        console.log('[Rehydration] Poll is ACTIVE (status: ' + status + ', phase: ' + sessionPhase + ') - restoring live view');
+
+        // Find the poll in ALL_POLLS to get full poll data
+        var poll = ALL_POLLS ? ALL_POLLS.find(function (p) { return p.pollId === activePollId; }) : null;
+
+        if (!poll) {
+          // Poll not in cache, need to fetch it
+          console.log('[Rehydration] Poll not in ALL_POLLS cache - fetching from server...');
+          // Try to fetch poll data
+          var pollRef = db.ref('polls/' + activePollId);
+          var pollSnapshot = await pollRef.once('value');
+          poll = pollSnapshot.val();
+
+          if (!poll) {
+            console.error('[Rehydration] Could not find poll data for:', activePollId);
+            sessionStorage.removeItem('veritas_active_poll_id');
+            return;
+          }
+          poll.pollId = activePollId;
+        }
+
+        // Restore CURRENT_POLL_DATA
+        CURRENT_POLL_DATA = {
+          pollId: activePollId,
+          pollName: poll.pollName || poll.name,
+          questions: poll.questions || [],
+          questionIndex: liveSessionData.questionIndex !== undefined ? liveSessionData.questionIndex : 0,
+          totalQuestions: poll.questions ? poll.questions.length : 0,
+          className: poll.className,
+          sessionType: poll.sessionType || 'LIVE_POLL'
+        };
+
+        // PHASE 1.3: SYNC TIMER - Calculate actual remaining time
+        var questionDef = CURRENT_POLL_DATA.questions[CURRENT_POLL_DATA.questionIndex] || {};
+        var timerPreset = questionDef.timerSeconds || (liveSessionData.metadata && liveSessionData.metadata.timeLimit) || 0;
+
+        if (timerPreset > 0 && liveSessionData.metadata && liveSessionData.metadata.startedAt) {
+          var startedAt = liveSessionData.metadata.startedAt;
+          var startTime = new Date(startedAt).getTime();
+          var currentTime = Date.now();
+          var elapsedSeconds = Math.floor((currentTime - startTime) / 1000);
+          var remainingSeconds = Math.max(0, timerPreset - elapsedSeconds);
+
+          console.log('[Rehydration] Timer sync: preset=' + timerPreset + 's, elapsed=' + elapsedSeconds + 's, remaining=' + remainingSeconds + 's');
+
+          // Store for timer restoration
+          if (typeof window !== 'undefined') {
+            window.REHYDRATED_TIMER_REMAINING = remainingSeconds;
+            window.REHYDRATED_TIMER_PRESET = timerPreset;
+            window.REHYDRATED_TIMER_ACTIVE = status === 'OPEN' && remainingSeconds > 0;
+          }
+        }
+
+        // Initialize Firebase Mission Control for proctoring
+        if (typeof initFirebaseMissionControl === 'function') {
+          initFirebaseMissionControl(activePollId);
+        }
+
+        // Show the live view (not the dashboard)
+        isLiveSession = true;
+
+        // Synthesize view data from live session
+        var syntheticData = {
+          pollId: activePollId,
+          status: status || 'OPEN',
+          questionIndex: CURRENT_POLL_DATA.questionIndex,
+          pollName: CURRENT_POLL_DATA.pollName,
+          questionText: questionDef.questionText || liveSessionData.questionText || '',
+          questionImageURL: questionDef.questionImageURL || liveSessionData.questionImageURL || '',
+          options: questionDef.options || liveSessionData.options || [],
+          totalQuestions: CURRENT_POLL_DATA.totalQuestions,
+          correctAnswer: questionDef.correctAnswer,
+          timerSeconds: questionDef.timerSeconds,
+          metadata: liveSessionData.metadata || {},
+          authoritativeStatus: 'LIVE',
+          results: {},
+          totalResponses: 0,
+          totalStudents: 0,
+          studentStatusList: []
+        };
+
+        console.log('[Rehydration] SUCCESS - Restoring live view with data:', syntheticData);
+
+        // Show live view container and call updateLiveView
+        if (typeof showLiveView === 'function') {
+          showLiveView(syntheticData);
+        } else if (typeof updateLiveView === 'function') {
+          // Fallback: directly update live view
+          var dashboardContent = document.getElementById('dashboard-content');
+          var liveView = document.getElementById('live-view');
+          if (dashboardContent) dashboardContent.style.display = 'none';
+          if (liveView) liveView.style.display = 'block';
+          updateLiveView(syntheticData);
+        }
+
+        // Start polling for live results
+        if (typeof pollForResults === 'function') {
+          setTimeout(pollForResults, 500);
+        }
+
+        showToast('success', 'Session Restored', 'Live poll resumed. Timer synced with server.', 3000);
+
+      } catch (error) {
+        console.error('[Rehydration] Error restoring session:', error);
+        // On error, just show dashboard
+        sessionStorage.removeItem('veritas_active_poll_id');
+      }
     }
 
     function initTeacherAuth() {
@@ -11316,6 +2626,7 @@
         bindClick('header-start-btn', onResumePoll);
         bindClick('header-end-show-btn', onEndQuestionAndShowAnswer);
         bindClick('header-stop-btn', onEndPoll);
+        bindClick('header-present-btn', onPresentQuestion); // New Present Button
 
         var calcToggleBtn = document.getElementById('header-calc-toggle');
         if (calcToggleBtn) {
@@ -11643,6 +2954,10 @@
         var headerDefaultEl = document.getElementById('header-default');
         var headerLiveEl = document.getElementById('header-live');
 
+        // FIX: Fetch Live Control Bar and FAB
+        var liveControlBar = document.getElementById('live-control-bar');
+        var fabContainer = document.getElementById('fab-container');
+
         // Handle Top-Level Views (dashboard-root vs create-poll-view)
         if (section === 'create-poll') {
           if (dashboardRoot) dashboardRoot.style.display = 'none';
@@ -11658,10 +2973,20 @@
           console.log('[UI] Switching to live header');
           if (headerDefaultEl) headerDefaultEl.style.display = 'none';
           if (headerLiveEl) headerLiveEl.style.display = 'flex';
+
+          // Show Live Controls
+          if (liveControlBar) liveControlBar.classList.remove('hidden');
+          if (liveControlBar) liveControlBar.style.display = 'flex';
+          if (fabContainer) fabContainer.style.display = 'block';
         } else {
           console.log('[UI] Switching to default header');
           if (headerDefaultEl) headerDefaultEl.style.display = 'flex';
           if (headerLiveEl) headerLiveEl.style.display = 'none';
+
+          // Hide Live Controls
+          if (liveControlBar) liveControlBar.classList.add('hidden');
+          if (liveControlBar) liveControlBar.style.display = 'none';
+          if (fabContainer) fabContainer.style.display = 'none';
         }
 
 
@@ -11958,6 +3283,12 @@
       missionControlHeartbeat.stop();
 
       console.log('[Firebase] loadInitialData: Fetching polls and classes from RTDB...');
+
+      var currentUser = firebase.auth().currentUser;
+      if (!currentUser || !currentUser.email) {
+        console.warn('[Firebase] loadInitialData skipped: No authenticated teacher (User: ' + (currentUser ? 'Anonymous' : 'Null') + ').');
+        return;
+      }
 
       var db = firebase.database();
 
@@ -13758,10 +5089,6 @@
       loadingEl.classList.remove('hidden');
       reportEl.classList.add('hidden');
 
-      // google.script.run
-      //   .withSuccessHandler(function (data) { ... })
-      //   .getEnhancedPostPollAnalytics(pollId);
-
       const getAnalytics = firebase.functions().httpsCallable('getAnalytics');
       getAnalytics({ pollId: pollId })
         .then(function (result) {
@@ -14829,12 +6156,25 @@
           }
 
           // FIREBASE MIGRATION: Start Secure Assessment via Cloud Function
+          // FIX: Include questionText and options to broadcast to students
+          var firstQuestion = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[0]) ? CURRENT_POLL_DATA.questions[0] : null;
+          var secureQuestionText = firstQuestion ? (firstQuestion.questionText || firstQuestion.stemHtml || firstQuestion.text || '') : '';
+          var secureOptions = firstQuestion ? (firstQuestion.options || []) : [];
+          var secureCorrectAnswer = firstQuestion ? (firstQuestion.correctAnswer !== undefined ? firstQuestion.correctAnswer : null) : null;
+          var secureImageURL = firstQuestion ? (firstQuestion.questionImageURL || firstQuestion.imageURL || firstQuestion.mediaUrl || '') : '';
+          var secureTotalQuestions = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions.length) ? CURRENT_POLL_DATA.questions.length : 0;
+
           ensureFunctionsCallable('setLiveSessionState').then(function (ctx) {
             console.log('[onStartPoll] secure: obtained callable context');
             return ctx.callable({
               pollId: pollId,
               status: 'OPEN',
               questionIndex: 0,
+              questionText: secureQuestionText,
+              options: secureOptions,
+              correctAnswer: secureCorrectAnswer,
+              questionImageURL: secureImageURL,
+              totalQuestions: secureTotalQuestions,
               metadata: {
                 sessionPhase: 'ASSESSMENT_START',
                 resultsVisibility: 'HIDDEN'
@@ -14877,12 +6217,25 @@
         }
 
         // FIREBASE MIGRATION: Start Live Poll via Cloud Function
+        // FIX: Include questionText and options to broadcast to students
+        var firstQuestion = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[0]) ? CURRENT_POLL_DATA.questions[0] : null;
+        var questionText = firstQuestion ? (firstQuestion.questionText || firstQuestion.stemHtml || firstQuestion.text || '') : '';
+        var questionOptions = firstQuestion ? (firstQuestion.options || []) : [];
+        var correctAnswer = firstQuestion ? (firstQuestion.correctAnswer !== undefined ? firstQuestion.correctAnswer : null) : null;
+        var questionImageURL = firstQuestion ? (firstQuestion.questionImageURL || firstQuestion.imageURL || firstQuestion.mediaUrl || '') : '';
+        var totalQuestions = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions.length) ? CURRENT_POLL_DATA.questions.length : 0;
+
         ensureFunctionsCallable('setLiveSessionState').then(function (ctx) {
           console.log('[onStartPoll] live: obtained callable context');
           return ctx.callable({
             pollId: pollId,
             status: 'OPEN',
             questionIndex: 0,
+            questionText: questionText,
+            options: questionOptions,
+            correctAnswer: correctAnswer,
+            questionImageURL: questionImageURL,
+            totalQuestions: totalQuestions,
             metadata: {
               sessionPhase: 'LIVE',
               resultsVisibility: 'HIDDEN'
@@ -14894,6 +6247,10 @@
           var res = result.data;
           if (res && res.success) {
             console.log('[onStartPoll] Session started successfully. Triggering UI transition...');
+
+            // PHASE 3: Save active poll ID for state rehydration on refresh
+            sessionStorage.setItem('veritas_active_poll_id', pollId);
+
             handleLightweightSessionUpdate({
               pollId: pollId,
               status: 'OPEN',
@@ -14968,8 +6325,6 @@
         previewOnlyNotice('pause the live poll');
         return;
       }
-      // google.script.run legacy cleanup removed
-
       var setSessionFn = firebase.functions().httpsCallable('setLiveSessionState');
       var pollId = CURRENT_POLL_DATA.pollId;
       var qIndex = CURRENT_POLL_DATA.questionIndex || 0;
@@ -15022,40 +6377,23 @@
       // Ensure we have valid data
       if (!pollId) { console.error('Missing pollId'); return; }
 
+      var targetVisibility = isRevealed ? 'HIDDEN' : 'REVEALED';
+
       setSessionFn({
         pollId: pollId,
         questionIndex: qIndex,
-        status: targetStatus,
+        status: 'LIVE',
         metadata: {
           serverProcessed: true,
-          reason: isRevealed ? 'RESULTS_HIDDEN' : 'RESULTS_REVEALED'
+          resultsVisibility: targetVisibility
         }
       })
         .then(function (result) {
-          console.log('Question Visibility Toggled via Cloud Function:', targetStatus);
+          console.log('Question Visibility Toggled via Cloud Function (REVEALED=' + !isRevealed + ')');
           if (endShowBtn) { endShowBtn.disabled = false; }
-          // Optimistic Local Update
-          CURRENT_POLL_DATA.resultsVisibility = isRevealed ? 'HIDDEN' : 'REVEALED';
-
-          isPaused = true;
-
-          // Synthesize success data for updateLiveView
-          var syntheticData = {
-            pollId: pollId,
-            questionIndex: CURRENT_POLL_DATA.questionIndex,
-            status: 'ENDED',
-            sessionPhase: 'RESULTS_REVEALED',
-            resultsVisibility: 'REVEALED'
-          };
-
-          updateLiveView(syntheticData);
-
-          broadcastSessionState(pollId, {
-            status: 'ENDED',
-            sessionPhase: 'RESULTS_REVEALED',
-            resultsVisibility: 'REVEALED',
-            questionIndex: CURRENT_POLL_DATA.questionIndex
-          });
+          // We rely on the Realtime Database listener (initFirebaseMissionControl) 
+          // to trigger updateLiveView(data) with full context.
+          // This avoids "optimistic" UI breaks where we only have partial data.
         })
         .catch(function (error) {
           console.error('Finalize Session Error:', error);
@@ -15108,12 +6446,27 @@
         });
     }
 
+    // PHASE 3: Global sequence counter for race condition prevention
+    var globalSequenceId = 0;
+
     function onNextQuestion() {
       if (navigationRequestInFlight) {
-        console.warn('Navigation already in progress; ignoring extra Next click');
+        console.warn('[Navigation] Already in progress; ignoring extra Next click');
         return;
       }
       navigationRequestInFlight = true;
+
+      // PHASE 3.3: RACE CONDITION GUARD - Generate unique sequence ID
+      globalSequenceId++;
+      var thisSequenceId = globalSequenceId;
+      console.log('[Navigation] Starting with sequenceId:', thisSequenceId);
+
+      // FAILSAFE: Reset flag after 5 seconds in case of network zombie
+      setTimeout(function () {
+        navigationRequestInFlight = false;
+        isNavigating = false;
+      }, 5000);
+
       if (pollInterval) clearInterval(pollInterval);
       pauseTimerCountdown();
       stopVisualTimer();
@@ -15125,6 +6478,7 @@
       isPaused = false;
       violationsAlertDismissed = false; // Reset violations alert for new question
       isNavigating = true; // Set flag to prevent polling during navigation
+
       if (PREVIEW_MODE) {
         isNavigating = false;
         navigationRequestInFlight = false;
@@ -15132,36 +6486,31 @@
         return;
       }
 
-      // OPTIMISTIC UPDATE: Update UI immediately using local data
+      // PHASE 3.1: OPTIMISTIC UPDATE - Update UI immediately using local data
       // This eliminates the visual lag for the teacher while the server processes the request
-      if (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions) {
-        var nextIndex = (CURRENT_POLL_DATA.questionIndex || 0) + 1;
-        if (nextIndex < CURRENT_POLL_DATA.questions.length) {
-          console.log('[Optimistic] Advancing UI to question index:', nextIndex);
-
-          var optimisticData = {
-            mode: 'lightweight',
-            pollId: CURRENT_POLL_DATA.pollId,
-            questionIndex: nextIndex,
-            status: 'OPEN',
-            metadata: {
-              sessionPhase: 'LIVE',
-              resultsVisibility: 'HIDDEN',
-              startedAt: new Date().toISOString()
-            }
-          };
-
-          // 1. Update UI instantly
-          handleLightweightSessionUpdate(optimisticData);
-
-          // 2. Broadcast to Firebase instantly (Fast Path for students)
-          // handleLightweightSessionUpdate already calls broadcastSessionState,
-          // but we want to ensure the optimistic payload is what's sent.
-        }
-      }
-
       var nextIndex = (CURRENT_POLL_DATA.questionIndex || 0) + 1;
-      // Optimistic update logic preserved above...
+      if (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions && nextIndex < CURRENT_POLL_DATA.questions.length) {
+        console.log('[Optimistic] Advancing UI to question index:', nextIndex, 'sequenceId:', thisSequenceId);
+
+        var optimisticData = {
+          mode: 'lightweight',
+          pollId: CURRENT_POLL_DATA.pollId,
+          questionIndex: nextIndex,
+          status: 'OPEN',
+          metadata: {
+            sessionPhase: 'LIVE',
+            resultsVisibility: 'HIDDEN',
+            startedAt: new Date().toISOString(),
+            sequenceId: thisSequenceId // Track this update
+          }
+        };
+
+        // 1. Update UI instantly
+        handleLightweightSessionUpdate(optimisticData);
+
+        // 2. Broadcast to Firebase instantly (Fast Path for students)
+        // handleLightweightSessionUpdate already calls broadcastSessionState
+      }
 
       var setSessionFn = firebase.functions().httpsCallable('setLiveSessionState');
       var pollId = CURRENT_POLL_DATA.pollId;
@@ -15169,23 +6518,41 @@
       // Fetch qDef for payload - CRITICAL for fast path
       var qDef = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[nextIndex]) ? CURRENT_POLL_DATA.questions[nextIndex] : null;
 
+      // PHASE 3.2: FIRE-AND-FORGET with Sequence Validation
       setSessionFn({
         pollId: pollId,
         questionIndex: nextIndex,
         status: 'OPEN',
         questionText: qDef ? qDef.questionText : '',
-        options: qDef ? qDef.options : []
+        options: qDef ? qDef.options : [],
+        metadata: {
+          sequenceId: thisSequenceId, // Send to backend for validation
+          timestamp: Date.now()
+        }
       })
         .then(function (result) {
-          // UI updates handled by listeners, but we unblock navigation
-          setTimeout(function () {
-            isNavigating = false;
-            navigationRequestInFlight = false;
-          }, 500);
+          console.log('[Navigation] Server confirmed sequenceId:', thisSequenceId);
+
+          // PHASE 3.3: Validate server accepted our sequence
+          // If a newer navigation happened, don't unblock the old one
+          if (thisSequenceId === globalSequenceId) {
+            setTimeout(function () {
+              isNavigating = false;
+              navigationRequestInFlight = false;
+            }, 500);
+          } else {
+            console.warn('[Navigation] Sequence mismatch: local=' + globalSequenceId + ', this=' + thisSequenceId + ' (ignoring stale response)');
+          }
         })
         .catch(function (error) {
-          isNavigating = false;
-          navigationRequestInFlight = false;
+          console.error('[Navigation] Error with sequenceId:', thisSequenceId, error);
+
+          // Only unblock if this is still the latest sequence
+          if (thisSequenceId === globalSequenceId) {
+            isNavigating = false;
+            navigationRequestInFlight = false;
+          }
+
           handleError(error);
         });
     }
@@ -15309,9 +6676,9 @@
         // Update local state and UI
         setLiveCalculatorToggleState(targetState, true);
 
-        // Show toast feedback
-        showToast('success', targetState ? 'Calculator enabled' : 'Calculator disabled',
-          targetState ? 'Students can now access the calculator.' : 'Calculator has been disabled for students.');
+        // Show toast feedback - Removed per user request
+        // showToast('success', targetState ? 'Calculator enabled' : 'Calculator disabled',
+        //  targetState ? 'Students can now access the calculator.' : 'Calculator has been disabled for students.');
       } catch (error) {
         liveCalculatorToggle.removeAttribute('aria-busy');
         liveCalculatorToggle.disabled = false;
@@ -15378,6 +6745,10 @@
         destructive: true
       });
       if (!confirmed) return;
+
+      // PHASE 3: Clear active poll ID for state rehydration
+      sessionStorage.removeItem('veritas_active_poll_id');
+
       showDashboard();
       if (PREVIEW_MODE) {
         previewOnlyNotice('end the live poll');
@@ -15814,6 +7185,11 @@
         setMainSection('live');
       }
 
+      // Sync local view if it was null (first load)
+      if (typeof localTeacherViewIndex === 'undefined' || localTeacherViewIndex === null) {
+        localTeacherViewIndex = data.questionIndex;
+      }
+
       if (isPreLive || isEnded) {
         console.log('[updateLiveView] Session is PRE_LIVE or ENDED, showing dashboard');
         showDashboard();
@@ -15869,8 +7245,47 @@
       // Update header
       safeSetText('header-poll-name', data.pollName);
 
+      // Update header
+      safeSetText('header-poll-name', data.pollName);
+
+      // Determine which question to render: Local or Live?
+      var renderIndex = (localTeacherViewIndex !== null) ? localTeacherViewIndex : data.questionIndex;
+      var isSynced = (localTeacherViewIndex === data.questionIndex);
+
+      // Update Present Button Visibility
+      var presentBtn = document.getElementById('header-present-btn');
+      if (presentBtn) {
+        if (!isSynced && renderIndex !== data.questionIndex) {
+          presentBtn.classList.remove('hidden');
+        } else {
+          presentBtn.classList.add('hidden');
+        }
+      }
+
       // Update question progress stepper
-      updateQuestionProgress(data.questionIndex, data.totalQuestions);
+      // Pass both current live index and local view index
+      updateQuestionProgress(data.questionIndex, data.totalQuestions, localTeacherViewIndex);
+
+      // Render the Question Content (Question Text/Image) based on LOCAL view
+      if (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[renderIndex]) {
+        // Manually update the question text display if needed, 
+        // depends on if your UI renders from CURRENT_POLL_DATA.questionIndex or passed args.
+        // The current `updateLiveView` seems to handle other things, 
+        // but we might need a dedicated `renderQuestionCard(index)` if `updateLiveView` relies on `data`.
+        // For now, let's assume `updateLiveView` updates sidebars etc. 
+        // We need to inject the QUESTION TEXT for `renderIndex`.
+
+        // Actually, `updateLiveView` doesn't seem to render the question card text explicitly in the lines we saw?
+        // Wait, let's check `Teacher_Scripts.html` for where the question text is put into the DOM.
+        // It might be in `handleLightweightSessionUpdate` or similar.
+
+        // Ah, we might need to find where the Question Text is updated.
+        // Looking at the code I read... I didn't see explicit `document.getElementById('question-text').textContent = ...` in `updateLiveView`.
+        // It might be in `renderResultsBars` or separate function.
+
+        // Let's force a render of the question card for `renderIndex`
+        renderQuestionCardContent(renderIndex);
+      }
 
       // Enable/disable navigation buttons
       safeSetDisabled('header-back-btn', data.questionIndex <= 0);
@@ -16088,10 +7503,43 @@
       isPaused = false;
       isNavigating = true;
 
+      /*
+         DECOUPLED NAVIGATION:
+         Instead of calling 'setLiveSessionState' immediately, 
+         we just update the local view state. 
+      */
+
+      localTeacherViewIndex = index;
+
+      // Trigger a UI update to show the new question
+      // Synthesize a data object merging current live data with new local index? 
+      // No, `updateLiveView` takes specific `data`. 
+      // Better to call our render loop.
+
+      // We can re-use updateLiveView if we reconstruct the state object, 
+      // OR just call our new `renderQuestionCardContent` and `updateQuestionProgress`.
+
+      // Let's assume we have `CURRENT_POLL_DATA` up to date with LIVE data.
+      updateQuestionProgress(CURRENT_POLL_DATA.questionIndex, CURRENT_POLL_DATA.totalQuestions, localTeacherViewIndex);
+      renderQuestionCardContent(localTeacherViewIndex);
+
+      // Show/Hide Present Button
+      var presentBtn = document.getElementById('header-present-btn');
+      if (presentBtn) {
+        if (localTeacherViewIndex !== CURRENT_POLL_DATA.questionIndex) {
+          presentBtn.classList.remove('hidden');
+        } else {
+          presentBtn.classList.add('hidden');
+        }
+      }
+
+      isNavigating = false;
+
+      /*
       var setSessionFn = firebase.functions().httpsCallable('setLiveSessionState');
       var pollId = CURRENT_POLL_DATA.pollId;
       var qDef = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[index]) ? CURRENT_POLL_DATA.questions[index] : null;
-
+  
       setSessionFn({
         pollId: pollId,
         questionIndex: index,
@@ -16108,9 +7556,12 @@
           isNavigating = false;
           handleError(error);
         });
+       */
     }
 
-    function updateQuestionProgress(current, total) {
+    function updateQuestionProgress(currentLive, total, currentLocal) {
+      if (currentLocal === undefined || currentLocal === null) currentLocal = currentLive;
+
       var container = document.getElementById('question-progress-container');
       if (!container) return;
 
@@ -16121,11 +7572,10 @@
       var startIdx = 0;
       var endIdx = total;
 
+      // Center around LOCAL view
       if (total > maxVisible) {
-        // Center the current question in the visible range
-        startIdx = Math.max(0, current - Math.floor(maxVisible / 2));
+        startIdx = Math.max(0, currentLocal - Math.floor(maxVisible / 2));
         endIdx = Math.min(total, startIdx + maxVisible);
-        // Adjust start if we hit the end
         if (endIdx - startIdx < maxVisible) {
           startIdx = Math.max(0, endIdx - maxVisible);
         }
@@ -16140,19 +7590,31 @@
 
       for (var i = startIdx; i < endIdx; i++) {
         var step = document.createElement('button');
-        step.type = 'button'; // Ensure it doesn't submit forms
-        var isCurrent = (i === current);
-        var isPast = (i < current);
+        step.type = 'button';
 
-        // Base classes - added cursor-pointer
+        var isLive = (i === currentLive);
+        var isSelected = (i === currentLocal);
+        var isPast = (i < currentLive);
+
         step.className = 'question-step flex items-center justify-center rounded-full transition-all duration-300 cursor-pointer ';
 
-        if (isCurrent) {
-          step.className += 'w-8 h-8 sm:w-9 sm:h-9 bg-veritas-gold text-white font-bold text-xs sm:text-sm shadow-lg scale-110 active ring-2 ring-white/20 z-10';
+        if (isSelected) {
+          // Selected (Gold)
+          step.className += 'w-8 h-8 sm:w-9 sm:h-9 bg-veritas-gold text-white font-bold text-xs sm:text-sm shadow-md ring-2 ring-white/20 z-10';
           step.innerHTML = '<span>' + (i + 1) + '</span>';
+
+          // If this is ALSO the live question, maybe add an indicator?
+          if (isLive) {
+            // It's both selected and live. The gold style covers it.
+          }
+        } else if (isLive) {
+          // It is the LIVE question, but NOT selected (Teacher is looking elsewhere)
+          // Make it distinct (e.g. Green pulsing or just Green)
+          step.className += 'w-8 h-8 bg-green-500 text-white font-bold hover:scale-105 ring-2 ring-green-400/50';
+          step.innerHTML = '<span class="material-symbols-outlined text-lg">podium</span>';
         } else if (isPast) {
-          step.className += 'w-6 h-6 sm:w-7 sm:h-7 bg-emerald-500/80 text-white font-bold text-[10px] sm:text-xs hover:bg-emerald-500 hover:scale-105';
-          step.innerHTML = '<span class="material-symbols-outlined text-xs sm:text-sm">check</span>';
+          step.className += 'w-8 h-8 bg-emerald-500/80 text-white font-bold hover:bg-emerald-500 hover:scale-105';
+          step.innerHTML = '<span class="material-symbols-outlined text-lg">check</span>';
         } else {
           step.className += 'w-6 h-6 sm:w-7 sm:h-7 bg-white/10 text-white/50 border border-white/10 font-bold text-[10px] sm:text-xs hover:bg-white/20 hover:text-white hover:scale-105';
           step.innerHTML = '<span>' + (i + 1) + '</span>';
@@ -16161,9 +7623,9 @@
         (function (idx) {
           step.onclick = function (e) {
             e.stopPropagation();
-            if (idx !== current) jumpToQuestion(idx);
+            jumpToQuestion(idx);
           };
-          step.title = "Jump to Question " + (idx + 1);
+          step.title = "View Question " + (idx + 1);
         })(i);
 
         container.appendChild(step);
@@ -16752,36 +8214,74 @@
         }
       }
 
+      // PHASE 2.1: OPTIMISTIC UI - Update immediately before server responds
+      // This eliminates the visual lag and prevents double-clicks
       if (buttonElement) {
         buttonElement.disabled = true;
-        buttonElement.querySelector('span:last-child').textContent = 'Unlocking...';
+        var iconSpan = buttonElement.querySelector('span.material-symbols-outlined');
+        var labelSpan = buttonElement.querySelector('span:last-child');
+
+        if (iconSpan) iconSpan.textContent = 'progress_activity';
+        if (iconSpan) iconSpan.classList.add('animate-spin');
+        if (labelSpan) labelSpan.textContent = 'Unlocking...';
+      }
+
+      // PHASE 2.1: OPTIMISTIC STATUS UPDATE
+      // Immediately update local student status to AWAITING_FULLSCREEN (Blue)
+      var optimisticUpdate = false;
+      currentStudentStatusData = currentStudentStatusData.map(function (s) {
+        if (s.email === email) {
+          optimisticUpdate = true;
+          return Object.assign({}, s, {
+            status: 'AWAITING_FULLSCREEN',
+            optimistic: true // Flag for rollback if server rejects
+          });
+        }
+        return s;
+      });
+
+      if (optimisticUpdate) {
+        renderStudentStatus(); // Re-render with optimistic state
+        console.log('[Optimistic UI] Student', email, 'marked as AWAITING_FULLSCREEN (pending server confirmation)');
       }
 
       if (PREVIEW_MODE) {
         await previewOnlyNotice('approve unlock requests');
         if (buttonElement) {
           buttonElement.disabled = false;
-          buttonElement.querySelector('span:last-child').textContent = formatStudentName(email);
+          var iconSpan = buttonElement.querySelector('span.material-symbols-outlined');
+          var labelSpan = buttonElement.querySelector('span:last-child');
+          if (iconSpan) {
+            iconSpan.textContent = 'lock_open';
+            iconSpan.classList.remove('animate-spin');
+          }
+          if (labelSpan) labelSpan.textContent = formatStudentName(email);
         }
         return;
       }
 
       recordTeacherAction('Unlock ' + email);
 
-      // FIREBASE MIGRATION: Approve unlock via Cloud Function
-      callManageRoster({
-        action: 'APPROVE_UNLOCK',
+      // PHASE 2.2: VERSIONED LOCKS - Send lockVersion to prevent stale unlocks
+      var manageProctoring = firebase.functions().httpsCallable('manageProctoring');
+      manageProctoring({
+        action: 'UNLOCK',
         pollId: pollId,
         studentEmail: email,
-        lockVersion: lockVersion
+        expectedLockVersion: lockVersion // Server validates this matches current lock
       }).then(function (result) {
         var response = result.data;
         if (response && response.success) {
-          // Success: Instant UI feedback is good, but RTDB listener handles the source of truth
+          // Success: Server confirmed unlock
           if (buttonElement) {
             buttonElement.disabled = false;
-            var lastSpan = buttonElement.querySelector('span:last-child');
-            if (lastSpan) lastSpan.textContent = 'Unlocked';
+            var iconSpan = buttonElement.querySelector('span.material-symbols-outlined');
+            var labelSpan = buttonElement.querySelector('span:last-child');
+            if (iconSpan) {
+              iconSpan.textContent = 'check_circle';
+              iconSpan.classList.remove('animate-spin');
+            }
+            if (labelSpan) lastSpan.textContent = 'Unlocked';
 
             setTimeout(function () {
               if (currentManagedStudent && currentManagedStudent.email === email) {
@@ -16794,12 +8294,35 @@
           throw new Error((response && response.error) || 'Failed to approve unlock');
         }
       }).catch(function (error) {
+        console.error('[Unlock Error]', error);
+
+        // PHASE 2.1: ROLLBACK OPTIMISTIC UPDATE on failure
+        currentStudentStatusData = currentStudentStatusData.map(function (s) {
+          if (s.email === email && s.optimistic) {
+            delete s.optimistic;
+            return Object.assign({}, s, { status: 'LOCKED' }); // Revert to locked
+          }
+          return s;
+        });
+        renderStudentStatus();
+
         if (buttonElement) {
           buttonElement.disabled = false;
-          var lastSpan = buttonElement.querySelector('span:last-child');
-          if (lastSpan) lastSpan.textContent = 'Approve Unlock';
+          var iconSpan = buttonElement.querySelector('span.material-symbols-outlined');
+          var labelSpan = buttonElement.querySelector('span:last-child');
+          if (iconSpan) {
+            iconSpan.textContent = 'lock_open';
+            iconSpan.classList.remove('animate-spin');
+          }
+          if (labelSpan) labelSpan.textContent = 'Approve Unlock';
         }
-        handleError(error);
+
+        // Check if this is a version mismatch
+        if (error.message && error.message.includes('version_mismatch')) {
+          showToast('warning', 'Unlock Failed', 'Student violated policy again. Refresh and retry.', 5000);
+        } else {
+          handleError(error);
+        }
       });
     }
 
@@ -16872,6 +8395,15 @@
       label.textContent = 'Reset';
       button.appendChild(icon);
       button.appendChild(label);
+
+      // FIX: Add click handler for reset button
+      button.addEventListener('click', function (e) {
+        e.stopPropagation(); // Prevent card click from opening inspector
+        if (student.email) {
+          proctorAction('RESET', student.email);
+        }
+      });
+
       return button;
     }
 
@@ -16890,6 +8422,15 @@
       label.textContent = 'Approve';
       button.appendChild(icon);
       button.appendChild(label);
+
+      // FIX: Add click handler for unlock button
+      button.addEventListener('click', function (e) {
+        e.stopPropagation(); // Prevent card click from opening inspector
+        if (student.email) {
+          proctorAction('UNLOCK', student.email);
+        }
+      });
+
       return button;
     }
 
@@ -16904,6 +8445,15 @@
       label.textContent = 'Block';
       button.appendChild(icon);
       button.appendChild(label);
+
+      // FIX: Add click handler for block button
+      button.addEventListener('click', function (e) {
+        e.stopPropagation(); // Prevent card click from opening inspector
+        if (student.email) {
+          proctorAction('BLOCK', student.email);
+        }
+      });
+
       return button;
     }
 
@@ -16918,6 +8468,15 @@
       label.textContent = 'Unblock';
       button.appendChild(icon);
       button.appendChild(label);
+
+      // FIX: Add click handler for unblock button
+      button.addEventListener('click', function (e) {
+        e.stopPropagation(); // Prevent card click from opening inspector
+        if (student.email) {
+          proctorAction('UNBLOCK', student.email);
+        }
+      });
+
       return button;
     }
 
@@ -17310,9 +8869,9 @@
         <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900">
           <div>
             <h3 class="text-lg font-bold text-gray-900 dark:text-white">${escapeHtml(name)}</h3>
-            <span class="text-xs px-2 py-0.5 rounded font-bold uppercase tracking-wide ${statusColor}">${status}</span>
+            <span class="text-xs px-2 py-0.5 rounded font-bold uppercase tracking-wide ${statusColor}">${status || 'UNKNOWN'}</span>
           </div>
-          <button onclick="closeStudentInspector()" class="text-gray-400 hover:text-gray-600">
+          <button onclick="closeStudentInspector()" class="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
             <span class="material-symbols-outlined">close</span>
           </button>
         </div>
@@ -17330,6 +8889,11 @@
               <button onclick="proctorAction('RESET', '${email}')" class="flex items-center justify-center gap-2 p-3 bg-white border border-gray-300 text-gray-700 rounded-lg font-bold hover:bg-gray-50 transition-all">
                 <span class="material-symbols-outlined">restart_alt</span>
                 <span>Reset Question</span>
+              </button>
+              
+              <button onclick="resendLinkToStudent('${email}')" class="flex items-center justify-center gap-2 p-3 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg font-bold hover:bg-blue-100 transition-all">
+                <span class="material-symbols-outlined">send</span>
+                <span>Re-send Link</span>
               </button>
               
               ${!isBlocked ? `
@@ -17389,16 +8953,98 @@
 
       panel.innerHTML = html;
       panel.classList.remove('hidden');
+      // Force reflow
+      void panel.offsetWidth;
+      panel.classList.remove('translate-x-full');
     }
 
     function closeStudentInspector() {
       var panel = document.getElementById('student-inspector-panel');
-      if (panel) panel.classList.add('hidden');
+      if (panel) {
+        panel.classList.add('translate-x-full');
+        // Wait for transition then hide
+        setTimeout(function () {
+          panel.classList.add('hidden');
+        }, 300);
+      }
     }
 
     // Expose close to window for onclick
     window.closeStudentInspector = closeStudentInspector;
     window.proctorAction = proctorAction;
+    window.resendLinkToStudent = resendLinkToStudent;
+
+    async function resendLinkToStudent(email) {
+      if (!confirm('Re-send the unique poll link to ' + email + '?')) return;
+
+      var btn = document.getElementById('send-link-btn');
+      var className = btn && btn.dataset.className;
+
+      // Fallback: Try to find class name in UI if not on button
+      if (!className) {
+        // Attempt to get from a global or infer
+        if (CURRENT_POLL_DATA && CURRENT_POLL_DATA.className) {
+          className = CURRENT_POLL_DATA.className;
+        }
+      }
+
+      if (!className) {
+        showToast('Error: Could not determine class name', 'error');
+        return;
+      }
+
+      var baseUrl = window.location.origin + '/student.html';
+
+      showToast('info', 'Sending Link', 'Preparing email for ' + email + '...');
+
+      try {
+        // 1. Get roster/links (re-using manage roster to get the token)
+        var result = await callManageRoster({
+          action: 'SEND_EMAILS',
+          className: className,
+          pollId: CURRENT_POLL_DATA.pollId
+        });
+
+        var payload = result.data;
+        if (!payload.success) throw new Error('Could not retrieve student link data');
+
+        // 2. Filter for OUR student
+        var targetLink = payload.links.find(function (l) { return l.email === email; });
+
+        if (!targetLink) {
+          throw new Error('Student not found in roster for this class');
+        }
+
+        // 3. Construct specific payload for just this student
+        var isSecure = (CURRENT_POLL_DATA.sessionType || "").toUpperCase().includes("SECURE");
+        var fullLink = baseUrl + '?token=' + targetLink.token;
+        var htmlBody = generateEmailHtml(targetLink.name, fullLink, isSecure, email);
+
+        var singleStudentPayload = {
+          subject: payload.subject,
+          students: [{
+            email: email,
+            name: targetLink.name,
+            subject: payload.subject,
+            body: htmlBody
+          }]
+        };
+
+        // 4. Send Email
+        var emailResult = await firebase.functions().httpsCallable('sendEmail')(singleStudentPayload);
+        var response = emailResult.data;
+
+        if (response.success && response.sentCount > 0) {
+          showToast('success', 'Link Sent', 'Email sent to ' + email);
+        } else {
+          throw new Error(response.error || 'Failed to send email');
+        }
+
+      } catch (e) {
+        console.error(e);
+        showToast('error', 'Send Failed', e.message);
+      }
+    }
 
     function proctorAction(action, email) {
       if (!confirm('Are you sure you want to ' + action + ' this student?')) return;
@@ -21507,6 +13153,9 @@
           realtimeConnected = snap.val() === true;
           console.log('[Firebase] Connection status changed:', realtimeConnected ? 'CONNECTED' : 'DISCONNECTED', 'pollId:', pollId);
 
+          // PHASE 4: Show/hide Teacher connectivity recovery toast
+          showTeacherConnectivityToast(realtimeConnected);
+
           // ADAPTIVE POLLING: Reduce server load when Firebase is active
           // Periodic polling is now primarily for metrics (progress/score)
           // Realtime status (ACTIVE/LOCKED) is handled via Firebase events
@@ -21524,6 +13173,14 @@
             pollInterval = setInterval(pollForResults, currentPollInterval);
           } else {
             currentPollInterval = newInterval; // Set for next start
+          }
+
+          // PHASE 4: Auto-recovery on reconnect - trigger poll to sync state
+          if (realtimeConnected) {
+            console.log('[Connectivity Recovery] Teacher reconnected - syncing state');
+            if (typeof pollForResults === 'function' && isLiveSession) {
+              setTimeout(pollForResults, 500);
+            }
           }
 
           // P0-2 FIX: Record event
@@ -21773,6 +13430,16 @@
       }
     }
 
+    // PHASE 3: Helper to check if student is idle based on lastActive timestamp
+    // Returns true if lastActive is more than 30 seconds old
+    function isStudentIdle(lastActiveTimestamp) {
+      if (!lastActiveTimestamp) return false;
+      var nowMs = Date.now();
+      var lastActiveMs = typeof lastActiveTimestamp === 'number' ? lastActiveTimestamp : new Date(lastActiveTimestamp).getTime();
+      var IDLE_THRESHOLD_MS = 30000; // 30 seconds
+      return (nowMs - lastActiveMs) > IDLE_THRESHOLD_MS;
+    }
+
     async function updateRealtimeUI() {
       var updatesFound = false;
 
@@ -21783,16 +13450,27 @@
       if (missionControlStudents && currentMissionControlPollId) {
         await Promise.all(missionControlStudents.map(async function (student) {
           var key = await window.VeritasShared.generateStudentKey(student.email, currentMissionControlPollId);
-          var rtStatus = realtimeStatuses[key];
+          var rtStatusData = realtimeStatuses[key];
 
-          if (rtStatus) {
+          if (rtStatusData) {
             var newStatus = student.status;
             var newConnection = student.connection ? student.connection.status : 'GRAY';
 
+            // PHASE 3: Extract status and lastActive from object or legacy string
+            var rtStatus = (typeof rtStatusData === 'object' && rtStatusData) ? rtStatusData.status : rtStatusData;
+            var lastActive = (typeof rtStatusData === 'object' && rtStatusData) ? (rtStatusData.lastActive || rtStatusData.lastActiveAt) : null;
+
+            // PHASE 3: Check for idle status based on lastActive
+            var isIdle = isStudentIdle(lastActive);
+
             if (rtStatus === 'ACTIVE') {
               if (student.status !== 'Submitted') {
-                newStatus = 'In Progress';
+                newStatus = isIdle ? 'Idle' : 'In Progress';
               }
+              newConnection = isIdle ? 'YELLOW' : 'GREEN';
+            } else if (rtStatus === 'Submitted') {
+              // PHASE 2: Instant "Green" from dual-write submissions
+              newStatus = 'Submitted';
               newConnection = 'GREEN';
             } else if (rtStatus === 'LOCKED') {
               newStatus = 'LOCKED';
@@ -21800,10 +13478,15 @@
               newConnection = 'GREEN';
             } else if (rtStatus === 'DISCONNECTED') {
               newConnection = 'RED';
+              newStatus = 'Offline';
             } else if (rtStatus === 'FINISHED') {
               newStatus = 'Submitted';
               newConnection = 'GREEN';
             }
+
+            // PHASE 3: Store idle flag for UI rendering
+            student.isIdle = isIdle;
+            student.lastActive = lastActive;
 
             if (student.status !== newStatus || (student.connection && student.connection.status !== newConnection)) {
               student.status = newStatus;
@@ -21824,24 +13507,39 @@
         var livePollUpdatesFound = false;
         await Promise.all(currentStudentStatusData.map(async function (student) {
           var key = await window.VeritasShared.generateStudentKey(student.email, CURRENT_POLL_DATA.pollId);
-          var rtStatus = realtimeStatuses[key];
+          var rtStatusData = realtimeStatuses[key];
 
-          if (rtStatus) {
+          if (rtStatusData) {
             var newStatus = student.status;
+
+            // PHASE 3: Extract status and lastActive from object or legacy string
+            var rtStatus = (typeof rtStatusData === 'object' && rtStatusData) ? rtStatusData.status : rtStatusData;
+            var lastActive = (typeof rtStatusData === 'object' && rtStatusData) ? (rtStatusData.lastActive || rtStatusData.lastActiveAt) : null;
+
+            // PHASE 3: Check for idle status based on lastActive
+            var isIdle = isStudentIdle(lastActive);
 
             // Map Firebase status to Live Poll status strings
             if (rtStatus === 'ACTIVE') {
               if (student.status !== 'Submitted') {
-                newStatus = 'In Progress';
+                newStatus = isIdle ? 'Idle' : 'In Progress';
               }
+            } else if (rtStatus === 'Submitted') {
+              // PHASE 2: Instant "Green" from dual-write submissions
+              newStatus = 'Submitted';
             } else if (rtStatus === 'LOCKED') {
               newStatus = 'LOCKED';
               student.proctorStatus = 'LOCKED';
             } else if (rtStatus === 'DISCONNECTED') {
-              // Keep current status but could add offline indicator
+              // Mark as offline if disconnected
+              newStatus = 'Offline';
             } else if (rtStatus === 'FINISHED') {
               newStatus = 'Submitted';
             }
+
+            // PHASE 3: Store idle flag for UI rendering
+            student.isIdle = isIdle;
+            student.lastActive = lastActive;
 
             if (student.status !== newStatus) {
               student.status = newStatus;
@@ -22446,7 +14144,8 @@
     }
 
     function attachManageHandlers() {
-      var buttons = document.querySelectorAll('#individual-session-students-grid [data-action="manage-student"]');
+      // FIX: Target buttons in both the new card grid and legacy/table views
+      var buttons = document.querySelectorAll('.mission-manage-btn, [data-action="manage-student"]');
       buttons.forEach(function (btn) {
         btn.addEventListener('click', function () {
           var email = btn.dataset.email;
@@ -22631,12 +14330,33 @@
       if (errorMessage) errorMessage.textContent = message;
     }
 
+    // PHASE 5: Global storage for current book view data (for CSV export)
+    var currentBookViewData = null;
+
     function renderBookView(data) {
+      // PHASE 5.0: Store data globally for CSV export
+      currentBookViewData = data;
+
       // Update header
       var title = document.getElementById('book-view-title');
       var subtitle = document.getElementById('book-view-subtitle');
       if (title) title.textContent = data.pollName + ' - Book View';
       if (subtitle) subtitle.textContent = data.className + ' • ' + data.questionCount + ' questions • ' + data.studentDetails.length + ' students';
+
+      // PHASE 5.1: Add CSV Export Button to header
+      var exportBtn = document.getElementById('book-export-csv-btn');
+      if (!exportBtn) {
+        // Create export button if it doesn't exist
+        var headerActions = document.querySelector('#book-view-section .flex.items-center.gap-4');
+        if (headerActions) {
+          exportBtn = document.createElement('button');
+          exportBtn.id = 'book-export-csv-btn';
+          exportBtn.className = 'flex items-center gap-2 px-4 py-2 bg-veritas-gold text-white rounded-lg hover:bg-veritas-gold/90 transition-colors font-semibold';
+          exportBtn.innerHTML = '<span class="material-symbols-outlined text-sm">download</span><span>Export CSV</span>';
+          exportBtn.onclick = function () { exportBookViewToCSV(); };
+          headerActions.appendChild(exportBtn);
+        }
+      }
 
       // Render class overview
       renderClassOverview(data.classOverview, data.questionCount);
@@ -22650,6 +14370,88 @@
       // Render response matrix
       renderResponseMatrix(data.studentDetails, data.questionCount);
     }
+
+    // PHASE 5.2: CSV EXPORT IMPLEMENTATION
+    function exportBookViewToCSV() {
+      if (!currentBookViewData) {
+        showToast('error', 'Export Error', 'No book view data available to export.');
+        return;
+      }
+
+      try {
+        var data = currentBookViewData;
+        var csv = [];
+
+        // Header row: Student Name, Email, Score, Q1, Q2, Q3...
+        var headerRow = ['Student Name', 'Email', 'Score', 'Percentage'];
+        for (var i = 0; i < data.questionCount; i++) {
+          headerRow.push('Q' + (i + 1));
+        }
+        csv.push(headerRow.join(','));
+
+        // Data rows
+        data.studentDetails.forEach(function (student) {
+          var row = [];
+
+          // Escape CSV values (handle commas and quotes)
+          function escapeCSV(value) {
+            if (value === null || value === undefined) return '';
+            var stringValue = String(value);
+            if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+              return '"' + stringValue.replace(/"/g, '""') + '"';
+            }
+            return stringValue;
+          }
+
+          row.push(escapeCSV(student.name));
+          row.push(escapeCSV(student.email || ''));
+          row.push(student.totalScore + '/' + student.maxScore);
+          row.push(student.percentage + '%');
+
+          // Add question responses
+          student.questionResponses.forEach(function (qResp) {
+            if (qResp.answered) {
+              var cellValue = qResp.isCorrect ? '✓ ' + qResp.studentAnswer : '✗ ' + qResp.studentAnswer;
+              row.push(escapeCSV(cellValue));
+            } else {
+              row.push('—');
+            }
+          });
+
+          csv.push(row.join(','));
+        });
+
+        // Create CSV file and download
+        var csvContent = csv.join('\n');
+        var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        var link = document.createElement('a');
+        var url = URL.createObjectURL(blob);
+
+        var fileName = (data.pollName || 'Poll') + '_' + (data.className || 'Class') + '_Results.csv';
+        fileName = fileName.replace(/[^a-z0-9_\-]/gi, '_'); // Sanitize filename
+
+        link.setAttribute('href', url);
+        link.setAttribute('download', fileName);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        showToast('success', 'Export Complete', 'CSV file downloaded successfully.', 3000);
+
+        // Track export action
+        if (typeof recordTeacherAction === 'function') {
+          recordTeacherAction('Export Book View CSV: ' + data.pollName);
+        }
+
+      } catch (error) {
+        console.error('[CSV Export] Error:', error);
+        showToast('error', 'Export Failed', 'Failed to generate CSV file: ' + error.message);
+      }
+    }
+
+    // PHASE 5.3: Make exportBookViewToCSV globally accessible
+    window.exportBookViewToCSV = exportBookViewToCSV;
 
     function renderClassOverview(overview, questionCount) {
       var totalStudents = document.getElementById('book-class-total-students');
@@ -24878,45 +16680,101 @@
         return;
       }
 
-      // FIX: If no students loaded yet, try to fetch from the class roster
+      // FIX: If no students loaded yet, try multiple sources for roster data
       var studentsToUse = currentStudentStatusData;
-      if ((!studentsToUse || studentsToUse.length === 0) && CURRENT_POLL_DATA && CURRENT_POLL_DATA.className) {
-        console.log('[Optimization] No students loaded, fetching from roster for class:', CURRENT_POLL_DATA.className);
+      if (!studentsToUse || studentsToUse.length === 0) {
+        var className = CURRENT_POLL_DATA ? CURRENT_POLL_DATA.className : null;
+        console.log('[Optimization] No students loaded, searching for roster. className:', className);
 
-        // Fetch roster asynchronously and update UI
-        firebase.database().ref('rosters/rosters/' + CURRENT_POLL_DATA.className).once('value')
-          .then(function (snapshot) {
-            var roster = snapshot.val();
-            if (roster && Array.isArray(roster) && roster.length > 0) {
-              console.log('[Optimization] Loaded', roster.length, 'students from roster');
-              // Transform roster to student status format
-              currentStudentStatusData = roster.map(function (s) {
-                return {
-                  name: s.name || '',
-                  email: s.email || '',
-                  status: 'Waiting...',
-                  statusNote: 'waiting',
-                  answer: '---',
-                  isCorrect: null,
-                  confidence: null,
-                  timestamp: 9999999999999
-                };
-              });
+        // First try: Check in-memory rosterData (most reliable)
+        if (className && rosterData && rosterData[className] && rosterData[className].length > 0) {
+          console.log('[Optimization] Found roster in memory:', rosterData[className].length, 'students');
+          currentStudentStatusData = rosterData[className].map(function (s) {
+            return {
+              name: s.name || '',
+              email: s.email || '',
+              firstName: (s.name || '').split(' ')[0] || '',
+              lastName: (s.name || '').split(' ').slice(1).join(' ') || '',
+              status: 'Waiting...',
+              statusNote: 'waiting',
+              answer: '---',
+              isCorrect: null,
+              confidence: null,
+              timestamp: 9999999999999
+            };
+          });
+          // Continue with students loaded
+          finishLightweightUpdate(data, questionDef, qIndex, currentStudentStatusData);
+          return;
+        }
 
-              // Re-trigger update with students now populated
-              handleLightweightSessionUpdate(data);
-            } else {
-              console.warn('[Optimization] No roster found for class:', CURRENT_POLL_DATA.className);
+        // Second try: Check poll definition for roster
+        if (CURRENT_POLL_DATA && CURRENT_POLL_DATA.roster && CURRENT_POLL_DATA.roster.length > 0) {
+          console.log('[Optimization] Found roster in poll definition:', CURRENT_POLL_DATA.roster.length, 'students');
+          currentStudentStatusData = CURRENT_POLL_DATA.roster.map(function (s) {
+            return {
+              name: s.name || '',
+              email: s.email || '',
+              firstName: (s.name || '').split(' ')[0] || '',
+              lastName: (s.name || '').split(' ').slice(1).join(' ') || '',
+              status: 'Waiting...',
+              statusNote: 'waiting',
+              answer: '---',
+              isCorrect: null,
+              confidence: null,
+              timestamp: 9999999999999
+            };
+          });
+          finishLightweightUpdate(data, questionDef, qIndex, currentStudentStatusData);
+          return;
+        }
+
+        // Third try: Fetch from Firebase if className is available
+        if (className) {
+          console.log('[Optimization] Fetching roster from Firebase for class:', className);
+
+          // Fetch roster asynchronously and update UI
+          firebase.database().ref('rosters/rosters/' + className).once('value')
+            .then(function (snapshot) {
+              var roster = snapshot.val();
+              if (roster && Array.isArray(roster) && roster.length > 0) {
+                console.log('[Optimization] Loaded', roster.length, 'students from Firebase');
+                // Transform roster to student status format
+                currentStudentStatusData = roster.map(function (s) {
+                  return {
+                    name: s.name || '',
+                    email: s.email || '',
+                    firstName: (s.name || '').split(' ')[0] || '',
+                    lastName: (s.name || '').split(' ').slice(1).join(' ') || '',
+                    status: 'Waiting...',
+                    statusNote: 'waiting',
+                    answer: '---',
+                    isCorrect: null,
+                    confidence: null,
+                    timestamp: 9999999999999
+                  };
+                });
+
+                // Re-trigger update with students now populated
+                handleLightweightSessionUpdate(data);
+              } else {
+                console.warn('[Optimization] No roster found in Firebase for class:', className);
+                // Continue without students
+                finishLightweightUpdate(data, questionDef, qIndex, []);
+              }
+            })
+            .catch(function (error) {
+              console.error('[Optimization] Failed to fetch roster from Firebase:', error);
               // Continue without students
               finishLightweightUpdate(data, questionDef, qIndex, []);
-            }
-          })
-          .catch(function (error) {
-            console.error('[Optimization] Failed to fetch roster:', error);
-            // Continue without students
-            finishLightweightUpdate(data, questionDef, qIndex, []);
-          });
-        return; // Exit early while roster is loading
+            });
+          return; // Exit early while roster is loading
+        }
+
+        // No roster source available
+        console.warn('[Optimization] No roster source available');
+        finishLightweightUpdate(data, questionDef, qIndex, []);
+        return;
       }
 
       finishLightweightUpdate(data, questionDef, qIndex, studentsToUse);
@@ -25124,46 +16982,8 @@
     // STUDENT INSPECTOR & ANALYTICS (PHASE 4)
     // ==========================================
 
-    async function openStudentInspector(email) {
-      var modal = document.getElementById('student-inspector-modal');
-      if (!modal) return;
+    // [Duplicate openStudentInspector function removed]
 
-      // 1. Reset & Show Loading State
-      document.getElementById('inspector-history-body').innerHTML = `<tr>
-      <td colspan="5" class="p-8 text-center text-slate-400">Loading history...</td>
-    </tr>`;
-      document.getElementById('inspector-empty-state').classList.add('hidden');
-
-      // 2. Populate Header
-      var student = (STUDENTS || []).find(function (s) { return s.email === email; });
-      var name = student ? (student.name || student.email) : email;
-      var initials = name.split(' ').map(function (n) { return n[0]; }).join('').substring(0, 2).toUpperCase();
-
-      document.getElementById('inspector-name').textContent = name;
-      document.getElementById('inspector-email').textContent = email;
-      document.getElementById('inspector-initials').textContent = initials;
-
-      // Status Badge
-      var statusBadge = document.getElementById('inspector-status-badge');
-      var isOnline = student && student.isOnline; // Assuming we track this
-      statusBadge.textContent = isOnline ? 'Online' : 'Offline';
-      statusBadge.className = isOnline
-        ? 'px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wide'
-        : 'px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-wide';
-
-      modal.classList.remove('hidden');
-
-      // 3. Fetch & Process History
-      try {
-        var history = await fetchStudentHistory(CURRENT_POLL_DATA.pollId, email);
-        renderStudentInspector(history);
-      } catch (error) {
-        console.error('Failed to fetch student history:', error);
-        document.getElementById('inspector-history-body').innerHTML = `<tr>
-        <td colspan="5" class="p-8 text-center text-red-500">Failed to load data.</td>
-      </tr>`;
-      }
-    }
 
     async function fetchStudentHistory(pollId, email) {
       if (!pollId || !email) return [];
@@ -25278,64 +17098,96 @@
         if (modal) modal.classList.add('hidden');
       });
     });
-  })();
-</script>
-  <script>
-    /**
-     * Veritas Theme Manager
-     * Handles Dark Mode persistence, system preference detection, and UI toggling.
-     */
-    (function () {
-        // Enforce Light Mode strictly
-        var ThemeEnforcer = {
-            init: function () {
-                // Force removal of dark class if present
-                document.documentElement.classList.remove('dark');
-                // Ensure light class is present (optional but safe)
-                document.documentElement.classList.add('light');
 
-                // Clear any stored preference to avoid confusion if we ever re-enable
-                try {
-                    localStorage.removeItem('veritas_theme');
-                } catch (e) { }
-            }
-        };
+    // --- New Navigation Helper Functions ---
 
-        // Initialize on load
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => ThemeEnforcer.init());
+    function renderQuestionCardContent(index) {
+      // This function is responsible for updating the 'Question Card' area 
+      // to show the question at `index`, regardless of what is 'Live'.
+
+      if (!CURRENT_POLL_DATA.questions || !CURRENT_POLL_DATA.questions[index]) return;
+      var q = CURRENT_POLL_DATA.questions[index];
+
+      // 1. Update Question Text
+      var qTextEl = document.getElementById('live-question-text');
+      if (qTextEl) {
+        qTextEl.textContent = q.questionText || '';
+      }
+
+      // 2. Update Question Image
+      var qImgContainer = document.getElementById('live-question-image-container');
+      var qImg = document.getElementById('live-question-image');
+      if (qImgContainer && qImg) {
+        var imgUrl = getImagePreviewUrl(q.questionImage || q.questionImageURL, q.questionImageFileId);
+        if (imgUrl) {
+          qImg.src = imgUrl;
+          qImgContainer.classList.remove('hidden');
         } else {
-            ThemeEnforcer.init();
+          qImgContainer.classList.add('hidden');
         }
+      }
 
-        window.ThemeManager = ThemeEnforcer;
-    })();
-</script>
+      var resultsContainer = document.getElementById('results-bars');
+      if (resultsContainer) {
+        // Re-render empty bars for the new question's options
+        resultsContainer.innerHTML = '';
 
-<style>
-    /* Extra transition for smooth theme switching */
-    html.dark body {
-        background-color: #0f172a;
-        /* slate-900 */
-        color: #f8fafc;
-        /* slate-50 */
+        var options = q.answers || q.options || [];
+        if (options.length > 0) {
+          options.forEach(function (opt, idx) {
+            var row = document.createElement('div');
+            row.className = 'mb-3';
+            var label = String.fromCharCode(65 + idx);
+
+            row.innerHTML = `
+                        <div class="flex justify-between text-sm mb-1">
+                           <span class="font-bold">${label}. ${escapeHtml(opt.text || '')}</span>
+                           <span class="text-gray-400 text-xs">Waiting...</span>
+                        </div>
+                        <div class="h-8 w-full bg-gray-100 rounded-lg overflow-hidden relative">
+                           <div class="h-full bg-gray-200" style="width: 0%"></div>
+                        </div>
+                     `;
+            resultsContainer.appendChild(row);
+          });
+        }
+      }
+
+      // Update Q# Info
+      var infoEl = document.getElementById('live-question-info');
+      if (infoEl) {
+        infoEl.textContent = 'Q' + (index + 1) + ' / ' + CURRENT_POLL_DATA.questions.length;
+      }
     }
 
-    html.dark .glass-card {
-        background: rgba(15, 23, 42, 0.6);
-        border-color: rgba(255, 255, 255, 0.1);
+    function onPresentQuestion() {
+      if (localTeacherViewIndex === null) return;
+
+      // Push the local index to the live session
+      var pollId = CURRENT_POLL_DATA.pollId;
+      var index = localTeacherViewIndex;
+      var qDef = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[index]) ? CURRENT_POLL_DATA.questions[index] : null;
+
+      var presentBtn = document.getElementById('header-present-btn');
+      if (presentBtn) setButtonLoading(presentBtn, true);
+
+      var setSessionFn = firebase.functions().httpsCallable('setLiveSessionState');
+      setSessionFn({
+        pollId: pollId,
+        questionIndex: index,
+        status: 'OPEN',
+        questionText: qDef ? qDef.questionText : '',
+        options: qDef ? qDef.options : [],
+        correctAnswer: qDef ? qDef.correctAnswer : ''
+      }).then(function () {
+        if (presentBtn) setButtonLoading(presentBtn, false);
+        if (presentBtn) presentBtn.classList.add('hidden');
+        // Sync local state since we just pushed it
+        // Wait for RTDB update to confirm
+      }).catch(function (err) {
+        if (presentBtn) setButtonLoading(presentBtn, false);
+        handleError(err);
+      });
     }
 
-    /* Transition properties */
-    body,
-    .glass-card,
-    .btn,
-    .card {
-        transition-property: background-color, border-color, color, fill, stroke;
-        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-        transition-duration: 300ms;
-    }
-</style>
-</body>
-
-</html>
+  })();

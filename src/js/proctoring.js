@@ -1,0 +1,200 @@
+(function (global) {
+  'use strict';
+
+  function clampSeconds(value) {
+    var seconds = Number(value);
+    if (!isFinite(seconds)) {
+      seconds = 0;
+    }
+    return Math.max(0, Math.floor(seconds));
+  }
+
+  function formatClock(seconds) {
+    var total = clampSeconds(seconds);
+    var minutes = Math.floor(total / 60);
+    var remaining = total % 60;
+    var m = minutes < 10 ? '0' + minutes : String(minutes);
+    var s = remaining < 10 ? '0' + remaining : String(remaining);
+    return m + ':' + s;
+  }
+
+  function createCountdown(options) {
+    options = options || {};
+    var onTick = typeof options.onTick === 'function' ? options.onTick : function () {};
+    var onExpire = typeof options.onExpire === 'function' ? options.onExpire : function () {};
+    var intervalId = null;
+    var remaining = 0;
+    var running = false;
+
+    function clearTimer() {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+      running = false;
+    }
+
+    function notifyTick() {
+      onTick(remaining);
+    }
+
+    function tickOnce() {
+      if (!running) return;
+      remaining = Math.max(0, remaining - 1);
+      notifyTick();
+      if (remaining <= 0) {
+        clearTimer();
+        onExpire();
+      }
+    }
+
+    return {
+      start: function (seconds) {
+        remaining = clampSeconds(seconds);
+        clearTimer();
+        if (remaining === 0) {
+          notifyTick();
+          onExpire();
+          return;
+        }
+        running = true;
+        notifyTick();
+        intervalId = setInterval(tickOnce, 1000);
+      },
+      pause: function () {
+        if (!running) return;
+        clearTimer();
+      },
+      stop: function () {
+        clearTimer();
+      },
+      add: function (deltaSeconds) {
+        var next = clampSeconds(remaining + Number(deltaSeconds));
+        remaining = next;
+        notifyTick();
+        if (remaining === 0 && running) {
+          clearTimer();
+          onExpire();
+        }
+      },
+      set: function (seconds) {
+        remaining = clampSeconds(seconds);
+        notifyTick();
+        if (remaining === 0 && running) {
+          clearTimer();
+          onExpire();
+        }
+      },
+      getRemaining: function () {
+        return remaining;
+      },
+      isRunning: function () {
+        return running;
+      }
+    };
+  }
+
+  function createHeartbeat(options) {
+    options = options || {};
+    var onBeat = typeof options.onBeat === 'function' ? options.onBeat : function () {};
+    var intervalMs = Math.max(500, Number(options.intervalMs) || 3000);
+    var timerId = null;
+
+    function scheduleNext() {
+      timerId = setTimeout(function () {
+        timerId = null;
+        onBeat();
+        scheduleNext();
+      }, intervalMs);
+    }
+
+    return {
+      start: function (fireImmediately) {
+        if (timerId) return;
+        if (fireImmediately) {
+          onBeat();
+        }
+        scheduleNext();
+      },
+      stop: function () {
+        if (timerId) {
+          clearTimeout(timerId);
+          timerId = null;
+        }
+      },
+      isRunning: function () {
+        return timerId !== null;
+      },
+      pulse: function () {
+        onBeat();
+      },
+      updateInterval: function (nextInterval) {
+        intervalMs = Math.max(500, Number(nextInterval) || intervalMs);
+        if (timerId) {
+          clearTimeout(timerId);
+          timerId = null;
+          scheduleNext();
+        }
+      }
+    };
+  }
+
+  function createFullscreenManager(doc, options) {
+    var documentRef = doc || document;
+    options = options || {};
+    var onChange = typeof options.onChange === 'function' ? options.onChange : function () {};
+    var targetElement = options.element || documentRef.documentElement;
+
+    function isFullscreen() {
+      return !!(documentRef.fullscreenElement || documentRef.webkitFullscreenElement || documentRef.msFullscreenElement);
+    }
+
+    function request() {
+      if (!targetElement) {
+        return Promise.reject(new Error('No element available for fullscreen'));
+      }
+      var req = targetElement.requestFullscreen || targetElement.webkitRequestFullscreen || targetElement.msRequestFullscreen;
+      if (!req) {
+        return Promise.reject(new Error('Fullscreen API unavailable'));
+      }
+      return req.call(targetElement);
+    }
+
+    function exit() {
+      var exitFn = documentRef.exitFullscreen || documentRef.webkitExitFullscreen || documentRef.msExitFullscreen;
+      if (exitFn) {
+        return exitFn.call(documentRef);
+      }
+      return Promise.resolve();
+    }
+
+    function handleChange() {
+      onChange({
+        isFullscreen: isFullscreen(),
+        hidden: documentRef.hidden
+      });
+    }
+
+    documentRef.addEventListener('fullscreenchange', handleChange);
+    documentRef.addEventListener('webkitfullscreenchange', handleChange);
+    documentRef.addEventListener('visibilitychange', handleChange);
+
+    return {
+      request: request,
+      exit: exit,
+      isFullscreen: isFullscreen,
+      dispose: function () {
+        documentRef.removeEventListener('fullscreenchange', handleChange);
+        documentRef.removeEventListener('webkitfullscreenchange', handleChange);
+        documentRef.removeEventListener('visibilitychange', handleChange);
+      }
+    };
+  }
+
+  global.SecureAssessmentShared = {
+    formatClock: formatClock,
+    createCountdown: createCountdown,
+    createHeartbeat: createHeartbeat,
+    createFullscreenManager: createFullscreenManager
+  };
+})(window);

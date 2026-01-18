@@ -4,10 +4,10 @@
   "description": "Veritas Live Poll - Integrated Development Environment",
   "main": "builder.js",
   "scripts": {
-    "build": "node builder.js",
-    "watch": "node watch.js",
-    "emulate": "firebase emulators:start",
-    "dev": "npm run build && node -e \"const { spawn } = require('child_process'); spawn('node', ['watch.js'], { stdio: 'inherit' }); spawn('firebase', ['emulators:start'], { stdio: 'inherit' });\"",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy:channel": "firebase hosting:channel:deploy",
     "emulators": "firebase emulators:start --only functions,database,firestore,hosting",
     "logs": "firebase functions:log"
   },
@@ -15,6 +15,13 @@
   "author": "Stephen Borish",
   "license": "MIT",
   "devDependencies": {
-    "firebase-tools": "^13.0.0"
+    "autoprefixer": "^10.4.23",
+    "firebase-tools": "^13.0.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17",
+    "vite": "^7.3.1"
+  },
+  "dependencies": {
+    "firebase": "^12.8.0"
   }
 }

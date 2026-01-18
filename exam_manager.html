@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet" />
+
+  <!-- Material Symbols -->
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+
+  <!-- Quill.js -->
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+  <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/quill-image-resize-module@3.0.0/image-resize.min.js"></script>
+
+  <!-- KaTeX -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+  <!-- MathLive -->
+  <script src="https://unpkg.com/mathlive"></script>
+
+  <!-- DOMPurify -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.5/purify.min.js"></script>
+
+  <link href="/src/css/main.css" rel="stylesheet">
+  <title>Veritas - Exam Manager</title>
+</head>
+
+<body class="bg-gray-50 min-h-screen text-gray-900 font-sans">
+
+  <!-- Navbar -->
+  <nav class="bg-veritas-navy text-white shadow-lg sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center space-x-4">
+        <div class="flex-shrink-0 flex items-center">
+          <span class="material-symbols-outlined text-gold mr-2 text-3xl">school</span>
+          <span class="font-serif text-xl font-bold tracking-wide">Veritas</span>
+        </div>
+        <!-- Firebase SDKs -->
+        <script type="module" src="/src/js/firebase.js"></script>
+        <div class="hidden md:flex space-x-4 ml-8">
+          <a href="#" onclick="navTo('dashboard')"
+            class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-white/10 transition-colors">Polls</a>
+          <a href="#" onclick="navTo('questionBank')"
+            class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-white/10 transition-colors">Question
+            Bank</a>
+          <a href="#" onclick="navTo('examManager')"
+            class="px-3 py-2 rounded-md text-sm font-medium bg-white/20 text-white">Exams</a>
+        </div>
+      </div>
+      <div class="flex items-center space-x-3">
+        <span class="text-sm text-gray-300 hidden sm:block">
+          "teacher@example.com"
+        </span>
+      </div>
+    </div>
+    </div>
+  </nav>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900">Exam Manager</h1>
+        <p class="text-gray-500 mt-1">Schedule and monitor exams</p>
+      </div>
+      <button onclick="openExamModal()"
+        class="btn-primary flex items-center gap-2 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all">
+        <span class="material-symbols-outlined">add_circle</span>
+        <span>Schedule Exam</span>
+      </button>
+    </div>
+
+    <!-- Exams List -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exam Name</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Window</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="examsTableBody" class="bg-white divide-y divide-gray-200">
+          <!-- Populated via JS -->
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- Create Exam Modal -->
+  <div id="examModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog"
+    aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"
+        onclick="closeExamModal()"></div>
+      <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+      <div
+        class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+        <form id="examForm" onsubmit="handleSave(event)">
+          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Schedule New Exam</h3>
+
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700">Exam Name</label>
+              <input type="text" name="examName"
+                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-veritas-navy focus:border-veritas-navy sm:text-sm"
+                required>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Class</label>
+                <select name="classId"
+                  class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-veritas-navy focus:border-veritas-navy sm:text-sm"
+                  required>
+                  <!-- Populated -->
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Duration (Minutes)</label>
+                <input type="number" name="durationMinutes" value="60" min="0"
+                  class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-veritas-navy focus:border-veritas-navy sm:text-sm">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Start Time</label>
+                <input type="datetime-local" name="startTime"
+                  class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-veritas-navy focus:border-veritas-navy sm:text-sm">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700">End Time</label>
+                <input type="datetime-local" name="endTime"
+                  class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-veritas-navy focus:border-veritas-navy sm:text-sm">
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700">Source</label>
+              <div class="mt-1 flex gap-4">
+                <label class="inline-flex items-center">
+                  <input type="radio" name="sourceType" value="QuestionBank" checked onchange="toggleSource()">
+                  <span class="ml-2">Question Bank Selection</span>
+                </label>
+                <label class="inline-flex items-center">
+                  <input type="radio" name="sourceType" value="Poll" onchange="toggleSource()">
+                  <span class="ml-2">Existing Poll</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Question Bank Selector (Simplified: CSV for MVP) -->
+            <div id="qbSource" class="mb-4">
+              <label class="block text-sm font-medium text-gray-700">Question IDs (Comma Separated)</label>
+              <input type="text" name="questionIdsCsv"
+                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-veritas-navy focus:border-veritas-navy sm:text-sm"
+                placeholder="Q123, Q456...">
+              <p class="mt-1 text-xs text-gray-500">Go to Question Bank to copy IDs.</p>
+            </div>
+
+            <!-- Poll Selector -->
+            <div id="pollSource" class="mb-4 hidden">
+              <label class="block text-sm font-medium text-gray-700">Select Poll</label>
+              <select name="sourcePollId"
+                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-veritas-navy focus:border-veritas-navy sm:text-sm">
+                <!-- Populated -->
+              </select>
+            </div>
+
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700">Proctoring</label>
+              <select name="proctorMode"
+                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-veritas-navy focus:border-veritas-navy sm:text-sm">
+                <option value="soft">Soft Lock (Allow Resume)</option>
+                <option value="hard">Hard Lock (Teacher Unlock Only)</option>
+              </select>
+            </div>
+
+            <div class="flex items-center mb-4">
+              <input type="checkbox" name="isOpen" class="h-4 w-4 text-veritas-navy border-gray-300 rounded">
+              <label class="ml-2 block text-sm text-gray-900">Open Immediately</label>
+            </div>
+          </div>
+          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+            <button type="submit"
+              class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-veritas-navy text-base font-medium text-white hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-veritas-navy sm:ml-3 sm:w-auto sm:text-sm">Create
+              Exam</button>
+            <button type="button"
+              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+              onclick="closeExamModal()">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- FIREBASE INIT ---
+    var FIREBASE_CONFIG = JSON.stringify({});
+    if (!FIREBASE_CONFIG || !FIREBASE_CONFIG.apiKey) {
+      console.warn('Config missing, using fallback');
+      FIREBASE_CONFIG = {
+        apiKey: "AIzaSyAv0bCe5KIuQx_sou8toBy5DG2PYaB_pBM",
+        authDomain: "classroomproctor.firebaseapp.com",
+        projectId: "classroomproctor",
+      };
+    }
+    firebase.initializeApp(FIREBASE_CONFIG);
+    var functions = firebase.functions();
+
+    window.onload = function () {
+      loadExams();
+      loadClassesAndPolls();
+    };
+
+    function navTo(mode) {
+      // Simple client-side nav if possible, or reload with param
+      // Assuming we are in a context where query params work or different pages
+      var url = '?page=' + mode;
+      if (mode === 'dashboard') url = 'Teacher_View.html'; // Adjust based on deployment
+      // For now, minimal shim:
+      window.location.href = window.location.pathname + '?page=' + mode;
+    }
+
+    function loadExams() {
+      const tbody = document.getElementById('examsTableBody');
+      tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center">Loading...</td></tr>';
+
+      var listExams = functions.httpsCallable('manageExams');
+      listExams({ action: 'GET_ALL' }).then(function (result) {
+        var exams = result.data.exams || [];
+        tbody.innerHTML = '';
+        if (exams.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">No exams scheduled.</td></tr>';
+          return;
+        }
+        exams.forEach(e => {
+          const statusClass = e.isOpen ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${e.examName}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${e.classId}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+               ${formatDate(e.startTime)} - ${formatDate(e.endTime)}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                ${e.isOpen ? 'Open' : 'Closed'}
+              </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+               <button onclick="toggleStatus('${e.examId}', ${!e.isOpen})" class="text-indigo-600 hover:text-indigo-900 mr-4">
+                 ${e.isOpen ? 'Close' : 'Open'}
+               </button>
+               <button onclick="goToDashboard('${e.examId}')" class="text-veritas-navy hover:text-blue-900 font-bold">
+                 Monitor
+               </button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }).catch(function (err) {
+        console.error(err);
+        tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-red-500">Error loading exams.</td></tr>';
+      });
+    }
+
+    function formatDate(d) {
+      if (!d) return '-';
+      return new Date(d).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function loadClassesAndPolls() {
+      var manageExams = functions.httpsCallable('manageExams');
+
+      // Load Classes
+      manageExams({ action: 'GET_CLASSES' }).then(function (res) {
+        const classes = res.data.classes || [];
+        const sel = document.querySelector('select[name="classId"]');
+        sel.innerHTML = ''; // Clear
+        classes.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c;
+          opt.textContent = c;
+          sel.appendChild(opt);
+        });
+      });
+
+      // Load Polls
+      manageExams({ action: 'GET_POLLS' }).then(function (res) {
+        const polls = res.data.polls || [];
+        const sel = document.querySelector('select[name="sourcePollId"]');
+        sel.innerHTML = ''; // Clear
+        polls.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.pollId;
+          opt.textContent = p.pollName + ' (' + p.questionCount + ' Qs)';
+          sel.appendChild(opt);
+        });
+      });
+    }
+
+    function goToDashboard(examId) {
+      // Assuming deploying to clean URLs eventually, but for now query param
+      // navTo('examTeacher&examId=' + examId);
+      // We can just open the Teacher View directly with params
+      // window.open('ExamTeacherView.html?examId=' + examId, '_blank');
+      // But existing logic was navTo. Let's stick to navTo if it works or use location.
+      window.location.href = '?page=examTeacher&examId=' + examId;
+    }
+
+    function toggleStatus(id, isOpen) {
+      var manageExams = functions.httpsCallable('manageExams');
+      manageExams({ action: 'UPDATE_STATUS', examId: id, data: { isOpen: isOpen } })
+        .then(function () { loadExams(); })
+        .catch(function (err) { alert('Failed to update status: ' + err.message); });
+    }
+
+    // Modal
+    function openExamModal() {
+      document.getElementById('examModal').classList.remove('hidden');
+    }
+    function closeExamModal() {
+      document.getElementById('examModal').classList.add('hidden');
+    }
+    function toggleSource() {
+      const type = document.querySelector('input[name="sourceType"]:checked').value;
+      document.getElementById('qbSource').classList.toggle('hidden', type !== 'QuestionBank');
+      document.getElementById('pollSource').classList.toggle('hidden', type !== 'Poll');
+    }
+
+    function handleSave(e) {
+      e.preventDefault();
+      const form = e.target;
+      const data = {
+        examName: form.examName.value,
+        classId: form.classId.value,
+        durationMinutes: form.durationMinutes.value,
+        startTime: form.startTime.value,
+        endTime: form.endTime.value,
+        sourceType: form.querySelector('input[name="sourceType"]:checked').value,
+        questionIdsCsv: form.questionIdsCsv.value,
+        sourcePollId: form.sourcePollId.value,
+        proctorMode: form.proctorMode.value,
+        isOpen: form.isOpen.checked
+      };
+
+      const btn = form.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = 'Creating...';
+
+      var manageExams = functions.httpsCallable('manageExams');
+      manageExams({ action: 'CREATE', data: data }).then(function () {
+        closeExamModal();
+        loadExams();
+        btn.disabled = false;
+        btn.textContent = 'Create Exam';
+      }).catch(function (err) {
+        alert('Failed to create exam: ' + err.message);
+        btn.disabled = false;
+        btn.textContent = 'Create Exam';
+      });
+    }
+  </script>
+</body>
+
+</html>

@@ -6157,12 +6157,25 @@
           }
 
           // FIREBASE MIGRATION: Start Secure Assessment via Cloud Function
+          // FIX: Include questionText and options to broadcast to students
+          var firstQuestion = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[0]) ? CURRENT_POLL_DATA.questions[0] : null;
+          var secureQuestionText = firstQuestion ? (firstQuestion.questionText || firstQuestion.stemHtml || firstQuestion.text || '') : '';
+          var secureOptions = firstQuestion ? (firstQuestion.options || []) : [];
+          var secureCorrectAnswer = firstQuestion ? (firstQuestion.correctAnswer !== undefined ? firstQuestion.correctAnswer : null) : null;
+          var secureImageURL = firstQuestion ? (firstQuestion.questionImageURL || firstQuestion.imageURL || firstQuestion.mediaUrl || '') : '';
+          var secureTotalQuestions = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions.length) ? CURRENT_POLL_DATA.questions.length : 0;
+
           ensureFunctionsCallable('setLiveSessionState').then(function (ctx) {
             console.log('[onStartPoll] secure: obtained callable context');
             return ctx.callable({
               pollId: pollId,
               status: 'OPEN',
               questionIndex: 0,
+              questionText: secureQuestionText,
+              options: secureOptions,
+              correctAnswer: secureCorrectAnswer,
+              questionImageURL: secureImageURL,
+              totalQuestions: secureTotalQuestions,
               metadata: {
                 sessionPhase: 'ASSESSMENT_START',
                 resultsVisibility: 'HIDDEN'
@@ -6205,12 +6218,25 @@
         }
 
         // FIREBASE MIGRATION: Start Live Poll via Cloud Function
+        // FIX: Include questionText and options to broadcast to students
+        var firstQuestion = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[0]) ? CURRENT_POLL_DATA.questions[0] : null;
+        var questionText = firstQuestion ? (firstQuestion.questionText || firstQuestion.stemHtml || firstQuestion.text || '') : '';
+        var questionOptions = firstQuestion ? (firstQuestion.options || []) : [];
+        var correctAnswer = firstQuestion ? (firstQuestion.correctAnswer !== undefined ? firstQuestion.correctAnswer : null) : null;
+        var questionImageURL = firstQuestion ? (firstQuestion.questionImageURL || firstQuestion.imageURL || firstQuestion.mediaUrl || '') : '';
+        var totalQuestions = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions.length) ? CURRENT_POLL_DATA.questions.length : 0;
+
         ensureFunctionsCallable('setLiveSessionState').then(function (ctx) {
           console.log('[onStartPoll] live: obtained callable context');
           return ctx.callable({
             pollId: pollId,
             status: 'OPEN',
             questionIndex: 0,
+            questionText: questionText,
+            options: questionOptions,
+            correctAnswer: correctAnswer,
+            questionImageURL: questionImageURL,
+            totalQuestions: totalQuestions,
             metadata: {
               sessionPhase: 'LIVE',
               resultsVisibility: 'HIDDEN'
@@ -8370,6 +8396,15 @@
       label.textContent = 'Reset';
       button.appendChild(icon);
       button.appendChild(label);
+
+      // FIX: Add click handler for reset button
+      button.addEventListener('click', function (e) {
+        e.stopPropagation(); // Prevent card click from opening inspector
+        if (student.email) {
+          proctorAction('RESET', student.email);
+        }
+      });
+
       return button;
     }
 
@@ -8388,6 +8423,15 @@
       label.textContent = 'Approve';
       button.appendChild(icon);
       button.appendChild(label);
+
+      // FIX: Add click handler for unlock button
+      button.addEventListener('click', function (e) {
+        e.stopPropagation(); // Prevent card click from opening inspector
+        if (student.email) {
+          proctorAction('UNLOCK', student.email);
+        }
+      });
+
       return button;
     }
 
@@ -8402,6 +8446,15 @@
       label.textContent = 'Block';
       button.appendChild(icon);
       button.appendChild(label);
+
+      // FIX: Add click handler for block button
+      button.addEventListener('click', function (e) {
+        e.stopPropagation(); // Prevent card click from opening inspector
+        if (student.email) {
+          proctorAction('BLOCK', student.email);
+        }
+      });
+
       return button;
     }
 
@@ -8416,6 +8469,15 @@
       label.textContent = 'Unblock';
       button.appendChild(icon);
       button.appendChild(label);
+
+      // FIX: Add click handler for unblock button
+      button.addEventListener('click', function (e) {
+        e.stopPropagation(); // Prevent card click from opening inspector
+        if (student.email) {
+          proctorAction('UNBLOCK', student.email);
+        }
+      });
+
       return button;
     }
 
@@ -16619,45 +16681,101 @@
         return;
       }
 
-      // FIX: If no students loaded yet, try to fetch from the class roster
+      // FIX: If no students loaded yet, try multiple sources for roster data
       var studentsToUse = currentStudentStatusData;
-      if ((!studentsToUse || studentsToUse.length === 0) && CURRENT_POLL_DATA && CURRENT_POLL_DATA.className) {
-        console.log('[Optimization] No students loaded, fetching from roster for class:', CURRENT_POLL_DATA.className);
+      if (!studentsToUse || studentsToUse.length === 0) {
+        var className = CURRENT_POLL_DATA ? CURRENT_POLL_DATA.className : null;
+        console.log('[Optimization] No students loaded, searching for roster. className:', className);
 
-        // Fetch roster asynchronously and update UI
-        firebase.database().ref('rosters/rosters/' + CURRENT_POLL_DATA.className).once('value')
-          .then(function (snapshot) {
-            var roster = snapshot.val();
-            if (roster && Array.isArray(roster) && roster.length > 0) {
-              console.log('[Optimization] Loaded', roster.length, 'students from roster');
-              // Transform roster to student status format
-              currentStudentStatusData = roster.map(function (s) {
-                return {
-                  name: s.name || '',
-                  email: s.email || '',
-                  status: 'Waiting...',
-                  statusNote: 'waiting',
-                  answer: '---',
-                  isCorrect: null,
-                  confidence: null,
-                  timestamp: 9999999999999
-                };
-              });
+        // First try: Check in-memory rosterData (most reliable)
+        if (className && rosterData && rosterData[className] && rosterData[className].length > 0) {
+          console.log('[Optimization] Found roster in memory:', rosterData[className].length, 'students');
+          currentStudentStatusData = rosterData[className].map(function (s) {
+            return {
+              name: s.name || '',
+              email: s.email || '',
+              firstName: (s.name || '').split(' ')[0] || '',
+              lastName: (s.name || '').split(' ').slice(1).join(' ') || '',
+              status: 'Waiting...',
+              statusNote: 'waiting',
+              answer: '---',
+              isCorrect: null,
+              confidence: null,
+              timestamp: 9999999999999
+            };
+          });
+          // Continue with students loaded
+          finishLightweightUpdate(data, questionDef, qIndex, currentStudentStatusData);
+          return;
+        }
 
-              // Re-trigger update with students now populated
-              handleLightweightSessionUpdate(data);
-            } else {
-              console.warn('[Optimization] No roster found for class:', CURRENT_POLL_DATA.className);
+        // Second try: Check poll definition for roster
+        if (CURRENT_POLL_DATA && CURRENT_POLL_DATA.roster && CURRENT_POLL_DATA.roster.length > 0) {
+          console.log('[Optimization] Found roster in poll definition:', CURRENT_POLL_DATA.roster.length, 'students');
+          currentStudentStatusData = CURRENT_POLL_DATA.roster.map(function (s) {
+            return {
+              name: s.name || '',
+              email: s.email || '',
+              firstName: (s.name || '').split(' ')[0] || '',
+              lastName: (s.name || '').split(' ').slice(1).join(' ') || '',
+              status: 'Waiting...',
+              statusNote: 'waiting',
+              answer: '---',
+              isCorrect: null,
+              confidence: null,
+              timestamp: 9999999999999
+            };
+          });
+          finishLightweightUpdate(data, questionDef, qIndex, currentStudentStatusData);
+          return;
+        }
+
+        // Third try: Fetch from Firebase if className is available
+        if (className) {
+          console.log('[Optimization] Fetching roster from Firebase for class:', className);
+
+          // Fetch roster asynchronously and update UI
+          firebase.database().ref('rosters/rosters/' + className).once('value')
+            .then(function (snapshot) {
+              var roster = snapshot.val();
+              if (roster && Array.isArray(roster) && roster.length > 0) {
+                console.log('[Optimization] Loaded', roster.length, 'students from Firebase');
+                // Transform roster to student status format
+                currentStudentStatusData = roster.map(function (s) {
+                  return {
+                    name: s.name || '',
+                    email: s.email || '',
+                    firstName: (s.name || '').split(' ')[0] || '',
+                    lastName: (s.name || '').split(' ').slice(1).join(' ') || '',
+                    status: 'Waiting...',
+                    statusNote: 'waiting',
+                    answer: '---',
+                    isCorrect: null,
+                    confidence: null,
+                    timestamp: 9999999999999
+                  };
+                });
+
+                // Re-trigger update with students now populated
+                handleLightweightSessionUpdate(data);
+              } else {
+                console.warn('[Optimization] No roster found in Firebase for class:', className);
+                // Continue without students
+                finishLightweightUpdate(data, questionDef, qIndex, []);
+              }
+            })
+            .catch(function (error) {
+              console.error('[Optimization] Failed to fetch roster from Firebase:', error);
               // Continue without students
               finishLightweightUpdate(data, questionDef, qIndex, []);
-            }
-          })
-          .catch(function (error) {
-            console.error('[Optimization] Failed to fetch roster:', error);
-            // Continue without students
-            finishLightweightUpdate(data, questionDef, qIndex, []);
-          });
-        return; // Exit early while roster is loading
+            });
+          return; // Exit early while roster is loading
+        }
+
+        // No roster source available
+        console.warn('[Optimization] No roster source available');
+        finishLightweightUpdate(data, questionDef, qIndex, []);
+        return;
       }
 
       finishLightweightUpdate(data, questionDef, qIndex, studentsToUse);

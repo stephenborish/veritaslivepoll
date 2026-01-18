@@ -124,11 +124,9 @@
         <span class="material-symbols-outlined text-6xl text-veritas-navy">school</span>
       </div>
       <h1 class="text-2xl font-bold text-gray-900 mb-2">
-        "Exam Name"
+        <span id="exam-name-entry">Loading...</span>
       </h1>
-      <p class="text-gray-500 mb-6">Duration:
-        <?= examConfig.durationMinutes > 0 ? examConfig.durationMinutes + ' mins' : 'Untimed' ?>
-      </p>
+      <p class="text-gray-500 mb-6">Duration: <span id="exam-duration-entry">--</span></p>
 
       <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left text-sm text-blue-800">
         <h3 class="font-bold mb-2 flex items-center gap-2">
@@ -139,9 +137,8 @@
           <li>You must remain in fullscreen mode.</li>
           <li>Do not switch tabs or windows.</li>
           <li>Your session is monitored in real-time.</li>
-          <? if (examConfig.proctorMode === 'hard') { ?>
-          <li class="font-bold text-red-700">Violations will lock your exam until a teacher unlocks it.</li>
-          <? } ?>
+          <li id="rule-hard-lock" class="font-bold text-red-700 hidden">Violations will lock your exam until a teacher
+            unlocks it.</li>
         </ul>
       </div>
 
@@ -157,11 +154,11 @@
     <!-- Top Bar -->
     <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 flex-shrink-0">
       <div class="flex items-center gap-4">
-        <span class="font-bold text-lg text-gray-900">
-          "Exam Name"
+        <span id="exam-name-header" class="font-bold text-lg text-gray-900">
+          Loading...
         </span>
-        <span class="text-sm text-gray-500 border-l border-gray-300 pl-4">
-          <?= studentInfo.displayName ?>
+        <span id="student-name-display" class="text-sm text-gray-500 border-l border-gray-300 pl-4">
+          Loading...
         </span>
       </div>
       <div class="flex items-center gap-6">
@@ -249,7 +246,30 @@
     })();
 
     // --- INIT ---
+    // Auto-load config on page load, but wait for startExam() to enter fullscreen
+    window.addEventListener('DOMContentLoaded', () => {
+      import('/src/js/exam-loader.js').then(module => {
+        module.loadExamData('student').then(data => {
+          module.updateDomWithConfig(data, 'student');
+          // Ready
+        }).catch(err => {
+          // If fetch fails (maybe auth?), show error
+          document.getElementById('entryScreen').innerHTML = `
+                    <div class="p-8 text-center">
+                        <h1 class="text-red-600 text-2xl font-bold">Error Loading Exam</h1>
+                        <p class="mt-4 text-gray-700">${err.message}</p>
+                        <p class="text-sm text-gray-500 mt-2">Check the URL or contact your teacher.</p>
+                    </div>
+                  `;
+        });
+      });
+    });
+
     function startExam() {
+      if (!window.EXAM_CONFIG) {
+        alert('Exam data not loaded yet. Please wait or refresh.');
+        return;
+      }
       // 1. Request Fullscreen
       document.documentElement.requestFullscreen().then(() => {
         // 2. Init Firebase logic

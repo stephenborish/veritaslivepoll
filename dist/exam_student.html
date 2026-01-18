@@ -124,11 +124,9 @@
         <span class="material-symbols-outlined text-6xl text-veritas-navy">school</span>
       </div>
       <h1 class="text-2xl font-bold text-gray-900 mb-2">
-        "Exam Name"
+        <span id="exam-name-entry">Loading...</span>
       </h1>
-      <p class="text-gray-500 mb-6">Duration:
-        <?= examConfig.durationMinutes > 0 ? examConfig.durationMinutes + ' mins' : 'Untimed' ?>
-      </p>
+      <p class="text-gray-500 mb-6">Duration: <span id="exam-duration-entry">--</span></p>
 
       <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left text-sm text-blue-800">
         <h3 class="font-bold mb-2 flex items-center gap-2">
@@ -139,9 +137,8 @@
           <li>You must remain in fullscreen mode.</li>
           <li>Do not switch tabs or windows.</li>
           <li>Your session is monitored in real-time.</li>
-          <? if (examConfig.proctorMode === 'hard') { ?>
-          <li class="font-bold text-red-700">Violations will lock your exam until a teacher unlocks it.</li>
-          <? } ?>
+          <li id="rule-hard-lock" class="font-bold text-red-700 hidden">Violations will lock your exam until a teacher
+            unlocks it.</li>
         </ul>
       </div>
 
@@ -157,11 +154,11 @@
     <!-- Top Bar -->
     <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 flex-shrink-0">
       <div class="flex items-center gap-4">
-        <span class="font-bold text-lg text-gray-900">
-          "Exam Name"
+        <span id="exam-name-header" class="font-bold text-lg text-gray-900">
+          Loading...
         </span>
-        <span class="text-sm text-gray-500 border-l border-gray-300 pl-4">
-          <?= studentInfo.displayName ?>
+        <span id="student-name-display" class="text-sm text-gray-500 border-l border-gray-300 pl-4">
+          Loading...
         </span>
       </div>
       <div class="flex items-center gap-6">
@@ -249,7 +246,30 @@
     })();
 
     // --- INIT ---
+    // Auto-load config on page load, but wait for startExam() to enter fullscreen
+    window.addEventListener('DOMContentLoaded', () => {
+      import('data:text/javascript;base64,CmltcG9ydCBmaXJlYmFzZSBmcm9tICcuL2ZpcmViYXNlLmpzJzsKaW1wb3J0ICdmaXJlYmFzZS9jb21wYXQvZnVuY3Rpb25zJzsKCi8qKgogKiBMb2FkcyBleGFtIGNvbmZpZ3VyYXRpb24gYmFzZWQgb24gVVJMIHBhcmFtZXRlcnMgYW5kIHVzZXIgcm9sZS4KICogCiAqIEBwYXJhbSB7c3RyaW5nfSByb2xlIC0gJ3RlYWNoZXInIHwgJ3N0dWRlbnQnIHwgJ21hbmFnZXInCiAqIEByZXR1cm5zIHtQcm9taXNlPE9iamVjdD59IC0gVGhlIGxvYWRlZCBjb25maWd1cmF0aW9uIGRhdGEKICovCmV4cG9ydCBhc3luYyBmdW5jdGlvbiBsb2FkRXhhbURhdGEocm9sZSkgewogICAgY29uc3QgcGFyYW1zID0gbmV3IFVSTFNlYXJjaFBhcmFtcyh3aW5kb3cubG9jYXRpb24uc2VhcmNoKTsKICAgIGNvbnN0IGV4YW1JZCA9IHBhcmFtcy5nZXQoJ2V4YW1JZCcpOwoKICAgIGlmICghZXhhbUlkKSB7CiAgICAgICAgdGhyb3cgbmV3IEVycm9yKCJNaXNzaW5nICdleGFtSWQnIGluIFVSTCBwYXJhbWV0ZXJzLiIpOwogICAgfQoKICAgIGNvbnN0IGZ1bmN0aW9ucyA9IGZpcmViYXNlLmZ1bmN0aW9ucygpOwoKICAgIHRyeSB7CiAgICAgICAgbGV0IHJlc3BvbnNlOwogICAgICAgIGlmIChyb2xlID09PSAndGVhY2hlcicgfHwgcm9sZSA9PT0gJ21hbmFnZXInKSB7CiAgICAgICAgICAgIC8vIEZvciB0ZWFjaGVycywgd2UgZmV0Y2ggdGhlIGZ1bGwgZXhhbSBtZXRhZGF0YSArIHJvc3RlcgogICAgICAgICAgICAvLyBBc3N1bWluZyBhICdnZXRFeGFtJyBvciBzaW1pbGFyIGFjdGlvbiBleGlzdHMgaW4gbWFuYWdlRXhhbXMsIAogICAgICAgICAgICAvLyBvciB3ZSBpbnRlcnByZXQgR0VUX0FMTCByZXN1bHQgaWYgR0VUX09ORSBpc24ndCBhdmFpbGFibGUuIAogICAgICAgICAgICAvLyBGb3Igc2FmZXR5LCBsZXQncyBhc3N1bWUgd2UgbWlnaHQgbmVlZCB0byBmZXRjaCBhbGwgYW5kIGZpbmQgb25lLCAKICAgICAgICAgICAgLy8gT1IgcmVseSBvbiBhIHNwZWNpZmljIEdFVC9SRUFEIGFjdGlvbi4KICAgICAgICAgICAgLy8gR2l2ZW4gdGhlIGxlZ2FjeSBjb2RlIGluIGV4YW1fbWFuYWdlciB1c2VzIEdFVF9BTEwsIHdlIHRyeSBHRVRfSU5GTyBmaXJzdC4KICAgICAgICAgICAgcmVzcG9uc2UgPSBhd2FpdCBmdW5jdGlvbnMuaHR0cHNDYWxsYWJsZSgnbWFuYWdlRXhhbXMnKSh7CiAgICAgICAgICAgICAgICBhY3Rpb246ICdHRVRfSU5GTycsCiAgICAgICAgICAgICAgICBleGFtSWQ6IGV4YW1JZAogICAgICAgICAgICB9KTsKICAgICAgICB9IGVsc2UgewogICAgICAgICAgICAvLyBGb3Igc3R1ZGVudHMsIHdlIGZldGNoIHNlc3Npb24gY29uZmlnCiAgICAgICAgICAgIHJlc3BvbnNlID0gYXdhaXQgZnVuY3Rpb25zLmh0dHBzQ2FsbGFibGUoJ21hbmFnZUV4YW1TZXNzaW9uJykoewogICAgICAgICAgICAgICAgYWN0aW9uOiAnR0VUX01FVEFEQVRBJywKICAgICAgICAgICAgICAgIGV4YW1JZDogZXhhbUlkCiAgICAgICAgICAgIH0pOwogICAgICAgIH0KCiAgICAgICAgaWYgKCFyZXNwb25zZS5kYXRhKSB7CiAgICAgICAgICAgIHRocm93IG5ldyBFcnJvcigiTm8gZGF0YSByZXR1cm5lZCBmcm9tIHNlcnZlci4iKTsKICAgICAgICB9CgogICAgICAgIHJldHVybiByZXNwb25zZS5kYXRhOwogICAgfSBjYXRjaCAoZXJyb3IpIHsKICAgICAgICBjb25zb2xlLmVycm9yKCJFeGFtIERhdGEgTG9hZCBFcnJvcjoiLCBlcnJvcik7CiAgICAgICAgdGhyb3cgZXJyb3I7CiAgICB9Cn0KCi8qKgogKiBVcGRhdGVzIERPTSBlbGVtZW50cyB3aXRoICdsb2FkaW5nJyBzdGF0ZSB0byAnbG9hZGVkJyBsb2dpYwogKi8KZXhwb3J0IGZ1bmN0aW9uIHVwZGF0ZURvbVdpdGhDb25maWcoY29uZmlnLCByb2xlKSB7CiAgICBpZiAocm9sZSA9PT0gJ3RlYWNoZXInKSB7CiAgICAgICAgY29uc3QgeyBleGFtQ29uZmlnLCByb3N0ZXJNYXAgfSA9IGNvbmZpZzsKCiAgICAgICAgLy8gVXBkYXRlIEdsb2JhbHMgZm9yIGxlZ2FjeSBzdXBwb3J0CiAgICAgICAgd2luZG93LkVYQU1fQ09ORklHID0gZXhhbUNvbmZpZzsKICAgICAgICB3aW5kb3cuUk9TVEVSX01BUCA9IHJvc3Rlck1hcCB8fCB7fTsKCiAgICAgICAgLy8gVXBkYXRlIEhlYWRlcnMKICAgICAgICBjb25zdCBoZWFkZXJFbCA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdleGFtLW5hbWUtaGVhZGVyJyk7CiAgICAgICAgaWYgKGhlYWRlckVsKSBoZWFkZXJFbC50ZXh0Q29udGVudCA9IGV4YW1Db25maWcuZXhhbU5hbWU7CgogICAgfSBlbHNlIGlmIChyb2xlID09PSAnc3R1ZGVudCcpIHsKICAgICAgICBjb25zdCB7IGV4YW1Db25maWcsIHN0dWRlbnRJbmZvLCBzdHVkZW50S2V5IH0gPSBjb25maWc7CgogICAgICAgIC8vIFVwZGF0ZSBHbG9iYWxzCiAgICAgICAgd2luZG93LkVYQU1fQ09ORklHID0gZXhhbUNvbmZpZzsKICAgICAgICB3aW5kb3cuU1RVREVOVF9JTkZPID0gc3R1ZGVudEluZm8gfHwge307CiAgICAgICAgd2luZG93LlNUVURFTlRfS0VZID0gc3R1ZGVudEtleTsKCiAgICAgICAgLy8gVXBkYXRlIEhlYWRlcnMKICAgICAgICBjb25zdCBoZWFkZXJFbCA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdleGFtLW5hbWUtaGVhZGVyJyk7CiAgICAgICAgaWYgKGhlYWRlckVsKSBoZWFkZXJFbC50ZXh0Q29udGVudCA9IGV4YW1Db25maWcuZXhhbU5hbWU7CgogICAgICAgIGNvbnN0IGVudHJ5SGVhZGVyID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2V4YW0tbmFtZS1lbnRyeScpOwogICAgICAgIGlmIChlbnRyeUhlYWRlcikgZW50cnlIZWFkZXIudGV4dENvbnRlbnQgPSBleGFtQ29uZmlnLmV4YW1OYW1lOwoKICAgICAgICBjb25zdCBzdHVkZW50TmFtZUVsID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3N0dWRlbnQtbmFtZS1kaXNwbGF5Jyk7CiAgICAgICAgaWYgKHN0dWRlbnROYW1lRWwpIHN0dWRlbnROYW1lRWwudGV4dENvbnRlbnQgPSBzdHVkZW50SW5mby5kaXNwbGF5TmFtZSB8fCAnU3R1ZGVudCc7CgogICAgICAgIGNvbnN0IGR1cmF0aW9uRWwgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnZXhhbS1kdXJhdGlvbi1lbnRyeScpOwogICAgICAgIGlmIChkdXJhdGlvbkVsKSB7CiAgICAgICAgICAgIGR1cmF0aW9uRWwudGV4dENvbnRlbnQgPSBleGFtQ29uZmlnLmR1cmF0aW9uTWludXRlcyA+IDAKICAgICAgICAgICAgICAgID8gZXhhbUNvbmZpZy5kdXJhdGlvbk1pbnV0ZXMgKyAnIG1pbnMnCiAgICAgICAgICAgICAgICA6ICdVbnRpbWVkJzsKICAgICAgICB9CgogICAgICAgIC8vIFJ1bGVzCiAgICAgICAgaWYgKGV4YW1Db25maWcucHJvY3Rvck1vZGUgPT09ICdoYXJkJykgewogICAgICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgncnVsZS1oYXJkLWxvY2snKT8uY2xhc3NMaXN0LnJlbW92ZSgnaGlkZGVuJyk7CiAgICAgICAgfQogICAgfQp9Cg==').then(module => {
+        module.loadExamData('student').then(data => {
+          module.updateDomWithConfig(data, 'student');
+          // Ready
+        }).catch(err => {
+          // If fetch fails (maybe auth?), show error
+          document.getElementById('entryScreen').innerHTML = `
+                    <div class="p-8 text-center">
+                        <h1 class="text-red-600 text-2xl font-bold">Error Loading Exam</h1>
+                        <p class="mt-4 text-gray-700">${err.message}</p>
+                        <p class="text-sm text-gray-500 mt-2">Check the URL or contact your teacher.</p>
+                    </div>
+                  `;
+        });
+      });
+    });
+
     function startExam() {
+      if (!window.EXAM_CONFIG) {
+        alert('Exam data not loaded yet. Please wait or refresh.');
+        return;
+      }
       // 1. Request Fullscreen
       document.documentElement.requestFullscreen().then(() => {
         // 2. Init Firebase logic

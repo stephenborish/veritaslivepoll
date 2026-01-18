@@ -6220,11 +6220,32 @@
         // FIREBASE MIGRATION: Start Live Poll via Cloud Function
         // FIX: Include questionText and options to broadcast to students
         var firstQuestion = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[0]) ? CURRENT_POLL_DATA.questions[0] : null;
-        var questionText = firstQuestion ? (firstQuestion.questionText || firstQuestion.stemHtml || firstQuestion.text || '') : '';
+
+        console.log('[onStartPoll] Inspecting Question Data:', firstQuestion);
+
+        // FALLBACK LOGIC for Question Text
+        var questionText = '';
+        if (firstQuestion) {
+          questionText = firstQuestion.questionText || firstQuestion.stemHtml || firstQuestion.text || '';
+          if (!questionText) {
+            console.warn('[onStartPoll] Primary text fields empty. Checking alternates...');
+            // Attempt to extract from other potential properties
+            if (firstQuestion.stem) questionText = firstQuestion.stem;
+          }
+        }
+
+        if (!questionText) {
+          console.error('[onStartPoll] CRITICAL: Question text is empty!', firstQuestion);
+          // Optional: alert teacher?
+          // await veritasAlert('Warning: This question appears to be empty. Students may see a blank screen.', { title: 'Empty Question' });
+          questionText = "[Empty Question]";
+        }
+
         var questionOptions = firstQuestion ? (firstQuestion.options || []) : [];
         var correctAnswer = firstQuestion ? (firstQuestion.correctAnswer !== undefined ? firstQuestion.correctAnswer : null) : null;
         var questionImageURL = firstQuestion ? (firstQuestion.questionImageURL || firstQuestion.imageURL || firstQuestion.mediaUrl || '') : '';
         var totalQuestions = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions.length) ? CURRENT_POLL_DATA.questions.length : 0;
+
 
         ensureFunctionsCallable('setLiveSessionState').then(function (ctx) {
           console.log('[onStartPoll] live: obtained callable context');

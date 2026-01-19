@@ -148,7 +148,7 @@ firebase deploy --only functions
 
 ```bash
 # Build the static files
-node builder.js
+npm run build
 
 # Deploy to Firebase Hosting
 firebase deploy --only hosting
@@ -204,7 +204,7 @@ veritaslivepoll/
 │   ├── analytics_engine.js # Psychometric calculations
 │   ├── email_service.js    # Email utilities
 │   └── package.json
-├── public/                  # Built static files (deployed to Hosting)
+├── dist/                    # Built static files (deployed to Hosting)
 │   ├── index.html          # Teacher dashboard
 │   ├── student.html        # Student interface
 │   ├── exam_*.html         # Exam-related pages
@@ -221,8 +221,8 @@ veritaslivepoll/
 ├── firestore.indexes.json  # Firestore indexes
 ├── database.rules.json     # RTDB security rules
 ├── storage.rules           # Cloud Storage rules
-├── builder.js              # Build script
-└── watch.js                # File watcher for development
+├── vite.config.js          # Vite configuration
+└── package.json            # Project dependencies and scripts
 ```
 
 ---

@@ -2,7 +2,6 @@
   "name": "veritaslivepoll",
   "version": "3.0.0",
   "description": "Veritas Live Poll - Integrated Development Environment",
-  "main": "builder.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

@@ -31,6 +31,7 @@ exports.setLiveSessionState = onCall({ cors: true }, async (request) => {
 
   const {
     pollId, status, questionIndex, questionText, options, correctAnswer, metadata,
+    questionImageURL, totalQuestions, calculatorEnabled,
   } = request.data;
 
   if (!pollId) {
@@ -63,6 +64,17 @@ exports.setLiveSessionState = onCall({ cors: true }, async (request) => {
       ...metadata,
     },
   };
+
+  // Include optional fields if provided
+  if (questionImageURL !== undefined) {
+    payload.questionImageURL = questionImageURL;
+  }
+  if (totalQuestions !== undefined) {
+    payload.totalQuestions = totalQuestions;
+  }
+  if (calculatorEnabled !== undefined) {
+    payload.calculatorEnabled = calculatorEnabled;
+  }
 
   // 3. SECURE OPTION: Store the answer key internally (not exposed to students)
   if (correctAnswer !== undefined && questionIndex !== undefined) {

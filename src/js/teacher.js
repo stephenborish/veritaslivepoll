@@ -6323,10 +6323,18 @@ import './LoginManager.js';
       var pollId = (CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId) || '';
       var qIndex = (typeof CURRENT_POLL_DATA.questionIndex === 'number') ? CURRENT_POLL_DATA.questionIndex : 0;
 
+      // Fetch current question definition to include in broadcast
+      var qDef = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[qIndex]) ? CURRENT_POLL_DATA.questions[qIndex] : null;
+
       firebase.functions().httpsCallable('setLiveSessionState')({
         pollId: pollId,
         status: 'OPEN',
-        questionIndex: qIndex
+        questionIndex: qIndex,
+        questionText: qDef ? qDef.questionText : '',
+        options: qDef ? qDef.options : [],
+        correctAnswer: qDef ? qDef.correctAnswer : null,
+        questionImageURL: qDef ? (qDef.questionImageURL || qDef.imageURL || qDef.mediaUrl || '') : '',
+        totalQuestions: (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions.length) ? CURRENT_POLL_DATA.questions.length : 0
       }).then(function (result) {
         var data = result.data;
         if (data && (data.success === false || data.error)) {
@@ -6351,10 +6359,18 @@ import './LoginManager.js';
       var pollId = CURRENT_POLL_DATA.pollId;
       var qIndex = CURRENT_POLL_DATA.questionIndex || 0;
 
+      // Fetch current question definition to include in broadcast
+      var qDef = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[qIndex]) ? CURRENT_POLL_DATA.questions[qIndex] : null;
+
       setSessionFn({
         pollId: pollId,
         status: 'PAUSED', // Stop = Pause in this context
-        questionIndex: qIndex
+        questionIndex: qIndex,
+        questionText: qDef ? qDef.questionText : '',
+        options: qDef ? qDef.options : [],
+        correctAnswer: qDef ? qDef.correctAnswer : null,
+        questionImageURL: qDef ? (qDef.questionImageURL || qDef.imageURL || qDef.mediaUrl || '') : '',
+        totalQuestions: (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions.length) ? CURRENT_POLL_DATA.questions.length : 0
       })
         .then(function (result) {
           isPaused = true;
@@ -6401,10 +6417,18 @@ import './LoginManager.js';
 
       var targetVisibility = isRevealed ? 'HIDDEN' : 'REVEALED';
 
+      // Fetch current question definition to include in broadcast
+      var qDef = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[qIndex]) ? CURRENT_POLL_DATA.questions[qIndex] : null;
+
       setSessionFn({
         pollId: pollId,
         questionIndex: qIndex,
         status: 'LIVE',
+        questionText: qDef ? qDef.questionText : '',
+        options: qDef ? qDef.options : [],
+        correctAnswer: qDef ? qDef.correctAnswer : null,
+        questionImageURL: qDef ? (qDef.questionImageURL || qDef.imageURL || qDef.mediaUrl || '') : '',
+        totalQuestions: (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions.length) ? CURRENT_POLL_DATA.questions.length : 0,
         metadata: {
           serverProcessed: true,
           resultsVisibility: targetVisibility
@@ -6413,7 +6437,7 @@ import './LoginManager.js';
         .then(function (result) {
           console.log('Question Visibility Toggled via Cloud Function (REVEALED=' + !isRevealed + ')');
           if (endShowBtn) { endShowBtn.disabled = false; }
-          // We rely on the Realtime Database listener (initFirebaseMissionControl) 
+          // We rely on the Realtime Database listener (initFirebaseMissionControl)
           // to trigger updateLiveView(data) with full context.
           // This avoids "optimistic" UI breaks where we only have partial data.
         })
@@ -6454,7 +6478,10 @@ import './LoginManager.js';
         questionIndex: nextIndex,
         status: 'OPEN',
         questionText: qDef ? qDef.questionText : '',
-        options: qDef ? qDef.options : []
+        options: qDef ? qDef.options : [],
+        correctAnswer: qDef ? qDef.correctAnswer : null,
+        questionImageURL: qDef ? (qDef.questionImageURL || qDef.imageURL || qDef.mediaUrl || '') : '',
+        totalQuestions: (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions.length) ? CURRENT_POLL_DATA.questions.length : 0
       })
         .then(function (result) {
           // UI updates handled by listeners, but we unblock navigation
@@ -6547,6 +6574,9 @@ import './LoginManager.js';
         status: 'OPEN',
         questionText: qDef ? qDef.questionText : '',
         options: qDef ? qDef.options : [],
+        correctAnswer: qDef ? qDef.correctAnswer : null,
+        questionImageURL: qDef ? (qDef.questionImageURL || qDef.imageURL || qDef.mediaUrl || '') : '',
+        totalQuestions: (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions.length) ? CURRENT_POLL_DATA.questions.length : 0,
         metadata: {
           sequenceId: thisSequenceId, // Send to backend for validation
           timestamp: Date.now()
@@ -6630,13 +6660,19 @@ import './LoginManager.js';
           .catch(console.error);
       }
 
+      // Fetch current question definition to include in broadcast
+      var qDef = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[questionIndex]) ? CURRENT_POLL_DATA.questions[questionIndex] : null;
+
       setSessionFn({
         pollId: pollId,
         questionIndex: questionIndex,
         status: 'OPEN',
         // Resend question data to ensure consistency
-        questionText: (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[questionIndex]) ? CURRENT_POLL_DATA.questions[questionIndex].questionText : '',
-        options: (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[questionIndex]) ? CURRENT_POLL_DATA.questions[questionIndex].options : []
+        questionText: qDef ? qDef.questionText : '',
+        options: qDef ? qDef.options : [],
+        correctAnswer: qDef ? qDef.correctAnswer : null,
+        questionImageURL: qDef ? (qDef.questionImageURL || qDef.imageURL || qDef.mediaUrl || '') : '',
+        totalQuestions: (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions.length) ? CURRENT_POLL_DATA.questions.length : 0
       })
         .then(function (result) {
           isPaused = false;
@@ -6717,12 +6753,23 @@ import './LoginManager.js';
         return;
       }
       const setLiveSessionState = firebase.functions().httpsCallable('setLiveSessionState');
+
+      // Fetch current question definition to include in broadcast
+      var qDef = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[CURRENT_QUESTION_INDEX]) ? CURRENT_POLL_DATA.questions[CURRENT_QUESTION_INDEX] : null;
+
       setLiveSessionState({
         pollId: CURRENT_POLL_DATA.pollId,
         status: 'PAUSED',
         questionIndex: CURRENT_QUESTION_INDEX,
-        sessionPhase: 'RESULTS_REVEALED',
-        resultsVisibility: 'REVEALED'
+        questionText: qDef ? qDef.questionText : '',
+        options: qDef ? qDef.options : [],
+        correctAnswer: qDef ? qDef.correctAnswer : null,
+        questionImageURL: qDef ? (qDef.questionImageURL || qDef.imageURL || qDef.mediaUrl || '') : '',
+        totalQuestions: (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions.length) ? CURRENT_POLL_DATA.questions.length : 0,
+        metadata: {
+          sessionPhase: 'RESULTS_REVEALED',
+          resultsVisibility: 'REVEALED'
+        }
       })
         .then(function (result) {
           if (revealBtn) { revealBtn.disabled = false; }
@@ -6743,12 +6790,23 @@ import './LoginManager.js';
         return;
       }
       const setLiveSessionState = firebase.functions().httpsCallable('setLiveSessionState');
+
+      // Fetch current question definition to include in broadcast
+      var qDef = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[CURRENT_QUESTION_INDEX]) ? CURRENT_POLL_DATA.questions[CURRENT_QUESTION_INDEX] : null;
+
       setLiveSessionState({
         pollId: CURRENT_POLL_DATA.pollId,
         status: 'PAUSED',
         questionIndex: CURRENT_QUESTION_INDEX,
-        sessionPhase: 'RESULTS_HOLD',
-        resultsVisibility: 'HIDDEN'
+        questionText: qDef ? qDef.questionText : '',
+        options: qDef ? qDef.options : [],
+        correctAnswer: qDef ? qDef.correctAnswer : null,
+        questionImageURL: qDef ? (qDef.questionImageURL || qDef.imageURL || qDef.mediaUrl || '') : '',
+        totalQuestions: (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions.length) ? CURRENT_POLL_DATA.questions.length : 0,
+        metadata: {
+          sessionPhase: 'RESULTS_HOLD',
+          resultsVisibility: 'HIDDEN'
+        }
       })
         .then(function (result) {
           if (hideBtn) { hideBtn.disabled = false; }
@@ -13674,9 +13732,16 @@ import './LoginManager.js';
       var poll = pollsData.find(p => p.pollId === pollId) || {};
       var timeLimit = poll.timeLimitMinutes || 60;
 
+      // Fetch first question to broadcast to students
+      var firstQuestion = (poll.questions && poll.questions[0]) ? poll.questions[0] : null;
+
       setLiveSessionState({
         pollId: pollId,
         status: 'OPEN',
+        questionIndex: 0,
+        questionText: firstQuestion ? firstQuestion.questionText : '',
+        options: firstQuestion ? firstQuestion.options : [],
+        correctAnswer: firstQuestion ? firstQuestion.correctAnswer : null,
         metadata: {
           reason: 'SECURE_ASSESSMENT_RUNNING',
           sessionPhase: 'SECURE_ASSESSMENT_RUNNING', // Use explicit string or import config
@@ -17200,7 +17265,9 @@ import './LoginManager.js';
         status: 'OPEN',
         questionText: qDef ? qDef.questionText : '',
         options: qDef ? qDef.options : [],
-        correctAnswer: qDef ? qDef.correctAnswer : ''
+        correctAnswer: qDef ? qDef.correctAnswer : null,
+        questionImageURL: qDef ? (qDef.questionImageURL || qDef.imageURL || qDef.mediaUrl || '') : '',
+        totalQuestions: (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions.length) ? CURRENT_POLL_DATA.questions.length : 0
       }).then(function () {
         if (presentBtn) setButtonLoading(presentBtn, false);
         if (presentBtn) presentBtn.classList.add('hidden');

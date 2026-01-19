@@ -11726,7 +11726,8 @@ import './LoginManager.js';
         ],
         correctAnswerIndex: 0,
         timerSeconds: null,
-        metacognitionEnabled: false
+        metacognitionEnabled: false,
+        shuffleOptions: false
       };
       assignQuestionId(newQuestion);
       questions.push(newQuestion);
@@ -11916,6 +11917,15 @@ import './LoginManager.js';
       html += '</div>';
       html += '</div>';
       html += '</div>';
+      html += '<div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700/30 rounded-lg p-3">';
+      html += '<div class="flex items-start gap-2">';
+      html += '<input type="checkbox" id="question-shuffle-input" class="mt-0.5 h-4 w-4 rounded border-purple-300 dark:border-purple-600 text-purple-600 focus:ring-purple-500 cursor-pointer" ' + (question.shuffleOptions ? 'checked' : '') + ' />';
+      html += '<div class="flex-1">';
+      html += '<label for="question-shuffle-input" class="text-brand-dark-gray dark:text-brand-white text-xs font-semibold leading-normal cursor-pointer block">Randomize Answer Order</label>';
+      html += '<p class="text-xs text-brand-dark-gray/70 dark:text-brand-white/70 mt-1">Shuffle answer choices for each student (reduces cheating).</p>';
+      html += '</div>';
+      html += '</div>';
+      html += '</div>';
       html += '</div>';
 
       html += '</div>';
@@ -11996,6 +12006,14 @@ import './LoginManager.js';
       if (metacognitionInput) {
         metacognitionInput.onchange = function () {
           questions[selectedQuestionIndex].metacognitionEnabled = this.checked;
+          markPollDirty();
+        };
+      }
+
+      var shuffleInput = document.getElementById('question-shuffle-input');
+      if (shuffleInput) {
+        shuffleInput.onchange = function () {
+          questions[selectedQuestionIndex].shuffleOptions = this.checked;
           markPollDirty();
         };
       }
@@ -13213,7 +13231,8 @@ import './LoginManager.js';
             questionIndex: state.questionIndex,
             questionText: finalQuestionText,
             correctAnswer: correctAns, // Secure transmission to CF
-            options: finalOptions
+            options: finalOptions,
+            shuffleOptions: questionDef.shuffleOptions || false
           });
           console.log('[Firebase] Cloud Function Success:', result.data);
           return;
@@ -13239,6 +13258,7 @@ import './LoginManager.js';
         questionText: finalQuestionText,
         questionImageURL: state.questionImageURL || (questionDef ? questionDef.questionImageURL : ''),
         options: finalOptions,
+        shuffleOptions: questionDef.shuffleOptions || false,
         metadata: {
           sessionPhase: state.sessionPhase || 'LIVE',
           resultsVisibility: state.resultsVisibility || 'HIDDEN',

@@ -811,7 +811,9 @@
         // =============================================================================
 
         function updateDebugHud(status, connected, pollId) {
-            if (!FIREBASE_CONFIG || !Veritas.Config.DEBUG_FIREBASE) return;
+            // Debug HUD disabled - can be enabled by removing this return
+            return;
+            // if (!FIREBASE_CONFIG) return;
 
             var hud = document.getElementById('firebase-debug-hud');
             if (!hud) {
@@ -3043,17 +3045,19 @@
                 violationLogged: violationLogged
             });
 
-            // Check for tab blur/switch (visibility hidden) - IMMEDIATE LOCK
-            if (event.hidden && !isInteractionBlocked && !violationLogged) {
-                console.log('[Proctor] ZERO TOLERANCE: Tab blur detected - IMMEDIATE LOCK');
-                triggerSecurityViolation('tab-blur');
-                return;
-            }
-
-            // Check for entering fullscreen
+            // FIX: Check for entering fullscreen FIRST before checking for tab blur
+            // This prevents false positives when entering fullscreen triggers a hidden event
             if (event.isFullscreen) {
                 console.log('[Proctor] Fullscreen entered');
                 fullscreenEnteredOnce = true;
+                return;
+            }
+
+            // Check for tab blur/switch (visibility hidden) - IMMEDIATE LOCK
+            // Only check this if we're NOT entering fullscreen
+            if (event.hidden && !isInteractionBlocked && !violationLogged) {
+                console.log('[Proctor] ZERO TOLERANCE: Tab blur detected - IMMEDIATE LOCK');
+                triggerSecurityViolation('tab-blur');
                 return;
             }
 

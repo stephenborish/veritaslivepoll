@@ -6273,15 +6273,14 @@ import './LoginManager.js';
             // PHASE 3: Save active poll ID for state rehydration on refresh
             sessionStorage.setItem('veritas_active_poll_id', pollId);
 
-            handleLightweightSessionUpdate({
-              pollId: pollId,
-              status: 'OPEN',
-              questionIndex: 0,
-              metadata: {
-                sessionPhase: 'LIVE',
-                resultsVisibility: 'HIDDEN'
-              }
-            });
+            // FIX: Don't call handleLightweightSessionUpdate here since setLiveSessionState already
+            // wrote the data to Firebase. Instead, just transition the UI directly.
+            // The Firebase listener will pick up the changes and update the UI automatically.
+
+            // Transition to live view
+            initFirebaseMissionControl(pollId);
+            setMainSection('live');
+
             if (emulatorAvailable && emulatorEnabled && emulatorEnabled.checked) {
               triggerLivePollEmulation(pollId);
             }
@@ -13653,7 +13652,8 @@ import './LoginManager.js';
     var violationsRef = null;
 
     function updateDebugHud() {
-      if (!Veritas.Config.DEBUG_FIREBASE) return;
+      // Debug HUD disabled - can be enabled by removing this return
+      return;
 
       var hud = document.getElementById('firebase-debug-hud');
       if (!hud) {

@@ -2,12 +2,16 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Veritas Live - Student</title>
-    <link href="/src/css/main.css" rel="stylesheet">
-    <link href="/src/css/student.css" rel="stylesheet">
-</head><body class="font-display bg-white text-black min-h-screen">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Veritas Live - Student</title>
+  <!-- Material Symbols -->
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+  <link href="/src/css/main.css" rel="stylesheet">
+  <link href="/src/css/student.css" rel="stylesheet">
+</head>
+
+<body class="font-display bg-white text-black min-h-screen">
   <!-- Lock Overlay - Shows when student violates proctoring rules -->
   <div id="lock-overlay"
     class="fixed inset-0 z-[9998] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center"
@@ -16,8 +20,7 @@
   </div>
 
   <!-- PAUSED / Eyes on Teacher Overlay -->
-  <div id="paused-overlay"
-    class="fixed inset-0 z-50 hidden flex items-center justify-center"
+  <div id="paused-overlay" class="fixed inset-0 z-50 hidden flex items-center justify-center"
     style="backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); background: rgba(18, 56, 93, 0.92);">
     <div class="flex flex-col items-center justify-center text-center p-8 max-w-md animate-fade-in">
       <div class="w-24 h-24 rounded-full bg-white/10 flex items-center justify-center mb-6 border-2 border-white/20">
@@ -78,7 +81,8 @@
       class="hidden fixed top-20 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-lg flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-800 shadow-lg transition-all duration-200 backdrop-blur-sm">
       <span id="connectivity-icon" class="material-symbols-outlined text-2xl">sync</span>
       <div class="flex flex-col text-left flex-1">
-        <span id="connectivity-message" class="text-sm font-semibold">Connection lost. Reconnecting automatically...</span>
+        <span id="connectivity-message" class="text-sm font-semibold">Connection lost. Reconnecting
+          automatically...</span>
         <span id="connectivity-submessage" class="text-xs text-amber-700/80 opacity-0"></span>
       </div>
     </div>
@@ -358,10 +362,11 @@
           aria-label="Embedded TI-84 calculator" tabindex="-1" data-safe-harbor="calculator"></iframe>
       </div>
     </div>
-  </main><script type="module" src="/src/js/firebase.js"></script>
-<script type="module" src="/src/js/common.js"></script>
-<script type="module" src="/src/js/proctoring.js"></script>
-<script type="module" src="/src/js/student.js"></script>
+  </main>
+  <script type="module" src="/src/js/firebase.js"></script>
+  <script type="module" src="/src/js/common.js"></script>
+  <script type="module" src="/src/js/proctoring.js"></script>
+  <script type="module" src="/src/js/student.js"></script>
 </body>
 
 </html>

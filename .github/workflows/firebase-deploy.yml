@@ -34,6 +34,12 @@ jobs:
           cache: 'npm'
           cache-dependency-path: 'functions/package-lock.json'
 
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Project
+        run: npm run build
+
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 

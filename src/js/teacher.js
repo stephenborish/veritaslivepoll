@@ -1,3 +1,5 @@
+import './LoginManager.js';
+
   (function () {
     // Top-Level Error Handler
     try {
@@ -1503,15 +1505,34 @@
     }
 
     function initTeacherAuth() {
-      // alert('[DEBUG] initTeacherAuth running');
-      console.log('initTeacherAuth firing'); // Console log as well
-      if (!sessionStorage.getItem('veritas_session_token')) {
-        console.log('[Auth] No teacher session found. Initiating Login Flow.');
-        // Hide main content
-        var dashboard = document.getElementById('dashboard-root');
-        if (dashboard) dashboard.style.display = 'none';
-
+      // Robust polling for LoginManager
+      var attempts = 0;
+      var maxAttempts = 30; // 3 seconds total
+      
+      function waitForLoginManager() {
         if (window.LoginManager) {
+          executeAuthCheck();
+        } else {
+          attempts++;
+          if (attempts < maxAttempts) {
+            console.log('[Auth] Waiting for LoginManager...', attempts); // Debug log
+            setTimeout(waitForLoginManager, 100);
+          } else {
+            console.error('[Critical] LoginManager failed to load after 3s'); 
+            alert('Auth System Missing - Please reload the page');
+          }
+        }
+      }
+
+      function executeAuthCheck() {
+         // alert('[DEBUG] initTeacherAuth running');
+        console.log('initTeacherAuth firing'); // Console log as well
+        if (!sessionStorage.getItem('veritas_session_token')) {
+          console.log('[Auth] No teacher session found. Initiating Login Flow.');
+          // Hide main content
+          var dashboard = document.getElementById('dashboard-root');
+          if (dashboard) dashboard.style.display = 'none';
+
           LoginManager.init(function (user) {
             console.log('[Auth] Teacher Login Successful:', user.email);
             sessionStorage.setItem('veritas_teacher_email', user.email);
@@ -1519,15 +1540,16 @@
           });
           LoginManager.show();
         } else {
-          alert('Auth System Missing');
+          console.log('[Auth] Teacher Authenticated');
+          // Unhide dashboard for optimistic load
+          var dashboard = document.getElementById('dashboard-root');
+          if (dashboard) dashboard.style.display = 'flex';
+          startTeacherApp();
         }
-      } else {
-        console.log('[Auth] Teacher Authenticated');
-        // Unhide dashboard for optimistic load
-        var dashboard = document.getElementById('dashboard-root');
-        if (dashboard) dashboard.style.display = 'flex';
-        startTeacherApp();
       }
+
+      // Start the polling
+      waitForLoginManager();
     }
 
     // Helper to group combobox init

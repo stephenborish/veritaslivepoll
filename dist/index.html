@@ -5,16 +5,84 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Veritas Live Poll</title>
-  <script type="module" crossorigin src="/assets/main-B_3qe66Z.js"></script>
+  <script type="module" crossorigin src="/assets/main-DV0_ggJa.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/firebase-7PLbf-9k.js">
   <link rel="modulepreload" crossorigin href="/assets/proctoring-CP4HimPX.js">
   <link rel="stylesheet" crossorigin href="/assets/firebase-DBKeXWac.css">
-  <link rel="stylesheet" crossorigin href="/assets/main-D2bvi6s_.css">
+  <link rel="stylesheet" crossorigin href="/assets/main-Bbksik6c.css">
 </head>
 
 <body class="font-display bg-background-light dark:bg-background-dark text-brand-dark-gray dark:text-brand-white">
   <!-- 🎯 Ambient State Overlay - Provides visual feedback for system states -->
   <div id="ambient-state-overlay" class="ambient-state-overlay state-normal"></div>
+
+  <div id="login-overlay">
+    <!-- Background Shapes -->
+    <div class="bg-shape bg-shape-1"></div>
+    <div class="bg-shape bg-shape-2"></div>
+
+    <div class="login-card">
+      <div class="login-logo">
+        <!-- Custom SVG Logo: Learning, Growth, & Exams -->
+        <svg class="logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Open Book Base (Learning) -->
+          <path d="M15 75C15 75 35 68 50 75C65 68 85 75 85 75V35C85 35 65 28 50 35C35 28 15 35 15 35V75Z"
+            fill="#12385D" />
+
+          <!-- Inner Pages (Knowledge) -->
+          <path d="M15 38C32 30 48 36 50 36V72C48 72 32 66 15 72V38Z" fill="rgba(255,255,255,0.1)" />
+          <path d="M85 38C68 30 52 36 50 36V72C52 72 68 66 85 72V38Z" fill="rgba(255,255,255,0.15)" />
+
+          <!-- Rising Growth/Torch Element (Growth & Searching) -->
+          <path d="M50 55V25" stroke="#C5A05A" stroke-width="6" stroke-linecap="round" />
+
+          <!-- Leaves / Torch Flame (Growth) -->
+          <path d="M50 25C50 25 35 15 35 30" stroke="#C5A05A" stroke-width="6" stroke-linecap="round" />
+          <path d="M50 25C50 25 65 15 65 30" stroke="#C5A05A" stroke-width="6" stroke-linecap="round" />
+
+          <!-- Exam Checkmark Badge (Exams) -->
+          <circle cx="78" cy="22" r="10" fill="#12385D" stroke="#ffffff" stroke-width="2" />
+          <path d="M73 22L76 25L83 18" stroke="#C5A05A" stroke-width="3" stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
+      </div>
+
+      <h1 class="login-title">Veritas Live</h1>
+      <p class="login-subtitle">Secure Teacher Dashboard Access</p>
+
+      <div class="login-form-container">
+        <div class="input-group">
+          <label class="input-label">Username or Email</label>
+          <input type="text" id="login-username" class="input-field" placeholder="Enter your credentials">
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Password</label>
+          <input type="password" id="login-password" class="input-field" placeholder="Enter your password">
+        </div>
+
+        <button id="simple-login-btn" class="login-btn btn-primary"
+          style="opacity: 0; animation: fadeInUp 0.6s ease-out 0.5s forwards;">
+          Sign In
+        </button>
+      </div>
+
+      <div class="divider"><span>OR</span></div>
+
+      <button id="google-login-btn" class="login-btn btn-google"
+        style="opacity: 0; animation: fadeInUp 0.6s ease-out 0.6s forwards;">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20"
+          alt="Google">
+        Sign in with Google
+      </button>
+
+      <div id="login-error" class="login-error"></div>
+
+      <div class="login-footer">
+        &copy; 2026 Veritas Education. Professional Grade.
+      </div>
+    </div>
+  </div>
 
   <!-- 🔔 Toast Notification Container - For elegant, non-intrusive alerts -->
   <div id="toast-container" class="toast-container"></div>

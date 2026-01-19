@@ -406,25 +406,11 @@
                 var sessionPath = 'sessions/' + pollId + '/live_session';
                 liveSessionRef = firebaseDb.ref(sessionPath);
 
-                // PHASE 4 FIX: IMMEDIATE FETCH - Execute .once('value') immediately on init
-                // This prevents the "white flash" by getting state before the first listener event
-                console.log('[Firebase] Executing immediate fetch on live_session...');
-                liveSessionRef.once('value').then(function (snapshot) {
-                    var sessionData = snapshot.val();
-                    if (sessionData) {
-                        console.log('[Firebase] Immediate fetch received:', sessionData.status);
-                        // Only process if we haven't already received an update from the listener
-                        if (!window._immediateFetchProcessed) {
-                            window._immediateFetchProcessed = true;
-                            var viewData = transformLiveSessionToViewData(sessionData, pollId);
-                            if (viewData) {
-                                updateStudentView(viewData);
-                            }
-                        }
-                    }
-                }).catch(function (err) {
-                    console.warn('[Firebase] Immediate fetch failed:', err);
-                });
+                // CRITICAL FIX: Attach listener FIRST to prevent race condition
+                // If we attach the listener after .once(), updates can be missed during the window
+                // between the .once() completing and the listener being attached.
+
+                var initialFetchCompleted = false;
 
                 var liveSessionCallback = function (snapshot) {
                     var data = snapshot.val();
@@ -491,7 +477,23 @@
                         }
                     }
                 };
+                // CRITICAL FIX: Attach listener FIRST, then fetch initial state
+                // This prevents the race condition where updates arrive between .once() and listener attachment
                 ListenerManager.attach('liveSession_' + pollId, liveSessionRef, 'value', liveSessionCallback);
+
+                // Now fetch initial state - the listener will catch any updates that happen during this fetch
+                console.log('[Firebase] Fetching initial live_session state...');
+                liveSessionRef.once('value').then(function (snapshot) {
+                    var sessionData = snapshot.val();
+                    if (sessionData && !initialFetchCompleted) {
+                        console.log('[Firebase] Initial state fetched:', sessionData.status);
+                        initialFetchCompleted = true;
+                        // Process through the same callback for consistency
+                        liveSessionCallback(snapshot);
+                    }
+                }).catch(function (err) {
+                    console.warn('[Firebase] Initial fetch failed:', err);
+                });
 
                 console.log('[Firebase] Sidecar initialized for', path, '(Listeners: ' + ListenerManager.getActiveCount() + ')');
             }

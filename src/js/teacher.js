@@ -2186,10 +2186,13 @@ import './LoginManager.js';
     }
 
     // --- DOM Utilities ---
-    function bindClick(id, handler) {
+    function bindClick(id, handler, isCritical) {
       var el = document.getElementById(id);
       if (!el) {
-        // Reduced noise for conditional elements
+        // CRITICAL FIX: Log missing critical buttons
+        if (isCritical) {
+          console.error('[Button Binding] CRITICAL button not found:', id);
+        }
         return null;
       }
       el.addEventListener('click', handler);
@@ -2682,9 +2685,9 @@ import './LoginManager.js';
           }
         });
 
-        bindClick('header-back-btn', onPreviousQuestion);
-        bindClick('header-prev-btn', onPreviousQuestion);
-        bindClick('header-next-btn', onNextQuestion);
+        bindClick('header-back-btn', onPreviousQuestion, true);
+        bindClick('header-prev-btn', onPreviousQuestion, true);
+        bindClick('header-next-btn', onNextQuestion, true);
 
         // Global Click Listener for Menus and Panels
         document.addEventListener('click', function (e) {
@@ -6273,15 +6276,14 @@ import './LoginManager.js';
             // PHASE 3: Save active poll ID for state rehydration on refresh
             sessionStorage.setItem('veritas_active_poll_id', pollId);
 
-            handleLightweightSessionUpdate({
-              pollId: pollId,
-              status: 'OPEN',
-              questionIndex: 0,
-              metadata: {
-                sessionPhase: 'LIVE',
-                resultsVisibility: 'HIDDEN'
-              }
-            });
+            // FIX: Don't call handleLightweightSessionUpdate here since setLiveSessionState already
+            // wrote the data to Firebase. Instead, just transition the UI directly.
+            // The Firebase listener will pick up the changes and update the UI automatically.
+
+            // Transition to live view
+            initFirebaseMissionControl(pollId);
+            setMainSection('live');
+
             if (emulatorAvailable && emulatorEnabled && emulatorEnabled.checked) {
               triggerLivePollEmulation(pollId);
             }
@@ -6449,6 +6451,24 @@ import './LoginManager.js';
     }
 
     function onPreviousQuestion() {
+      // CRITICAL FIX: Add navigation guard to prevent race conditions
+      if (navigationRequestInFlight) {
+        console.warn('[Navigation] Previous question already in progress; ignoring extra click');
+        return;
+      }
+      navigationRequestInFlight = true;
+
+      // Generate unique sequence ID for this navigation request
+      globalSequenceId++;
+      var thisSequenceId = globalSequenceId;
+      console.log('[Navigation] Previous question starting with sequenceId:', thisSequenceId);
+
+      // FAILSAFE: Reset flag after 5 seconds in case of network zombie
+      setTimeout(function () {
+        navigationRequestInFlight = false;
+        isNavigating = false;
+      }, 5000);
+
       if (pollInterval) clearInterval(pollInterval);
       pauseTimerCountdown();
       stopVisualTimer();
@@ -6461,6 +6481,7 @@ import './LoginManager.js';
       isNavigating = true; // Set flag to prevent polling during navigation
       if (PREVIEW_MODE) {
         isNavigating = false;
+        navigationRequestInFlight = false;
         previewOnlyNotice('navigate to a previous question');
         return;
       }
@@ -6481,16 +6502,29 @@ import './LoginManager.js';
         options: qDef ? qDef.options : [],
         correctAnswer: qDef ? qDef.correctAnswer : null,
         questionImageURL: qDef ? (qDef.questionImageURL || qDef.imageURL || qDef.mediaUrl || '') : '',
-        totalQuestions: (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions.length) ? CURRENT_POLL_DATA.questions.length : 0
+        totalQuestions: (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions.length) ? CURRENT_POLL_DATA.questions.length : 0,
+        metadata: {
+          sequenceId: thisSequenceId, // Track this navigation request
+          timestamp: Date.now()
+        }
       })
         .then(function (result) {
-          // UI updates handled by listeners, but we unblock navigation
-          setTimeout(function () {
-            isNavigating = false;
-          }, 500);
+          console.log('[Navigation] Previous question confirmed with sequenceId:', thisSequenceId);
+
+          // Validate server accepted our sequence
+          if (thisSequenceId === globalSequenceId) {
+            setTimeout(function () {
+              isNavigating = false;
+              navigationRequestInFlight = false;
+            }, 500);
+          } else {
+            console.warn('[Navigation] Sequence mismatch: local=' + globalSequenceId + ', this=' + thisSequenceId + ' (ignoring stale response)');
+          }
         })
         .catch(function (error) {
+          console.error('[Navigation] Previous question error with sequenceId:', thisSequenceId, error);
           isNavigating = false;
+          navigationRequestInFlight = false;
           handleError(error);
         });
     }
@@ -11692,7 +11726,8 @@ import './LoginManager.js';
         ],
         correctAnswerIndex: 0,
         timerSeconds: null,
-        metacognitionEnabled: false
+        metacognitionEnabled: false,
+        shuffleOptions: false
       };
       assignQuestionId(newQuestion);
       questions.push(newQuestion);
@@ -11882,6 +11917,15 @@ import './LoginManager.js';
       html += '</div>';
       html += '</div>';
       html += '</div>';
+      html += '<div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700/30 rounded-lg p-3">';
+      html += '<div class="flex items-start gap-2">';
+      html += '<input type="checkbox" id="question-shuffle-input" class="mt-0.5 h-4 w-4 rounded border-purple-300 dark:border-purple-600 text-purple-600 focus:ring-purple-500 cursor-pointer" ' + (question.shuffleOptions ? 'checked' : '') + ' />';
+      html += '<div class="flex-1">';
+      html += '<label for="question-shuffle-input" class="text-brand-dark-gray dark:text-brand-white text-xs font-semibold leading-normal cursor-pointer block">Randomize Answer Order</label>';
+      html += '<p class="text-xs text-brand-dark-gray/70 dark:text-brand-white/70 mt-1">Shuffle answer choices for each student (reduces cheating).</p>';
+      html += '</div>';
+      html += '</div>';
+      html += '</div>';
       html += '</div>';
 
       html += '</div>';
@@ -11962,6 +12006,14 @@ import './LoginManager.js';
       if (metacognitionInput) {
         metacognitionInput.onchange = function () {
           questions[selectedQuestionIndex].metacognitionEnabled = this.checked;
+          markPollDirty();
+        };
+      }
+
+      var shuffleInput = document.getElementById('question-shuffle-input');
+      if (shuffleInput) {
+        shuffleInput.onchange = function () {
+          questions[selectedQuestionIndex].shuffleOptions = this.checked;
           markPollDirty();
         };
       }
@@ -13121,11 +13173,48 @@ import './LoginManager.js';
     async function broadcastSessionState(pollId, state) {
       if (!pollId || !state) return;
 
-      var questionDef = (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions && typeof state.questionIndex === 'number') ?
+      // CRITICAL FIX: Validate CURRENT_POLL_DATA before proceeding
+      if (!CURRENT_POLL_DATA || !CURRENT_POLL_DATA.questions || !CURRENT_POLL_DATA.questions.length) {
+        console.error('[Broadcast] CRITICAL: CURRENT_POLL_DATA is not populated!', {
+          hasCURRENT_POLL_DATA: !!CURRENT_POLL_DATA,
+          hasQuestions: !!(CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions),
+          questionCount: CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions ? CURRENT_POLL_DATA.questions.length : 0
+        });
+        showToast('error', 'System Error', 'Cannot broadcast question: Poll data not loaded. Please refresh and try again.');
+        return;
+      }
+
+      var questionDef = (typeof state.questionIndex === 'number' && state.questionIndex >= 0 && state.questionIndex < CURRENT_POLL_DATA.questions.length) ?
         CURRENT_POLL_DATA.questions[state.questionIndex] : null;
 
-      var finalQuestionText = state.questionText || (questionDef ? questionDef.questionText : '') || 'Question ' + ((state.questionIndex || 0) + 1);
-      var finalOptions = state.options || (questionDef ? questionDef.options : []);
+      if (!questionDef) {
+        console.error('[Broadcast] CRITICAL: Question definition not found for index:', state.questionIndex, {
+          totalQuestions: CURRENT_POLL_DATA.questions.length
+        });
+        showToast('error', 'System Error', 'Cannot broadcast question: Question not found at index ' + state.questionIndex);
+        return;
+      }
+
+      var finalQuestionText = state.questionText || questionDef.questionText || '';
+      var finalOptions = state.options || questionDef.options || [];
+
+      // CRITICAL FIX: Validate that we have actual content to broadcast
+      if (!finalQuestionText || finalOptions.length === 0) {
+        console.error('[Broadcast] CRITICAL: Incomplete question data!', {
+          questionIndex: state.questionIndex,
+          hasText: !!finalQuestionText,
+          optionsCount: finalOptions.length,
+          questionDef: questionDef
+        });
+        showToast('error', 'Invalid Question', 'This question is missing text or answer options. Please check the question and try again.');
+        return;
+      }
+
+      console.log('[Broadcast] Validated question data:', {
+        questionIndex: state.questionIndex,
+        textLength: finalQuestionText.length,
+        optionsCount: finalOptions.length
+      });
 
       // PHASE 2 MIGRATION: Try Cloud Function First
       // This is the "Gold Standard" - single authority, fast, logged.
@@ -13142,7 +13231,8 @@ import './LoginManager.js';
             questionIndex: state.questionIndex,
             questionText: finalQuestionText,
             correctAnswer: correctAns, // Secure transmission to CF
-            options: finalOptions
+            options: finalOptions,
+            shuffleOptions: questionDef.shuffleOptions || false
           });
           console.log('[Firebase] Cloud Function Success:', result.data);
           return;
@@ -13168,6 +13258,7 @@ import './LoginManager.js';
         questionText: finalQuestionText,
         questionImageURL: state.questionImageURL || (questionDef ? questionDef.questionImageURL : ''),
         options: finalOptions,
+        shuffleOptions: questionDef.shuffleOptions || false,
         metadata: {
           sessionPhase: state.sessionPhase || 'LIVE',
           resultsVisibility: state.resultsVisibility || 'HIDDEN',
@@ -13653,7 +13744,8 @@ import './LoginManager.js';
     var violationsRef = null;
 
     function updateDebugHud() {
-      if (!Veritas.Config.DEBUG_FIREBASE) return;
+      // Debug HUD disabled - can be enabled by removing this return
+      return;
 
       var hud = document.getElementById('firebase-debug-hud');
       if (!hud) {

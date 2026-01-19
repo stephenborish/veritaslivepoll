@@ -6276,13 +6276,32 @@ import './LoginManager.js';
             // PHASE 3: Save active poll ID for state rehydration on refresh
             sessionStorage.setItem('veritas_active_poll_id', pollId);
 
-            // FIX: Don't call handleLightweightSessionUpdate here since setLiveSessionState already
-            // wrote the data to Firebase. Instead, just transition the UI directly.
-            // The Firebase listener will pick up the changes and update the UI automatically.
+            // FIX: After setLiveSessionState writes to Firebase, we need to update the teacher UI
+            // Don't broadcast again (that causes race conditions), just update local UI
+            var firstQuestion = CURRENT_POLL_DATA.questions[0];
 
-            // Transition to live view
+            // Transition to live view FIRST
             initFirebaseMissionControl(pollId);
             setMainSection('live');
+
+            // Then populate the UI with the first question
+            if (typeof updateLiveView === 'function') {
+              updateLiveView({
+                pollId: pollId,
+                status: 'OPEN',
+                questionIndex: 0,
+                questionText: firstQuestion.questionText,
+                questionImageURL: firstQuestion.questionImageURL || '',
+                options: firstQuestion.options,
+                correctAnswer: firstQuestion.correctAnswer,
+                totalQuestions: CURRENT_POLL_DATA.questions.length,
+                pollName: CURRENT_POLL_DATA.pollName,
+                metadata: {
+                  sessionPhase: 'LIVE',
+                  resultsVisibility: 'HIDDEN'
+                }
+              });
+            }
 
             if (emulatorAvailable && emulatorEnabled && emulatorEnabled.checked) {
               triggerLivePollEmulation(pollId);

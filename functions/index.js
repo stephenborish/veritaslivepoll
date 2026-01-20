@@ -43,6 +43,15 @@ exports.setLiveSessionState = onCall({ cors: true }, async (request) => {
 
   logger.info(`Session Update: ${pollId} -> ${status} (Q${questionIndex})`);
 
+  // DIAGNOSTIC: Log received question data
+  logger.info(`Question data received:`, {
+    questionText: questionText ? questionText.substring(0, 100) : 'EMPTY',
+    optionsLength: options ? options.length : 0,
+    options: options,
+    questionImageURL: questionImageURL,
+    totalQuestions: totalQuestions
+  });
+
   // 2. The "Fast Path" is now the "Only Path"
   // Write directly to Realtime DB
   const sessionRef = admin.database().ref(`sessions/${pollId}/live_session`);

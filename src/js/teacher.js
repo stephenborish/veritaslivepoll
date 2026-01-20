@@ -6168,6 +6168,15 @@ import './LoginManager.js';
         // This prevents the UI from falling back to full refresh or failing
         CURRENT_POLL_DATA = selectedPoll;
 
+        // DIAGNOSTIC: Log poll data to understand question structure
+        console.log('[onStartPoll] CURRENT_POLL_DATA:', {
+          pollId: CURRENT_POLL_DATA.pollId,
+          pollName: CURRENT_POLL_DATA.pollName,
+          hasQuestions: !!CURRENT_POLL_DATA.questions,
+          questionsLength: CURRENT_POLL_DATA.questions ? CURRENT_POLL_DATA.questions.length : 0,
+          firstQuestion: CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[0] ? CURRENT_POLL_DATA.questions[0] : 'NO FIRST QUESTION'
+        });
+
         // Check session type and call appropriate function
         if (isSecureSessionTypeClient(selectedPoll.sessionType)) {
           console.log('[onStartPoll] Starting Secure Session...');
@@ -6244,11 +6253,35 @@ import './LoginManager.js';
         // FIREBASE MIGRATION: Start Live Poll via Cloud Function
         // FIX: Include questionText and options to broadcast to students
         var firstQuestion = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[0]) ? CURRENT_POLL_DATA.questions[0] : null;
+
+        // CRITICAL FIX: Validate that questions exist before starting poll
+        if (!firstQuestion || !CURRENT_POLL_DATA.questions || CURRENT_POLL_DATA.questions.length === 0) {
+          console.error('[onStartPoll] ERROR: Poll has no questions!', {
+            hasQuestions: !!CURRENT_POLL_DATA.questions,
+            questionsLength: CURRENT_POLL_DATA.questions ? CURRENT_POLL_DATA.questions.length : 0,
+            pollData: CURRENT_POLL_DATA
+          });
+          setButtonLoading(startPollBtn, false);
+          await veritasAlert('This poll has no questions. Please add questions before starting the session.', { title: 'Cannot Start Poll' });
+          return;
+        }
+
         var questionText = firstQuestion ? (firstQuestion.questionText || firstQuestion.stemHtml || firstQuestion.text || '') : '';
         var questionOptions = firstQuestion ? (firstQuestion.options || []) : [];
         var correctAnswer = firstQuestion ? (firstQuestion.correctAnswer !== undefined ? firstQuestion.correctAnswer : null) : null;
         var questionImageURL = firstQuestion ? (firstQuestion.questionImageURL || firstQuestion.imageURL || firstQuestion.mediaUrl || '') : '';
         var totalQuestions = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions.length) ? CURRENT_POLL_DATA.questions.length : 0;
+
+        // DIAGNOSTIC: Log what we're about to send to Firebase
+        console.log('[onStartPoll] Question data being sent to Firebase:', {
+          questionText: questionText,
+          questionOptionsLength: questionOptions ? questionOptions.length : 0,
+          questionOptions: questionOptions,
+          correctAnswer: correctAnswer,
+          questionImageURL: questionImageURL,
+          totalQuestions: totalQuestions,
+          firstQuestion: firstQuestion
+        });
 
         ensureFunctionsCallable('setLiveSessionState').then(function (ctx) {
           console.log('[onStartPoll] live: obtained callable context');
@@ -13523,6 +13556,43 @@ import './LoginManager.js';
             // Update live results UI instantly
             handleRealtimeAnswer(answer);
           }
+        });
+
+        // FIX: Fetch initial student data to populate the dashboard
+        // This ensures that if students joined before the dashboard loaded, they are visible
+        firebaseRef.once('value').then(function (snapshot) {
+          var studentsData = snapshot.val() || {};
+          var studentKeys = Object.keys(studentsData);
+
+          if (studentKeys.length > 0) {
+            console.log('[Firebase] Fetched initial student data:', studentKeys.length, 'students');
+
+            // Populate initial student status data for live polls
+            currentStudentStatusData = studentKeys.map(function (studentKey) {
+              var statusData = studentsData[studentKey];
+              var email = studentKey.replace(/,/g, '.'); // Restore email from key
+
+              // Extract status from the data structure
+              var status = (typeof statusData === 'object' && statusData) ?
+                (statusData.status || 'ACTIVE') : statusData;
+
+              return {
+                email: email,
+                name: email, // Will be updated when roster loads
+                status: status === 'ACTIVE' ? 'Waiting' : 'Locked',
+                proctorStatus: status,
+                progress: 0,
+                score: 0,
+                totalQuestions: CURRENT_POLL_DATA.totalQuestions || 0
+              };
+            });
+
+            // Render the student status cards
+            renderStudentStatus();
+            console.log('[Firebase] Initial student status rendered:', currentStudentStatusData.length, 'students');
+          }
+        }).catch(function (error) {
+          console.error('[Firebase] Error fetching initial student data:', error);
         });
 
         console.log('[Firebase] Mission Control initialized for', path, 'Connected:', realtimeConnected);

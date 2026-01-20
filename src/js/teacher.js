@@ -6168,6 +6168,15 @@ import './LoginManager.js';
         // This prevents the UI from falling back to full refresh or failing
         CURRENT_POLL_DATA = selectedPoll;
 
+        // DIAGNOSTIC: Log poll data to understand question structure
+        console.log('[onStartPoll] CURRENT_POLL_DATA:', {
+          pollId: CURRENT_POLL_DATA.pollId,
+          pollName: CURRENT_POLL_DATA.pollName,
+          hasQuestions: !!CURRENT_POLL_DATA.questions,
+          questionsLength: CURRENT_POLL_DATA.questions ? CURRENT_POLL_DATA.questions.length : 0,
+          firstQuestion: CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions[0] ? CURRENT_POLL_DATA.questions[0] : 'NO FIRST QUESTION'
+        });
+
         // Check session type and call appropriate function
         if (isSecureSessionTypeClient(selectedPoll.sessionType)) {
           console.log('[onStartPoll] Starting Secure Session...');
@@ -6249,6 +6258,17 @@ import './LoginManager.js';
         var correctAnswer = firstQuestion ? (firstQuestion.correctAnswer !== undefined ? firstQuestion.correctAnswer : null) : null;
         var questionImageURL = firstQuestion ? (firstQuestion.questionImageURL || firstQuestion.imageURL || firstQuestion.mediaUrl || '') : '';
         var totalQuestions = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions.length) ? CURRENT_POLL_DATA.questions.length : 0;
+
+        // DIAGNOSTIC: Log what we're about to send to Firebase
+        console.log('[onStartPoll] Question data being sent to Firebase:', {
+          questionText: questionText,
+          questionOptionsLength: questionOptions ? questionOptions.length : 0,
+          questionOptions: questionOptions,
+          correctAnswer: correctAnswer,
+          questionImageURL: questionImageURL,
+          totalQuestions: totalQuestions,
+          firstQuestion: firstQuestion
+        });
 
         ensureFunctionsCallable('setLiveSessionState').then(function (ctx) {
           console.log('[onStartPoll] live: obtained callable context');

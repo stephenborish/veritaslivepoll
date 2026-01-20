@@ -1,0 +1,43 @@
+{
+  "pollId": "1737337200000",
+  "pollName": "Claude Test Poll - Live Poll Visibility Fix",
+  "className": "AP Biology",
+  "questions": [
+    {
+      "questionText": "Which phase of the cell cycle is most analogous to the process of urban planning and infrastructure development in a rapidly growing city?",
+      "options": [
+        "G1 phase - during this growth phase, the cell increases in size and synthesizes necessary proteins, similar to how a city expands its infrastructure to support growth",
+        "M phase - the division of a cell into two daughter cells is similar to how a city might split into multiple municipalities as it grows",
+        "G2 phase - the final preparations for mitosis in this phase resemble the last-minute adjustments made before implementing a city's expansion plan"
+      ],
+      "correctAnswer": 0
+    },
+    {
+      "questionText": "What is the primary function of mitochondria in eukaryotic cells?",
+      "options": [
+        "Protein synthesis",
+        "Energy production through cellular respiration",
+        "DNA replication",
+        "Waste removal"
+      ],
+      "correctAnswer": 1
+    },
+    {
+      "questionText": "Which of the following best describes osmosis?",
+      "options": [
+        "Movement of water across a semipermeable membrane from high to low concentration",
+        "Active transport of ions against concentration gradient",
+        "Diffusion of gases through cell membrane"
+      ],
+      "correctAnswer": 0
+    }
+  ],
+  "questionCount": 3,
+  "sessionType": "LIVE_POLL",
+  "timeLimitMinutes": 0,
+  "accessCode": "",
+  "availableFrom": "",
+  "dueBy": "",
+  "secureSettings": {},
+  "missionControlState": ""
+}

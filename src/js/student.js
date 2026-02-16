@@ -1952,7 +1952,6 @@
                     if (secureOptionsList) secureOptionsList.innerHTML = '';
 
                     // Firebase write was successful, the Cloud Function processes it.
-                    // No need for a redundant google.script.run sync.
                     console.log('[Firebase] Submission finalized. Polling for next state.');
                     setTimeout(function () { pollForIndividualSessionState(); }, 50);
                 } else {
@@ -2702,7 +2701,6 @@
                 }
 
                 showLockEnforcementUI();
-                // google.script.run legacy cleanup removed to prevent ReferenceError
                 var reportStudentViolation = firebaseFunctions.httpsCallable('reportStudentViolation');
                 reportStudentViolation({
                     pollId: activePollId,

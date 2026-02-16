@@ -2,14 +2,6 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-<!-- =============================================================================
-     VERITAS LIVE POLL - SHARED CSS CUSTOM PROPERTIES
-     =============================================================================
-     Purpose: Centralized CSS variables for design system consistency
-     Used by: TeacherView.html, StudentView.html
-     Phase: 3A - Shared Components
-     ============================================================================= -->
-
   /* Veritas Design System - CSS Custom Properties */
   :root {
     /* Brand Colors */

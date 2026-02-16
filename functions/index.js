@@ -518,7 +518,6 @@ exports.reportStudentViolation = onCall({ cors: true }, async (request) => {
 
 /**
  * Create a new poll
- * Replaces google.script.run.createNewPoll
  */
 exports.createPoll = onCall({ cors: true }, async (request) => {
   const { pollName, className, questions, metadata } = request.data;
@@ -561,7 +560,6 @@ exports.createPoll = onCall({ cors: true }, async (request) => {
 
 /**
  * Update an existing poll
- * Replaces google.script.run.updatePoll
  */
 exports.updatePoll = onCall({ cors: true }, async (request) => {
   const { pollId, pollName, className, questions, metadata } = request.data;
@@ -649,7 +647,6 @@ exports.deletePoll = onCall({ cors: true }, async (request) => {
 
 /**
  * Manage roster operations (CRUD)
- * Replaces google.script.run.saveRoster, bulkAddStudentsToRoster,
  * renameClass, deleteClassRecord
  */
 exports.manageRoster = onCall({ cors: true }, async (request) => {
@@ -1251,7 +1248,6 @@ exports.submitExam = onCall({ cors: true }, async (request) => {
 
 /**
  * Verify if the authenticated user is an authorized teacher.
- * Replaces google.script.run.isTeacherEmail_
  */
 exports.verifyTeacher = onCall({ cors: true }, async (request) => {
   // Check if user is authenticated via Firebase Auth

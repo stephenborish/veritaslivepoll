@@ -209,11 +209,9 @@ veritaslivepoll/
 │   ├── student.html        # Student interface
 │   ├── exam_*.html         # Exam-related pages
 │   └── favicon.png
-├── src/                     # Source HTML components
-│   ├── Teacher_*.html      # Teacher view components
-│   ├── Student_*.html      # Student view components
-│   ├── Common_*.html       # Shared components
-│   └── Exam*.html          # Exam components
+├── src/                     # Source Code
+│   ├── js/                 # Javascript modules
+│   └── css/                # CSS styles
 ├── DOCS/                    # Documentation
 │   └── Firestore_Data_Model.md
 ├── firebase.json           # Firebase configuration

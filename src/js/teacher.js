@@ -188,24 +188,33 @@ import './LoginManager.js';
                 [{ 'list': 'ordered' }, { 'list': 'bullet' }],
                 [{ 'script': 'sub' }, { 'script': 'super' }],
                 [{ 'color': [] }, { 'background': [] }],
-                ['link', 'image', 'formula'], // Add 'formula'
+                ['link', 'image', 'formula', 'mathsqrt', 'mathfrac', 'mathpow'],
                 [{ 'align': [] }],
                 ['clean']
               ],
               handlers: {
                 formula: function () {
-                  console.log('Formula button clicked');
                   var range = this.quill.getSelection();
                   if (typeof window.openFormulaModal === 'function') {
                     window.openFormulaModal(this.quill, range);
                   } else {
-                    console.error('window.openFormulaModal is not defined. Checking global scope...');
-                    if (window.openFormulaModal) {
-                      window.openFormulaModal(this.quill, range);
-                    } else {
-                      alert('Error: Formula editor could not be loaded. Please refresh.');
-                    }
+                    alert('Error: Formula editor could not be loaded. Please refresh.');
                   }
+                },
+                mathsqrt: function () {
+                  var range = this.quill.getSelection(true) || { index: this.quill.getLength() };
+                  this.quill.insertEmbed(range.index, 'formula', '\\sqrt{x}');
+                  this.quill.setSelection(range.index + 1, 0);
+                },
+                mathfrac: function () {
+                  var range = this.quill.getSelection(true) || { index: this.quill.getLength() };
+                  this.quill.insertEmbed(range.index, 'formula', '\\frac{x}{y}');
+                  this.quill.setSelection(range.index + 1, 0);
+                },
+                mathpow: function () {
+                  var range = this.quill.getSelection(true) || { index: this.quill.getLength() };
+                  this.quill.insertEmbed(range.index, 'formula', 'x^2');
+                  this.quill.setSelection(range.index + 1, 0);
                 }
               }
             }
@@ -7590,14 +7599,36 @@ import './LoginManager.js';
         }
       }
 
-      // Update response count
-      safeSetText('response-count', data.totalResponses + ' / ' + data.totalStudents + ' answered');
-      safeSetText('response-count-header', data.totalResponses + ' / ' + data.totalStudents + ' answered');
+      var liveStudentList = Array.isArray(data.studentStatusList) ? data.studentStatusList : [];
+      if (!liveStudentList.length && Array.isArray(currentStudentStatusData) && currentStudentStatusData.length) {
+        liveStudentList = currentStudentStatusData.slice();
+      }
+      if (!liveStudentList.length && CURRENT_POLL_DATA && Array.isArray(CURRENT_POLL_DATA.roster)) {
+        liveStudentList = CURRENT_POLL_DATA.roster.map(function (student) {
+          var record = (typeof student === 'string') ? { email: student } : (student || {});
+          return {
+            email: record.email || '',
+            firstName: record.firstName || '',
+            lastName: record.lastName || '',
+            name: record.name || record.displayName || '',
+            status: 'Waiting...'
+          };
+        }).filter(function (student) { return !!student.email; });
+      }
 
-      updateLiveOverviewFromData(data);
+      var totalStudentsCount = typeof data.totalStudents === 'number' ? data.totalStudents : liveStudentList.length;
+
+      // Update response count
+      safeSetText('response-count', data.totalResponses + ' / ' + totalStudentsCount + ' answered');
+      safeSetText('response-count-header', data.totalResponses + ' / ' + totalStudentsCount + ' answered');
+
+      updateLiveOverviewFromData(Object.assign({}, data, {
+        totalStudents: totalStudentsCount,
+        studentStatusList: liveStudentList
+      }));
 
       // Update results bars
-      renderResultsBars(data.results, data.correctAnswer, data.studentStatusList);
+      renderResultsBars(data.results, data.correctAnswer, liveStudentList);
       renderLiveMetacognition(data.metacognition || null);
 
       var resultsStrip = document.getElementById('results-reveal-strip');
@@ -7625,7 +7656,7 @@ import './LoginManager.js';
       }
 
       // Update student status
-      currentStudentStatusData = data.studentStatusList;
+      currentStudentStatusData = liveStudentList;
 
       // FIX TASK A: Re-apply Firebase realtime overrides immediately after server update
       // This ensures that "LOCKED" status from Firebase (which is faster) is not overwritten by "ACTIVE" from stale server poll
@@ -15740,6 +15771,7 @@ import './LoginManager.js';
       if (wizardState.currentStep === 4) {
         nextBtn.classList.add('hidden');
         publishBtn.classList.remove('hidden');
+        publishBtn.classList.add('inline-flex');
 
         // Update publish button text based on mode
         var publishBtnIcon = publishBtn.querySelector('.material-symbols-outlined');
@@ -15755,6 +15787,7 @@ import './LoginManager.js';
       } else {
         nextBtn.classList.remove('hidden');
         publishBtn.classList.add('hidden');
+        publishBtn.classList.remove('inline-flex');
       }
     }
 
@@ -16124,10 +16157,7 @@ import './LoginManager.js';
           '<span class="material-symbols-outlined text-lg">delete</span></button>' +
           '</div></div>';
 
-        // 2. Math Input Panel (Static for Stem)
-        var mathPanelHtml = getMathPanelHtml();
-
-        // 3. Smart Paste Zone
+        // 2. Smart Paste Zone
         var smartPasteHtml = '<div class="px-4 py-3 bg-slate-50/50 border-b border-brand-light-gray">' +
           '<div class="flex items-center gap-2 mb-2">' +
           '<span class="material-symbols-outlined text-sm text-veritas-gold">tips_and_updates</span>' +
@@ -16137,28 +16167,13 @@ import './LoginManager.js';
           '</div>';
 
         // 4. Question Stem Section
-        var questionImageUrl = q.questionImageURL && q.questionImageURL !== 'UPLOADING' ? q.questionImageURL : '';
-        var questionImageUploading = q.questionImageURL === 'UPLOADING';
         var stemHtml = '<div class="p-4 space-y-3">' +
           '<div class="flex items-center justify-between">' +
           '<label class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Question Stem</label>' +
-          '<label class="inline-flex items-center gap-1.5 px-2 py-1 text-[11px] font-semibold rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer">' +
-          '<span class="material-symbols-outlined text-sm">image</span>Image' +
-          '<input type="file" class="hidden" accept="image/*" onchange="handleWizardImageUpload(this.files[0], ' + qIndex + ', null)">' +
-          '</label>' +
           '</div>' +
           '<div class="border border-brand-light-gray rounded-lg overflow-hidden focus-within:border-veritas-navy transition-colors">' +
           '<div id="' + questionInputId + '" class="bg-white" style="min-height: 100px; height: auto;"></div>' +
           '</div>' +
-          (questionImageUploading
-            ? '<div class="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">Uploading question image...</div>'
-            : '') +
-          (questionImageUrl
-            ? '<div class="flex items-start gap-3 rounded-lg border border-slate-200 p-2 bg-slate-50">' +
-              '<img src="' + escapeHtml(questionImageUrl) + '" alt="Question image" class="h-20 w-28 rounded object-cover border border-slate-200 bg-white">' +
-              '<button type="button" class="h-9 px-3 rounded-md bg-red-50 text-red-600 text-xs font-semibold hover:bg-red-100 transition-colors" onclick="wizardState.questions[' + qIndex + '].questionImageURL = ""; renderWizardQuestions();">Remove</button>' +
-            '</div>'
-            : '') +
           '</div>';
 
         // 5. Answer Choices
@@ -16169,9 +16184,6 @@ import './LoginManager.js';
           var isCorrect = q.correctAnswerIndex === optIndex;
           var optionId = 'answer-input-' + questionNumber + '-' + optionLabels[optIndex].toLowerCase();
           var correctClass = isCorrect ? 'ring-2 ring-green-500 bg-green-50/30' : 'border-slate-200';
-          var optionImageUrl = opt.imageURL && opt.imageURL !== 'UPLOADING' ? opt.imageURL : '';
-          var optionImageUploading = opt.imageURL === 'UPLOADING';
-
           optionsHtml += '<div class="flex items-start gap-3 p-3 rounded-xl border ' + correctClass + ' transition-all group">' +
             '<div class="flex flex-col items-center gap-2 mt-1">' +
             '<button type="button" class="wizard-correct-toggle w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm transition-all ' +
@@ -16183,21 +16195,6 @@ import './LoginManager.js';
             '<div class="border border-brand-light-gray rounded-lg overflow-hidden bg-white focus-within:border-veritas-navy transition-colors">' +
             '<div id="' + optionId + '" style="min-height: 60px; height: auto;"></div>' +
             '</div>' +
-            '<div class="flex items-center gap-2">' +
-            '<label class="inline-flex items-center gap-1.5 px-2 py-1 text-[11px] font-semibold rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer">' +
-            '<span class="material-symbols-outlined text-sm">image</span>Image' +
-            '<input type="file" class="hidden" accept="image/*" onchange="handleWizardImageUpload(this.files[0], ' + qIndex + ', ' + optIndex + ')">' +
-            '</label>' +
-            (optionImageUploading
-              ? '<span class="text-[11px] font-semibold text-amber-700">Uploading...</span>'
-              : '') +
-            (optionImageUrl
-              ? '<button type="button" class="h-7 px-2 rounded-md bg-red-50 text-red-600 text-[11px] font-semibold hover:bg-red-100 transition-colors" onclick="wizardState.questions[' + qIndex + '].options[' + optIndex + '].imageURL = ""; renderWizardQuestions();">Remove image</button>'
-              : '') +
-            '</div>' +
-            (optionImageUrl
-              ? '<img src="' + escapeHtml(optionImageUrl) + '" alt="Answer image" class="h-20 w-28 rounded object-cover border border-slate-200 bg-white">'
-              : '') +
             '</div>' +
             '<button type="button" class="mt-2 h-8 px-2 rounded-md text-[11px] font-semibold text-red-500 bg-red-50 hover:bg-red-100 transition-all" ' +
             'onclick="removeWizardOption(' + qIndex + ', ' + optIndex + ')" title="Delete answer choice">Delete</button>' +
@@ -16216,7 +16213,7 @@ import './LoginManager.js';
         optionsHtml += '</div>';
 
         // 6. Assemble Card
-        questionDiv.innerHTML = headerHtml + mathPanelHtml + smartPasteHtml + stemHtml + optionsHtml;
+        questionDiv.innerHTML = headerHtml + smartPasteHtml + stemHtml + optionsHtml;
         container.appendChild(questionDiv);
 
         // --- Event Listeners and Initialization ---

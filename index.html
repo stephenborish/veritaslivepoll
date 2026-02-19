@@ -9,6 +9,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
   <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet" />
   <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script type="module" src="https://cdn.jsdelivr.net/npm/mathlive@0.101.1/+esm"></script>
   <script src="https://cdn.jsdelivr.net/npm/quill-image-resize-module@3.0.0/image-resize.min.js"></script>
   <link href="/src/css/main.css" rel="stylesheet">
   <link href="/src/css/teacher.css" rel="stylesheet">
@@ -390,7 +393,7 @@
       </aside>
 
       <!-- Main Content Area -->
-      <main class="flex-1 min-h-0 overflow-y-auto bg-gray-50 dark:bg-brand-dark-gray/10 flex flex-col">
+      <main id="main-content" class="flex-1 min-h-0 overflow-y-auto bg-gray-50 dark:bg-brand-dark-gray/10 flex flex-col">
         <!-- Dashboard View (Default) - Redesigned -->
         <div id="dashboard" class="p-8 max-w-7xl mx-auto">
           <!-- Poll Library & Session Management (Combined) -->
@@ -1745,7 +1748,7 @@
           class="btn-primary h-12 px-8 rounded-lg bg-primary text-white font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
           id="wizard-next-btn" onclick="wizardGoNext()">Next</button>
         <button type="button"
-          class="btn-primary hidden h-12 px-8 rounded-lg bg-green-600 text-white font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 hover:bg-green-700 transition-all flex items-center gap-2"
+          class="btn-primary hidden h-12 px-8 rounded-lg bg-green-600 text-white font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 hover:bg-green-700 transition-all items-center gap-2"
           id="wizard-publish-btn" onclick="publishWizardPoll()">
           <span class="material-symbols-outlined">rocket_launch</span>
           Publish Poll

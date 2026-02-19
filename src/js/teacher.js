@@ -15276,6 +15276,62 @@ import './LoginManager.js';
     var wizardQuestionIdCounter = 0;
     var wizardDraggedIndex = null; // For drag-and-drop
     var wizardEditingQuestionIndex = null; // Track which question is being edited
+    var wizardAutoSaveTimer = null;
+
+    function getWizardDraftStorageKey() {
+      var modeKey = wizardState.isEditMode ? 'edit' : 'create';
+      var pollKey = wizardState.pollId || 'new';
+      return 'vlp_wizard_draft_' + modeKey + '_' + pollKey;
+    }
+
+    function saveWizardDraft(reason) {
+      try {
+        syncWizardQuillContent();
+        var draft = {
+          savedAt: Date.now(),
+          reason: reason || 'auto',
+          wizardState: JSON.parse(JSON.stringify(wizardState))
+        };
+        localStorage.setItem(getWizardDraftStorageKey(), JSON.stringify(draft));
+      } catch (error) {
+        console.warn('[Wizard] Failed to auto-save draft:', error);
+      }
+    }
+
+    function scheduleWizardAutoSave(reason) {
+      if (wizardAutoSaveTimer) {
+        clearTimeout(wizardAutoSaveTimer);
+      }
+      wizardAutoSaveTimer = setTimeout(function () {
+        saveWizardDraft(reason || 'debounced');
+      }, 250);
+    }
+
+    function clearWizardDraft() {
+      try {
+        localStorage.removeItem(getWizardDraftStorageKey());
+      } catch (error) {
+        console.warn('[Wizard] Failed to clear draft:', error);
+      }
+    }
+
+    function restoreWizardDraftIfAvailable() {
+      try {
+        var raw = localStorage.getItem(getWizardDraftStorageKey());
+        if (!raw) return;
+        var draft = JSON.parse(raw);
+        if (!draft || !draft.wizardState) return;
+
+        var draftState = draft.wizardState;
+        if (!confirm('A saved draft was found for this poll editor. Restore it?')) {
+          return;
+        }
+
+        wizardState = Object.assign({}, wizardState, draftState);
+      } catch (error) {
+        console.warn('[Wizard] Failed to restore draft:', error);
+      }
+    }
 
     // ===========================
     // WIZARD LIFECYCLE
@@ -15368,6 +15424,8 @@ import './LoginManager.js';
           wizardTitle.textContent = 'Create Poll';
         }
       }
+
+      restoreWizardDraftIfAvailable();
       wizardQuestionIdCounter = wizardState.questions.length;
 
       // Populate class dropdown from ALL_CLASSES or BASE_CLASSES
@@ -15455,6 +15513,8 @@ import './LoginManager.js';
         }
       }
 
+      saveWizardDraft('close-wizard');
+
       // Restore session controls
       var headerSessionControls = document.getElementById('header-session-controls');
       if (headerSessionControls) {
@@ -15475,6 +15535,8 @@ import './LoginManager.js';
       if (Array.isArray(polls)) {
         refreshPollData(polls);
       }
+
+      clearWizardDraft();
 
       // Reset wizard state
       wizardState = {
@@ -15542,6 +15604,10 @@ import './LoginManager.js';
 
     function goToWizardStep(stepNumber) {
       if (stepNumber < 1 || stepNumber > 4) return;
+
+      if (wizardState.currentStep === 3) {
+        saveWizardDraft('leave-question-step');
+      }
 
       // Update progress steps within the wizard header
       var progressContainers = ['.wizard-progress'];
@@ -15880,6 +15946,7 @@ import './LoginManager.js';
 
       syncWizardQuillContent();
       renderWizardQuestions();
+      scheduleWizardAutoSave('add-question');
 
       // Scroll to the new question
       setTimeout(function () {
@@ -15899,6 +15966,7 @@ import './LoginManager.js';
         syncWizardQuillContent();
         wizardState.questions.splice(index, 1);
         renderWizardQuestions();
+        scheduleWizardAutoSave('remove-question');
       }
     }
 
@@ -15911,6 +15979,7 @@ import './LoginManager.js';
       syncWizardQuillContent();
       q.options.push({ text: '', html: '', delta: null, imageURL: '', id: generateUUID() });
       renderWizardQuestions();
+      scheduleWizardAutoSave('add-option');
     }
 
     function removeWizardOption(qIndex, optIndex) {
@@ -15921,6 +15990,7 @@ import './LoginManager.js';
       }
       syncWizardQuillContent();
       q.options.splice(optIndex, 1);
+      scheduleWizardAutoSave('remove-option');
       // Adjust correct answer index if needed
       if (q.correctAnswerIndex >= q.options.length) {
         q.correctAnswerIndex = 0;
@@ -15932,6 +16002,7 @@ import './LoginManager.js';
       syncWizardQuillContent();
       wizardState.questions[qIndex].correctAnswerIndex = optIndex;
       renderWizardQuestions();
+      scheduleWizardAutoSave('set-correct-answer');
     }
 
     /**
@@ -15993,6 +16064,7 @@ import './LoginManager.js';
       }
 
       renderWizardQuestions();
+      scheduleWizardAutoSave('smart-paste');
     }
 
     /**
@@ -16065,13 +16137,28 @@ import './LoginManager.js';
           '</div>';
 
         // 4. Question Stem Section
-        var stemHtml = '<div class="p-4 space-y-2">' +
+        var questionImageUrl = q.questionImageURL && q.questionImageURL !== 'UPLOADING' ? q.questionImageURL : '';
+        var questionImageUploading = q.questionImageURL === 'UPLOADING';
+        var stemHtml = '<div class="p-4 space-y-3">' +
           '<div class="flex items-center justify-between">' +
           '<label class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Question Stem</label>' +
+          '<label class="inline-flex items-center gap-1.5 px-2 py-1 text-[11px] font-semibold rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer">' +
+          '<span class="material-symbols-outlined text-sm">image</span>Image' +
+          '<input type="file" class="hidden" accept="image/*" onchange="handleWizardImageUpload(this.files[0], ' + qIndex + ', null)">' +
+          '</label>' +
           '</div>' +
           '<div class="border border-brand-light-gray rounded-lg overflow-hidden focus-within:border-veritas-navy transition-colors">' +
           '<div id="' + questionInputId + '" class="bg-white" style="min-height: 100px; height: auto;"></div>' +
           '</div>' +
+          (questionImageUploading
+            ? '<div class="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">Uploading question image...</div>'
+            : '') +
+          (questionImageUrl
+            ? '<div class="flex items-start gap-3 rounded-lg border border-slate-200 p-2 bg-slate-50">' +
+              '<img src="' + escapeHtml(questionImageUrl) + '" alt="Question image" class="h-20 w-28 rounded object-cover border border-slate-200 bg-white">' +
+              '<button type="button" class="h-9 px-3 rounded-md bg-red-50 text-red-600 text-xs font-semibold hover:bg-red-100 transition-colors" onclick="wizardState.questions[' + qIndex + '].questionImageURL = ""; renderWizardQuestions();">Remove</button>' +
+            '</div>'
+            : '') +
           '</div>';
 
         // 5. Answer Choices
@@ -16082,6 +16169,8 @@ import './LoginManager.js';
           var isCorrect = q.correctAnswerIndex === optIndex;
           var optionId = 'answer-input-' + questionNumber + '-' + optionLabels[optIndex].toLowerCase();
           var correctClass = isCorrect ? 'ring-2 ring-green-500 bg-green-50/30' : 'border-slate-200';
+          var optionImageUrl = opt.imageURL && opt.imageURL !== 'UPLOADING' ? opt.imageURL : '';
+          var optionImageUploading = opt.imageURL === 'UPLOADING';
 
           optionsHtml += '<div class="flex items-start gap-3 p-3 rounded-xl border ' + correctClass + ' transition-all group">' +
             '<div class="flex flex-col items-center gap-2 mt-1">' +
@@ -16090,14 +16179,28 @@ import './LoginManager.js';
             'onclick="setCorrectAnswer(' + qIndex + ', ' + optIndex + ')" title="Mark as Correct Answer">' +
             optionLabels[optIndex] + '</button>' +
             '</div>' +
-            '<div class="flex-1">' +
+            '<div class="flex-1 space-y-2">' +
             '<div class="border border-brand-light-gray rounded-lg overflow-hidden bg-white focus-within:border-veritas-navy transition-colors">' +
             '<div id="' + optionId + '" style="min-height: 60px; height: auto;"></div>' +
             '</div>' +
+            '<div class="flex items-center gap-2">' +
+            '<label class="inline-flex items-center gap-1.5 px-2 py-1 text-[11px] font-semibold rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer">' +
+            '<span class="material-symbols-outlined text-sm">image</span>Image' +
+            '<input type="file" class="hidden" accept="image/*" onchange="handleWizardImageUpload(this.files[0], ' + qIndex + ', ' + optIndex + ')">' +
+            '</label>' +
+            (optionImageUploading
+              ? '<span class="text-[11px] font-semibold text-amber-700">Uploading...</span>'
+              : '') +
+            (optionImageUrl
+              ? '<button type="button" class="h-7 px-2 rounded-md bg-red-50 text-red-600 text-[11px] font-semibold hover:bg-red-100 transition-colors" onclick="wizardState.questions[' + qIndex + '].options[' + optIndex + '].imageURL = ""; renderWizardQuestions();">Remove image</button>'
+              : '') +
             '</div>' +
-            '<button type="button" class="mt-2 p-1.5 rounded text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100" ' +
-            'onclick="removeWizardOption(' + qIndex + ', ' + optIndex + ')" title="Remove Choice">' +
-            '<span class="material-symbols-outlined text-lg">close</span></button>' +
+            (optionImageUrl
+              ? '<img src="' + escapeHtml(optionImageUrl) + '" alt="Answer image" class="h-20 w-28 rounded object-cover border border-slate-200 bg-white">'
+              : '') +
+            '</div>' +
+            '<button type="button" class="mt-2 h-8 px-2 rounded-md text-[11px] font-semibold text-red-500 bg-red-50 hover:bg-red-100 transition-all" ' +
+            'onclick="removeWizardOption(' + qIndex + ', ' + optIndex + ')" title="Delete answer choice">Delete</button>' +
             '</div>';
         });
 
@@ -16233,6 +16336,7 @@ import './LoginManager.js';
      * Scrolls to a specific question in the wizard
      */
     function jumpToWizardQuestion(qIndex) {
+      saveWizardDraft('jump-question');
       var container = document.getElementById('wizard-questions-list');
       if (!container) return;
 
@@ -16358,6 +16462,7 @@ import './LoginManager.js';
           stateQuestion.html = content.html;
           stateQuestion.delta = content.delta;
           stateQuestion.questionText = content.text;
+          scheduleWizardAutoSave('question-change');
         });
       });
 
@@ -16387,6 +16492,7 @@ import './LoginManager.js';
           optionState.html = content.html;
           optionState.delta = content.delta;
           optionState.text = content.text;
+          scheduleWizardAutoSave('answer-change');
         });
       });
     }
@@ -16451,6 +16557,7 @@ import './LoginManager.js';
         wizardState.questions[qIndex].options[optIndex].imageURL = 'UPLOADING';
       }
       renderWizardQuestions();
+      scheduleWizardAutoSave('image-upload-start');
 
       // Upload to Firebase Storage
       uploadImage(file).then(function (downloadURL) {
@@ -16462,6 +16569,7 @@ import './LoginManager.js';
           wizardState.questions[qIndex].options[optIndex].imageURL = downloadURL;
         }
         renderWizardQuestions();
+        scheduleWizardAutoSave('image-upload-complete');
       }).catch(function (error) {
         alert('Image upload failed. Please try again.');
         // Sync and reset uploading state
@@ -16472,6 +16580,7 @@ import './LoginManager.js';
           wizardState.questions[qIndex].options[optIndex].imageURL = null;
         }
         renderWizardQuestions();
+        scheduleWizardAutoSave('image-upload-failed');
       });
     }
 

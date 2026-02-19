@@ -255,7 +255,7 @@
     view-transition-name: var(--vt-sidebar);
   }
 
-  main {
+  #main-content {
     view-transition-name: var(--vt-content);
   }
 
@@ -4003,7 +4003,7 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: rgba(255, 255, 255, 0.78);
+    color: rgba(255, 255, 255, 0.92);
   }
 
   .wizard-header-progress .progress-step.active .progress-circle {
@@ -4360,8 +4360,39 @@
     background: white;
     border: 2px solid #e5e7eb;
     border-radius: 12px;
-    overflow: hidden;
+    overflow: visible;
     transition: box-shadow 0.2s;
+  }
+
+  .question-card .ql-toolbar,
+  .question-card .ql-container {
+    overflow: visible;
+  }
+
+  .question-card .ql-picker-options {
+    z-index: 60;
+  }
+
+  .ql-snow .ql-picker.ql-color .ql-picker-options,
+  .ql-snow .ql-picker.ql-background .ql-picker-options {
+    max-height: 260px;
+    overflow-y: auto;
+  }
+
+  .ql-snow .ql-picker.ql-mathsqrt .ql-picker-label::before {
+    content: '√';
+  }
+
+  .ql-snow .ql-picker.ql-mathfrac .ql-picker-label::before {
+    content: 'x/y';
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  .ql-snow .ql-picker.ql-mathpow .ql-picker-label::before {
+    content: 'x²';
+    font-size: 10px;
+    font-weight: 700;
   }
 
   .question-card:hover {
@@ -4959,4 +4990,3 @@
       box-shadow: 0 0 0 0 rgba(197, 160, 90, 0);
     }
   }
-

@@ -31,10 +31,10 @@
           ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'"
         },
         "students": {
-          ".read": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
+          ".read": "false",
           "$studentKey": {
-            ".read": "auth != null",
-            ".write": "auth != null"
+            ".read": "auth != null && (auth.token.firebase.sign_in_provider != 'anonymous' || data.child('uid').val() == auth.uid)",
+            ".write": "auth != null && (auth.token.firebase.sign_in_provider != 'anonymous' || ((!data.exists() && newData.child('uid').val() == auth.uid) || (data.exists() && data.child('uid').val() == auth.uid && newData.child('uid').val() == auth.uid)))"
           }
         },
         "answers_key": {
@@ -56,7 +56,8 @@
         ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
         ".read": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
         "$studentKey": {
-          ".write": "auth != null"
+          ".read": "auth != null && (auth.token.firebase.sign_in_provider != 'anonymous' || data.child('studentUid').val() == auth.uid)",
+          ".write": "auth != null && (auth.token.firebase.sign_in_provider != 'anonymous' || ((!data.exists() && newData.child('studentUid').val() == auth.uid) || (data.exists() && data.child('studentUid').val() == auth.uid && newData.child('studentUid').val() == auth.uid)))"
         }
       }
     },

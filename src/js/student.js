@@ -342,6 +342,7 @@
                             status: 'ACTIVE',
                             name: window.STUDENT_NAME || 'Unknown',
                             email: window.STUDENT_EMAIL || 'unknown',
+                            uid: (firebase.auth && firebase.auth().currentUser) ? firebase.auth().currentUser.uid : null,
                             joinedAt: firebase.database.ServerValue.TIMESTAMP,
                             lockVersion: 0,
                             userAgent: navigator.userAgent
@@ -572,6 +573,7 @@
                     answer: answer,
                     answerId: answerId,
                     studentEmail: studentEmail,
+                    studentUid: (firebase.auth && firebase.auth().currentUser) ? firebase.auth().currentUser.uid : null,
                     confidenceLevel: confidence || null,
                     timestamp: timestamp,
                     clientTimestamp: Date.now(),
@@ -598,6 +600,7 @@
                 var studentStatusPath = 'sessions/' + pollId + '/students/' + key;
                 var statusPayload = {
                     status: 'Submitted',
+                    uid: (firebase.auth && firebase.auth().currentUser) ? firebase.auth().currentUser.uid : null,
                     lastActive: firebase.database.ServerValue.TIMESTAMP,
                     lastSubmissionQuestionIndex: questionIndex,
                     lastSubmissionTimestamp: firebase.database.ServerValue.TIMESTAMP

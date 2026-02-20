@@ -21,6 +21,27 @@ if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
 
+// Local emulator support for end-to-end workflow testing.
+// This keeps production untouched while allowing localhost runs to use emulators.
+if (typeof window !== 'undefined') {
+    const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+    if (isLocalhost) {
+        try {
+            firebase.auth().useEmulator('http://127.0.0.1:9099');
+            firebase.database().useEmulator('127.0.0.1', 9000);
+            firebase.firestore().useEmulator('127.0.0.1', 8080);
+            firebase.functions().useEmulator('127.0.0.1', 5001);
+            // Storage emulator is optional in local runs.
+            if (firebase.storage && firebase.storage()) {
+                firebase.storage().useEmulator('127.0.0.1', 9199);
+            }
+            console.log('[Firebase] Connected to local emulators (auth, rtdb, firestore, functions, storage)');
+        } catch (err) {
+            console.warn('[Firebase] Emulator connection skipped or already initialized:', err && err.message ? err.message : err);
+        }
+    }
+}
+
 // Expose global variable for legacy scripts that expect it (if they check global window.firebase)
 window.firebase = firebase;
 window.FIREBASE_CONFIG = firebaseConfig; // Some scripts check this global

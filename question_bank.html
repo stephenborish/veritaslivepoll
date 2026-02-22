@@ -53,7 +53,24 @@
         appId: "1:600627073908:web:935970f5849b28f6ad5221"
       };
     }
-    firebase.initializeApp(FIREBASE_CONFIG);
+    function whenFirebaseReady(cb, attempts) {
+      attempts = attempts || 0;
+      if (window.firebase && window.firebase.apps) {
+        cb(window.firebase);
+        return;
+      }
+      if (attempts > 200) {
+        console.error('Firebase SDK failed to initialize in time.');
+        return;
+      }
+      setTimeout(function () { whenFirebaseReady(cb, attempts + 1); }, 50);
+    }
+
+    whenFirebaseReady(function (fb) {
+      if (!fb.apps.length) {
+        fb.initializeApp(FIREBASE_CONFIG);
+      }
+    });
   </script>
 </head>
 

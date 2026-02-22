@@ -1,3 +1,5 @@
+import firebase from './firebase.js';
+
     (function () {
         console.log('Veritas Student Script IIFE executing...');
         var secureFocusContainer = document.getElementById('individual-timed-session');
@@ -38,6 +40,26 @@
         var lastQuestionIndex = -1;
         var liveSessionRef = null;
         var connectedRef = null;
+
+        function isDebugMode() {
+            try {
+                var sp = new URLSearchParams(window.location.search);
+                if (sp.get('debug') === '1') {
+                    sessionStorage.setItem('veritas_debug_mode', '1');
+                    return true;
+                }
+                return sessionStorage.getItem('veritas_debug_mode') === '1';
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function debugLog() {
+            if (!isDebugMode()) return;
+            var args = Array.prototype.slice.call(arguments);
+            args.unshift('[Debug][Student]');
+            console.log.apply(console, args);
+        }
 
         // =============================================================================
         // STATE REHYDRATION - Prevents "White Flash" or "Lobby Loop" on refresh
@@ -324,6 +346,7 @@
                 currentFirebasePollId = pollId; // Store for debug HUD
 
                 var path = 'sessions/' + pollId + '/students/' + studentKey;
+                debugLog('Join/presence write path:', path, 'uid:', (firebase.auth && firebase.auth().currentUser) ? firebase.auth().currentUser.uid : null);
                 firebaseRef = firebaseDb.ref(path);
 
                 // 1. Set Initial State with Read-Before-Write
@@ -405,6 +428,7 @@
                 // When teacher advances slide, a signal is written here.
                 // NEW: Listen to 'live_session' for instant updates (Hybrid Architecture)
                 var sessionPath = 'sessions/' + pollId + '/live_session';
+                debugLog('Question read/listener path:', sessionPath);
                 liveSessionRef = firebaseDb.ref(sessionPath);
 
                 // CRITICAL FIX: Attach listener FIRST to prevent race condition
@@ -593,11 +617,13 @@
                 // DUAL-WRITE IMPLEMENTATION
                 // Write 1: Full answer payload to secure answers/ node (for grading via Cloud Function)
                 var answerPath = 'answers/' + pollId + '/' + key;
+                debugLog('Answer write path:', answerPath);
                 var answerWritePromise = firebaseDb.ref(answerPath).set(payload);
 
                 // Write 2: CONCURRENT status update to public student node (for instant Teacher visibility)
                 // This allows the Teacher to see "Submitted" status IMMEDIATELY without waiting for Cloud Function
                 var studentStatusPath = 'sessions/' + pollId + '/students/' + key;
+                debugLog('Status update path:', studentStatusPath);
                 var statusPayload = {
                     status: 'Submitted',
                     uid: (firebase.auth && firebase.auth().currentUser) ? firebase.auth().currentUser.uid : null,
@@ -5619,14 +5645,18 @@
             var urlParams = new URLSearchParams(window.location.search);
             var token = urlParams.get('token');
             var pollId = urlParams.get('pollId');
+            var sessionId = urlParams.get('sessionId');
+            var code = urlParams.get('code');
+            debugLog('URL params parsed:', { hasToken: !!token, pollId: pollId, sessionId: sessionId, code: code });
 
             if (pollId) {
+                debugLog('Using pollId from URL:', pollId);
                 window.currentPollId = pollId;
                 sessionStorage.setItem('veritas_active_poll_id', pollId);
             }
 
             if (token) {
-                console.log('[Auth] Token found in URL:', token);
+                console.log('[Auth] Token found in URL');
 
                 // IMMEDIATE: Hide login overlay to prevent flash/blocking
                 // We'll show it again if validation fails
@@ -5678,6 +5708,7 @@
                                 findActivePollForClass(data.className).then(function (foundPollId) {
                                     if (foundPollId) {
                                         console.log('[Auth] Found active poll:', foundPollId);
+                                        debugLog('pollId missing from link; fallback-selected active poll for class:', data.className, '=>', foundPollId);
                                         window.currentPollId = foundPollId;
                                         sessionStorage.setItem('veritas_active_poll_id', foundPollId);
                                     } else {

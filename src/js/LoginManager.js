@@ -1,3 +1,5 @@
+import firebase from './firebase.js';
+
 
 (function () {
     // Expose LoginManager globally

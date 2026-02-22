@@ -1,3 +1,4 @@
+import firebase from './firebase.js';
 import './LoginManager.js';
 
   (function () {
@@ -65,6 +66,26 @@ import './LoginManager.js';
     var initialQuestionOrder = [];
     var draggedQuestionId = null;
     var pollSearchQuery = '';
+
+    function isDebugMode() {
+      try {
+        var sp = new URLSearchParams(window.location.search);
+        if (sp.get('debug') === '1') {
+          sessionStorage.setItem('veritas_debug_mode', '1');
+          return true;
+        }
+        return sessionStorage.getItem('veritas_debug_mode') === '1';
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function debugLog() {
+      if (!isDebugMode()) return;
+      var args = Array.prototype.slice.call(arguments);
+      args.unshift('[Debug][Teacher]');
+      console.log.apply(console, args);
+    }
 
     // Helper: Rich Text Rendering
     function renderRichText(htmlContent) {
@@ -9214,7 +9235,7 @@ import './LoginManager.js';
 
         // 3. Construct specific payload for just this student
         var isSecure = (CURRENT_POLL_DATA.sessionType || "").toUpperCase().includes("SECURE");
-        var fullLink = baseUrl + '?token=' + targetLink.token;
+        var fullLink = baseUrl + '?token=' + encodeURIComponent(targetLink.token) + '&pollId=' + encodeURIComponent(CURRENT_POLL_DATA.pollId);
         var htmlBody = generateEmailHtml(targetLink.name, fullLink, isSecure, email);
 
         var singleStudentPayload = {
@@ -9919,7 +9940,7 @@ import './LoginManager.js';
         var isSecure = (CURRENT_POLL_DATA.sessionType || "").toUpperCase().includes("SECURE");
 
         payload.students = payload.links.map(function (s) {
-          var fullLink = baseUrl + '?token=' + s.token;
+          var fullLink = baseUrl + '?token=' + encodeURIComponent(s.token) + '&pollId=' + encodeURIComponent(CURRENT_POLL_DATA.pollId);
           var htmlBody = generateEmailHtml(s.name, fullLink, isSecure, s.email);
           return {
             email: s.email,
@@ -10039,7 +10060,8 @@ import './LoginManager.js';
         html += '</tr></thead><tbody>';
 
         response.links.forEach(function (link) {
-          var fullUrl = baseUrl + '?token=' + link.token;
+          var selectedPollId = (CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId) ? CURRENT_POLL_DATA.pollId : '';
+          var fullUrl = baseUrl + '?token=' + encodeURIComponent(link.token) + (selectedPollId ? '&pollId=' + encodeURIComponent(selectedPollId) : '');
           html += '<tr class="border-b border-brand-light-gray/50 dark:border-brand-dark-gray/20 hover:bg-brand-light-gray/30 dark:hover:bg-brand-dark-gray/10">';
           html += '<td class="px-4 py-3 text-sm text-brand-dark-gray dark:text-brand-white">' + escapeHtml(link.name) + '</td>';
           html += '<td class="px-4 py-3 text-sm text-brand-dark-gray dark:text-brand-white">' + escapeHtml(link.email) + '</td>';
@@ -13395,6 +13417,7 @@ import './LoginManager.js';
         firebaseDb = firebase.database();
 
         var path = 'sessions/' + pollId + '/students';
+        debugLog('Listening for student presence at path:', path);
         firebaseRef = firebaseDb.ref(path);
         currentMissionControlPollId = pollId;
 
@@ -13558,7 +13581,9 @@ import './LoginManager.js';
         });
 
         // P0-3 FIX: Listen to violations node
-        violationsRef = firebaseDb.ref('sessions/' + pollId + '/violations');
+        var violationsPath = 'sessions/' + pollId + '/violations';
+        debugLog('Listening for violations at path:', violationsPath);
+        violationsRef = firebaseDb.ref(violationsPath);
         violationsRef.on('child_added', function (snapshot) {
           var studentKey = snapshot.key;
           var violation = snapshot.val();
@@ -13580,7 +13605,9 @@ import './LoginManager.js';
         });
 
         // FAST PATH: Listen for answers (Live Results)
-        var answersRef = firebaseDb.ref('answers/' + pollId);
+        var answersPath = 'answers/' + pollId;
+        debugLog('Listening for responses at path:', answersPath);
+        var answersRef = firebaseDb.ref(answersPath);
         answersRef.on('child_added', function (snapshot) {
           var answer = snapshot.val();
           if (answer && answer.questionIndex !== undefined) {

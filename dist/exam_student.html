@@ -90,7 +90,7 @@
     }
   </style>
   <title>Veritas - Exam</title>
-  <script type="module" crossorigin src="/assets/firebase-BgE_CHdH.js"></script>
+  <script type="module" crossorigin src="/assets/firebase-KwNOrGS8.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/firebase-C-lrpGEc.css">
 </head>
 
@@ -239,9 +239,26 @@
     var functions;
     (function () {
       if (FIREBASE_CONFIG) {
-        firebase.initializeApp(FIREBASE_CONFIG);
-        window.VERITAS_FIREBASE_DB = firebase.database();
-        functions = firebase.functions();
+        function whenFirebaseReady(cb, attempts) {
+          attempts = attempts || 0;
+          if (window.firebase && window.firebase.apps) {
+            cb(window.firebase);
+            return;
+          }
+          if (attempts > 200) {
+            console.error('Firebase SDK failed to initialize in time.');
+            return;
+          }
+          setTimeout(function () { whenFirebaseReady(cb, attempts + 1); }, 50);
+        }
+
+        whenFirebaseReady(function (fb) {
+          if (!fb.apps.length) {
+            fb.initializeApp(FIREBASE_CONFIG);
+          }
+          window.VERITAS_FIREBASE_DB = fb.database();
+          functions = fb.functions();
+        });
       }
     })();
 

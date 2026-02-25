@@ -6296,10 +6296,11 @@ import './LoginManager.js';
           return;
         }
 
-        var questionText = firstQuestion ? (firstQuestion.questionText || firstQuestion.stemHtml || firstQuestion.text || '') : '';
-        var questionOptions = firstQuestion ? (firstQuestion.options || []) : [];
+        var normalizedFirstQuestion = normalizeBroadcastQuestion(firstQuestion || {});
+        var questionText = normalizedFirstQuestion.questionText || '';
+        var questionOptions = normalizedFirstQuestion.options || [];
         var correctAnswer = firstQuestion ? (firstQuestion.correctAnswer !== undefined ? firstQuestion.correctAnswer : null) : null;
-        var questionImageURL = firstQuestion ? (firstQuestion.questionImageURL || firstQuestion.imageURL || firstQuestion.mediaUrl || '') : '';
+        var questionImageURL = normalizedFirstQuestion.questionImageURL || '';
         var totalQuestions = (CURRENT_POLL_DATA.questions && CURRENT_POLL_DATA.questions.length) ? CURRENT_POLL_DATA.questions.length : 0;
 
         // DIAGNOSTIC: Log what we're about to send to Firebase
@@ -13275,6 +13276,42 @@ import './LoginManager.js';
         ', success=' + debugInfo.success);
     })();
 
+    function normalizeBroadcastQuestion(questionDef) {
+      var q = questionDef || {};
+
+      var questionText = q.questionText || q.text || q.stemHtml || q.html || '';
+      var questionImageURL = q.questionImageURL || q.imageURL || q.imageUrl || q.mediaUrl || '';
+
+      var rawOptions = [];
+      if (Array.isArray(q.options)) {
+        rawOptions = q.options;
+      } else if (Array.isArray(q.answers)) {
+        rawOptions = q.answers;
+      } else if (Array.isArray(q.choices)) {
+        rawOptions = q.choices;
+      }
+
+      var options = rawOptions.map(function (opt) {
+        if (typeof opt === 'string') {
+          return { text: opt };
+        }
+        return {
+          id: opt && opt.id ? opt.id : null,
+          text: (opt && (opt.text || opt.label || opt.value || opt.html)) || '',
+          html: (opt && (opt.html || opt.text)) || '',
+          imageURL: (opt && (opt.imageURL || opt.imageUrl || opt.mediaUrl)) || ''
+        };
+      }).filter(function (opt) {
+        return !!(opt && (opt.text || opt.imageURL));
+      });
+
+      return {
+        questionText: questionText,
+        questionImageURL: questionImageURL,
+        options: options
+      };
+    }
+
     async function broadcastSessionState(pollId, state) {
       if (!pollId || !state) return;
 
@@ -13300,8 +13337,10 @@ import './LoginManager.js';
         return;
       }
 
-      var finalQuestionText = state.questionText || questionDef.questionText || '';
-      var finalOptions = state.options || questionDef.options || [];
+      var normalized = normalizeBroadcastQuestion(questionDef);
+
+      var finalQuestionText = state.questionText || normalized.questionText || '';
+      var finalOptions = (Array.isArray(state.options) && state.options.length > 0) ? state.options : normalized.options;
 
       // CRITICAL FIX: Validate that we have actual content to broadcast
       if (!finalQuestionText || finalOptions.length === 0) {
@@ -13361,7 +13400,7 @@ import './LoginManager.js';
         sessionPhase: state.sessionPhase || 'LIVE',
         resultsVisibility: state.resultsVisibility || 'HIDDEN',
         questionText: finalQuestionText,
-        questionImageURL: state.questionImageURL || (questionDef ? questionDef.questionImageURL : ''),
+        questionImageURL: state.questionImageURL || normalized.questionImageURL,
         options: finalOptions,
         shuffleOptions: questionDef.shuffleOptions || false,
         metadata: {
@@ -17042,15 +17081,16 @@ import './LoginManager.js';
       var qIndex = data.questionIndex;
       var questionDef = (CURRENT_POLL_DATA && CURRENT_POLL_DATA.questions) ? CURRENT_POLL_DATA.questions[qIndex] : null;
 
+      var normalizedQuestion = normalizeBroadcastQuestion(questionDef || {});
       broadcastSessionState(data.pollId, {
         questionIndex: qIndex,
         status: data.status,
         sessionPhase: data.metadata ? data.metadata.sessionPhase : 'LIVE',
         resultsVisibility: data.metadata ? data.metadata.resultsVisibility : 'HIDDEN',
         // Pass content from local cache for instant student rendering
-        questionText: questionDef ? questionDef.questionText : '',
-        questionImageURL: questionDef ? questionDef.questionImageURL : '',
-        options: questionDef ? questionDef.options : []
+        questionText: normalizedQuestion.questionText,
+        questionImageURL: normalizedQuestion.questionImageURL,
+        options: normalizedQuestion.options
       });
 
       // 2. Synthesize a full view object from CURRENT_POLL_DATA

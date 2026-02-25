@@ -31,7 +31,7 @@
           ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'"
         },
         "students": {
-          ".read": "false",
+          ".read": "auth != null",
           "$studentKey": {
             ".read": "auth != null && (auth.token.firebase.sign_in_provider != 'anonymous' || data.child('uid').val() == auth.uid)",
             ".write": "auth != null && (auth.token.firebase.sign_in_provider != 'anonymous' || ((!data.exists() && newData.child('uid').val() == auth.uid) || (data.exists() && data.child('uid').val() == auth.uid && newData.child('uid').val() == auth.uid)))"

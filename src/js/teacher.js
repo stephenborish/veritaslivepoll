@@ -13574,8 +13574,14 @@ import './LoginManager.js';
 
           // TASK: Instant Render on Join (Latency Fix)
           var studentKey = snapshot.key;
-          var status = snapshot.val();
-          var studentEmail = studentKey.replace(/,/g, '.'); // Restore email
+          var studentData = snapshot.val();
+          // Read actual email and name from the student object written by student.js
+          var studentEmail = (studentData && typeof studentData === 'object' && studentData.email)
+              ? studentData.email : studentKey;
+          var studentName = (studentData && typeof studentData === 'object' && studentData.name)
+              ? studentData.name : studentEmail;
+          var status = (studentData && typeof studentData === 'object')
+              ? (studentData.status || 'ACTIVE') : (studentData || 'ACTIVE');
 
           if (!missionControlStudents) missionControlStudents = [];
 
@@ -13584,9 +13590,9 @@ import './LoginManager.js';
 
           if (!exists) {
             console.log('[Firebase] New student detected via Fast Path:', studentEmail);
-            // Add temp student object (Name will be Email until full sync)
+            // Add student object with real name and email from Firebase data
             var newStudent = {
-              name: studentEmail, // Temporary display name
+              name: studentName,
               email: studentEmail,
               status: status,
               proctorStatus: status === 'ACTIVE' ? 'ACTIVE' : 'LOCKED', // Infer from status
@@ -13667,7 +13673,11 @@ import './LoginManager.js';
             // Populate initial student status data for live polls
             currentStudentStatusData = studentKeys.map(function (studentKey) {
               var statusData = studentsData[studentKey];
-              var email = studentKey.replace(/,/g, '.'); // Restore email from key
+              // Read actual email and name from the student data object
+              var email = (typeof statusData === 'object' && statusData && statusData.email)
+                  ? statusData.email : studentKey;
+              var name = (typeof statusData === 'object' && statusData && statusData.name)
+                  ? statusData.name : email;
 
               // Extract status from the data structure
               var status = (typeof statusData === 'object' && statusData) ?
@@ -13675,7 +13685,7 @@ import './LoginManager.js';
 
               return {
                 email: email,
-                name: email, // Will be updated when roster loads
+                name: name,
                 status: status === 'ACTIVE' ? 'Waiting' : 'Locked',
                 proctorStatus: status,
                 progress: 0,

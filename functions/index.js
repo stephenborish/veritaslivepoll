@@ -894,7 +894,7 @@ exports.manageRoster = onCall({ cors: true }, async (request) => {
             const exp = new Date();
             exp.setDate(exp.getDate() + 30);
             await tokRef.child(token).set({
-              email: student.email, className, created: Date.now(), expires: exp.getTime()
+              email: student.email, className, pollId: pollId || null, created: Date.now(), expires: exp.getTime()
             });
             await tokIdxRef.child(sEmail.replace(/\./g, "_")).set(token);
           }

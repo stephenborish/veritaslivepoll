@@ -5650,7 +5650,7 @@ import firebase from './firebase.js';
             var code = urlParams.get('code');
             debugLog('URL params parsed:', { hasToken: !!token, pollId: pollId, sessionId: sessionId, code: code });
 
-            if (pollId) {
+            if (pollId && pollId !== 'undefined' && pollId !== 'null') {
                 debugLog('Using pollId from URL:', pollId);
                 window.currentPollId = pollId;
                 sessionStorage.setItem('veritas_active_poll_id', pollId);
@@ -5687,8 +5687,9 @@ import firebase from './firebase.js';
                             window.SESSION_TOKEN = token;
                             window.STUDENT_CLASS = data.className;
 
-                            // Extract pollId from token data if not already set from URL params
-                            if (data.pollId && !window.currentPollId) {
+                            // Extract pollId from token data if URL param was missing or invalid
+                            var currentPollIdIsInvalid = !window.currentPollId || window.currentPollId === 'undefined' || window.currentPollId === 'null';
+                            if (data.pollId && currentPollIdIsInvalid) {
                                 console.log('[Auth] Using pollId from token data:', data.pollId);
                                 window.currentPollId = data.pollId;
                                 try { sessionStorage.setItem('veritas_active_poll_id', data.pollId); } catch (e) { }

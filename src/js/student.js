@@ -4054,7 +4054,7 @@ import firebase from './firebase.js';
                 return;
             }
 
-            if (!data.sessionType && !data.pollId) {
+            if (!data.sessionType && !data.pollId && !studentSessionStarted) {
                 if (entryScreen) {
                     entryScreen.style.display = 'block';
                     entryScreen.classList.remove('hidden');
@@ -5686,6 +5686,13 @@ import firebase from './firebase.js';
                             window.STUDENT_EMAIL = data.email;
                             window.SESSION_TOKEN = token;
                             window.STUDENT_CLASS = data.className;
+
+                            // Extract pollId from token data if not already set from URL params
+                            if (data.pollId && !window.currentPollId) {
+                                console.log('[Auth] Using pollId from token data:', data.pollId);
+                                window.currentPollId = data.pollId;
+                                try { sessionStorage.setItem('veritas_active_poll_id', data.pollId); } catch (e) { }
+                            }
 
                             // Persist
                             try {

@@ -2715,7 +2715,7 @@ import './LoginManager.js';
           }
         });
 
-        bindClick('header-back-btn', onPreviousQuestion, true);
+        bindClick('header-back-btn', onPreviousQuestion, false);
         bindClick('header-prev-btn', onPreviousQuestion, true);
         bindClick('header-next-btn', onNextQuestion, true);
 
@@ -7640,9 +7640,10 @@ import './LoginManager.js';
 
       var totalStudentsCount = typeof data.totalStudents === 'number' ? data.totalStudents : liveStudentList.length;
 
-      // Update response count
-      safeSetText('response-count', data.totalResponses + ' / ' + totalStudentsCount + ' answered');
-      safeSetText('response-count-header', data.totalResponses + ' / ' + totalStudentsCount + ' answered');
+      // Update response count (guard against undefined values)
+      var displayResponses = typeof data.totalResponses === 'number' ? data.totalResponses : 0;
+      safeSetText('response-count', displayResponses + ' / ' + totalStudentsCount + ' answered');
+      safeSetText('response-count-header', displayResponses + ' / ' + totalStudentsCount + ' answered');
 
       updateLiveOverviewFromData(Object.assign({}, data, {
         totalStudents: totalStudentsCount,

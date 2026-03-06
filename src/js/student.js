@@ -3708,8 +3708,9 @@ import firebase from './firebase.js';
 
             var pollId = window.currentPollId || sessionStorage.getItem('veritas_active_poll_id');
             if (!pollId) {
-                console.warn('[Polling] No active poll ID found, skipping');
+                console.warn('[Polling] No active poll ID found, scheduling retry');
                 pollInFlight = false;
+                scheduleNextPoll(defaultPollInterval);
                 return;
             }
 

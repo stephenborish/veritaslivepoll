@@ -9237,7 +9237,8 @@ import './LoginManager.js';
 
         // 3. Construct specific payload for just this student
         var isSecure = (CURRENT_POLL_DATA.sessionType || "").toUpperCase().includes("SECURE");
-        var fullLink = baseUrl + '?token=' + encodeURIComponent(targetLink.token) + '&pollId=' + encodeURIComponent(CURRENT_POLL_DATA.pollId);
+        var activePollId = CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId;
+        var fullLink = baseUrl + '?token=' + encodeURIComponent(targetLink.token) + (activePollId ? '&pollId=' + encodeURIComponent(activePollId) : '');
         var htmlBody = generateEmailHtml(targetLink.name, fullLink, isSecure, email);
 
         var singleStudentPayload = {
@@ -9942,7 +9943,8 @@ import './LoginManager.js';
         var isSecure = (CURRENT_POLL_DATA.sessionType || "").toUpperCase().includes("SECURE");
 
         payload.students = payload.links.map(function (s) {
-          var fullLink = baseUrl + '?token=' + encodeURIComponent(s.token) + '&pollId=' + encodeURIComponent(CURRENT_POLL_DATA.pollId);
+          var activePollId = CURRENT_POLL_DATA && CURRENT_POLL_DATA.pollId;
+          var fullLink = baseUrl + '?token=' + encodeURIComponent(s.token) + (activePollId ? '&pollId=' + encodeURIComponent(activePollId) : '');
           var htmlBody = generateEmailHtml(s.name, fullLink, isSecure, s.email);
           return {
             email: s.email,
